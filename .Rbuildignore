@@ -1,0 +1,6 @@
+^studies$
+^\.gitignore$
+^\.git$
+^\.Rproj\.user$
+^.*\.Rproj$
+^.*\.Rcheck$
