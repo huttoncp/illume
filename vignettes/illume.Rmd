@@ -1,0 +1,341 @@
+---
+title: "Introduction to illume"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to illume}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+set.seed(2024)
+```
+
+## What this package is for
+
+`illume` is a frequentist regression workflow aimed at **inference** rather than
+prediction. One function, `lum_model()`, fits everything from a simple
+regression to a mixed model with smooths and correlated errors, across five
+response distributions. Because a single engine fits them all, the object, the
+methods and the diagnostics do not change as the model gets more complicated.
+
+```r
+lum_model(y ~ x + (1 | subj), data = dd, family = "gaussian")
+lum_model(y ~ x + (1 | subj), data = dd, family = "poisson")
+lum_model(y ~ x + (1 | subj), data = dd, family = "multinomial")
+```
+
+The **multinomial** family closes a specific gap. If your outcome has three or
+more categories with no natural order -- a diagnosis, a habitat type, a choice
+among options -- and your data are grouped, R has had no good frequentist
+option: `nnet::multinom()` has no random effects, `lme4::glmer()` and `glmmTMB`
+have no multinomial family, and `brms` is much slower and answers a different
+question.
+
+Most of this vignette uses the multinomial family because it is the most
+involved case. Everything shown applies to the other families unchanged.
+
+```{r, eval = FALSE}
+library(illume)
+```
+
+```{r, include = FALSE}
+library(illume)
+```
+
+## A first model
+
+We will simulate data where an outcome with three categories depends on a
+continuous predictor `x1` and a grouping factor `grp`, measured repeatedly within
+subjects.
+
+```{r simulate}
+n_subj <- 40; per <- 20; N <- n_subj * per
+dd <- data.frame(
+  subj = factor(rep(seq_len(n_subj), each = per)),
+  x1   = rnorm(N),
+  grp  = factor(sample(c("a", "b", "c"), N, TRUE))
+)
+
+# true structure: an effect of x1 and grp, plus subject-level variation
+X  <- model.matrix(~ x1 + grp, dd)
+bt <- matrix(c(0.1, -0.2,  0.9, 0.5,  -0.6, 0.4,  0.2, -0.5), 4, 2, byrow = TRUE)
+b  <- matrix(rnorm(n_subj * 2), n_subj, 2) %*% diag(c(0.8, 0.6))
+eta <- X %*% bt + b[as.integer(dd$subj), ]
+P <- exp(eta %*% t(contr.sum(3))); P <- P / rowSums(P)
+dd$y <- factor(c("low", "mid", "high")[apply(P, 1, function(p) sample.int(3, 1, prob = p))],
+               levels = c("low", "mid", "high"))
+
+table(dd$y)
+```
+
+The model is written the way you would write it in `lme4`:
+
+```{r fit}
+fit <- lum_model(y ~ x1 + grp + (1 | subj), data = dd,
+                 family = "multinomial", verbose = FALSE)
+fit
+```
+
+## Reading the output
+
+```{r summary}
+summary(fit)
+```
+
+Two things in that output deserve attention.
+
+**The coefficients are sum-to-zero contrasts.** A coefficient such as `low:x1` is
+the effect of `x1` on the `low` category *relative to the average across all
+categories*, not relative to a baseline category. This differs from
+`nnet::multinom()` and `brms`, which compare each category against a reference.
+The summary prints a reminder, because it is easy to misread if you are used to
+the other convention.
+
+**The assumption checks are printed with the coefficients.** That is unusual for
+a `summary()` method and it is deliberate, for a reason worth explaining.
+
+## Why the diagnostics are so prominent
+
+This class of model fails *quietly*. A fit can converge, produce entirely
+reasonable-looking coefficients with small standard errors and significance
+stars, and yet the covariance matrix behind those standard errors can be
+unusable -- meaning the uncertainty is meaningless even though nothing in the
+output looks wrong.
+
+Every fit therefore carries a table of checks:
+
+```{r checks}
+head(fit$checks[, c("check", "status", "detail")], 8)
+```
+
+Each check has one of five statuses. `OK` and `FAIL` are self-explanatory. `WARN`
+means something is worth a look. `BOUNDARY` means a variance sits at zero, where
+the usual tests do not apply. And `INCONCLUSIVE` means there is not enough
+information to judge -- which is reported honestly rather than being passed off
+as a clean bill of health.
+
+Anything that is not `OK` also carries a reason and a suggested remedy:
+
+```{r check-detail}
+bad <- fit$checks[fit$checks$status != "OK", ]
+if (nrow(bad)) bad[1, c("check", "cause", "suggestion")] else "all checks passed"
+```
+
+### The most useful check
+
+The one to look at first is `latent_budget`. A mixed model introduces one
+unobserved value per random effect per group. The method used to fit the model
+(the Laplace approximation) is accurate when each of those values is informed by
+a reasonable amount of data, and degrades when it is not.
+
+Importantly this is a *global* constraint. A single term can look perfectly
+healthy on its own and the model can still be over-stretched, because what
+matters is the total. Per-term checks cannot see that; this one can.
+
+## Testing fixed effects
+
+`lum_anova()` gives an analysis of deviance. Each term is tested **jointly
+across all category dimensions**, so a predictor with one column is tested on two
+degrees of freedom when there are three categories.
+
+```{r anova}
+lum_anova(fit, type = 3)
+```
+
+Type III tests each term with all others present; Type II tests each term after
+the terms that do not contain it. They agree when there are no interactions. Wald
+tests are the default because they need no refitting; a likelihood-ratio version
+is available with `test = "LRT"` and is more reliable for very strong effects.
+
+For small samples, neither is ideal -- both rely on large-sample approximations,
+and unlike linear mixed models there is no Kenward-Roger correction available
+here. `lum_pb_lrt()` replaces the assumed reference distribution with a
+simulated one:
+
+```{r pb, eval = FALSE}
+lum_pb_lrt(fit, "x1", B = 200, ncores = 4)
+```
+
+## Predictions
+
+By default `predict()` returns a probability for every observation and category,
+as `nnet::multinom(type = "probs")` does.
+
+```{r predict}
+head(round(predict(fit), 3))
+```
+
+There is a choice to make here. With `marginal = FALSE` (the default) the random
+effects are set to zero, giving probabilities for a *typical* subject. With
+`marginal = TRUE` the prediction is averaged over the distribution of subjects,
+giving probabilities for the *population*.
+
+```{r marginal}
+grid <- data.frame(x1 = 0, grp = factor(c("a", "b", "c"), levels = levels(dd$grp)))
+round(predict(fit, newdata = grid, marginal = FALSE), 3)
+round(predict(fit, newdata = grid, marginal = TRUE, ndraw = 200), 3)
+```
+
+These differ because averaging and the softmax transform do not commute: the
+average of the transformed values is not the transform of the average. The
+population-averaged probabilities are pulled toward being more even across
+categories. Which you want depends on the question you are asking.
+
+Standard errors and intervals come from simulation, and the intervals are
+percentile intervals, so they always lie between 0 and 1.
+
+```{r se}
+pr <- predict(fit, newdata = grid, se.fit = TRUE, nsim = 100)
+round(data.frame(fit = pr$fit[, 1], lower = pr$lower[, 1], upper = pr$upper[, 1]), 3)
+```
+
+## Random slopes, smooths and correlated time
+
+Beyond random intercepts, the formula accepts random slopes and penalised
+smooths:
+
+```{r more, eval = FALSE}
+lum_model(y ~ x1 + time + (1 + time | subj), data = dd, family = "multinomial")
+lum_model(y ~ x1 + s(xs, k = 10) + (1 | subj), data = dd, family = "multinomial")
+lum_model(y ~ x1 + t2(lon, lat) + (1 | site), data = dd, family = "multinomial")
+```
+
+Two rules for smooths: use `t2()` rather than `te()` for tensor products, and
+write them unqualified -- `s(x)`, not `mgcv::s(x)` -- because mgcv identifies
+smooths by name.
+
+## Simple models, and exact inference
+
+Nothing requires a random effect. `lum_model()` fits an ordinary regression, and
+when the family is gaussian and nothing is integrated out it reports **exact**
+inference rather than large-sample approximations:
+
+```{r lmlike}
+set.seed(1)
+sd2 <- data.frame(x = rnorm(200), z = factor(sample(c("a", "b", "c"), 200, TRUE)))
+sd2$v <- 2 + 1.5 * sd2$x - 0.8 * (sd2$z == "b") + rnorm(200, 0, 1.2)
+
+f_lm <- lum_model(v ~ x + z, data = sd2, family = "gaussian", verbose = FALSE)
+round(lum_coef_table(f_lm), 5)
+round(summary(lm(v ~ x + z, data = sd2))$coefficients, 5)
+```
+
+The two agree to numerical precision, including the residual standard deviation
+and the degrees of freedom. `lum_anova()` likewise switches from chi-square to F:
+
+```{r lmanova}
+lum_anova(f_lm, type = 3)
+```
+
+This matters because the chi-square test treats the residual variance as known,
+which it is not, making it anti-conservative in small samples. Where an exact
+reference exists, illume uses it.
+
+It applies only where it is genuinely available. A Poisson or binomial model
+without random effects is still a GLM, with no exact small-sample analogue, so
+it keeps z and chi-square. So does any model with a random effect.
+
+## Other families
+
+The same formula syntax, methods and diagnostics apply to every family. What
+changes is the response, the link, and whether there is a dispersion parameter:
+
+```{r families, eval = FALSE}
+lum_model(count ~ x + (1 | site), data = dd, family = "poisson")
+lum_model(count ~ x + (1 | site), data = dd, family = "nbinom")   # overdispersed
+lum_model(hit   ~ x + (1 | site), data = dd, family = "binomial")
+lum_model(score ~ x + (1 | site), data = dd, family = "gaussian")
+```
+
+`summary()` reports a dispersion parameter where the family has one -- the
+residual standard deviation for gaussian, the overdispersion parameter for
+negative binomial -- and omits that section otherwise. Coefficients carry no
+category prefix outside the multinomial, and the sum-to-zero note disappears,
+because there is only one linear predictor.
+
+A two-category outcome can be stored however your data happen to hold it --
+`0`/`1`, a two-level factor, `TRUE`/`FALSE`, or a character column read straight
+from a csv. All four give the same fit. For a factor or character response the
+*second* level is the one being modelled, exactly as in `glm()`, so
+`factor(c("no", "yes"))` models the probability of `"yes"`. If you want the other
+direction, relevel the factor. You do not have to remember which way round it is:
+`summary()` states the category it is modelling, and the reference it is measured
+against.
+
+Two categories belong to `"binomial"` and three or more to `"multinomial"`;
+each family says so if it is given the other one's data.
+
+If your counts vary more than Poisson allows, `"nbinom"` adds one parameter `k`,
+giving variance `mu + mu^2/k`. Smaller `k` means more overdispersion; large `k`
+approaches the Poisson.
+
+Zero-inflation, hurdle models and Tweedie are deliberately out of scope.
+`glmmTMB` covers those well, and a weaker reimplementation would help nobody.
+
+## When there are many categories
+
+The number of covariance parameters grows quickly with the number of categories.
+With an unstructured covariance and `J` categories you need `(J-1)J/2` parameters
+*per grouping factor* -- 3 when `J = 3`, but 45 when `J = 10`. Many designs
+cannot support that.
+
+The remedy is a reduced-rank structure, which describes the covariance with fewer
+dimensions:
+
+```{r rr, eval = FALSE}
+lum_model(y ~ x1 + (1 | subj), data = dd, family = "multinomial",
+          re_struct = list(subj = list(type = "rr", rank = 3)))
+```
+
+This saves parameters *and* latent values, and the latter is usually the bigger
+gain. When a structure is too rich for the data, the checks say so and name a
+specific rank to try.
+
+## Checking the fitted model
+
+`lum_appraise()` draws diagnostic panels built for a categorical outcome rather
+than borrowed from tools designed for continuous responses:
+
+```{r appraise, fig.width = 7, fig.height = 5, eval = FALSE}
+lum_appraise(fit)
+```
+
+Two further checks are worth knowing about, because broad residual summaries have
+very little power to detect the problems they address. `lum_check_omitted()`
+tests variables you did *not* include, and `lum_check_ar()` tests for leftover
+correlation over time:
+
+```{r targeted, eval = FALSE}
+lum_check_omitted(fit, dd)
+lum_check_ar(fit, time = dd$time, group = dd$subj)
+```
+
+And `lum_consistency()` asks the most direct question available: can the model
+recover itself from data it generated? If not, the fitting method is not reliable
+for this model and this amount of data.
+
+```{r consistency, eval = FALSE}
+lum_consistency(fit, B = 50, ncores = 4)
+```
+
+## Working with other packages
+
+`illume` fits into the usual ecosystem. `car::Anova()` dispatches to the correct
+joint test, `performance::model_performance()` and `check_model()` work, and
+`marginaleffects` can be enabled with one call:
+
+```{r ecosystem, eval = FALSE}
+lum_register_marginaleffects()
+marginaleffects::avg_slopes(fit, variables = "x1")
+```
+
+## Where to read more
+
+The model itself is a baseline-category logit with random effects; Agresti
+(2013), *Categorical Data Analysis*, chapter 8, is the standard reference. The
+fitting method is described in Kristensen et al. (2016), *Journal of Statistical
+Software* 70(5). The mixed-model representation of smooths follows Wood (2017),
+*Generalized Additive Models*, section 5.4. The parametric bootstrap follows
+Halekoh and Højsgaard (2014), *Journal of Statistical Software* 59(9).

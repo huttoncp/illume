@@ -1,0 +1,50 @@
+Package: illume
+Type: Package
+Title: Frequentist Regression and Mixed Models with Built-In Diagnostics
+Version: 0.0.1.9000
+Authors@R: person(given = "Craig", family = "Hutton",
+                  role = c("aut", "cre"),
+                  email = "craig.hutton@gmail.com")
+Description: A frequentist regression workflow built around inference rather
+    than prediction. One engine fits gaussian, binomial, Poisson, negative
+    binomial and multinomial models by approximate maximum likelihood using the
+    Laplace approximation via 'RTMB', with 'lme4'-style formulas supporting
+    crossed and nested random intercepts and slopes, penalised smooth terms via
+    'mgcv', and AR(1) temporal correlation. Because one engine fits them all,
+    every model shares a single object, a single set of methods, and a single
+    diagnostic system that reports whether each assumption is consistent with
+    the data, with a stated reason and suggested remedy when it is not. The
+    multinomial family fits mixed models for nominal categorical outcomes, for
+    which no frequentist implementation was previously available. Methods of
+    Kristensen, Nielsen, Berg, Skaug and Bell (2016)
+    <doi:10.18637/jss.v070.i05> and Halekoh and Hojsgaard (2014)
+    <doi:10.18637/jss.v059.i09>.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: R (>= 4.1)
+Imports:
+    RTMB,
+    TMB,
+    Matrix,
+    stats,
+    graphics,
+    grDevices,
+    utils,
+    parallel,
+    codetools
+Suggests:
+    lme4,
+    mgcv,
+    car,
+    marginaleffects,
+    performance,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://github.com/craig-hutton/illume
+BugReports: https://github.com/craig-hutton/illume/issues
