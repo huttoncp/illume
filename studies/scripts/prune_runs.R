@@ -1,21 +1,22 @@
 ## ---------------------------------------------------------------------------
-## Enforce the retention policy: keep raw per-replicate data for the three most
-## recent runs of each study, and for older runs keep only the generated
+## Enforce the retention policy: keep the raw per-replicate data from the three
+## most recent PACKAGE VERSIONS, and for older versions keep only the generated
 ## findings.
 ##
-## "Three most recent" is per STUDY, not overall.  Counting globally would mean
-## three re-runs of the coverage study silently discarded every benchmark and
-## comparison result, which is not what a retention policy is for.
+## The unit of retention is a version's whole SET of studies, not each study
+## separately. Results are evidence about a particular build of the package, so
+## coverage from version 5 and benchmarks from version 3 are not a coherent
+## picture; sets are kept or dropped together.
 ##
-## A run is only ever deleted AFTER its findings have been written and verified
-## to exist on disk.  If summarising fails, the run is kept and reported.
+## A set is only ever deleted AFTER every study in it has findings written and
+## verified present on disk. If any is missing, the set is kept and reported.
 ##
-## IMPORTANT LIMIT: this prunes the WORKING TREE, not git history.  Blobs that
+## IMPORTANT LIMIT: this prunes the WORKING TREE, not git history. Blobs that
 ## have been committed stay in .git forever, so the repository keeps growing
-## even as the checkout stays small.  This policy keeps the working tree and
+## even as the checkout stays small. This policy keeps the working tree and
 ## fresh clones manageable and the directory comprehensible; it is not a way to
-## cap repository size.  For that you would need to avoid committing raw .rds
-## at all, use git-lfs, or rewrite history -- all bigger decisions.
+## cap repository size. For that you would need to avoid committing raw .rds at
+## all, use git-lfs, or rewrite history -- all bigger decisions.
 ##
 ## Usage: Rscript prune_runs.R <studies_dir> [keep] [--dry-run]
 ## ---------------------------------------------------------------------------
@@ -39,38 +40,50 @@ dir_bytes <- function(d) {
   sum(file.info(f)$size, na.rm = TRUE)
 }
 
-cat(sprintf("Retention: %d most recent run(s) per study%s\n\n", keep,
+has_findings <- function(study, version) {
+  fp <- file.path(studies, "findings", paste0(study, ".md"))
+  if (!file.exists(fp)) return(FALSE)
+  any(startsWith(readLines(fp, warn = FALSE), paste0("## ", version)))
+}
+
+versions <- ver_sort(basename(list.dirs(runs_root, recursive = FALSE)))
+if (!length(versions)) { cat("no run sets found\n"); quit(save = "no") }
+
+cat(sprintf("Retention: %d most recent version(s)%s\n\n", keep,
             if (dry) "   [DRY RUN - nothing will be deleted]" else ""))
 
+## refresh findings for every set, so the permanent record is current even for
+## sets being retained
+for (v in versions)
+  for (s in list.dirs(file.path(runs_root, v), recursive = FALSE))
+    write_findings(studies, basename(s), v)
+
+keepers <- utils::head(versions, keep)
+drops   <- setdiff(versions, keepers)
+
+for (v in versions) {
+  studs <- basename(list.dirs(file.path(runs_root, v), recursive = FALSE))
+  cat(sprintf("  %-14s %2d stud%s  %7.1f KB  %s\n", v, length(studs),
+              if (length(studs) == 1) "y" else "ies",
+              dir_bytes(file.path(runs_root, v)) / 1024,
+              if (v %in% keepers) "KEEP" else "prune"))
+}
+cat("\n")
+
 freed <- 0
-for (sdir in list.dirs(runs_root, recursive = FALSE)) {
-  study <- basename(sdir)
-  rs <- sort(basename(list.dirs(sdir, recursive = FALSE)), decreasing = TRUE)
-  if (!length(rs)) next
-  keepers <- utils::head(rs, keep)
-  drops   <- setdiff(rs, keepers)
-
-  ## refresh findings for every run, so the permanent record is current even
-  ## for runs that are being retained
-  for (r in rs) write_findings(studies, study, r)
-
-  cat(sprintf("%-10s %d run(s): keeping %s\n", study, length(rs),
-              paste(keepers, collapse = ", ")))
-  if (!length(drops)) next
-
-  fp <- file.path(studies, "findings", paste0(study, ".md"))
-  rec <- if (file.exists(fp)) readLines(fp, warn = FALSE) else character(0)
-  for (r in drops) {
-    ## never discard raw data whose findings are not actually on disk
-    if (!any(startsWith(rec, paste0("## ", r)))) {
-      cat(sprintf("           KEEPING %s - no findings recorded, refusing to delete\n", r))
-      next
-    }
-    sz <- dir_bytes(file.path(sdir, r))
-    cat(sprintf("           pruning %s (%.1f KB, findings retained)\n", r, sz / 1024))
-    if (!dry) unlink(file.path(sdir, r), recursive = TRUE, force = TRUE)
-    freed <- freed + sz
+for (v in drops) {
+  studs <- basename(list.dirs(file.path(runs_root, v), recursive = FALSE))
+  missing <- studs[!vapply(studs, has_findings, TRUE, version = v)]
+  if (length(missing)) {
+    cat(sprintf("%-14s KEEPING - no findings recorded for: %s\n", v,
+                paste(missing, collapse = ", ")))
+    next
   }
+  sz <- dir_bytes(file.path(runs_root, v))
+  cat(sprintf("%-14s pruning (%.1f KB; findings for %d stud%s retained)\n", v,
+              sz / 1024, length(studs), if (length(studs) == 1) "y" else "ies"))
+  if (!dry) unlink(file.path(runs_root, v), recursive = TRUE, force = TRUE)
+  freed <- freed + sz
 }
 cat(sprintf("\n%s %.1f KB\n", if (dry) "Would free" else "Freed", freed / 1024))
 if (!dry && freed > 0)
