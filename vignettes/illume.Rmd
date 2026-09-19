@@ -15,15 +15,15 @@ set.seed(2024)
 ## What this package is for
 
 `illume` is a frequentist regression workflow aimed at **inference** rather than
-prediction. One function, `lum_model()`, fits everything from a simple
+prediction. One function, `ilm_model()`, fits everything from a simple
 regression to a mixed model with smooths and correlated errors, across five
 response distributions. Because a single engine fits them all, the object, the
 methods and the diagnostics do not change as the model gets more complicated.
 
 ```r
-lum_model(y ~ x + (1 | subj), data = dd, family = "gaussian")
-lum_model(y ~ x + (1 | subj), data = dd, family = "poisson")
-lum_model(y ~ x + (1 | subj), data = dd, family = "multinomial")
+ilm_model(y ~ x + (1 | subj), data = dd, family = "gaussian")
+ilm_model(y ~ x + (1 | subj), data = dd, family = "poisson")
+ilm_model(y ~ x + (1 | subj), data = dd, family = "multinomial")
 ```
 
 The **multinomial** family closes a specific gap. If your outcome has three or
@@ -73,7 +73,7 @@ table(dd$y)
 The model is written the way you would write it in `lme4`:
 
 ```{r fit}
-fit <- lum_model(y ~ x1 + grp + (1 | subj), data = dd,
+fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd,
                  family = "multinomial", verbose = FALSE)
 fit
 ```
@@ -136,12 +136,12 @@ matters is the total. Per-term checks cannot see that; this one can.
 
 ## Testing fixed effects
 
-`lum_anova()` gives an analysis of deviance. Each term is tested **jointly
+`ilm_anova()` gives an analysis of deviance. Each term is tested **jointly
 across all category dimensions**, so a predictor with one column is tested on two
 degrees of freedom when there are three categories.
 
 ```{r anova}
-lum_anova(fit, type = 3)
+ilm_anova(fit, type = 3)
 ```
 
 Type III tests each term with all others present; Type II tests each term after
@@ -151,11 +151,11 @@ is available with `test = "LRT"` and is more reliable for very strong effects.
 
 For small samples, neither is ideal -- both rely on large-sample approximations,
 and unlike linear mixed models there is no Kenward-Roger correction available
-here. `lum_pb_lrt()` replaces the assumed reference distribution with a
+here. `ilm_pb_lrt()` replaces the assumed reference distribution with a
 simulated one:
 
 ```{r pb, eval = FALSE}
-lum_pb_lrt(fit, "x1", B = 200, ncores = 4)
+ilm_pb_lrt(fit, "x1", B = 200, ncores = 4)
 ```
 
 ## Predictions
@@ -197,9 +197,9 @@ Beyond random intercepts, the formula accepts random slopes and penalised
 smooths:
 
 ```{r more, eval = FALSE}
-lum_model(y ~ x1 + time + (1 + time | subj), data = dd, family = "multinomial")
-lum_model(y ~ x1 + s(xs, k = 10) + (1 | subj), data = dd, family = "multinomial")
-lum_model(y ~ x1 + t2(lon, lat) + (1 | site), data = dd, family = "multinomial")
+ilm_model(y ~ x1 + time + (1 + time | subj), data = dd, family = "multinomial")
+ilm_model(y ~ x1 + s(xs, k = 10) + (1 | subj), data = dd, family = "multinomial")
+ilm_model(y ~ x1 + t2(lon, lat) + (1 | site), data = dd, family = "multinomial")
 ```
 
 Two rules for smooths: use `t2()` rather than `te()` for tensor products, and
@@ -208,7 +208,7 @@ smooths by name.
 
 ## Simple models, and exact inference
 
-Nothing requires a random effect. `lum_model()` fits an ordinary regression, and
+Nothing requires a random effect. `ilm_model()` fits an ordinary regression, and
 when the family is gaussian and nothing is integrated out it reports **exact**
 inference rather than large-sample approximations:
 
@@ -217,16 +217,16 @@ set.seed(1)
 sd2 <- data.frame(x = rnorm(200), z = factor(sample(c("a", "b", "c"), 200, TRUE)))
 sd2$v <- 2 + 1.5 * sd2$x - 0.8 * (sd2$z == "b") + rnorm(200, 0, 1.2)
 
-f_lm <- lum_model(v ~ x + z, data = sd2, family = "gaussian", verbose = FALSE)
-round(lum_coef_table(f_lm), 5)
+f_lm <- ilm_model(v ~ x + z, data = sd2, family = "gaussian", verbose = FALSE)
+round(ilm_coef_table(f_lm), 5)
 round(summary(lm(v ~ x + z, data = sd2))$coefficients, 5)
 ```
 
 The two agree to numerical precision, including the residual standard deviation
-and the degrees of freedom. `lum_anova()` likewise switches from chi-square to F:
+and the degrees of freedom. `ilm_anova()` likewise switches from chi-square to F:
 
 ```{r lmanova}
-lum_anova(f_lm, type = 3)
+ilm_anova(f_lm, type = 3)
 ```
 
 This matters because the chi-square test treats the residual variance as known,
@@ -243,10 +243,10 @@ The same formula syntax, methods and diagnostics apply to every family. What
 changes is the response, the link, and whether there is a dispersion parameter:
 
 ```{r families, eval = FALSE}
-lum_model(count ~ x + (1 | site), data = dd, family = "poisson")
-lum_model(count ~ x + (1 | site), data = dd, family = "nbinom")   # overdispersed
-lum_model(hit   ~ x + (1 | site), data = dd, family = "binomial")
-lum_model(score ~ x + (1 | site), data = dd, family = "gaussian")
+ilm_model(count ~ x + (1 | site), data = dd, family = "poisson")
+ilm_model(count ~ x + (1 | site), data = dd, family = "nbinom")   # overdispersed
+ilm_model(hit   ~ x + (1 | site), data = dd, family = "binomial")
+ilm_model(score ~ x + (1 | site), data = dd, family = "gaussian")
 ```
 
 `summary()` reports a dispersion parameter where the family has one -- the
@@ -285,7 +285,7 @@ The remedy is a reduced-rank structure, which describes the covariance with fewe
 dimensions:
 
 ```{r rr, eval = FALSE}
-lum_model(y ~ x1 + (1 | subj), data = dd, family = "multinomial",
+ilm_model(y ~ x1 + (1 | subj), data = dd, family = "multinomial",
           re_struct = list(subj = list(type = "rr", rank = 3)))
 ```
 
@@ -295,29 +295,29 @@ specific rank to try.
 
 ## Checking the fitted model
 
-`lum_appraise()` draws diagnostic panels built for a categorical outcome rather
+`ilm_appraise()` draws diagnostic panels built for a categorical outcome rather
 than borrowed from tools designed for continuous responses:
 
 ```{r appraise, fig.width = 7, fig.height = 5, eval = FALSE}
-lum_appraise(fit)
+ilm_appraise(fit)
 ```
 
 Two further checks are worth knowing about, because broad residual summaries have
-very little power to detect the problems they address. `lum_check_omitted()`
-tests variables you did *not* include, and `lum_check_ar()` tests for leftover
+very little power to detect the problems they address. `ilm_check_omitted()`
+tests variables you did *not* include, and `ilm_check_ar()` tests for leftover
 correlation over time:
 
 ```{r targeted, eval = FALSE}
-lum_check_omitted(fit, dd)
-lum_check_ar(fit, time = dd$time, group = dd$subj)
+ilm_check_omitted(fit, dd)
+ilm_check_ar(fit, time = dd$time, group = dd$subj)
 ```
 
-And `lum_consistency()` asks the most direct question available: can the model
+And `ilm_consistency()` asks the most direct question available: can the model
 recover itself from data it generated? If not, the fitting method is not reliable
 for this model and this amount of data.
 
 ```{r consistency, eval = FALSE}
-lum_consistency(fit, B = 50, ncores = 4)
+ilm_consistency(fit, B = 50, ncores = 4)
 ```
 
 ## Working with other packages
@@ -327,7 +327,7 @@ joint test, `performance::model_performance()` and `check_model()` work, and
 `marginaleffects` can be enabled with one call:
 
 ```{r ecosystem, eval = FALSE}
-lum_register_marginaleffects()
+ilm_register_marginaleffects()
 marginaleffects::avg_slopes(fit, variables = "x1")
 ```
 

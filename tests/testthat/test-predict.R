@@ -24,7 +24,7 @@ test_that("type = class returns the most likely category", {
 
 test_that("new data reproduces the fitted design exactly", {
   fit <- fit_basic()
-  nd <- lum_newX(fit, fit$model)
+  nd <- ilm_newX(fit, fit$model)
   expect_equal(unname(nd$X), unname(fit$X))
 })
 
@@ -70,6 +70,6 @@ test_that("marginal predictions are refused on the link scale", {
 
 test_that("fitted probabilities agree with predict", {
   fit <- fit_basic()
-  expect_equal(unname(lum_fitted(fit, conditional = FALSE)),
+  expect_equal(unname(ilm_fitted(fit, conditional = FALSE)),
                unname(predict(fit, type = "response")))
 })

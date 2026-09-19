@@ -1,6 +1,6 @@
 # Several functions refit the model internally: the LRT, the parametric
 # bootstrap, the simulation-calibrated diagnostics and the null-model
-# log-likelihood behind pseudo-R-squared.  lum_fit() defaults to the
+# log-likelihood behind pseudo-R-squared.  ilm_fit() defaults to the
 # multinomial family, so an internal refit that forgets to pass the fitted
 # family is silently a DIFFERENT model -- and because the refit is wrapped in
 # try(), the failure surfaces as an empty table rather than an error.
@@ -25,9 +25,9 @@ sim_fam <- function(fam, seed = 1, n = 400, ncl = 25) {
 test_that("the LRT returns finite statistics for every univariate family", {
   for (fam in c("gaussian", "poisson", "binomial")) {
     dd <- sim_fam(fam)
-    f <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = fam,
+    f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = fam,
                    verbose = FALSE)
-    a <- suppressWarnings(lum_anova(f, type = 3, test = "LRT"))
+    a <- suppressWarnings(ilm_anova(f, type = 3, test = "LRT"))
     pc <- intersect(c("Pr(>Chisq)", "Pr(>F)"), names(a))[1]
     expect_true(all(is.finite(a[["Chisq"]])),
                 info = paste("LRT statistic not finite for", fam))
@@ -40,32 +40,32 @@ test_that("the LRT statistic matches an explicit pair of refits", {
   # the sharpest check: if the reduced model were fitted under the wrong
   # family, its log-likelihood would not be comparable and this would not match
   dd <- sim_fam("poisson", seed = 3)
-  full <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
+  full <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
                     verbose = FALSE)
-  red  <- lum_model(y ~ grp + (1 | g), data = dd, family = "poisson",
+  red  <- ilm_model(y ~ grp + (1 | g), data = dd, family = "poisson",
                     verbose = FALSE)
   manual <- 2 * (as.numeric(logLik(full)) - as.numeric(logLik(red)))
-  a <- suppressWarnings(lum_anova(full, type = 3, test = "LRT"))
+  a <- suppressWarnings(ilm_anova(full, type = 3, test = "LRT"))
   expect_equal(a[["x1", "Chisq"]], manual, tolerance = 1e-3)
 })
 
 test_that("an internal refit inherits weights as well as family", {
   dd <- sim_fam("gaussian", seed = 4)
   dd$w <- rep(c(1, 3), length.out = nrow(dd))
-  full <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
+  full <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
                     weights = w, verbose = FALSE)
-  red  <- lum_model(y ~ grp + (1 | g), data = dd, family = "gaussian",
+  red  <- ilm_model(y ~ grp + (1 | g), data = dd, family = "gaussian",
                     weights = w, verbose = FALSE)
   manual <- 2 * (as.numeric(logLik(full)) - as.numeric(logLik(red)))
-  a <- suppressWarnings(lum_anova(full, type = 3, test = "LRT"))
+  a <- suppressWarnings(ilm_anova(full, type = 3, test = "LRT"))
   expect_equal(a[["x1", "Chisq"]], manual, tolerance = 1e-3)
 })
 
 test_that("simulation-calibrated residual tests run for a univariate family", {
   dd <- sim_fam("binomial", seed = 5)
-  f <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = "binomial",
+  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "binomial",
                  verbose = FALSE)
-  r <- suppressWarnings(lum_rqr_test(f, B = 5L, seed = 1L, verbose = FALSE))
+  r <- suppressWarnings(ilm_rqr_test(f, B = 5L, seed = 1L, verbose = FALSE))
   expect_true(is.finite(r$obs))
   # the simulated null must not be entirely NA: that is what a wrong-family
   # refit would produce, since every refit would fail and be discarded
@@ -74,16 +74,16 @@ test_that("simulation-calibrated residual tests run for a univariate family", {
 
 test_that("the null-model log-likelihood is finite for a univariate family", {
   dd <- sim_fam("poisson", seed = 6)
-  f <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
+  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
                  verbose = FALSE)
-  expect_true(is.finite(lum_null_ll(f)))
+  expect_true(is.finite(ilm_null_ll(f)))
 })
 
 test_that("the parametric bootstrap runs for a univariate family", {
   dd <- sim_fam("gaussian", seed = 7)
-  f <- lum_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
+  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
                  verbose = FALSE)
-  pb <- suppressWarnings(lum_pb_lrt(f, term = "x1", B = 10L, seed = 1L,
+  pb <- suppressWarnings(ilm_pb_lrt(f, term = "x1", B = 10L, seed = 1L,
                                     verbose = FALSE))
   expect_true(is.finite(pb$p_boot))
   expect_equal(pb$n_ok, 10L)

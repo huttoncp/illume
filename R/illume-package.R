@@ -26,7 +26,7 @@
 #'
 #' @section Families:
 #' `"gaussian"`, `"binomial"`, `"poisson"`, `"nbinom"` and `"multinomial"`; see
-#' [lum_family()]. Zero-inflation, hurdle models and Tweedie are deliberately out
+#' [ilm_family()]. Zero-inflation, hurdle models and Tweedie are deliberately out
 #' of scope, because `glmmTMB` covers those well.
 #'
 #' @section How the model is written:
@@ -35,24 +35,24 @@
 #' that category's deviation from the average across categories, *not* a contrast
 #' against a baseline category. This differs from [nnet::multinom()] and `brms`,
 #' which use baseline-category coding, and matters when reading output: see
-#' [lum_coef_table()].
+#' [ilm_coef_table()].
 #'
 #' @section Why the diagnostics are prominent:
 #' This model class fails *quietly*. A fit can return entirely plausible
 #' coefficients while its covariance matrix is unusable, so the standard errors
 #' are meaningless even though nothing looks wrong. Every fit therefore carries a
 #' table of checks (see `fit$checks`), each with a status, a plain-language
-#' reason, and a suggested remedy. [summary.lum_model()] prints them.
+#' reason, and a suggested remedy. [summary.ilm_model()] prints them.
 #'
 #' @section Main entry points:
 #' \describe{
-#'   \item{[lum_model()]}{fit a model from a formula, for any family}
-#'   \item{[lum_family()]}{what each response distribution assumes}
-#'   \item{[summary.lum_model()]}{coefficient table plus assumption checks}
-#'   \item{[lum_anova()]}{Type II/III analysis of deviance for fixed effects}
-#'   \item{[predict.lum_model()]}{category probabilities, conditional or population-averaged}
-#'   \item{[lum_appraise()]}{residual diagnostic panels}
-#'   \item{[lum_pb_lrt()]}{parametric-bootstrap likelihood-ratio test}
+#'   \item{[ilm_model()]}{fit a model from a formula, for any family}
+#'   \item{[ilm_family()]}{what each response distribution assumes}
+#'   \item{[summary.ilm_model()]}{coefficient table plus assumption checks}
+#'   \item{[ilm_anova()]}{Type II/III analysis of deviance for fixed effects}
+#'   \item{[predict.ilm_model()]}{category probabilities, conditional or population-averaged}
+#'   \item{[ilm_appraise()]}{residual diagnostic panels}
+#'   \item{[ilm_pb_lrt()]}{parametric-bootstrap likelihood-ratio test}
 #' }
 #'
 #' @references

@@ -35,7 +35,7 @@ question.
 \section{Families}{
 
 \code{"gaussian"}, \code{"binomial"}, \code{"poisson"}, \code{"nbinom"} and \code{"multinomial"}; see
-\code{\link[=lum_family]{lum_family()}}. Zero-inflation, hurdle models and Tweedie are deliberately out
+\code{\link[=ilm_family]{ilm_family()}}. Zero-inflation, hurdle models and Tweedie are deliberately out
 of scope, because \code{glmmTMB} covers those well.
 }
 
@@ -46,7 +46,7 @@ With \code{J} outcome categories the model has \code{C = J - 1} free linear pred
 that category's deviation from the average across categories, \emph{not} a contrast
 against a baseline category. This differs from \code{\link[nnet:multinom]{nnet::multinom()}} and \code{brms},
 which use baseline-category coding, and matters when reading output: see
-\code{\link[=lum_coef_table]{lum_coef_table()}}.
+\code{\link[=ilm_coef_table]{ilm_coef_table()}}.
 }
 
 \section{Why the diagnostics are prominent}{
@@ -55,19 +55,19 @@ This model class fails \emph{quietly}. A fit can return entirely plausible
 coefficients while its covariance matrix is unusable, so the standard errors
 are meaningless even though nothing looks wrong. Every fit therefore carries a
 table of checks (see \code{fit$checks}), each with a status, a plain-language
-reason, and a suggested remedy. \code{\link[=summary.lum_model]{summary.lum_model()}} prints them.
+reason, and a suggested remedy. \code{\link[=summary.ilm_model]{summary.ilm_model()}} prints them.
 }
 
 \section{Main entry points}{
 
 \describe{
-\item{\code{\link[=lum_model]{lum_model()}}}{fit a model from a formula, for any family}
-\item{\code{\link[=lum_family]{lum_family()}}}{what each response distribution assumes}
-\item{\code{\link[=summary.lum_model]{summary.lum_model()}}}{coefficient table plus assumption checks}
-\item{\code{\link[=lum_anova]{lum_anova()}}}{Type II/III analysis of deviance for fixed effects}
-\item{\code{\link[=predict.lum_model]{predict.lum_model()}}}{category probabilities, conditional or population-averaged}
-\item{\code{\link[=lum_appraise]{lum_appraise()}}}{residual diagnostic panels}
-\item{\code{\link[=lum_pb_lrt]{lum_pb_lrt()}}}{parametric-bootstrap likelihood-ratio test}
+\item{\code{\link[=ilm_model]{ilm_model()}}}{fit a model from a formula, for any family}
+\item{\code{\link[=ilm_family]{ilm_family()}}}{what each response distribution assumes}
+\item{\code{\link[=summary.ilm_model]{summary.ilm_model()}}}{coefficient table plus assumption checks}
+\item{\code{\link[=ilm_anova]{ilm_anova()}}}{Type II/III analysis of deviance for fixed effects}
+\item{\code{\link[=predict.ilm_model]{predict.ilm_model()}}}{category probabilities, conditional or population-averaged}
+\item{\code{\link[=ilm_appraise]{ilm_appraise()}}}{residual diagnostic panels}
+\item{\code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}}}{parametric-bootstrap likelihood-ratio test}
 }
 }
 

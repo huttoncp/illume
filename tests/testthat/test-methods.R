@@ -27,7 +27,7 @@ test_that("fixef returns a predictors-by-categories matrix", {
   expect_equal(dim(B), c(ncol(fit$X), fit$C))
   expect_equal(colnames(B), fit$ylevels[seq_len(fit$C)])
   expect_equal(as.vector(B), unname(coef(fit)))
-  expect_equal(dim(lum_se_fixef(fit)), dim(B))
+  expect_equal(dim(ilm_se_fixef(fit)), dim(B))
 })
 
 test_that("logLik carries df and nobs, and AIC/BIC follow from them", {
@@ -46,9 +46,9 @@ test_that("BIC's two sample-size conventions differ", {
   expect_lt(BIC(fit, n = "groups"), BIC(fit))        # fewer groups than rows
 })
 
-test_that("lum_coef_table reports a sensible Wald table", {
+test_that("ilm_coef_table reports a sensible Wald table", {
   fit <- fit_basic()
-  ct <- lum_coef_table(fit)
+  ct <- ilm_coef_table(fit)
   expect_equal(nrow(ct), length(coef(fit)))
   expect_true(all(ct[["Std. Error"]] > 0))
   expect_true(all(ct[["Pr(>|z|)"]] >= 0 & ct[["Pr(>|z|)"]] <= 1))
@@ -57,7 +57,7 @@ test_that("lum_coef_table reports a sensible Wald table", {
 
 test_that("print and summary run and surface the checks", {
   fit <- fit_basic()
-  expect_output(print(fit), "lum_model fit")
+  expect_output(print(fit), "ilm_model fit")
   out <- capture.output(print(summary(fit)))
   expect_true(any(grepl("Model checks", out)))
   expect_true(any(grepl("SUM-TO-ZERO", out)))   # the contrast warning

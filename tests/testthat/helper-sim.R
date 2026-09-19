@@ -34,6 +34,6 @@ sim_mlmm <- function(seed = 1, n_subj = 25, per = 12, J = 3, with_time = FALSE,
 # a fitted model most tests can reuse
 fit_basic <- function(seed = 1, ...) {
   dd <- sim_mlmm(seed = seed, ...)
-  illume::lum_model(y ~ x1 + grp + (1 | subj), data = dd,
+  illume::ilm_model(y ~ x1 + grp + (1 | subj), data = dd,
                     family = "multinomial", verbose = FALSE)
 }

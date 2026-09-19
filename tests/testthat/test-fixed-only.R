@@ -12,8 +12,8 @@ sim_lm <- function(seed = 1, n = 200) {
 
 test_that("a fixed-effects-only model fits at all", {
   dd <- sim_lm()
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
-  expect_s3_class(f, "lum_model")
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  expect_s3_class(f, "ilm_model")
   expect_equal(f$opt$convergence, 0L)
   expect_equal(length(f$re), 0L)
   expect_true(isTRUE(f$exact_df))
@@ -22,7 +22,7 @@ test_that("a fixed-effects-only model fits at all", {
 
 test_that("an intercept-only model fits", {
   dd <- sim_lm(2)
-  f <- lum_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
   expect_equal(length(coef(f)), 1L)
   expect_equal(unname(coef(f)), unname(coef(stats::lm(y ~ 1, dd))), tolerance = 1e-5)
 })
@@ -31,19 +31,19 @@ test_that("anova on an intercept-only model is empty, not an error", {
   # there are no non-intercept terms to test, which is a valid answer rather
   # than a failure; rbind of nothing gives NULL, which used to error
   dd <- sim_lm(2)
-  f <- lum_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
-  a <- lum_anova(f, type = 3)
+  f <- ilm_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
+  a <- ilm_anova(f, type = 3)
   expect_s3_class(a, "anova")
   expect_equal(nrow(a), 0L)
   expect_true("F value" %in% names(a))
   expect_silent(invisible(capture.output(print(a))))
-  a2 <- lum_anova(f, type = 2)
+  a2 <- ilm_anova(f, type = 2)
   expect_equal(nrow(a2), 0L)
 })
 
 test_that("an intercept-only model summarises and predicts", {
   dd <- sim_lm(2)
-  f <- lum_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ 1, data = dd, family = "gaussian", verbose = FALSE)
   out <- capture.output(print(summary(f)))
   expect_true(any(grepl("Linear model fit", out)))
   expect_equal(unname(predict(f)[1, 1]), unname(coef(f)[1]), tolerance = 1e-6)
@@ -51,7 +51,7 @@ test_that("an intercept-only model summarises and predicts", {
 
 test_that("coefficients and standard errors match lm() exactly", {
   dd <- sim_lm(3)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   m <- stats::lm(y ~ x + z, data = dd)
   cl <- summary(m)$coefficients
   expect_equal(unname(coef(f)), unname(cl[, 1]), tolerance = 1e-5)
@@ -62,15 +62,15 @@ test_that("the residual SD is the unbiased one, as lm reports", {
   # maximum likelihood divides by n; lm divides by n - p.  Reporting the ML
   # value alongside rescaled standard errors would be internally inconsistent.
   dd <- sim_lm(4)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   m <- stats::lm(y ~ x + z, data = dd)
   expect_equal(unname(f$dispersion), summary(m)$sigma, tolerance = 1e-5)
 })
 
 test_that("tests are t, not z, when they can be exact", {
   dd <- sim_lm(5)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
-  ct <- lum_coef_table(f)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  ct <- ilm_coef_table(f)
   expect_true("t value" %in% names(ct))
   expect_false("z value" %in% names(ct))
   m <- stats::lm(y ~ x + z, data = dd)
@@ -83,9 +83,9 @@ test_that("tests are t, not z, when they can be exact", {
 test_that("anova uses F, and matches car::Anova on the equivalent lm", {
   skip_if_not_installed("car")
   dd <- sim_lm(6)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   m <- stats::lm(y ~ x + z, data = dd)
-  a <- lum_anova(f, type = 3)
+  a <- ilm_anova(f, type = 3)
   ca <- car::Anova(m, type = 3)
   expect_true("F value" %in% names(a))
   expect_equal(a[["F value"]], ca[rownames(a), "F value"], tolerance = 1e-4)
@@ -95,24 +95,24 @@ test_that("anova uses F, and matches car::Anova on the equivalent lm", {
 test_that("a mixed model still gets z and chi-square, not t and F", {
   # the exact reference exists only when nothing is integrated out
   dd <- sim_lm(7); dd$g <- factor(sample(20, nrow(dd), TRUE))
-  f <- lum_model(y ~ x + (1 | g), data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + (1 | g), data = dd, family = "gaussian", verbose = FALSE)
   expect_false(isTRUE(f$exact_df))
-  expect_true("z value" %in% names(lum_coef_table(f)))
-  expect_true("Chisq" %in% names(lum_anova(f, type = 3)))
+  expect_true("z value" %in% names(ilm_coef_table(f)))
+  expect_true("Chisq" %in% names(ilm_anova(f, type = 3)))
 })
 
 test_that("non-gaussian fixed-effects models do not claim exact inference", {
   # a Poisson GLM has no exact small-sample t or F reference
   dd <- sim_lm(8)
   dd$cnt <- stats::rpois(nrow(dd), exp(0.4 + 0.3 * dd$x))
-  f <- lum_model(cnt ~ x, data = dd, family = "poisson", verbose = FALSE)
+  f <- ilm_model(cnt ~ x, data = dd, family = "poisson", verbose = FALSE)
   expect_false(isTRUE(f$exact_df))
-  expect_true("z value" %in% names(lum_coef_table(f)))
+  expect_true("z value" %in% names(ilm_coef_table(f)))
 })
 
 test_that("the latent budget is not reported when nothing is latent", {
   dd <- sim_lm(9)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   expect_false("latent_budget" %in% f$checks$check)
   expect_true(all(f$checks$status %in% c("OK", "WARN", "FAIL", "BOUNDARY",
                                          "INCONCLUSIVE")))
@@ -120,7 +120,7 @@ test_that("the latent budget is not reported when nothing is latent", {
 
 test_that("summary describes a linear model rather than a mixed one", {
   dd <- sim_lm(10)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   out <- capture.output(print(summary(f)))
   expect_true(any(grepl("Linear model fit", out)))
   expect_true(any(grepl("Residual degrees of freedom", out)))
@@ -130,7 +130,7 @@ test_that("summary describes a linear model rather than a mixed one", {
 
 test_that("predict works without random effects", {
   dd <- sim_lm(11)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
   p <- predict(f)
   expect_equal(dim(p), c(nrow(dd), 1L))
   m <- stats::lm(y ~ x + z, data = dd)
@@ -141,8 +141,8 @@ test_that("predict works without random effects", {
 
 test_that("simulate works without random effects", {
   dd <- sim_lm(12)
-  f <- lum_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
-  ys <- lum_simulate(f, 3L, seed = 1L)
+  f <- ilm_model(y ~ x + z, data = dd, family = "gaussian", verbose = FALSE)
+  ys <- ilm_simulate(f, 3L, seed = 1L)
   expect_equal(dim(ys), c(nrow(dd), 3L))
   expect_true(all(is.finite(ys)))
   # a gaussian draw is a measurement, not a category index.  Checking only
