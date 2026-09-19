@@ -9,3 +9,9 @@ src/*.o
 src/*.so
 src/*.dll
 inst/doc/
+
+# Raw per-replicate simulation output. Regenerable: the study scripts use
+# fixed seeds, so re-running reproduces them exactly. Committing them would
+# add ~3.8 MB per version to history permanently, and .rds does not
+# delta-compress. Summary CSVs and generated findings ARE tracked.
+studies/runs/**/*.rds

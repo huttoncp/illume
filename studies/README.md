@@ -15,8 +15,9 @@ studies/
 
 ## Retention policy
 
-**Raw per-replicate data is kept for the three most recent package versions.
-For older versions only the findings are kept.**
+**Raw per-replicate data is kept on local disk for the three most recent
+package versions. For older versions only the findings are kept.** None of the
+raw data is committed — see below.
 
 The unit of retention is a version's whole **set** of studies, not each study
 separately. Results are evidence about a particular build, so coverage from one
@@ -42,17 +43,36 @@ Rscript scripts/prune_runs.R . 3             # do it
 
 Run it after each new study run, and commit the result.
 
-### What this policy does not do
+### What is committed, and what is not
 
-It prunes the **working tree, not git history**. Data that has been committed
-stays in `.git` permanently, so the repository keeps growing even as the
-checkout stays small — binary `.rds` files do not delta-compress, so each
-version's set adds roughly its full size forever.
+Raw per-replicate `.rds` is **not** committed — it is 3.8 MB per version, does
+not delta-compress, and would stay in git history forever. It is also
+*regenerable*: the study scripts use fixed seeds, so re-running reproduces it
+exactly. It stays on local disk, gitignored, and `prune_runs.R` manages it
+there.
 
-This policy keeps the directory comprehensible and fresh clones manageable. It
-is not a way to cap repository size. If that becomes the goal, the real options
-are to stop committing raw `.rds` at all, adopt git-lfs, or rewrite history —
-each a larger decision than a retention rule.
+What is committed is small and text:
+
+| tracked | size | purpose |
+|---|---|---|
+| `runs/<version>/<study>/*.csv` | ~64 KB per version | per-cell summaries; every reported table derives from these |
+| `runs/<version>/RUNINFO.dcf` | 1 KB | version, date, R version |
+| `findings/*.md` | ~17 KB | permanent record, generated |
+| `scripts/*.R` | ~68 KB | the studies themselves |
+
+So a version's evidence costs roughly 80 KB in the repository rather than
+3.9 MB.
+
+### Where findings go
+
+* **Full findings** — `findings/*.md`, with per-cell tables and caveats. This is
+  methods-paper material.
+* **Summary notes** — the `## Validation` section of that version's entry in
+  `../NEWS.md`. A handful of bullets: what was checked, the headline number, and
+  any caveat that changes how the result should be read.
+
+Keep the two in step. When a version's studies are re-run, regenerate the
+findings and update that version's NEWS entry in the same commit.
 
 ## Scripts
 
