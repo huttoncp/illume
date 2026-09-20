@@ -1005,6 +1005,9 @@ ilm_print_checks <- function(ck, title) {
 #' @param censor Optional censoring specification from [ilm_censor()], marking
 #'   observations known only as an interval -- at or below a floor, at or above
 #'   a ceiling. Supported for the gaussian family, where it gives a Tobit model.
+#' @param rp Internal. The flexible parametric baseline: knots, the derivative
+#'   design and which columns of `X` hold the spline. Built by [ilm_model()]
+#'   from `rp_df`.
 #' @param Zd Optional design matrix for the dispersion model, one row per
 #'   observation. Its columns become a linear predictor for the logarithm of
 #'   the dispersion, so its intercept replaces the single dispersion parameter.
@@ -1064,7 +1067,8 @@ ilm_print_checks <- function(ck, title) {
 ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
-                     censor = NULL, Zd = NULL, disp_mu = FALSE) {
+                     censor = NULL, Zd = NULL, disp_mu = FALSE,
+                     rp = NULL) {
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Censoring: derive the codes from THIS response, so a simulated replicate
   ## is censored by the same rule the data were rather than inheriting the
@@ -1205,6 +1209,11 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
 
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
              n_disp = fam$n_disp,
+             ## the derivative of the linear predictor with respect to log
+             ## time, which a flexible parametric density needs and nothing
+             ## else does; zero columns everywhere but the spline
+             Drp = if (is.null(rp)) matrix(0, nrow(X), 0L) else rp$D,
+             has_rp = !is.null(rp),
              Zdisp = if (is.null(Zd)) matrix(0, nrow(X), 0L) else Zd,
              has_dm = has_dm, disp_mu = isTRUE(disp_mu),
              grp = lapply(re, `[[`, "group"), Zl = lapply(re, `[[`, "Z"),
@@ -1341,8 +1350,9 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       }
       dsp <- if (n_disp > 1L) c(0, logdisp) else numeric(0)
     }
+    etad <- if (has_rp) as.vector(Drp %*% beta[, 1]) else NULL
     nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens,
-                         logsig = lsig)
+                         logsig = lsig, etad = etad)
     sd_ <- sdv; ADREPORT(sd_)
     if (n_disp > 0L && !has_dm) { disp_ <- exp(logdisp); ADREPORT(disp_) }
     nll
@@ -1360,6 +1370,11 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     nd <- if (has_dm) fam$n_disp - 1L else fam$n_disp
     if (nd > 0L) pars$logdisp <- rep(0, nd)
   }
+  ## A flexible baseline starts with the log cumulative hazard rising at rate
+  ## one in log time, which is the exponential special case. From beta = 0 the
+  ## derivative is zero everywhere, which is the boundary of the valid region
+  ## and a poor place to differentiate.
+  if (!is.null(rp)) pars$beta[rp$cols[1L], 1L] <- 1
   if (has_dm) {
     if (!is.null(Zd)) pars$gamma <- rep(0, ncol(Zd))
     if (isTRUE(disp_mu)) pars$mu_pow <- 0
@@ -1520,7 +1535,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                    stats::setNames(pe[pn %in% c("gamma", "mu_pow")],
                                    pnames[substr(pnames, 1L, 5L) == "disp:"])
                    else NULL,
-                 Zd = Zd, disp_mu = isTRUE(disp_mu),
+                 Zd = Zd, disp_mu = isTRUE(disp_mu), rp = rp,
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
                  beta = matrix(pe[pn == "beta"], p, C),
                  ## rho is the correlation ONE TIME UNIT apart under both

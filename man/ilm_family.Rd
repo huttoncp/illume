@@ -9,7 +9,7 @@ the piece that turns a linear predictor into a log-likelihood.}
 \usage{
 ilm_family(
   family = c("gaussian", "binomial", "poisson", "nbinom", "multinomial", "weibull",
-    "lognormal", "loglogistic")
+    "lognormal", "loglogistic", "rp", "rp_odds", "rp_normal")
 )
 }
 \arguments{

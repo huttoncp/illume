@@ -70,9 +70,9 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
     ## An accelerated failure time family supplies its own distribution
     ## function, so this does not need a third switch over families to keep in
     ## step with the two the likelihood already has.
-    u <- if (isTRUE(object$family$aft))
+    u <- if (!is.null(object$family$cdf))
       object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),
-                        unname(disp))
+                        if (length(disp)) unname(disp) else 1)
     else switch(fam,
       gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp) else 1),
       poisson  = {
@@ -160,6 +160,15 @@ ilm_sim_cond <- function(object, B, seed = 1L) {
   ## part of the variability the envelope is meant to carry.
   ## with a dispersion model the spread varies by row, so the simulator is
   ## handed the fitted per-row value rather than the single parameter
+  if (!is.null(object$rp)) {
+    ## A spline baseline has no closed-form inverse, so a draw is a numerical
+    ## inversion of the fitted survivor function. The offset carries the
+    ## covariates and any random effects; only the baseline is inverted.
+    off <- ilm_rp_offset(object, TRUE)
+    return(vapply(seq_len(B), function(b)
+      ilm_censor_apply(object$censor, ilm_rp_sim(object, off = off)),
+      numeric(N)))
+  }
   lsig <- if (!is.null(object$Zd) || isTRUE(object$disp_mu))
     log(ilm_disp_vec(object)) else NULL
   vapply(seq_len(B), function(b)

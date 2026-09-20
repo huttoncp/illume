@@ -20,7 +20,9 @@ ilm_model_formula(
   joint = NULL,
   na.action = stats::na.omit,
   censor = NULL,
-  dispformula = NULL
+  dispformula = NULL,
+  rp_df = 3L,
+  rp_knots = NULL
 )
 }
 \arguments{
@@ -64,6 +66,14 @@ its logarithm: \code{~ group} for a separate spread per level, \code{~ x} for on
 that changes with a covariate, \code{~ mu} for a power of the fitted mean.
 \code{mu} is a reserved name. This is the remedy for what
 \code{\link[=ilm_check_variance]{ilm_check_variance()}} diagnoses.}
+
+\item{rp_df}{Degrees of freedom for a flexible parametric baseline, used by
+\code{family = "rp"}, \code{"rp_odds"} and \code{"rp_normal"}. \code{1} is a straight line in
+log time, and so the corresponding parametric model; \code{3} is the usual
+default and allows two interior knots.}
+
+\item{rp_knots}{Knot positions on the log-time scale, given directly in
+place of \code{rp_df}.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

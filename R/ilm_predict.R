@@ -69,8 +69,15 @@ ilm_newX <- function(object, newdata) {
     sd_list[[lab]] <- ilm_smooth_design(object$smooths[[lab]], newdata)
     if (!is.null(sd_list[[lab]]$Xf)) X <- cbind(X, sd_list[[lab]]$Xf)
   }
-  if (ncol(X) != ncol(object$X))
-    stop("new-data design has ", ncol(X), " columns but the fit has ", ncol(object$X))
+  ## A flexible parametric baseline puts spline columns at the front of the
+  ## fitted design. They are a function of the response, not of the covariates,
+  ## so new data cannot supply them and the comparison is against what is left.
+  nrp <- if (is.null(object$rp)) 0L else length(object$rp$cols)
+  if (ncol(X) != ncol(object$X) - nrp)
+    stop("new-data design has ", ncol(X), " columns but the fit has ",
+         ncol(object$X) - nrp,
+         if (nrp) paste0(" besides its ", nrp, " baseline spline columns") else "",
+         call. = FALSE)
   list(X = X, smooths = sd_list)
 }
 
@@ -223,6 +230,15 @@ predict.ilm_model <- function(object, newdata = NULL,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L, ...) {
   type <- match.arg(type); interval <- match.arg(interval)
+  ## A flexible parametric model's linear predictor depends on TIME through the
+  ## spline, so there is no fitted value for a covariate pattern alone. Asking
+  ## for one is a question about the survival curve.
+  if (!is.null(object$rp) && !is.null(newdata))
+    stop("a flexible parametric model has no fitted value for a covariate ",
+         "pattern on its own: its linear predictor depends on time through ",
+         "the baseline spline. Use ilm_survival(object, newdata, times) for ",
+         "the survival curve, or ilm_plot_survival() to see it.",
+         call. = FALSE)
   want_unc <- isTRUE(se.fit) || interval != "none"
   if (marginal && type == "link")
     stop("marginal = TRUE applies on the response scale; use type = \"response\"")

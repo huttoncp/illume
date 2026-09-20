@@ -57,7 +57,7 @@ ilm_pearson_ovr <- function(object) {
     ## at 40% censoring that pulled the mean to -0.64, -0.84 and -0.56 for the
     ## three families. The normal score fills the censoring interval in and is
     ## centred and unit-scaled whatever the censoring.
-    if (isTRUE(object$family$aft))
+    if (!is.null(object$family$cdf))
       return(matrix(stats::qnorm(pmin(pmax(ilm_rqr(object, TRUE, 1L), 1e-8),
                                       1 - 1e-8)), ncol = 1L))
     w <- if (is.null(object$weights)) rep(1, N) else pmax(1, round(object$weights))

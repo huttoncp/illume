@@ -126,12 +126,16 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
     }
     lsig_sim <- if (!is.null(fit$Zd) || isTRUE(fit$disp_mu))
       log(ilm_disp_vec(fit)) else NULL
+    rp_off <- if (!is.null(fit$rp)) as.vector(eta[, 1]) -
+      as.vector(ilm_rcs(log(as.numeric(fit$y)), fit$rp$knots) %*%
+                fit$beta[fit$rp$cols, 1L]) else NULL
     if (mn) {
       P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
       out[, s] <- apply(P, 1, function(pr) sample.int(J, 1L, prob = pr))
     } else {
-      out[, s] <- ilm_censor_apply(
-        fit$censor, as.numeric(fam$sim(eta, wts, dsp, logsig = lsig_sim)))
+      out[, s] <- ilm_censor_apply(fit$censor, if (!is.null(rp_off))
+        ilm_rp_sim(fit, off = rp_off)
+        else as.numeric(fam$sim(eta, wts, dsp, logsig = lsig_sim)))
     }
   }
   out

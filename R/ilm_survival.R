@@ -94,12 +94,14 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
-  if (!isTRUE(object$family$aft))
-    stop("a survival curve needs an accelerated failure time family. This ",
-         "model is ", object$family$name, "; use family = \"weibull\", ",
-         "\"lognormal\" or \"loglogistic\".", call. = FALSE)
+  if (!isTRUE(object$family$aft) && is.null(object$rp))
+    stop("a survival curve needs a time-to-event family. This model is ",
+         object$family$name, "; use family = \"weibull\", \"lognormal\", ",
+         "\"loglogistic\", or \"rp\" for a flexible baseline.",
+         call. = FALSE)
 
   if (is.null(newdata)) newdata <- ilm_typical_row(object)
+  if (!is.null(object$rp)) return(ilm_rp_survival(object, newdata, times, conf))
   pr <- stats::predict(object, newdata = newdata, se.fit = TRUE)
   eta <- log(as.matrix(if (is.list(pr)) pr$fit else pr)[, 1])
   se_eta <- if (is.list(pr) && !is.null(pr$se.fit)) {
@@ -205,10 +207,11 @@ ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
-  if (!isTRUE(object$family$aft))
-    stop("a survival curve needs an accelerated failure time family. This ",
-         "model is ", object$family$name, "; use family = \"weibull\", ",
-         "\"lognormal\" or \"loglogistic\".", call. = FALSE)
+  if (!isTRUE(object$family$aft) && is.null(object$rp))
+    stop("a survival curve needs a time-to-event family. This model is ",
+         object$family$name, "; use family = \"weibull\", \"lognormal\", ",
+         "\"loglogistic\", or \"rp\" for a flexible baseline.",
+         call. = FALSE)
   N <- nrow(object$X)
   if (missing(time)) time <- as.numeric(object$y)
   if (missing(event) || is.null(event)) {

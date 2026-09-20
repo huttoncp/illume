@@ -19,7 +19,8 @@ ilm_fit(
   joint = FALSE,
   censor = NULL,
   Zd = NULL,
-  disp_mu = FALSE
+  disp_mu = FALSE,
+  rp = NULL
 )
 }
 \arguments{
@@ -77,6 +78,10 @@ Built by \code{\link[=ilm_model]{ilm_model()}} from \code{dispformula}.}
 
 \item{disp_mu}{Logical. Add a term in the logarithm of the fitted mean to
 that predictor, making the dispersion a power of the mean.}
+
+\item{rp}{Internal. The flexible parametric baseline: knots, the derivative
+design and which columns of \code{X} hold the spline. Built by \code{\link[=ilm_model]{ilm_model()}}
+from \code{rp_df}.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

@@ -75,6 +75,12 @@
 #' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
 #' @param censor Optional censoring specification from [ilm_censor()], for a
 #'   response with a floor, a ceiling or a detection limit.
+#' @param rp_df Degrees of freedom for a flexible parametric baseline, used by
+#'   `family = "rp"`, `"rp_odds"` and `"rp_normal"`. `1` is a straight line in
+#'   log time, and so the corresponding parametric model; `3` is the usual
+#'   default and allows two interior knots.
+#' @param rp_knots Knot positions on the log-time scale, given directly in
+#'   place of `rp_df`.
 #' @param dispformula Optional one-sided formula for the dispersion, modelling
 #'   its logarithm: `~ group` for a separate spread per level, `~ x` for one
 #'   that changes with a covariate, `~ mu` for a power of the fitted mean.
@@ -154,7 +160,8 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                          re_struct = NULL, ar = NULL,
                          weights = NULL, contrasts = NULL, verbose = TRUE,
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
-                         censor = NULL, dispformula = NULL) {
+                         censor = NULL, dispformula = NULL,
+                         rp_df = 3L, rp_knots = NULL) {
   fam <- if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
@@ -330,8 +337,39 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
     Zd <- stats::model.matrix(f2, mf)
     attr(Zd, "formula") <- dispformula
   }
+  ## A flexible parametric baseline is a spline in log time, and log time is
+  ## the response, so the basis is DATA: its columns simply join the model
+  ## matrix. The spline coefficients are then part of beta, and the standard
+  ## errors, the anova and the bootstrap all work on them unchanged.
+  rp <- NULL
+  if (isTRUE(fam$rp)) {
+    tt <- as.numeric(yi)
+    if (any(!is.na(tt) & tt <= 0))
+      stop("a flexible parametric baseline is a spline in log(time), so every ",
+           "time must be strictly positive; ", sum(tt <= 0, na.rm = TRUE),
+           " are not.", call. = FALSE)
+    ev <- if (is.null(censor)) rep(1L, length(tt))
+          else as.integer(ilm_censor_for(censor, tt) == 0L)
+    lt <- log(tt)
+    kn <- if (!is.null(rp_knots)) sort(unique(as.numeric(rp_knots)))
+          else ilm_rp_knots(lt, ev, as.integer(rp_df)[1])
+    if (length(kn) < 2L)
+      stop("`rp_knots` needs at least two knots, the boundaries", call. = FALSE)
+    Bs <- ilm_rcs(lt, kn)
+    Ds <- ilm_rcs(lt, kn, deriv = TRUE)
+    ## the derivative design is zero in every column that is not the spline,
+    ## so D %*% beta picks out exactly d(eta)/d(log t)
+    Dfull <- cbind(Ds, matrix(0, nrow(X), ncol(X)))
+    X <- cbind(Bs, X)
+    colnames(Dfull) <- colnames(X)
+    rp <- list(knots = kn, df = length(kn) - 1L, D = Dfull,
+               cols = seq_len(ncol(Bs)), lo = min(lt) - 3, hi = max(lt) + 3)
+    ## the spline columns belong to no formula term, the same as a smooth's
+    ## null space, so they carry NA and no per-term test picks them up
+    asgn <- c(rep(NA_integer_, ncol(Bs)), asgn)
+  }
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
-                 Zd = Zd, disp_mu = disp_mu,
+                 Zd = Zd, disp_mu = disp_mu, rp = rp,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
                   restarts = restarts, joint = joint)
 

@@ -58,6 +58,20 @@ mgcv penalised smooths and AR(1) correlation.
   approximation is exact, so there is no approximation error to run out of
   observations for.
 
+## A flexible survival baseline
+
+* `family = "rp"`, `"rp_odds"` and `"rp_normal"` fit the Royston-Parmar model:
+  a restricted cubic spline in log time in place of the straight line the
+  parametric families assume, on the hazard, odds or probit scale. The
+  coefficients keep their meaning -- a hazard ratio on the hazard scale -- while
+  the baseline is free to bend.
+* `rp_df` sets how much it can bend, `rp_knots` places the knots directly.
+* `ilm_rp_lrt()` tests the spline against the straight-line special case it
+  generalises, and names the simpler family when that fits as well.
+* `ilm_survival()` and `ilm_plot_survival()` work for it. `predict()` on new
+  data does not, and says why: the linear predictor depends on time through the
+  baseline, so there is no fitted value for a covariate pattern alone.
+
 ## Correlation in space
 
 * `ilm_variogram(coords = )` bins pairs by Euclidean distance rather than by
@@ -170,6 +184,22 @@ Summary notes; the full tables belong with the methods paper.
   with times drawn from 1..30 it found 53 pairs at lag 1, five at lag 2 and none
   beyond, so five of six lags returned no verdict. Binning by separation uses
   all 900 pairs.
+
+* **`rp_df = 1` reproduces the parametric special case exactly.** Against the
+  three accelerated failure time families on the same data, the
+  log-likelihoods agree to 1e-10 and the reparameterisation is exact to five
+  decimals: the slope on log time is `1 / scale`, and each coefficient is
+  `-beta / scale`. Those families are pinned to `survival::survreg()`, so the
+  flexible one inherits that validation -- which matters, since neither
+  `flexsurv` nor `rstpm2` is available here to check against directly.
+* **The hazard ratio survives a baseline the model cannot draw.** On a
+  piecewise-constant hazard -- 0.15 before time 3, then 0.9, which no
+  parametric family in the package can bend to -- the coefficient came back
+  0.711, 0.699 and 0.701 at `rp_df` of 3, 5 and 7, against a truth of 0.700.
+* **And the survival-curve check caught the baseline that was too rigid.** At
+  `rp_df = 3` it returned `FAIL` with 82% of the curve outside the envelope; at
+  5, `OK` with 2%. The largest error in the fitted survivor function fell from
+  0.12 to 0.06 over the same change.
 
 * **With thousands of pairs per bin, significance stops meaning anything
   actionable.** On 300 points carrying an exponential field, adding

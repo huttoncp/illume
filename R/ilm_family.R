@@ -132,10 +132,13 @@ ilm_aft_family <- function(name) {
 #' @export
 ilm_family <- function(family = c("gaussian", "binomial", "poisson",
                                   "nbinom", "multinomial",
-                                  "weibull", "lognormal", "loglogistic")) {
+                                  "weibull", "lognormal", "loglogistic",
+                                  "rp", "rp_odds", "rp_normal")) {
   family <- match.arg(family)
   if (family %in% c("weibull", "lognormal", "loglogistic"))
     return(ilm_aft_family(family))
+  if (family %in% c("rp", "rp_odds", "rp_normal"))
+    return(ilm_rp_family(family))
 
   ## Each nll() receives eta (N x C), the response, the frequency weights and
   ## the dispersion parameters on the log scale, and returns the negative

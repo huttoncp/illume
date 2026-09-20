@@ -91,8 +91,11 @@ test_that("a survival curve needs a survival family", {
   d <- data.frame(x = stats::rnorm(200))
   d$y <- stats::rnorm(200)
   g <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
-  expect_error(ilm_survival(g), "accelerated failure time family")
-  expect_error(ilm_plot_survival(g), "accelerated failure time family")
+  # the message now names the flexible baseline too, since that is also an
+  # answer to "how do I get a survival curve"
+  expect_error(ilm_survival(g), "needs a time-to-event family")
+  expect_error(ilm_survival(g), "rp", fixed = TRUE)
+  expect_error(ilm_plot_survival(g), "needs a time-to-event family")
   expect_error(ilm_survival(d), "must be a fitted ilm_model")
 })
 
