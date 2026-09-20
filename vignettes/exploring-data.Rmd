@@ -299,8 +299,32 @@ ilm_boot_diff(d2, "score", "grp", R = 500, seed = 1)
 separate intervals for overlap is a conservative and lossy substitute: two
 intervals can overlap while the difference is clearly non-zero.
 
+Past two groups every pair is compared, and a formula works in place of the
+two column names:
+
+```{r}
+ilm_boot_diff(score ~ grp, data = d, R = 500, seed = 1)
+```
+
+Six comparisons at a nominal 95% each do not jointly cover at 95%, so the
+intervals are **simultaneous** by default: the groups are resampled together,
+each comparison is standardised by its own bootstrap standard error, and the
+largest standardised value in each replicate supplies one critical value for
+all of them. On normal, equal-variance data this reproduces `TukeyHSD()` to
+about 0.006, without assuming either normality or a common variance. Set
+`adjust = "none"` for comparisons chosen in advance, or `adjust =
+"bonferroni"` to keep the shape of a percentile interval.
+
+`ref` compares every level against one:
+
+```{r}
+ilm_boot_diff(score ~ grp, data = d, ref = "alpha", R = 500, seed = 1)
+```
+
 On skewed data, `"percentile"` and `"bca"` hold their nominal coverage better
-than `"normal"` and `"basic"`.
+than `"normal"` and `"basic"`. When the skew is severe and the groups are
+small, no interval shape rescues a bootstrapped *mean* -- reach for
+`stat = "median"` instead, which stays nominal where the mean does not.
 
 ## Into the model
 

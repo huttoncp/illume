@@ -130,7 +130,29 @@ also fit.
   separate switches is how the quantile and Pearson residuals both came to
   assume a multinomial response.
 
-## Findings behind those changes
+## Comparing more than two groups
+
+* `ilm_boot_diff()` compares every pair of levels, not just two, and takes a
+  formula: `ilm_boot_diff(score ~ grp, data = d)` as well as
+  `ilm_boot_diff(d, "score", "grp")`. `ref = ` compares every level against one
+  instead, and several grouping columns are crossed with `interaction()`.
+* The intervals are **simultaneous by default**. Five levels give ten
+  comparisons, and ten intervals each nominally 95% do not jointly cover at
+  95%; reporting them as though they did is the usual way a pairwise table
+  misleads. `adjust = "max_t"` resamples all groups together, standardises each
+  comparison by its own bootstrap standard error and takes the `conf` quantile
+  of the largest standardised value as one critical value for all of them.
+  `"bonferroni"` and `"none"` are there for when they are wanted.
+* Each row now carries `p_value` and `p_adj` alongside the interval, read off
+  the same bootstrap maximum, so the test and the interval agree.
+* `ilm_boot_diff()` is now generic, and its first argument is `x` rather than
+  `data`. Positional calls are unaffected; a call naming `data =` for the data
+  frame needs the formula form.
+* Groups are resampled jointly rather than one comparison at a time -- which is
+  what makes a simultaneous statement possible, and changes the random stream,
+  so a two-group result at a given `seed` differs numerically from 0.0.1.9000.
+
+## Findings behind those changes
 
 Summary notes; the full tables belong with the methods paper.
 
@@ -263,6 +285,21 @@ Summary notes; the full tables belong with the methods paper.
   normal score of the quantile residual fills the interval in and stays centred
   and unit-scaled, which is what the diagnostics now use.
 
+* **All-pairs comparisons match `TukeyHSD()` where Tukey is exactly right,
+  and hold up where it is not.** On normal, equal-variance, balanced data the
+  simultaneous endpoints agree to 0.006 and the adjusted p-values to 0.011.
+  Family-wise error over six comparisons at group sizes of 45 to 80 came to
+  0.068 with a common variance and 0.072 with variances differing fourfold,
+  against a nominal 0.05, where six unadjusted intervals reject 0.302 of the
+  time.
+* **Under heavy skew the marginal interval fails before the adjustment does.**
+  On lognormal data with a spread parameter up to 1.2 at those group sizes, a
+  single unadjusted comparison already erred 0.090 of the time, and no interval
+  shape moved it: percentile 0.090, BCa 0.089, basic 0.093, normal 0.084. It is
+  the bootstrapped mean of a small skewed sample, not the multiplicity, and it
+  converges -- at group sizes of 300 to 500 the same design gives 0.049 per
+  comparison and 0.062 family-wise. `stat = "median"` is the remedy: on that
+  same design, under a null placing the medians together, 0.043 and 0.050.
 * **A centred smooth changes what the intercept estimates.** The gaussian
   smooth cell returned an intercept covered 0.880 of the time while every slope
   was nominal, which looked like a defect in the fit and was not. `mgcv`'s

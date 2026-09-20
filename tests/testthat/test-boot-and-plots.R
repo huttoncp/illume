@@ -61,7 +61,113 @@ test_that("boot_diff reports the difference and whether it excludes zero", {
   expect_lt(r$lower, r$observed)
   expect_gt(r$upper, r$observed)
   expect_type(r$excludes_zero, "logical")
-  expect_error(ilm_boot_diff(d, "score", "grp"), "exactly 2 levels")
+  ## one comparison is not a family, so nothing is adjusted whatever was asked
+  expect_equal(r$adjust, "none")
+  expect_equal(r$n_comparisons, 1L)
+  expect_equal(ilm_boot_diff(d2, "score", "grp", R = 300, seed = 1,
+                             adjust = "bonferroni")$adjust, "none")
+})
+
+test_that("boot_diff compares every pair past two groups", {
+  d <- ilm_sim()
+  lv <- levels(droplevels(factor(d$grp)))
+  r <- ilm_boot_diff(d, "score", "grp", R = 300, seed = 1)
+  expect_equal(nrow(r), length(lv) * (length(lv) - 1L) / 2L)
+  expect_true(all(r$lower <= r$observed & r$observed <= r$upper))
+  ## each ordered pair once, in level order, so `from` never follows `to`
+  expect_equal(anyDuplicated(paste(r$from, r$to)), 0L)
+  expect_true(all(match(r$from, lv) < match(r$to, lv)))
+  ## an unused factor level is dropped rather than becoming an empty group
+  expect_false("epsilon" %in% c(r$from, r$to))
+  ## the difference is `to` minus `from`
+  m <- tapply(d$score, d$grp, mean, na.rm = TRUE)
+  expect_equal(r$observed, as.vector(m[r$to] - m[r$from]))
+})
+
+test_that("the formula and column interfaces agree", {
+  d <- ilm_sim()
+  a <- ilm_boot_diff(d, "score", "grp", R = 300, seed = 3)
+  b <- ilm_boot_diff(score ~ grp, data = d, R = 300, seed = 3)
+  expect_equal(a, b)
+  ## a formula can carry a transformation, which the column form cannot
+  f <- ilm_boot_diff(log(score + 100) ~ grp, data = d, R = 200, seed = 3)
+  expect_equal(nrow(f), nrow(a))
+  expect_false(isTRUE(all.equal(f$observed, a$observed)))
+})
+
+test_that("adjustment widens the intervals, max_t less than bonferroni", {
+  set.seed(4)
+  dd <- data.frame(g = factor(rep(letters[1:4], each = 120)),
+                   y = rnorm(480, rep(c(0, 0.3, 0.15, 0.6), each = 120)))
+  ## compared on one scale, so the ordering is about the adjustment and not
+  ## about the shape of the interval
+  w <- function(a) {
+    r <- ilm_boot_diff(y ~ g, data = dd, R = 1500, seed = 5, adjust = a,
+                       ci_type = "normal")
+    r$upper - r$lower
+  }
+  expect_true(all(w("none") < w("max_t")))
+  expect_true(all(w("max_t") < w("bonferroni")))
+  ## and fewer comparisons buy back sharpness
+  all6 <- ilm_boot_diff(y ~ g, data = dd, R = 1500, seed = 5)
+  ref3 <- ilm_boot_diff(y ~ g, data = dd, R = 1500, seed = 5, ref = "a")
+  k <- match(paste(ref3$from, ref3$to), paste(all6$from, all6$to))
+  expect_true(all((ref3$upper - ref3$lower) <
+                  (all6$upper - all6$lower)[k]))
+})
+
+test_that("max_t reproduces TukeyHSD where Tukey is exact", {
+  ## normal, equal variance, balanced -- Tukey's own assumptions. Agreement
+  ## here is the check that the studentized maximum is built correctly; the
+  ## test suite cannot otherwise tell a right critical value from a wrong one.
+  set.seed(11)
+  n <- 150L
+  dd <- data.frame(g = factor(rep(c("a", "b", "c", "d"), each = n)),
+                   y = rnorm(4 * n, rep(c(0, 0.3, 0.15, 0.6), each = n)))
+  r <- ilm_boot_diff(y ~ g, data = dd, R = 3000, seed = 2)
+  tk <- TukeyHSD(stats::aov(y ~ g, dd))$g[paste(r$to, r$from, sep = "-"), ,
+                                          drop = FALSE]
+  ## the point estimates are sample means either way, so these are exact
+  expect_equal(r$observed, unname(tk[, "diff"]))
+  ## the critical value is bootstrapped, so compare half-widths proportionally
+  hw_i <- (r$upper - r$lower) / 2
+  hw_t <- unname(tk[, "upr"] - tk[, "lwr"]) / 2
+  expect_lt(max(abs(hw_i - hw_t) / hw_t), 0.10)
+  expect_lt(max(abs(r$p_adj - unname(tk[, "p adj"]))), 0.05)
+})
+
+test_that("ref compares every level against one, and p_adj tracks the interval", {
+  d <- ilm_sim()
+  lv <- levels(droplevels(factor(d$grp)))
+  r <- ilm_boot_diff(score ~ grp, data = d, ref = "alpha", R = 400, seed = 1)
+  expect_equal(nrow(r), length(lv) - 1L)
+  expect_true(all(r$from == "alpha"))
+  expect_false("alpha" %in% r$to)
+  expect_equal(r$n_comparisons, rep(length(lv) - 1L, nrow(r)))
+  ## p_adj and the simultaneous interval are read off the same bootstrap
+  ## maximum, so away from the boundary they tell the same story
+  expect_equal(r$p_adj < 0.05, r$excludes_zero)
+})
+
+test_that("boot_diff rejects bad input", {
+  d <- ilm_sim()
+  expect_error(ilm_boot_diff(d, "score", "nope"), "not found")
+  expect_error(ilm_boot_diff(d, "score", "site", adjust = "holm"),
+               "unknown `adjust`")
+  expect_error(ilm_boot_diff(d, "site", "grp"), "must be numeric")
+  expect_error(ilm_boot_diff(score ~ grp, R = 10), "`data` must be supplied")
+  expect_error(ilm_boot_diff(~ grp, data = d), "left and a right hand side")
+  expect_error(ilm_boot_diff(score ~ grp, data = d, ref = "zzz", R = 10),
+               "not a level")
+  expect_error(ilm_boot_diff(d, "score", "grp", R = 10, nonsense = 1),
+               "unused argument")
+  ## a level with fewer than two observations cannot be resampled
+  d1 <- d[d$grp != "delta" | seq_len(nrow(d)) == which(d$grp == "delta")[1], ]
+  expect_error(ilm_boot_diff(d1, "score", "grp", R = 10),
+               "at least 2 non-missing")
+  ## one surviving level is not a comparison
+  d0 <- d[d$grp == "alpha", ]
+  expect_error(ilm_boot_diff(d0, "score", "grp", R = 10), "at least 2 levels")
 })
 
 test_that("describe_na counts missing values and sorts by them", {
