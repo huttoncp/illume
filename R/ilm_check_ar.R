@@ -40,8 +40,24 @@
 #' @keywords internal
 #' @noRd
 ilm_pearson_ovr <- function(object) {
+  fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   P <- ilm_fitted(object, TRUE); N <- nrow(P)
-  Y <- matrix(0, N, ncol(P)); Y[cbind(seq_len(N), object$y)] <- 1
+  ## For a univariate family the Pearson residual is the ordinary one: the
+  ## deviation scaled by the standard deviation the family implies at that
+  ## mean. Only the multinomial needs the one-vs-rest indicator construction.
+  if (!identical(fam, "multinomial")) {
+    mu <- as.numeric(P[, 1]); y <- as.numeric(object$y)
+    d <- object$dispersion
+    w <- if (is.null(object$weights)) rep(1, N) else pmax(1, round(object$weights))
+    v <- switch(fam,
+      gaussian = rep(if (length(d)) unname(d[1])^2 else 1, N),
+      poisson  = mu,
+      nbinom   = mu + mu^2 / unname(d[1]),
+      binomial = mu * (1 - mu) / w,
+      stop("no Pearson residual is defined for family ", fam, call. = FALSE))
+    return(matrix((y - mu) / sqrt(pmax(v, 1e-8)), ncol = 1L))
+  }
+  Y <- matrix(0, N, ncol(P)); Y[cbind(seq_len(N), as.integer(object$y))] <- 1
   (Y - P) / sqrt(pmax(P * (1 - P), 1e-8))
 }
 

@@ -371,46 +371,82 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
 #' @export
 ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
   op <- par(mfrow = c(2, 3), mar = c(4, 4, 3, 1), cex = 0.8); on.exit(par(op))
+  fam <- if (!is.null(object$family)) object$family$name else "gaussian"
+  mn <- identical(fam, "multinomial")
   u <- ilm_rqr(object, TRUE, seed); z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
   P <- ilm_fitted(object, TRUE)
 
   ## 1 QQ of the log-score randomised quantile residuals
-  qqnorm(z, main = "Log-score quantile residuals", pch = 16, cex = 0.4,
+  qqnorm(z, main = "Quantile residuals", pch = 16, cex = 0.4,
          col = "#00000055"); qqline(z, col = "red", lwd = 2)
 
-  ## 2 residuals against fitted probability of the observed category
-  py <- P[cbind(seq_len(nrow(P)), object$y)]
-  plot(py, z, pch = 16, cex = 0.4, col = "#00000055", xlab = "fitted p(observed)",
+  ## 2 residuals against the fitted value. For a multinomial that is the
+  ## predicted probability of the category actually observed; for every other
+  ## family it is the fitted mean.
+  py <- if (mn) P[cbind(seq_len(nrow(P)), as.integer(object$y))]
+        else as.numeric(P[, 1])
+  plot(py, z, pch = 16, cex = 0.4, col = "#00000055",
+       xlab = if (mn) "fitted p(observed)" else "fitted",
        ylab = "quantile residual", main = "Residual vs fitted")
   abline(h = 0, col = "red", lwd = 2)
   lines(lowess(py, z), col = "blue", lwd = 2)
 
-  ## 3 calibration, all categories
-  cal <- ilm_calibration(object, nbins, B, seed)
-  plot(0:1, 0:1, type = "n", xlab = "predicted", ylab = "observed",
-       main = "Calibration (envelope = model)")
-  abline(0, 1, col = "grey60", lty = 2)
-  cols <- seq_len(object$J) + 1L
-  for (j in seq_len(object$J)) {
-    cj <- cal[[j]]; if (is.null(cj)) next
-    arrows(cj$mean_p, cj$lo, cj$mean_p, cj$hi, angle = 90, code = 3,
-           length = 0.02, col = adjustcolor(cols[j], 0.4))
-    points(cj$mean_p, cj$obs, col = cols[j], pch = 16); lines(cj$mean_p, cj$obs, col = cols[j])
+  ## 3 calibration where a probability is predicted, scale-location otherwise.
+  ## A calibration curve needs a predicted probability to bin by, which a
+  ## gaussian or count model does not have; what those models can get wrong
+  ## instead is the spread, so that is what the panel shows.
+  cal <- NULL
+  if (mn || identical(fam, "binomial")) {
+    cal <- ilm_calibration(object, nbins, B, seed)
+    plot(0:1, 0:1, type = "n", xlab = "predicted", ylab = "observed",
+         main = "Calibration (envelope = model)")
+    abline(0, 1, col = "grey60", lty = 2)
+    cols <- seq_along(cal) + 1L
+    for (j in seq_along(cal)) {
+      cj <- cal[[j]]; if (is.null(cj)) next
+      arrows(cj$mean_p, cj$lo, cj$mean_p, cj$hi, angle = 90, code = 3,
+             length = 0.02, col = adjustcolor(cols[j], 0.4))
+      points(cj$mean_p, cj$obs, col = cols[j], pch = 16)
+      lines(cj$mean_p, cj$obs, col = cols[j])
+    }
+    legend("topleft", legend = names(cal), col = cols, pch = 16, bty = "n",
+           cex = 0.7)
+  } else {
+    plot(py, sqrt(abs(z)), pch = 16, cex = 0.4, col = "#00000055",
+         xlab = "fitted", ylab = expression(sqrt(abs(residual))),
+         main = "Scale-location")
+    if (length(py) > 20L) lines(lowess(py, sqrt(abs(z))), col = "red", lwd = 2)
+    mtext("flat is homoscedastic; see ilm_check_variance()", side = 3,
+          line = -1, cex = 0.6, col = "grey30")
   }
-  legend("topleft", legend = object$ylevels, col = cols, pch = 16, bty = "n", cex = 0.7)
 
-  ## 4 observed vs simulated category frequencies
-  ys <- ilm_sim_from_P(P, B, seed)
-  obs <- tabulate(object$y, object$J) / length(object$y)
-  sim <- vapply(seq_len(B), function(b) tabulate(ys[, b], object$J) / nrow(ys), numeric(object$J))
-  rng <- range(c(obs, sim))
-  plot(seq_len(object$J), obs, ylim = rng, pch = 16, xaxt = "n", xlab = "",
-       ylab = "proportion", main = "Category frequencies")
-  axis(1, seq_len(object$J), object$ylevels, las = 2, cex.axis = 0.7)
-  for (j in seq_len(object$J))
-    arrows(j, quantile(sim[j, ], .025), j, quantile(sim[j, ], .975),
-           angle = 90, code = 3, length = 0.03, col = "grey50")
-  points(seq_len(object$J), obs, pch = 16, col = "red")
+  ## 4 observed against simulated: category frequencies for a multinomial,
+  ## the response distribution otherwise
+  ys <- ilm_sim_cond(object, B, seed)
+  if (mn) {
+    obs <- tabulate(as.integer(object$y), object$J) / length(object$y)
+    sim <- vapply(seq_len(B), function(b)
+      tabulate(ys[, b], object$J) / nrow(ys), numeric(object$J))
+    rng <- range(c(obs, sim))
+    plot(seq_len(object$J), obs, ylim = rng, pch = 16, xaxt = "n", xlab = "",
+         ylab = "proportion", main = "Category frequencies")
+    axis(1, seq_len(object$J), object$ylevels, las = 2, cex.axis = 0.7)
+    for (j in seq_len(object$J))
+      arrows(j, quantile(sim[j, ], .025), j, quantile(sim[j, ], .975),
+             angle = 90, code = 3, length = 0.03, col = "grey50")
+    points(seq_len(object$J), obs, pch = 16, col = "red")
+  } else {
+    yv <- as.numeric(object$y)
+    dobs <- density(yv[is.finite(yv)])
+    plot(dobs, main = "Observed against simulated", xlab = "response",
+         lwd = 2.5, ylim = c(0, max(dobs$y) * 1.3))
+    for (b in seq_len(min(B, 60L))) {
+      db <- try(density(ys[is.finite(ys[, b]), b]), silent = TRUE)
+      if (!inherits(db, "try-error"))
+        lines(db, col = adjustcolor("grey50", 0.3))
+    }
+    lines(dobs, lwd = 2.5)
+  }
 
   ## 5 random-effect Mahalanobis QQ
   rm_ <- ilm_re_mahalanobis(object)

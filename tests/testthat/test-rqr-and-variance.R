@@ -111,3 +111,30 @@ test_that("too few replicates is warned about", {
   expect_warning(ilm_check_variance(f, B = 20, plot = FALSE, verbose = FALSE),
                  "FAIL verdict is unreachable")
 })
+
+## ---- the rest of the residual layer, across families -----------------------
+
+test_that("Pearson residuals are defined and standardised for every family", {
+  d <- sim_fam(2)
+  for (fam in c("gaussian", "poisson", "nbinom", "binomial", "multinomial")) {
+    r <- illume:::ilm_pearson_ovr(fit_fam(d, fam))
+    expect_true(all(is.finite(r)), info = fam)
+    # a Pearson residual is the deviation scaled by its own standard
+    # deviation, so it should be centred near 0 with spread near 1
+    expect_lt(abs(mean(r)), 0.15, label = paste(fam, "mean"))
+    expect_lt(abs(stats::sd(r) - 1), 0.4, label = paste(fam, "sd"))
+  }
+})
+
+test_that("ilm_appraise draws all six panels for every family", {
+  d <- sim_fam(3)
+  for (fam in c("gaussian", "poisson", "nbinom", "binomial", "multinomial")) {
+    f <- fit_fam(d, fam)
+    ff <- tempfile(fileext = ".png")
+    grDevices::png(ff, width = 1000, height = 650)
+    suppressWarnings(suppressMessages(ilm_appraise(f, nbins = 6L, B = 200L)))
+    grDevices::dev.off()
+    # a blank device lands near 500 bytes; six populated panels far above
+    expect_gt(file.size(ff), 5000, label = paste(fam, "appraise size"))
+  }
+})
