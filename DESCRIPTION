@@ -1,6 +1,6 @@
 Package: illume
 Type: Package
-Title: Frequentist Regression and Mixed Models with Built-In Diagnostics
+Title: Exploration and Frequentist Inference in One Toolkit
 Version: 0.0.1.9000
 Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
@@ -29,6 +29,8 @@ Imports:
     RTMB,
     TMB,
     Matrix,
+    collapse,
+    tinyplot,
     stats,
     graphics,
     grDevices,
@@ -36,6 +38,7 @@ Imports:
     parallel,
     codetools
 Suggests:
+    boot,
     lme4,
     mgcv,
     car,

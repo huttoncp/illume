@@ -133,25 +133,75 @@ ilm_sim_from_P <- function(P, B, seed = 1L) {
 #'   observed proportions per bin plus the simulated interval.
 #' @export
 ilm_calibration <- function(object, nbins = 10L, B = 200L, seed = 1L) {
-  ## This diagnostic bins observations by predicted CATEGORY probability, which
-  ## only exists when there are categories to predict.
-  if (object$C < 2L)
-    stop("ilm_calibration() applies to the multinomial family; for ",
-         if (!is.null(object$family)) object$family$name else "this family",
-         " use the residual panels in ilm_appraise()", call. = FALSE)
-  P <- ilm_fitted(object, TRUE); y <- object$y; J <- object$J
-  ys <- ilm_sim_from_P(P, B, seed)
-  lapply(seq_len(J), function(j) {
-    br <- unique(quantile(P[, j], seq(0, 1, length.out = nbins + 1L)))
+  fam <- if (!is.null(object$family)) object$family$name else "gaussian"
+  ## Calibration compares predicted PROBABILITIES against observed frequencies,
+  ## so it needs a model that predicts a probability. For gaussian, Poisson and
+  ## negative binomial the honest analogue is not a calibration curve but the
+  ## randomised quantile residuals, which ilm_rqr() already provides.
+  if (!fam %in% c("multinomial", "binomial"))
+    stop("ilm_calibration() applies to the binomial and multinomial families, ",
+         "which predict probabilities. For ", fam,
+         " use ilm_rqr() or the residual panels in ilm_appraise().",
+         call. = FALSE)
+
+  P <- ilm_fitted(object, TRUE)
+  ## A binomial fit predicts one probability, of the modelled outcome. Putting
+  ## it in the two-column form the multinomial path already uses lets one
+  ## implementation serve both, with the second column the complement.
+  if (identical(fam, "binomial")) {
+    p1 <- as.numeric(P[, 1])
+    P <- cbind(1 - p1, p1)
+    lab <- if (!is.null(object$ylevels) && length(object$ylevels) == 2L)
+      object$ylevels else c("0", "1")
+    colnames(P) <- lab
+    y <- as.integer(object$y) + 1L        # 0/1 becomes column index 1/2
+    J <- 2L
+  } else {
+    y <- object$y; J <- object$J
+  }
+
+  ## The envelope's 2.5% and 97.5% points are order statistics of B draws. At
+  ## B = 60 they are so poorly estimated that the envelope comes out too narrow
+  ## and roughly a fifth of correct models pick up a warning, against the 8.6%
+  ## the binomial null predicts. Above ~150 the two agree.
+  if (B < 150L)
+    warning("B = ", B, " gives an unstable envelope: the 2.5% and 97.5% points ",
+            "are estimated from too few draws, which inflates the apparent ",
+            "number of bins outside it. Use B >= 200.", call. = FALSE)
+  ys <- ilm_sim_cond(object, B, seed)
+  if (identical(fam, "binomial")) ys <- ys + 1L
+
+  out <- lapply(seq_len(J), function(j) {
+    br <- unique(stats::quantile(P[, j], seq(0, 1, length.out = nbins + 1L)))
+    ## a prediction that barely varies cannot be binned into a curve
     if (length(br) < 3L) return(NULL)
     bin <- cut(P[, j], br, include.lowest = TRUE)
     mp  <- tapply(P[, j], bin, mean)
     ob  <- tapply(y == j, bin, mean)
-    sim <- vapply(seq_len(B), function(b) tapply(ys[, b] == j, bin, mean), numeric(nlevels(bin)))
-    list(mean_p = mp, obs = ob,
-         lo = apply(sim, 1, quantile, 0.025, na.rm = TRUE),
-         hi = apply(sim, 1, quantile, 0.975, na.rm = TRUE))
+    sim <- vapply(seq_len(B),
+                  function(b) tapply(ys[, b] == j, bin, mean),
+                  numeric(nlevels(bin)))
+    ## The envelope is what makes this worth plotting. An in-sample curve on
+    ## its own is close to self-fulfilling: fitting with an intercept forces
+    ## the mean residual to zero, so calibration-in-the-large is guaranteed.
+    ## What the envelope tests is the SHAPE -- systematic bending points at a
+    ## misspecified link, and misfit at the extremes at missing nonlinearity.
+    lo <- apply(sim, 1, stats::quantile, 0.025, na.rm = TRUE)
+    hi <- apply(sim, 1, stats::quantile, 0.975, na.rm = TRUE)
+    outside <- sum(ob < lo | ob > hi, na.rm = TRUE)
+    ## With 95% envelopes, the number of bins falling outside is Binomial(bins,
+    ## 0.05) when the model is correct -- so at 10 bins there is a 40% chance
+    ## of at least one, and flagging on that would mean warning about most
+    ## correctly specified models. The status is graded against that null.
+    nb <- nlevels(bin)
+    ptail <- stats::pbinom(outside - 1L, nb, 0.05, lower.tail = FALSE)
+    list(mean_p = mp, obs = ob, lo = lo, hi = hi,
+         n_bins = nb, n_outside = outside, p_outside = round(ptail, 4),
+         status = if (ptail < 0.05) "FAIL" else if (ptail < 0.20) "WARN" else "OK")
   })
+  names(out) <- if (!is.null(colnames(P))) colnames(P) else
+    if (!is.null(object$ylevels)) object$ylevels else as.character(seq_len(J))
+  out
 }
 
 #' Distances of the fitted random effects from zero

@@ -20,6 +20,8 @@
 #'   mtext polygon text plot.new
 #' @importFrom grDevices adjustcolor
 #' @importFrom utils head tail
+#' @importFrom collapse fcount fmatch fmean fndistinct fnobs fquantile
+#'   fsd fsum fvar group
 #' @name illume-imports
 #' @noRd
 NULL
