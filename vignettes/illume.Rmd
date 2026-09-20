@@ -512,6 +512,30 @@ between-centre standard deviation of 0.465 against truths of 0.7, 0.6 and 0.5;
 fitting the same data without the centre term pushed the between-centre spread
 into the scale, which came back at 0.729.
 
+### Survival curves, and whether the family was right
+
+```{r survcurve, eval = FALSE}
+ilm_plot_survival(fit, dd$time, dd$event)
+```
+
+The fitted curve is drawn over the Kaplan-Meier estimate, which assumes nothing
+about the shape of the baseline. Where the two part company, the parametric
+assumption is what is wrong, and the footnote says to try another family and
+compare by AIC.
+
+The grey band is not a confidence interval for the curve. It is the spread of
+the Kaplan-Meier across datasets simulated from the fit and refitted, which is
+the reference every check in this package uses. It matters here more than most:
+on a correctly specified 500-subject model the largest vertical gap between the
+two curves was 0.12, which looks alarming and is not — the Kaplan-Meier of 500
+subjects wobbles by that much in the tail, and the verdict came back `OK` with
+none of the curve outside the band. The same measure on a Weibull fitted to
+log-logistic data gave a *smaller* gap, 0.09, and a verdict of `FAIL` with 26%
+of the curve outside. A threshold on the gap would have got both backwards.
+
+`ilm_survival()` returns the curve itself, with intervals, for plotting
+elsewhere.
+
 Residuals work as they do everywhere else. The quantile residual of a censored
 subject is drawn across the probability of the interval they are known to lie
 in, so it stays uniform under a correct model — measured across all three

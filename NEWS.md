@@ -83,6 +83,10 @@ mgcv penalised smooths and AR(1) correlation.
   log time ratio whatever the baseline hazard does.
 * `ilm_surv(time, event)` builds the censoring specification in the convention
   `survival::Surv()` uses, which is the opposite of the code stored internally.
+* `ilm_survival()` gives the predicted survival curve with intervals, and
+  `ilm_plot_survival()` draws it over the Kaplan-Meier estimate with an
+  envelope and a verdict. The Kaplan-Meier is computed in-package, and matches
+  `survival::survfit()` to 3e-16.
 * A family now carries its own distribution function, and the residual
   machinery asks it rather than keeping a third switch over families. Two
   separate switches is how the quantile and Pearson residuals both came to
@@ -160,6 +164,21 @@ Summary notes; the full tables belong with the methods paper.
   80 centres, 44% censored -- a frailty Weibull recovered 0.746 / 0.597 / 0.465
   against truths of 0.7 / 0.6 / 0.5, while dropping the centre term pushed the
   between-centre spread into the scale, which rose from 0.597 to 0.729.
+* **A simulated replicate has to be censored the way the study was.** Drawing a
+  full event time for every subject and then marking the originally censored
+  ones as censored at it is not the same process: measured on a 500-subject
+  study, 141 of 190 censored subjects drew a time beyond their own censoring
+  time, and the simulated Kaplan-Meier sat above the observed one at every point
+  (0.13 against 0.00 in the tail). Every one of the four survival curves shown
+  to the first version of the check came back `FAIL`, the correctly specified
+  model included. Censoring times are now carried per subject -- known for those
+  censored, drawn from the reverse Kaplan-Meier conditioned on exceeding the
+  event time for the rest, capped at the end of follow-up -- and the check
+  passes correctly specified models and fails the wrong family.
+* **A threshold on the gap between the curves would be backwards.** On a
+  correctly specified 500-subject model the largest vertical gap to the
+  Kaplan-Meier was 0.121, with none of the curve outside the envelope. A Weibull
+  fitted to log-logistic data gave a *smaller* gap, 0.093, with 26% outside.
 * **The natural AFT residual is not usable when anything is censored.** The
   error on the log-time scale, `(log t - eta) / scale`, is evaluated at the
   censoring time rather than at the event, so it sits systematically low: at 40%

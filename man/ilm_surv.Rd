@@ -4,13 +4,17 @@
 \alias{ilm_surv}
 \title{Right-censored follow-up, in the survival convention}
 \usage{
-ilm_surv(time, event)
+ilm_surv(time, event, seed = 1L)
 }
 \arguments{
 \item{time}{Follow-up time, strictly positive.}
 
 \item{event}{\code{1} or \code{TRUE} if the event was observed, \code{0} or \code{FALSE} if the
 subject was censored.}
+
+\item{seed}{Random seed for the censoring times drawn for subjects who had
+the event; see the section below. Drawn once, so the result is
+reproducible and a replicate is censored the same way every time.}
 }
 \value{
 An \code{"ilm_censor"} object, to pass as \code{ilm_model(censor = )}.
@@ -27,13 +31,16 @@ opposite of the code \code{\link[=ilm_censor]{ilm_censor()}} stores, which is wh
 -- getting it backwards silently fits the model to the wrong subjects, and
 the fit will not look wrong.
 }
-\section{What the diagnostics can and cannot do here}{
+\section{How the diagnostics censor their replicates}{
 
-Censoring times vary by subject and are not observed for anyone who had the
-event, so unlike a detection limit they cannot be re-drawn. The
-simulation-based diagnostics therefore hold the censoring pattern fixed
-across replicates. That is the usual convention, and it makes the envelopes
-slightly narrower than a fully random-censoring account would.
+Every envelope in this package simulates from the fit, and a replicate has to
+be censored the way the study was or it is not the same process. A subject
+censored in the data has a known censoring time, which is used directly. A
+subject who had the event does not: theirs is only known to exceed the time
+they failed at, so it is drawn from the censoring distribution -- the
+Kaplan-Meier with the roles of event and censoring swapped -- conditioned on
+exceeding it. Those draws are made once, here, so they are reproducible and
+every replicate is censored consistently.
 }
 
 \examples{
