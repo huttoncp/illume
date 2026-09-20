@@ -1005,6 +1005,12 @@ ilm_print_checks <- function(ck, title) {
 #' @param censor Optional censoring specification from [ilm_censor()], marking
 #'   observations known only as an interval -- at or below a floor, at or above
 #'   a ceiling. Supported for the gaussian family, where it gives a Tobit model.
+#' @param Zd Optional design matrix for the dispersion model, one row per
+#'   observation. Its columns become a linear predictor for the logarithm of
+#'   the dispersion, so its intercept replaces the single dispersion parameter.
+#'   Built by [ilm_model()] from `dispformula`.
+#' @param disp_mu Logical. Add a term in the logarithm of the fitted mean to
+#'   that predictor, making the dispersion a power of the mean.
 #' @param ylevels Optional character vector of category labels, used in output.
 #' @param weights Optional numeric vector of **frequency** weights: the number of
 #'   replicate observations each row stands for, exactly as in a binomial `glm()`
@@ -1058,7 +1064,7 @@ ilm_print_checks <- function(ck, title) {
 ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
-                     censor = NULL) {
+                     censor = NULL, Zd = NULL, disp_mu = FALSE) {
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Censoring: derive the codes from THIS response, so a simulated replicate
   ## is censored by the same rule the data were rather than inheriting the
@@ -1073,6 +1079,22 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
            nrow(X), " rows", call. = FALSE)
   }
   cens <- ilm_censor_for(censor, y)
+  ## A dispersion model replaces the single dispersion parameter with a linear
+  ## predictor for its logarithm. It needs a dispersion to model in the first
+  ## place, which a poisson or binomial response does not have -- their spread
+  ## is fixed by their mean, and the remedy for extra spread there is a
+  ## different family, not a formula.
+  if (!is.null(Zd) || isTRUE(disp_mu)) {
+    if (fam$n_disp < 1L)
+      stop("the ", fam$name, " family has no dispersion parameter to model: ",
+           "its variance is determined by its mean. For counts that are more ",
+           "spread out than poisson allows, use family = \"nbinom\"; for a ",
+           "binary response, extra spread has to come from a random effect.",
+           call. = FALSE)
+    if (!is.null(Zd) && nrow(Zd) != nrow(X))
+      stop("the dispersion design has ", nrow(Zd), " rows but the model ",
+           "matrix has ", nrow(X), call. = FALSE)
+  }
   ## An accelerated failure time model works on log(t), so a non-positive time
   ## is not a hard case, it is a contradiction. Say so rather than returning
   ## NaN from inside the optimiser.
@@ -1169,11 +1191,22 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       if (dk[k] > 1L) a <- c(a, ilm_nm_ld(nm, dk[k], dcor[k]))
       a
     })))
-  if (fam$n_disp > 0L) pnames <- c(pnames, fam$disp_names)
+  has_dm <- !is.null(Zd) || isTRUE(disp_mu)
+  if (fam$n_disp > 0L && !has_dm) pnames <- c(pnames, fam$disp_names)
+  if (has_dm) {
+    if (!is.null(Zd)) pnames <- c(pnames, paste0("disp:", colnames(Zd)))
+    if (isTRUE(disp_mu)) pnames <- c(pnames, "disp:mu_power")
+    ## a second dispersion parameter (nbinom has none, but keep the block
+    ## general) is still a plain scalar
+    if (fam$n_disp > 1L)
+      pnames <- c(pnames, fam$disp_names[-1L])
+  }
   if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C), "ar:rho_raw")
 
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
              n_disp = fam$n_disp,
+             Zdisp = if (is.null(Zd)) matrix(0, nrow(X), 0L) else Zd,
+             has_dm = has_dm, disp_mu = isTRUE(disp_mu),
              grp = lapply(re, `[[`, "group"), Zl = lapply(re, `[[`, "Z"),
              kind = vapply(re, `[[`, "", "kind"), bas = lapply(re, `[[`, "basis"),
              b_idx = lapply(seq_len(K), function(k) (boff[k] + 1L):boff[k + 1L]),
@@ -1202,6 +1235,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   }
 
   fam_nll <- fam$nll                    # captured in the closure, not via dl
+  fam_linkinv <- fam$linkinv
   f <- function(pars) {
     getAll(pars, dl)
     nll <- 0; eta <- X %*% beta; sdv <- AD(numeric(0))
@@ -1291,10 +1325,26 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     ## The only family-specific line in the whole likelihood.  Everything above
     ## builds eta and accumulates the random-effect prior, and none of it
     ## depends on the response distribution.
-    dsp <- if (n_disp > 0L) logdisp else numeric(0)
-    nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens)
+    ## logdisp exists only when there is no dispersion model, or when the
+    ## family has a second dispersion parameter the model does not cover
+    dsp <- if (n_disp > 0L && !has_dm) logdisp else numeric(0)
+    ## A dispersion model gives every row its own log dispersion. The reserved
+    ## `mu` term makes it a power of the fitted mean, which is the remedy for
+    ## the pattern ilm_check_variance() calls a trend; everything else in the
+    ## dispersion design is ordinary data.
+    lsig <- NULL
+    if (has_dm) {
+      lsig <- if (ncol(Zdisp) > 0L) as.vector(Zdisp %*% gamma) else 0 * eta[, 1]
+      if (disp_mu) {
+        mu1 <- fam_linkinv(eta[, 1])
+        lsig <- lsig + mu_pow * log(abs(mu1) + 1e-8)
+      }
+      dsp <- if (n_disp > 1L) c(0, logdisp) else numeric(0)
+    }
+    nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens,
+                         logsig = lsig)
     sd_ <- sdv; ADREPORT(sd_)
-    if (n_disp > 0L) { disp_ <- exp(logdisp); ADREPORT(disp_) }
+    if (n_disp > 0L && !has_dm) { disp_ <- exp(logdisp); ADREPORT(disp_) }
     nll
   }
 
@@ -1304,7 +1354,53 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   ## zero -- MakeADFun cannot make an empty vector random.
   if (sum(tl) > 0L) pars$theta <- rep(0, sum(tl))
   if (sum(bl) > 0L) pars$bvec  <- rep(0, sum(bl))
-  if (fam$n_disp > 0L) pars$logdisp <- rep(0, fam$n_disp)
+  if (fam$n_disp > 0L) {
+    ## with a dispersion model the intercept of that model IS the log
+    ## dispersion, so only the extra parameters beyond the first are kept
+    nd <- if (has_dm) fam$n_disp - 1L else fam$n_disp
+    if (nd > 0L) pars$logdisp <- rep(0, nd)
+  }
+  if (has_dm) {
+    if (!is.null(Zd)) pars$gamma <- rep(0, ncol(Zd))
+    if (isTRUE(disp_mu)) pars$mu_pow <- 0
+
+    ## WARM START. A dispersion model is a refinement of the ordinary fit, so
+    ## start it from there. It matters most for the `mu` term: from beta = 0
+    ## the fitted mean is zero for every row, log|mu| is the log of the
+    ## numerical floor, and the power multiplying it can go anywhere. Measured
+    ## on data with a true power of 1.0, a cold start converged falsely with
+    ## the power at -115818 and the slope collapsed to zero.
+    base <- try(suppressWarnings(
+      ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
+              weights = weights, family = fam, verbose = FALSE,
+              restarts = 1L, censor = censor)), silent = TRUE)
+    if (!inherits(base, "try-error")) {
+      bp <- base$opt$par; bn <- names(bp)
+      pars$beta <- matrix(bp[bn == "beta"], p, C)
+      if (sum(tl) > 0L && sum(bn == "theta") == sum(tl))
+        pars$theta <- unname(bp[bn == "theta"])
+      br <- base$sdr$par.random
+      if (!is.null(br) && sum(bl) > 0L && sum(names(br) == "bvec") == sum(bl))
+        pars$bvec <- unname(br[names(br) == "bvec"])
+      ## the intercept of the dispersion model is the log dispersion the
+      ## ordinary fit found
+      if (!is.null(Zd) && "(Intercept)" %in% colnames(Zd) &&
+          any(bn == "logdisp"))
+        pars$gamma[match("(Intercept)", colnames(Zd))] <-
+          unname(bp[bn == "logdisp"])[1L]
+    }
+    ## A power of the mean is a power of |mu|, which has no useful derivative
+    ## where mu passes through zero.
+    if (isTRUE(disp_mu)) {
+      mu0 <- fam$linkinv(as.vector(X %*% pars$beta[, 1]))
+      if (any(mu0 > 0) && any(mu0 < 0))
+        warning("`dispformula = ~ mu` makes the spread a power of the fitted ",
+                "mean, and the fitted mean changes sign across these data, so ",
+                "the term is not well behaved near the crossing. Model the ",
+                "spread on a covariate instead, or shift the response so the ",
+                "mean stays on one side of zero.", call. = FALSE)
+    }
+  }
   rnd <- if (sum(bl) > 0L) "bvec" else character(0)
   if (!is.null(ar)) {
     pars$lchol_ar <- rep(0, ilm_ncov(C))
@@ -1371,8 +1467,15 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   ## asymptotically normal, and the N/(N-p) correction below is derived for
   ## ordinary least squares and does not apply. Fall back to Wald, which is
   ## what survreg() and every other censored fitter reports.
+  ## A dispersion model rules out exact inference for the same reason censoring
+  ## does. Exact t and F rest on a constant variance, where the residual sum of
+  ## squares is chi-square and independent of the coefficients. With the
+  ## variance itself estimated from the data as a function of covariates, that
+  ## independence goes and the t distribution is an approximation. gls()
+  ## reports t here by convention; this package reserves t for the case where
+  ## it is exact.
   exact_df <- fam$name == "gaussian" && sum(bl) == 0L && is.null(ar) &&
-    (is.null(cens) || !any(cens != 0L))
+    (is.null(cens) || !any(cens != 0L)) && !has_dm
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
@@ -1394,11 +1497,30 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  ## unbiased (n - p) scale, so it agrees with lm() and with
                  ## the rescaled standard errors.  Elsewhere it is the
                  ## maximum likelihood estimate.
-                 dispersion = if (fam$n_disp > 0L) {
+                 dispersion = if (fam$n_disp > 0L && !has_dm) {
                    d <- exp(pe[pn == "logdisp"])
                    if (exact_df) d <- d * sqrt(N / (N - p))
                    stats::setNames(d, fam$disp_names)
+                 } else if (has_dm) {
+                   ## the dispersion is no longer one number; report the value
+                   ## at the median row so anything expecting a scalar gets a
+                   ## representative one, and carry the model beside it
+                   stats::setNames(
+                     stats::median(ilm_disp_rows(
+                       Zd, unname(pe[pn == "gamma"]),
+                       if (isTRUE(disp_mu)) unname(pe[pn == "mu_pow"]) else NA_real_,
+                       fam, X, matrix(pe[pn == "beta"], p, C))),
+                     fam$disp_names[1])
                  } else NULL,
+                 disp_formula = if (has_dm) attr(Zd, "formula") else NULL,
+                 disp_gamma = if (has_dm) unname(pe[pn == "gamma"]) else NULL,
+                 disp_mu_pow = if (has_dm && isTRUE(disp_mu))
+                   unname(pe[pn == "mu_pow"]) else NA_real_,
+                 disp_coef = if (has_dm)
+                   stats::setNames(pe[pn %in% c("gamma", "mu_pow")],
+                                   pnames[substr(pnames, 1L, 5L) == "disp:"])
+                   else NULL,
+                 Zd = Zd, disp_mu = isTRUE(disp_mu),
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
                  beta = matrix(pe[pn == "beta"], p, C),
                  ## rho is the correlation ONE TIME UNIT apart under both
@@ -1411,4 +1533,48 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  ar_range = unname(if (!is.null(ar) && identical(ar$type, "car1"))
                    exp(pe[pn == "rho_raw"]) else NA_real_),
                  ok = !any(st == "FAIL")), class = "ilm_model")
+}
+
+## ---- the dispersion model --------------------------------------------------
+
+## Per-row dispersion implied by a fitted dispersion model. Needed in two
+## places that cannot share code -- inside the likelihood, where everything is
+## an AD type, and afterwards on plain numbers -- so this is the plain-number
+## one.
+#' @keywords internal
+#' @noRd
+ilm_disp_rows <- function(Zd, gamma, mu_pow, fam, X, beta) {
+  ls <- rep(0, nrow(X))
+  if (!is.null(Zd) && ncol(Zd) > 0L && length(gamma) == ncol(Zd))
+    ls <- ls + as.vector(Zd %*% gamma)
+  if (is.finite(mu_pow)) {
+    mu <- fam$linkinv(as.vector(X %*% beta[, 1]))
+    ls <- ls + mu_pow * log(abs(mu) + 1e-8)
+  }
+  exp(ls)
+}
+
+#' Fitted dispersion, one value per observation
+#'
+#' The dispersion a model implies for each row. A constant repeated when the
+#' model has a single dispersion parameter, and the fitted dispersion model
+#' when it has one.
+#'
+#' Every piece of machinery that needs a standard deviation -- the residuals,
+#' the simulators, the survival curves -- asks for it here rather than reading
+#' `object$dispersion`, which is one number and stops being the whole story as
+#' soon as a dispersion formula is in play.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @return A numeric vector with one entry per observation, or `NULL` when the
+#'   family has no dispersion parameter.
+#' @keywords internal
+#' @noRd
+ilm_disp_vec <- function(object) {
+  if (is.null(object$dispersion)) return(NULL)
+  if (is.null(object$Zd) && !isTRUE(object$disp_mu))
+    return(rep(unname(object$dispersion[[1]]), nrow(object$X)))
+  ilm_disp_rows(object$Zd, object$disp_gamma,
+                if (is.null(object$disp_mu_pow)) NA_real_ else object$disp_mu_pow,
+                object$family, object$X, object$beta)
 }

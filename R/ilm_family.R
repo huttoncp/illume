@@ -50,8 +50,9 @@ ilm_aft_family <- function(name) {
 
   list(name = name, link = "log", n_disp = 1L, disp_names = "log_scale",
        C_of = function(J) 1L, censorable = TRUE, positive = TRUE, aft = TRUE,
-       nll = function(eta, y, w, disp, cens = NULL, ...) {
-         sc <- exp(disp[1]); lt <- log(y); z <- (lt - eta[, 1]) / sc
+       nll = function(eta, y, w, disp, cens = NULL, logsig = NULL, ...) {
+         sc <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
+         lt <- log(y); z <- (lt - eta[, 1]) / sc
          if (is.null(cens) || !any(cens != 0L))
            return(-sum(w * (logf(z) - log(sc) - lt)))
          o <- cens == 0L; l <- cens < 0L; r <- cens > 0L
@@ -64,8 +65,9 @@ ilm_aft_family <- function(name) {
          out
        },
        linkinv = function(e) exp(e),
-       sim = function(eta, w, disp)
-         exp(eta[, 1] + exp(disp[1]) * rw(nrow(eta))),
+       sim = function(eta, w, disp, logsig = NULL)
+         exp(eta[, 1] +
+             (if (is.null(logsig)) exp(disp[1]) else exp(logsig)) * rw(nrow(eta))),
        ## The residual machinery asks the family for these rather than carrying
        ## its own switch. Two separate switches over families is how ilm_rqr()
        ## and ilm_pearson_ovr() both came to assume a multinomial response.
@@ -143,8 +145,11 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
     gaussian = list(
       name = "gaussian", link = "identity", n_disp = 1L,
       disp_names = "log_sigma", C_of = function(J) 1L, censorable = TRUE,
-      nll = function(eta, y, w, disp, cens = NULL, ...) {
-        mu <- eta[, 1]; s <- exp(disp[1])
+      nll = function(eta, y, w, disp, cens = NULL, logsig = NULL, ...) {
+        ## logsig is a dispersion MODEL: one log standard deviation per row,
+        ## in place of the single parameter. dnorm vectorises over it, so
+        ## nothing else in the likelihood changes.
+        mu <- eta[, 1]; s <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
         if (is.null(cens) || !any(cens != 0L))
           return(-sum(w * dnorm(y, mu, s, log = TRUE)))
         ## A censored row contributes the probability of the interval it is
@@ -159,7 +164,9 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
         out
       },
       linkinv = function(e) e,
-      sim = function(eta, w, disp) stats::rnorm(nrow(eta), eta[, 1], exp(disp[1]))),
+      sim = function(eta, w, disp, logsig = NULL)
+        stats::rnorm(nrow(eta), eta[, 1],
+                     if (is.null(logsig)) exp(disp[1]) else exp(logsig))),
 
     binomial = list(
       name = "binomial", link = "logit", n_disp = 0L,
@@ -170,7 +177,7 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
         -sum(w * (y * e - logspace_add(0 * e, e)))
       },
       linkinv = function(e) 1 / (1 + exp(-e)),
-      sim = function(eta, w, disp)
+      sim = function(eta, w, disp, ...)
         stats::rbinom(nrow(eta), size = pmax(1, round(w)),
                       prob = 1 / (1 + exp(-eta[, 1]))) / pmax(1, round(w))),
 
@@ -181,18 +188,20 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
         -sum(w * dpois(y, exp(eta[, 1]), log = TRUE))
       },
       linkinv = function(e) exp(e),
-      sim = function(eta, w, disp) stats::rpois(nrow(eta), exp(eta[, 1]))),
+      sim = function(eta, w, disp, ...) stats::rpois(nrow(eta), exp(eta[, 1]))),
 
     nbinom = list(
       name = "nbinom", link = "log", n_disp = 1L,
       disp_names = "log_k", C_of = function(J) 1L,
-      nll = function(eta, y, w, disp, ...) {
-        mu <- exp(eta[, 1]); k <- exp(disp[1])
+      nll = function(eta, y, w, disp, logsig = NULL, ...) {
+        mu <- exp(eta[, 1]); k <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
         -sum(w * dnbinom2(y, mu = mu, var = mu + mu * mu / k, log = TRUE))
       },
       linkinv = function(e) exp(e),
-      sim = function(eta, w, disp)
-        stats::rnbinom(nrow(eta), size = exp(disp[1]), mu = exp(eta[, 1]))),
+      sim = function(eta, w, disp, logsig = NULL)
+        stats::rnbinom(nrow(eta),
+                       size = if (is.null(logsig)) exp(disp[1]) else exp(logsig),
+                       mu = exp(eta[, 1]))),
 
     multinomial = list(
       name = "multinomial", link = "logit", n_disp = 0L,
@@ -204,7 +213,7 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
         -(sum(y * etaJ) - sum(w * log(rowSums(exp(etaJ)))))
       },
       linkinv = function(e) e,
-      sim = function(eta, w, disp, Tct) {
+      sim = function(eta, w, disp, ..., Tct) {
         P <- exp(eta %*% Tct); P <- P / rowSums(P)
         cp <- t(apply(P, 1, cumsum))
         as.integer(rowSums(stats::runif(nrow(P)) > cp)) + 1L

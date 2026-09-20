@@ -438,6 +438,42 @@ basis buys a step cheaply. The spline pulls ahead only on long cycles, and only
 above about six degrees of freedom, by at most 23 AIC. Pick on the shape you
 expect, not on the basis.
 
+## When the spread is not constant
+
+`ilm_check_variance()` reports two patterns, and both have the same remedy:
+model the logarithm of the dispersion instead of treating it as one number.
+
+```{r dispformula, eval = FALSE}
+# a separate spread per group
+ilm_model(y ~ x + (1 | id), data = dd, family = "gaussian",
+          dispformula = ~ site)
+
+# spread that grows with the fitted mean; `mu` is the one reserved name
+ilm_model(y ~ x + (1 | id), data = dd, family = "gaussian",
+          dispformula = ~ mu)
+```
+
+These are `nlme`'s `varIdent()` and `varPower()`, and `glmmTMB`'s
+`dispformula`, written one way. On a three-group design illume, `glmmTMB` and
+`gls` returned the same log-likelihood to five decimals and the same standard
+errors; on a power-of-the-mean design illume and `gls` agreed on the power to
+two decimals.
+
+It works for any family that has a dispersion to model — the negative
+binomial's overdispersion and an accelerated failure time model's scale as well
+as a gaussian standard deviation. A Poisson or binomial response has no
+dispersion parameter at all, its spread being fixed by its mean, and asking for
+one says so.
+
+Two things follow. Exact t and F inference is switched off, because it rests on
+a constant variance and the variance is now itself estimated — `gls()` reports
+t here by convention, but this package reserves t for where it is exact. And
+the fit is warm started from the ordinary one, which matters most for `~ mu`:
+from a cold start the fitted mean is zero for every row, `log|mu|` is the log
+of the numerical floor, and the power multiplying it can go anywhere. Measured
+on data with a true power of 1.0, a cold start converged falsely with the power
+at -115818 and the slope collapsed to zero.
+
 ## Floors, ceilings and detection limits
 
 A reading of `0` from an assay whose detection limit is 0 does not mean zero.

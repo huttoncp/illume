@@ -184,6 +184,20 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   ## dispersion is family-specific: gaussian has a residual SD, the negative
   ## binomial an overdispersion parameter, and binomial/Poisson/multinomial
   ## have none at all
+  ## With a dispersion model the single number is only the value at a typical
+  ## row, so the model behind it is printed too rather than leaving the reader
+  ## to think the spread is constant.
+  if (!is.null(o$disp_coef)) {
+    cat("
+Dispersion model: ", deparse(o$disp_formula), "
+", sep = "")
+    cf <- o$disp_coef
+    for (nm in names(cf))
+      cat(sprintf(" %-22s %8.4f
+", sub("^disp:", "", nm), cf[[nm]]))
+    cat(" (on the log scale; the value below is that at the median row)
+")
+  }
   if (!is.null(o$dispersion)) {
     cat("\nDispersion:\n")
     for (nm in names(o$dispersion)) {

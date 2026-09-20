@@ -124,11 +124,14 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
       }
       eta <- eta + Ba[ar$idx, , drop = FALSE]
     }
+    lsig_sim <- if (!is.null(fit$Zd) || isTRUE(fit$disp_mu))
+      log(ilm_disp_vec(fit)) else NULL
     if (mn) {
       P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
       out[, s] <- apply(P, 1, function(pr) sample.int(J, 1L, prob = pr))
     } else {
-      out[, s] <- ilm_censor_apply(fit$censor, as.numeric(fam$sim(eta, wts, dsp)))
+      out[, s] <- ilm_censor_apply(
+        fit$censor, as.numeric(fam$sim(eta, wts, dsp, logsig = lsig_sim)))
     }
   }
   out

@@ -41,6 +41,7 @@ Imports:
 Suggests:
     boot,
     lme4,
+    glmmTMB,
     nlme,
     survival,
     mgcv,

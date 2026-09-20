@@ -63,21 +63,24 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
   if (!identical(fam, "multinomial")) {
     mu <- as.numeric(ilm_fitted(object, conditional)[, 1])
     w <- if (is.null(object$weights)) rep(1, N) else object$weights
-    disp <- object$dispersion
+    ## one dispersion per row, so a dispersion model is honoured; a constant
+    ## repeated otherwise
+    disp <- ilm_disp_vec(object)
+    if (is.null(disp)) disp <- numeric(0)
     ## An accelerated failure time family supplies its own distribution
     ## function, so this does not need a third switch over families to keep in
     ## step with the two the likelihood already has.
     u <- if (isTRUE(object$family$aft))
       object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),
-                        unname(disp[1]))
+                        unname(disp))
     else switch(fam,
-      gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp[1]) else 1),
+      gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp) else 1),
       poisson  = {
         lo <- stats::ppois(y - 1, mu); hi <- stats::ppois(y, mu)
         lo + stats::runif(N) * (hi - lo)
       },
       nbinom = {
-        k <- unname(disp[1])
+        k <- unname(disp)
         lo <- stats::pnbinom(y - 1, size = k, mu = mu)
         hi <- stats::pnbinom(y, size = k, mu = mu)
         lo + stats::runif(N) * (hi - lo)
@@ -155,8 +158,13 @@ ilm_sim_cond <- function(object, B, seed = 1L) {
   ## built on it is calibrated against a process that is not the fitted one.
   ## Whether a given draw lands beyond the limit is itself random, which is
   ## part of the variability the envelope is meant to carry.
+  ## with a dispersion model the spread varies by row, so the simulator is
+  ## handed the fitted per-row value rather than the single parameter
+  lsig <- if (!is.null(object$Zd) || isTRUE(object$disp_mu))
+    log(ilm_disp_vec(object)) else NULL
   vapply(seq_len(B), function(b)
-    ilm_censor_apply(object$censor, as.numeric(fam$sim(eta, w, disp))),
+    ilm_censor_apply(object$censor,
+                     as.numeric(fam$sim(eta, w, disp, logsig = lsig))),
     numeric(N))
 }
 

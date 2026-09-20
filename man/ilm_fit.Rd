@@ -17,7 +17,9 @@ ilm_fit(
   verbose = TRUE,
   restarts = 3L,
   joint = FALSE,
-  censor = NULL
+  censor = NULL,
+  Zd = NULL,
+  disp_mu = FALSE
 )
 }
 \arguments{
@@ -67,6 +69,14 @@ contains smooths.}
 \item{censor}{Optional censoring specification from \code{\link[=ilm_censor]{ilm_censor()}}, marking
 observations known only as an interval -- at or below a floor, at or above
 a ceiling. Supported for the gaussian family, where it gives a Tobit model.}
+
+\item{Zd}{Optional design matrix for the dispersion model, one row per
+observation. Its columns become a linear predictor for the logarithm of
+the dispersion, so its intercept replaces the single dispersion parameter.
+Built by \code{\link[=ilm_model]{ilm_model()}} from \code{dispformula}.}
+
+\item{disp_mu}{Logical. Add a term in the logarithm of the fitted mean to
+that predictor, making the dispersion a power of the mean.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

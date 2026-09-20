@@ -58,6 +58,19 @@ mgcv penalised smooths and AR(1) correlation.
   approximation is exact, so there is no approximation error to run out of
   observations for.
 
+## Modelling the spread
+
+* `ilm_model(dispformula = )` models the logarithm of the dispersion:
+  `~ group` for a separate spread per level, `~ x` for one that changes with a
+  covariate, `~ mu` for a power of the fitted mean. `mu` is a reserved name.
+  This is the remedy `ilm_check_variance()` diagnoses, and the check now names
+  it.
+* Available for every family with a dispersion parameter -- gaussian, negative
+  binomial, and the three accelerated failure time families. A Poisson or
+  binomial response has none, and asking says so.
+* A dispersion model rules out exact t and F inference, for the same reason
+  censoring does: both rest on a constant variance.
+
 ## Censored responses
 
 * `ilm_censor()` marks observations known only as an interval -- at or below a
@@ -145,6 +158,21 @@ Summary notes; the full tables belong with the methods paper.
   with times drawn from 1..30 it found 53 pairs at lag 1, five at lag 2 and none
   beyond, so five of six lags returned no verdict. Binning by separation uses
   all 900 pairs.
+
+* **The dispersion model matches `glmmTMB` and `nlme`.** On a three-group
+  design illume, `glmmTMB::glmmTMB(dispformula = ~ g)` and
+  `nlme::gls(weights = varIdent())` all returned a log-likelihood of -1993.6974
+  and standard errors agreeing to four decimals. On a power-of-the-mean design,
+  illume and `nlme::gls(weights = varPower())` agreed on the power to two
+  decimals and on the log-likelihood to 1e-3.
+* **`~ mu` needs a warm start.** From a cold start the fitted mean is zero for
+  every row, `log|mu|` is the log of the numerical floor, and the power
+  multiplying it is unidentified there: on data with a true power of 1.0 the fit
+  converged falsely with the power at -115818 and the slope collapsed to zero.
+  A dispersion model is now started from the ordinary fit.
+* **Applying the remedy clears the diagnosis.** On a 900-row design with spreads
+  of 0.5 and 2.0 by stratum, `ilm_check_variance()` went from `WARN` with a
+  variance ratio of 12.01 to `OK` with 1.06, and AIC fell from 3274.6 to 2653.6.
 
 * **The censored fit matches `survival::survreg()`** to five decimal places in
   the coefficients, 1e-5 in the scale and 1e-6 in the log-likelihood, on both a

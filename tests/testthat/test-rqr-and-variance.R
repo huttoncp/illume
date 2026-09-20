@@ -92,7 +92,8 @@ test_that("variance differing between strata is detected, with the remedy named"
                                            verbose = FALSE))
   expect_true(r$status %in% c("WARN", "FAIL"))
   expect_gt(r$ratio, 4)
-  expect_match(r$suggestion, "separate variance per level")
+  # the suggestion names the argument that fixes it, not a description of it
+  expect_match(r$suggestion, "dispformula = ~ s", fixed = TRUE)
 })
 
 test_that("the by argument is validated", {

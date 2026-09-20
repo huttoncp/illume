@@ -34,7 +34,7 @@ utils::globalVariables(c(
   "X", "Ycount", "wrow", "Tct", "grp", "Zl", "kind", "bas", "b_idx", "t_idx",
   "nlk", "dk", "wk", "npc", "ty", "rk", "dcor", "K", "C", "has_ar",
   "ar_idx", "idx1", "idx_t", "idx_lag", "n_g", "Tt", "qk", "brng", "lc_idx",
-  "is_car", "ar_gap", "nre_ar",
+  "is_car", "ar_gap", "nre_ar", "has_dm", "disp_mu", "Zdisp", "gamma", "mu_pow",
   "obs_lev", "obs_row",
   "beta", "theta", "bvec", "lchol", "lchol_ar", "rho_raw", "B_ar", "B",
   "logdisp", "n_disp", "yobs",

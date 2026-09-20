@@ -75,6 +75,11 @@
 #' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
 #' @param censor Optional censoring specification from [ilm_censor()], for a
 #'   response with a floor, a ceiling or a detection limit.
+#' @param dispformula Optional one-sided formula for the dispersion, modelling
+#'   its logarithm: `~ group` for a separate spread per level, `~ x` for one
+#'   that changes with a covariate, `~ mu` for a power of the fitted mean.
+#'   `mu` is a reserved name. This is the remedy for what
+#'   [ilm_check_variance()] diagnoses.
 #' @param weights Optional **frequency** weights: the number of replicate
 #'   observations each row stands for. Evaluated inside `data`. See [ilm_fit()]
 #'   for when this is valid, and why survey weights are not.
@@ -149,7 +154,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                          re_struct = NULL, ar = NULL,
                          weights = NULL, contrasts = NULL, verbose = TRUE,
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
-                         censor = NULL) {
+                         censor = NULL, dispformula = NULL) {
   fam <- if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
@@ -197,6 +202,25 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   wexpr <- cl$weights
   wnm <- if (is.null(wexpr)) NULL else deparse(wexpr)
   if (!is.null(wnm)) rhs <- c(rhs, wnm)
+  ## The dispersion model's variables have to be in the same model frame as
+  ## everything else, or na.action will drop different rows from each and the
+  ## two designs will not line up.
+  dvars <- character(0); disp_mu <- FALSE
+  if (!is.null(dispformula)) {
+    if (!inherits(dispformula, "formula") || length(dispformula) != 2L)
+      stop("`dispformula` must be a one-sided formula, such as ~ group or ",
+           "~ mu.", call. = FALSE)
+    dtl <- attr(stats::terms(dispformula), "term.labels")
+    disp_mu <- "mu" %in% dtl
+    dvars <- setdiff(all.vars(dispformula), "mu")
+    miss <- setdiff(dvars, names(data))
+    if (length(miss))
+      stop("`dispformula` refers to ", paste(miss, collapse = ", "),
+           ", which ", if (length(miss) > 1L) "are" else "is",
+           " not in the data. `mu` is the one reserved name, meaning the ",
+           "fitted mean.", call. = FALSE)
+    rhs <- unique(c(rhs, dvars))
+  }
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
@@ -296,7 +320,18 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## default wherever a smooth is present.
   if (is.null(joint)) joint <- length(smsp) > 0L
   w <- if (is.null(wnm)) NULL else as.numeric(mf[[wnm]])
+  Zd <- NULL
+  if (!is.null(dispformula)) {
+    dfm <- stats::update(dispformula, ~ . )
+    keep <- attr(stats::terms(dfm), "term.labels")
+    keep <- setdiff(keep, "mu")
+    f2 <- if (length(keep))
+      stats::reformulate(keep, env = fenv) else stats::as.formula("~ 1", fenv)
+    Zd <- stats::model.matrix(f2, mf)
+    attr(Zd, "formula") <- dispformula
+  }
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
+                 Zd = Zd, disp_mu = disp_mu,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
                   restarts = restarts, joint = joint)
 

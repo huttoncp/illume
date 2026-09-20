@@ -47,7 +47,8 @@ ilm_pearson_ovr <- function(object) {
   ## mean. Only the multinomial needs the one-vs-rest indicator construction.
   if (!identical(fam, "multinomial")) {
     mu <- as.numeric(P[, 1]); y <- as.numeric(object$y)
-    d <- object$dispersion
+    d <- ilm_disp_vec(object)
+    if (is.null(d)) d <- numeric(0)
     ## For an accelerated failure time model the residual is the normal score
     ## of the quantile residual. The obvious alternative -- the error on the
     ## log-time scale, (log t - eta) / scale -- is centred and unit-scaled only
@@ -61,9 +62,9 @@ ilm_pearson_ovr <- function(object) {
                                       1 - 1e-8)), ncol = 1L))
     w <- if (is.null(object$weights)) rep(1, N) else pmax(1, round(object$weights))
     v <- switch(fam,
-      gaussian = rep(if (length(d)) unname(d[1])^2 else 1, N),
+      gaussian = if (length(d)) unname(d)^2 else rep(1, N),
       poisson  = mu,
-      nbinom   = mu + mu^2 / unname(d[1]),
+      nbinom   = mu + mu^2 / unname(d),
       binomial = mu * (1 - mu) / w,
       stop("no Pearson residual is defined for family ", fam, call. = FALSE))
     return(matrix((y - mu) / sqrt(pmax(v, 1e-8)), ncol = 1L))

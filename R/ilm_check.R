@@ -496,11 +496,13 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
 
   ## the remedy depends on which pattern fired
   fix <- character(0)
+  ## Both remedies are a dispersion formula, which is why the wording names it.
   if (isTRUE(p_trend < 0.05))
-    fix <- c(fix, "spread changes with the fitted value: model the variance, or use a family whose variance grows with the mean")
+    fix <- c(fix, "spread changes with the fitted value: dispformula = ~ mu, or a family whose variance grows with the mean")
   if (isTRUE(p_ratio < 0.05))
-    fix <- c(fix, sprintf("spread differs across %s: allow a separate variance per level",
-                          if (is.null(by_lab)) "groups" else by_lab))
+    fix <- c(fix, sprintf("spread differs across %s: dispformula = ~ %s",
+                          if (is.null(by_lab)) "groups" else by_lab,
+                          if (is.null(by_lab)) "group" else by_lab))
 
   if (plot) {
     u <- ilm_rqr(object, TRUE, seed)

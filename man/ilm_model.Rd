@@ -19,7 +19,8 @@ ilm_model_formula(
   restarts = 3L,
   joint = NULL,
   na.action = stats::na.omit,
-  censor = NULL
+  censor = NULL,
+  dispformula = NULL
 )
 }
 \arguments{
@@ -57,6 +58,12 @@ contains smooths, which is when \code{\link[=predict.ilm_model]{predict.ilm_mode
 
 \item{censor}{Optional censoring specification from \code{\link[=ilm_censor]{ilm_censor()}}, for a
 response with a floor, a ceiling or a detection limit.}
+
+\item{dispformula}{Optional one-sided formula for the dispersion, modelling
+its logarithm: \code{~ group} for a separate spread per level, \code{~ x} for one
+that changes with a covariate, \code{~ mu} for a power of the fitted mean.
+\code{mu} is a reserved name. This is the remedy for what
+\code{\link[=ilm_check_variance]{ilm_check_variance()}} diagnoses.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in
