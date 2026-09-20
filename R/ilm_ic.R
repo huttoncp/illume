@@ -160,10 +160,38 @@ ilm_fitted <- function(object, conditional = TRUE) {
 #' @param object A fitted `"ilm_model"` object.
 #' @param conditional Logical. Include the estimated random effects.
 #' @return An N x C matrix.
+#' Estimated AR/CAR latent values
+#'
+#' TMB names the entries of `par.random`, so the block is picked out by name
+#' rather than by an offset that would silently shift if the parameter order
+#' ever changed.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @return A latent-by-category matrix, or `NULL` when there is no such term.
+#' @keywords internal
+#' @noRd
+ilm_Bar_hat <- function(object) {
+  if (is.null(object$ar) || is.null(object$sdr$par.random)) return(NULL)
+  v <- object$sdr$par.random
+  i <- which(names(v) == "B_ar")
+  if (length(i) != object$ar$n_cell * object$C) return(NULL)
+  matrix(v[i], object$ar$n_cell, object$C)
+}
+
 #' @keywords internal
 #' @noRd
 ilm_eta_hat <- function(object, conditional = TRUE) {
   eta <- object$X %*% object$beta
+  ## The AR/CAR latent is a random effect like any other and belongs in the
+  ## conditional fitted value. Leaving it out put the whole autoregressive
+  ## process into the residual, so every residual diagnostic on such a model
+  ## measured the structure the model had already accounted for -- measured,
+  ## residual correlation at short separations went UP after fitting CAR(1),
+  ## from 0.23 to 0.49, when it should fall toward zero.
+  if (conditional && !is.null(object$ar)) {
+    Ba <- ilm_Bar_hat(object)
+    if (!is.null(Ba)) eta <- eta + Ba[object$ar$idx, , drop = FALSE]
+  }
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
     if (!conditional && e$kind != "basis") next

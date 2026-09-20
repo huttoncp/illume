@@ -346,6 +346,57 @@ Three things make this not `stats::acf()`:
   point outside the band is exactly a lag the check flags. The picture and the
   table cannot disagree.
 
+### When the times are not evenly spaced
+
+`ilm_ar1()` needs a common step, because "one step" has to mean something.
+When visits fall where they fall, use `ilm_car1()`: the correlation between two
+observations is `rho` raised to the gap between them, which is `nlme`'s
+`corCAR1()` and reduces to AR(1) when every gap is one.
+
+```{r car1, eval = FALSE}
+ilm_model(y ~ x + (1 | subj), data = dd, family = "gaussian",
+          ar = ilm_car1(dd$day, dd$subj))
+```
+
+Both constructors report their **latent budget** before you fit, because that is
+the constraint that bites. These are latent-variable structures: one latent
+value exists per distinct unit-and-time, so genuinely continuous times give one
+latent per observation. For a gaussian response that is fine — the model is
+linear-Gaussian, the Laplace approximation is exact, and coverage measured over
+400 replicates at exactly one observation per latent came back at 0.955, 0.937
+and 0.949 against a nominal 0.95. For a categorical response it is not, and the
+fit says so. Rounding `time` to a coarser grid, so observations share a latent,
+is the usual fix.
+
+### Checking a correlation structure over irregular time
+
+`ilm_check_ar()` matches pairs at exact lags, which stops working once the times
+are irregular: on a sixty-unit panel with six observations each drawn from
+thirty possible times, it found 53 pairs at lag 1, five at lag 2 and none
+beyond. `ilm_variogram()` bins every within-group pair by how far apart it is
+instead, and uses all 900.
+
+```{r variogram, eval = FALSE}
+ilm_variogram(fit, time = dd$day, group = dd$subj)
+```
+
+It distinguishes three shapes, because they need three different remedies:
+
+| what you see | what it is | what to do |
+|---|---|---|
+| decays from the shortest separation | autoregression | `ilm_car1()` |
+| the same level at every separation | a group effect | add or widen a random effect |
+| alternates in sign | a cycle | `ilm_fourier()`, `ilm_cyclic()` |
+
+The envelope again comes from refitting simulated data, and again is not centred
+on zero: residuals within a group sum to roughly zero, so pairs of them
+correlate negatively even under a correct model, and more so the further apart
+they are.
+
+`type = "semivariance"` reports the same information in the form
+`nlme::Variogram()` uses, since for standardised residuals the semivariance at
+separation `d` is `1 - r(d)`.
+
 ### A cycle is not autocorrelation
 
 Both fill the autocorrelation plot with flagged lags. Only one of them is fixed
@@ -386,6 +437,85 @@ a plain `factor(month)` beat both by more than a hundred, because no smooth
 basis buys a step cheaply. The spline pulls ahead only on long cycles, and only
 above about six degrees of freedom, by at most 23 AIC. Pick on the shape you
 expect, not on the basis.
+
+## Floors, ceilings and detection limits
+
+A reading of `0` from an assay whose detection limit is 0 does not mean zero.
+It means "somewhere at or below the limit", and fitting it as a zero pulls the
+mean down and the variance in. Same for a scale that tops out, a score capped
+at 100, a measurement beyond an instrument's range.
+
+`ilm_describe()` names the pile-up before you model it:
+
+```{r pileup}
+set.seed(1)
+y <- 0.5 + rnorm(1500, 0, 1.4)
+d0 <- data.frame(unbounded = y, capped = pmin(y, 1.2))
+ilm_describe(d0)[, c("variable", "gauss", "gauss_note")]
+```
+
+and `ilm_censor()` is the remedy. A censored observation contributes the
+probability of the interval it is known to lie in rather than a density at a
+value it was never observed at:
+
+```{r tobit, eval = FALSE}
+ilm_model(y ~ x + (1 | subj), data = dd, family = "gaussian",
+          censor = ilm_censor(dd$y, upper = 1.2))
+```
+
+With no random effects this is the Tobit model, and it agrees with
+`survival::survreg()` to five decimal places in the coefficients and to 1e-6 in
+the log-likelihood. What illume adds is that the random effects still work.
+Measured on a 60-unit panel censored at 18%, ignoring the ceiling attenuated the
+slope from 1.02 to 0.79 against a truth of 1.0, and the between-unit standard
+deviation from 0.78 to 0.65 against a truth of 0.8.
+
+Two things follow automatically. Exact t and F inference is switched off,
+because a censored likelihood mixes densities with tail probabilities and is
+only asymptotically normal — `survreg()` reports Wald for the same reason. And
+the quantile residual of a censored row is drawn across the probability of its
+interval, the same randomisation Dunn and Smyth use for a discrete response;
+without it every censored row lands on one quantile and the QQ plot shows a
+spike at the limit that has nothing to do with fit.
+
+## Time to an event
+
+The same interval-probability mechanism gives parametric survival models. Three
+families are available, and all three are the same model with a different error
+distribution:
+
+$$\log T = X\beta + \text{scale} \times W$$
+
+`"weibull"`, `"lognormal"` and `"loglogistic"`, for `W` extreme-value, normal
+and logistic respectively.
+
+```{r aft, eval = FALSE}
+ilm_model(time ~ treatment + age + (1 | centre), data = dd, family = "weibull",
+          censor = ilm_surv(dd$time, dd$event))
+```
+
+`ilm_surv()` takes `event` in the convention `survival::Surv()` uses — `1` when
+the event happened, `0` when the subject was still event-free at the end of
+follow-up. It exists because that is the opposite of the code stored
+internally, and getting it backwards fits the model to the wrong subjects
+without looking wrong.
+
+A coefficient is a **log time ratio**: `+0.5` means survival times are `exp(0.5)`
+times longer. That reading holds whatever the baseline hazard does, which is the
+appeal of an accelerated failure time model over a proportional hazards one.
+
+All three agree with `survival::survreg()` to about seven decimal places in the
+coefficients and ten in the log-likelihood, with the same standard errors. What
+illume adds is the random effect. On an 80-centre study with 44% censoring,
+a frailty Weibull recovered a slope of 0.746, a scale of 0.597 and a
+between-centre standard deviation of 0.465 against truths of 0.7, 0.6 and 0.5;
+fitting the same data without the centre term pushed the between-centre spread
+into the scale, which came back at 0.729.
+
+Residuals work as they do everywhere else. The quantile residual of a censored
+subject is drawn across the probability of the interval they are known to lie
+in, so it stays uniform under a correct model — measured across all three
+families at 40% censoring, Kolmogorov-Smirnov p-values ran from 0.37 to 0.90.
 
 ## Interactions
 

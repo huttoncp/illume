@@ -2,10 +2,14 @@
 % Please edit documentation in R/ilm_family.R
 \name{ilm_family}
 \alias{ilm_family}
-\title{Response distributions supported by illume}
+\title{Describes how a response distribution enters the model. The random-effect
+machinery -- covariance structures, random slopes, smooths, AR(1) -- is
+identical for every family and never sees the response; a family supplies only
+the piece that turns a linear predictor into a log-likelihood.}
 \usage{
 ilm_family(
-  family = c("gaussian", "binomial", "poisson", "nbinom", "multinomial")
+  family = c("gaussian", "binomial", "poisson", "nbinom", "multinomial", "weibull",
+    "lognormal", "loglogistic")
 )
 }
 \arguments{

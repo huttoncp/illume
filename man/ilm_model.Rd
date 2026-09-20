@@ -18,7 +18,8 @@ ilm_model_formula(
   verbose = TRUE,
   restarts = 3L,
   joint = NULL,
-  na.action = stats::na.omit
+  na.action = stats::na.omit,
+  censor = NULL
 )
 }
 \arguments{
@@ -34,7 +35,7 @@ ilm_model_formula(
 \item{re_struct}{Optional named list of category covariance structures, named
 by grouping variable. See \code{\link[=ilm_fit]{ilm_fit()}}.}
 
-\item{ar}{Optional AR(1) specification.}
+\item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}} or \code{\link[=ilm_car1]{ilm_car1()}}.}
 
 \item{weights}{Optional \strong{frequency} weights: the number of replicate
 observations each row stands for. Evaluated inside \code{data}. See \code{\link[=ilm_fit]{ilm_fit()}}
@@ -53,6 +54,9 @@ random parameters. \code{NULL} (the default) switches it on when the model
 contains smooths, which is when \code{\link[=predict.ilm_model]{predict.ilm_model()}} needs it.}
 
 \item{na.action}{How to handle missing values; default \code{\link[stats:na.fail]{stats::na.omit()}}.}
+
+\item{censor}{Optional censoring specification from \code{\link[=ilm_censor]{ilm_censor()}}, for a
+response with a floor, a ceiling or a detection limit.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

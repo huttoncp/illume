@@ -1002,6 +1002,9 @@ ilm_print_checks <- function(ck, title) {
 #'   FALSE` within an element to drop an intercept-slope correlation.
 #' @param ar Optional AR(1) specification:
 #'   `list(idx =, n_group =, Tt =)`.
+#' @param censor Optional censoring specification from [ilm_censor()], marking
+#'   observations known only as an interval -- at or below a floor, at or above
+#'   a ceiling. Supported for the gaussian family, where it gives a Tobit model.
 #' @param ylevels Optional character vector of category labels, used in output.
 #' @param weights Optional numeric vector of **frequency** weights: the number of
 #'   replicate observations each row stands for, exactly as in a binomial `glm()`
@@ -1054,8 +1057,35 @@ ilm_print_checks <- function(ck, title) {
 #' @export
 ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
-                     verbose = TRUE, restarts = 3L, joint = FALSE) {
+                     verbose = TRUE, restarts = 3L, joint = FALSE,
+                     censor = NULL) {
   fam <- if (is.list(family)) family else ilm_family(family)
+  ## Censoring: derive the codes from THIS response, so a simulated replicate
+  ## is censored by the same rule the data were rather than inheriting the
+  ## observed pattern. See ilm_censor().
+  if (!is.null(censor)) {
+    if (!isTRUE(fam$censorable))
+      stop("the ", fam$name, " family has no censored form. Censoring needs a ",
+           "continuous response whose distribution function can be evaluated; ",
+           "available: gaussian.", call. = FALSE)
+    if (length(censor) != nrow(X))
+      stop("`censor` has ", length(censor), " values but the model matrix has ",
+           nrow(X), " rows", call. = FALSE)
+  }
+  cens <- ilm_censor_for(censor, y)
+  ## An accelerated failure time model works on log(t), so a non-positive time
+  ## is not a hard case, it is a contradiction. Say so rather than returning
+  ## NaN from inside the optimiser.
+  if (isTRUE(fam$positive)) {
+    bad <- !is.na(y) & y <= 0
+    if (any(bad))
+      stop("the ", fam$name, " family models log(time), so every response must ",
+           "be strictly positive; ", sum(bad), " value",
+           if (sum(bad) > 1L) "s are" else " is", " zero or negative",
+           if (any(y[bad] == 0, na.rm = TRUE))
+             ". A recorded time of exactly 0 usually means an event before the first assessment: give it the smallest time the study could have measured, or left-censor it with ilm_censor()." else "",
+           call. = FALSE)
+  }
   ## Accept a spec from ilm_ar1()/ilm_car1(), or the bare list the fitter took
   ## before those existed.
   ar <- ilm_as_cor(ar)
@@ -1262,7 +1292,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     ## builds eta and accumulates the random-effect prior, and none of it
     ## depends on the response distribution.
     dsp <- if (n_disp > 0L) logdisp else numeric(0)
-    nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct)
+    nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens)
     sd_ <- sdv; ADREPORT(sd_)
     if (n_disp > 0L) { disp_ <- exp(logdisp); ADREPORT(disp_) }
     nll
@@ -1334,10 +1364,19 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   ## where exact t inference is available and strictly better than the
   ## large-sample normal approximation the Laplace machinery would otherwise
   ## give.  Recorded here; vcov(), ilm_coef_table() and ilm_anova() act on it.
-  exact_df <- fam$name == "gaussian" && sum(bl) == 0L && is.null(ar)
+  ## Exact t and F inference rests on the response being a gaussian linear
+  ## model, where the residual sum of squares is chi-square and independent of
+  ## the coefficients. A censored fit is not that model: its likelihood mixes
+  ## densities with tail probabilities, the sampling distribution is only
+  ## asymptotically normal, and the N/(N-p) correction below is derived for
+  ## ordinary least squares and does not apply. Fall back to Wald, which is
+  ## what survreg() and every other censored fitter reports.
+  exact_df <- fam$name == "gaussian" && sum(bl) == 0L && is.null(ar) &&
+    (is.null(cens) || !any(cens != 0L))
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
+                 censor = censor, n_censored = if (is.null(cens)) 0L else sum(cens != 0L),
                  J = J, C = C, n_latent = sum(bl), n_covpar = sum(tl),
                  ## how many scalars TMB actually integrated out. logLik() needs
                  ## it to put back the (q/2)log(2*pi) the hand-written gaussian

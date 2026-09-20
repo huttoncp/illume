@@ -22,7 +22,10 @@ ilm_describe(
 \arguments{
 \item{data}{A data frame, or a vector when \code{y} is \code{NULL}.}
 
-\item{y}{Name of the column to summarise.}
+\item{y}{Name of the column to summarise, or several names. With none,
+\code{data} is taken as the thing to describe: a bare vector, or a data frame
+whose columns are all of one kind. For a frame of mixed kinds use
+\code{\link[=ilm_describe_all]{ilm_describe_all()}}, which returns one table per kind.}
 
 \item{by}{Optional character vector of grouping columns.}
 

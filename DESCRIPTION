@@ -42,6 +42,7 @@ Suggests:
     boot,
     lme4,
     nlme,
+    survival,
     mgcv,
     car,
     marginaleffects,

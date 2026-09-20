@@ -458,13 +458,13 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
   X <- object$X; J <- object$J; rl <- ilm_re_list_of(object)
   rs <- object$re_struct; arr <- object$ar; yl <- object$ylevels
   asg <- object$assign; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights
+  fm <- object$family; wt <- object$weights; cnsr <- object$censor
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   if (!is.null(cl)) try(parallel::clusterExport(cl, "by_vec", envir = environment()),
                         silent = TRUE)
   one <- function(b) {
-    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl, weights = wt,
+    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl, weights = wt, censor = cnsr,
                       family = fm, verbose = FALSE, restarts = 1L), silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0)
       return(c(trend = NA_real_, ratio = NA_real_))

@@ -1,5 +1,82 @@
 #' Response distributions supported by illume
 #'
+
+## ---------------------------------------------------------------------------
+## Accelerated failure time.
+##
+## All three are the same model with a different error distribution:
+##
+##     log T  =  X beta  +  scale * W
+##
+## and everything that differs between them is the distribution of W. Writing
+## z = (log t - eta) / scale, the density and survivor function on the LOG scale
+## are what the likelihood needs, and the -log(t) that turns a density in log t
+## into one in t is the Jacobian.
+##
+## A coefficient is a log time ratio: +0.5 means survival times are exp(0.5)
+## times longer, whatever the baseline hazard does. That is the appeal of the
+## accelerated failure time reading over a proportional hazards one, and it is
+## the same interpretation in all three.
+##
+## Censoring is not a special case here, it is the point: a subject still alive
+## at the end of follow-up contributes the probability of surviving that long.
+## The mechanism is the one ilm_censor() already provides.
+## ---------------------------------------------------------------------------
+
+#' @keywords internal
+#' @noRd
+ilm_aft_family <- function(name) {
+  ## log density and log survivor of the standardised error W.
+  ## logspace_add(0, z) is log(1 + exp(z)) computed without overflowing, which
+  ## plain log1p(exp(z)) does for z beyond about 700.
+  logf <- switch(name,
+    lognormal   = function(z) dnorm(z, log = TRUE),
+    loglogistic = function(z) z - 2 * logspace_add(0 * z, z),
+    weibull     = function(z) z - exp(z))
+  logS <- switch(name,
+    lognormal   = function(z) log(pnorm(-z) + 1e-300),
+    loglogistic = function(z) -logspace_add(0 * z, z),
+    weibull     = function(z) -exp(z))
+  logF <- switch(name,
+    lognormal   = function(z) log(pnorm(z) + 1e-300),
+    loglogistic = function(z) z - logspace_add(0 * z, z),
+    weibull     = function(z) log(1 - exp(-exp(z)) + 1e-300))
+  rw <- switch(name,
+    lognormal   = function(n) stats::rnorm(n),
+    loglogistic = function(n) stats::rlogis(n),
+    ## log of a standard exponential is the smallest extreme value
+    ## distribution, which is what makes T Weibull
+    weibull     = function(n) log(stats::rexp(n)))
+
+  list(name = name, link = "log", n_disp = 1L, disp_names = "log_scale",
+       C_of = function(J) 1L, censorable = TRUE, positive = TRUE, aft = TRUE,
+       nll = function(eta, y, w, disp, cens = NULL, ...) {
+         sc <- exp(disp[1]); lt <- log(y); z <- (lt - eta[, 1]) / sc
+         if (is.null(cens) || !any(cens != 0L))
+           return(-sum(w * (logf(z) - log(sc) - lt)))
+         o <- cens == 0L; l <- cens < 0L; r <- cens > 0L
+         out <- 0
+         if (any(o)) out <- out - sum(w[o] * (logf(z[o]) - log(sc) - lt[o]))
+         ## right-censored: known only to have survived past t
+         if (any(r)) out <- out - sum(w[r] * logS(z[r]))
+         ## left-censored: known only to have failed before t
+         if (any(l)) out <- out - sum(w[l] * logF(z[l]))
+         out
+       },
+       linkinv = function(e) exp(e),
+       sim = function(eta, w, disp)
+         exp(eta[, 1] + exp(disp[1]) * rw(nrow(eta))),
+       ## The residual machinery asks the family for these rather than carrying
+       ## its own switch. Two separate switches over families is how ilm_rqr()
+       ## and ilm_pearson_ovr() both came to assume a multinomial response.
+       cdf = function(y, eta, sc) {
+         z <- (log(y) - eta) / sc
+         switch(name,
+           lognormal   = stats::pnorm(z),
+           loglogistic = stats::plogis(z),
+           weibull     = -expm1(-exp(z)))
+       })
+}
 #' Describes how a response distribution enters the model. The random-effect
 #' machinery -- covariance structures, random slopes, smooths, AR(1) -- is
 #' identical for every family and never sees the response; a family supplies only
@@ -52,8 +129,11 @@
 #' ilm_family("nbinom")$disp_names
 #' @export
 ilm_family <- function(family = c("gaussian", "binomial", "poisson",
-                                  "nbinom", "multinomial")) {
+                                  "nbinom", "multinomial",
+                                  "weibull", "lognormal", "loglogistic")) {
   family <- match.arg(family)
+  if (family %in% c("weibull", "lognormal", "loglogistic"))
+    return(ilm_aft_family(family))
 
   ## Each nll() receives eta (N x C), the response, the frequency weights and
   ## the dispersion parameters on the log scale, and returns the negative
@@ -62,9 +142,21 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
 
     gaussian = list(
       name = "gaussian", link = "identity", n_disp = 1L,
-      disp_names = "log_sigma", C_of = function(J) 1L,
-      nll = function(eta, y, w, disp, ...) {
-        -sum(w * dnorm(y, eta[, 1], exp(disp[1]), log = TRUE))
+      disp_names = "log_sigma", C_of = function(J) 1L, censorable = TRUE,
+      nll = function(eta, y, w, disp, cens = NULL, ...) {
+        mu <- eta[, 1]; s <- exp(disp[1])
+        if (is.null(cens) || !any(cens != 0L))
+          return(-sum(w * dnorm(y, mu, s, log = TRUE)))
+        ## A censored row contributes the probability of the interval it is
+        ## known to lie in, not a density at a value it was never observed at.
+        ## The upper tail is written as pnorm(mu - y) rather than
+        ## 1 - pnorm(y - mu), which loses all its precision out in the tail.
+        o <- cens == 0L; l <- cens < 0L; r <- cens > 0L
+        out <- 0
+        if (any(o)) out <- out - sum(w[o] * dnorm(y[o], mu[o], s, log = TRUE))
+        if (any(l)) out <- out - sum(w[l] * log(pnorm((y[l] - mu[l]) / s) + 1e-300))
+        if (any(r)) out <- out - sum(w[r] * log(pnorm((mu[r] - y[r]) / s) + 1e-300))
+        out
       },
       linkinv = function(e) e,
       sim = function(eta, w, disp) stats::rnorm(nrow(eta), eta[, 1], exp(disp[1]))),

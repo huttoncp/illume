@@ -252,6 +252,19 @@ ilm_gauss_check <- function(x, min_n = 20L, cap = 0.12) {
   if (!discrete && ilm_n_modes(x) >= 2L)
     reasons <- c(reasons, "multimodal (check for subgroups)")
   if (discrete) reasons <- c(reasons, sprintf("discrete (%d distinct values)", nu))
+  ## A stack of identical values at one end of a continuous variable is not a
+  ## shape a distribution produces; it is a limit. A detection floor, an
+  ## instrument ceiling, a capped scale. It is worth naming before skewness is,
+  ## because the remedy is different: ilm_censor(), not a transformation.
+  if (!discrete && nu > 20L) {
+    pmin_ <- fmean(x == min(x)); pmax_ <- fmean(x == max(x))
+    if (pmin_ >= 0.02 && n * pmin_ >= 5)
+      reasons <- c(reasons, sprintf("%.0f%% of values sit exactly at the minimum (%s): a floor, see ilm_censor()",
+                                    100 * pmin_, format(min(x), digits = 4)))
+    if (pmax_ >= 0.02 && n * pmax_ >= 5)
+      reasons <- c(reasons, sprintf("%.0f%% of values sit exactly at the maximum (%s): a ceiling, see ilm_censor()",
+                                    100 * pmax_, format(max(x), digits = 4)))
+  }
   if (all(x >= 0) && (min(x) - 0) < 0.05 * s) reasons <- c(reasons, "bounded at zero")
   if (bow > 0.1) reasons <- c(reasons, "right-skewed")
   if (bow < -0.1) reasons <- c(reasons, "left-skewed")
@@ -475,7 +488,10 @@ ILM_CLASSES <- c("numeric", "categorical", "logical", "time")
 #' they are worth asking for.
 #'
 #' @param data A data frame, or a vector when `y` is `NULL`.
-#' @param y Name of the column to summarise.
+#' @param y Name of the column to summarise, or several names. With none,
+#'   `data` is taken as the thing to describe: a bare vector, or a data frame
+#'   whose columns are all of one kind. For a frame of mixed kinds use
+#'   [ilm_describe_all()], which returns one table per kind.
 #' @param by Optional character vector of grouping columns.
 #' @param digits Rounding for numeric columns, quantiles included.
 #' @param gauss One of `"index"` (the 0-1 agreement index), `"ks_d"` (the raw
@@ -502,7 +518,6 @@ ilm_describe <- function(data, y = NULL, by = NULL, digits = 3,
                           dispersion = TRUE, rare_n = 5L,
                           cap = 0.12, min_n = 20L) {
   gauss <- match.arg(gauss)
-  x <- if (is.null(y)) data else data[[y]]
   one <- function(v) {
     if (is.logical(v)) ilm_describe_lgl(v, digits)
     else if (ilm_is_time(v)) ilm_describe_time(v, digits)
@@ -510,6 +525,50 @@ ilm_describe <- function(data, y = NULL, by = NULL, digits = 3,
                                              cap, min_n)
     else ilm_describe_cat(v, digits, rare_n = rare_n)
   }
+
+  ## Resolving what is actually being described.
+  ##
+  ## Passing a whole data frame and no `y` used to hand the frame itself to
+  ## one(), which is not logical, not a time and not numeric, so it fell
+  ## through to the categorical branch and failed with "the condition has
+  ## length > 1" for any frame of more than one column -- and returned nonsense
+  ## rather than failing for a frame of exactly one.
+  ##
+  ## Columns of different kinds do not share a set of statistics. That is
+  ## precisely why ilm_describe_all() returns one table per kind, so a mixed
+  ## frame is an error that names that function rather than a mangled table.
+  cols <- NULL
+  if (!is.null(y)) {
+    miss <- setdiff(y, names(data))
+    if (length(miss))
+      stop("column", if (length(miss) > 1L) "s" else "", " not found in the ",
+           "data: ", paste(miss, collapse = ", "), ". Available: ",
+           paste(utils::head(names(data), 12), collapse = ", "),
+           if (length(names(data)) > 12L) ", ..." else "", call. = FALSE)
+    if (length(y) > 1L) cols <- y else x <- data[[y]]
+  } else if (is.data.frame(data)) {
+    kinds <- unique(vapply(data, ilm_class_of, ""))
+    if (length(kinds) > 1L)
+      stop("`data` holds columns of more than one kind (",
+           paste(sort(kinds), collapse = ", "), "), which do not share a set ",
+           "of statistics. Name a column with `y`, or use ilm_describe_all(), ",
+           "which returns one table per kind.", call. = FALSE)
+    if (!ncol(data))
+      stop("`data` has no columns to describe", call. = FALSE)
+    cols <- names(data)
+  } else x <- data
+
+  if (!is.null(cols)) {
+    r <- do.call(rbind, lapply(cols, function(cn)
+      ilm_describe(data, cn, by = by, digits = digits, gauss = gauss,
+                   probs = probs, skew = skew, kurt = kurt,
+                   dispersion = dispersion, rare_n = rare_n,
+                   cap = cap, min_n = min_n)))
+    nrep <- nrow(r) / length(cols)
+    return(cbind(variable = rep(cols, each = nrep), r,
+                 stringsAsFactors = FALSE))
+  }
+
   if (is.null(by)) return(one(x))
   miss <- setdiff(by, names(data))
   if (length(miss))

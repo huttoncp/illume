@@ -16,7 +16,8 @@ ilm_fit(
   family = "multinomial",
   verbose = TRUE,
   restarts = 3L,
-  joint = FALSE
+  joint = FALSE,
+  censor = NULL
 )
 }
 \arguments{
@@ -62,6 +63,10 @@ solution, which helps on difficult surfaces.}
 parameters. Needed by \code{\link[=predict.ilm_model]{predict.ilm_model()}} to propagate uncertainty in penalised
 smooth coefficients; \code{\link[=ilm_model]{ilm_model()}} switches it on automatically when the model
 contains smooths.}
+
+\item{censor}{Optional censoring specification from \code{\link[=ilm_censor]{ilm_censor()}}, marking
+observations known only as an interval -- at or below a floor, at or above
+a ceiling. Supported for the gaussian family, where it gives a Tobit model.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

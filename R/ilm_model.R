@@ -72,7 +72,9 @@
 #' @param data A data frame.
 #' @param re_struct Optional named list of category covariance structures, named
 #'   by grouping variable. See [ilm_fit()].
-#' @param ar Optional AR(1) specification.
+#' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
+#' @param censor Optional censoring specification from [ilm_censor()], for a
+#'   response with a floor, a ceiling or a detection limit.
 #' @param weights Optional **frequency** weights: the number of replicate
 #'   observations each row stands for. Evaluated inside `data`. See [ilm_fit()]
 #'   for when this is valid, and why survey weights are not.
@@ -146,7 +148,8 @@ ilm_model <- function(formula, ...) {
 ilm_model_formula <- function(formula, data, family = "gaussian",
                          re_struct = NULL, ar = NULL,
                          weights = NULL, contrasts = NULL, verbose = TRUE,
-                         restarts = 3L, joint = NULL, na.action = stats::na.omit) {
+                         restarts = 3L, joint = NULL, na.action = stats::na.omit,
+                         censor = NULL) {
   fam <- if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
@@ -293,7 +296,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## default wherever a smooth is present.
   if (is.null(joint)) joint <- length(smsp) > 0L
   w <- if (is.null(wnm)) NULL else as.numeric(mf[[wnm]])
-  fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar,
+  fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
                   restarts = restarts, joint = joint)
 

@@ -64,7 +64,13 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
     mu <- as.numeric(ilm_fitted(object, conditional)[, 1])
     w <- if (is.null(object$weights)) rep(1, N) else object$weights
     disp <- object$dispersion
-    u <- switch(fam,
+    ## An accelerated failure time family supplies its own distribution
+    ## function, so this does not need a third switch over families to keep in
+    ## step with the two the likelihood already has.
+    u <- if (isTRUE(object$family$aft))
+      object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),
+                        unname(disp[1]))
+    else switch(fam,
       gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp[1]) else 1),
       poisson  = {
         lo <- stats::ppois(y - 1, mu); hi <- stats::ppois(y, mu)
@@ -84,6 +90,19 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
         lo + stats::runif(N) * (hi - lo)
       },
       stop("no quantile residual is defined for family ", fam, call. = FALSE))
+
+    ## A censored observation is known only as an interval, so its residual is
+    ## drawn uniformly across the probability of that interval -- the same
+    ## randomisation Dunn and Smyth use for a discrete response, applied to the
+    ## censoring interval instead of to a jump. Without it every censored row
+    ## lands on the same quantile and the QQ plot shows a spike at the limit
+    ## that has nothing to do with model fit.
+    cz <- ilm_censor_for(object$censor, y)
+    if (!is.null(cz) && any(cz != 0L)) {
+      l <- cz < 0L; r <- cz > 0L
+      if (any(l)) u[l] <- stats::runif(sum(l), 0, u[l])
+      if (any(r)) u[r] <- stats::runif(sum(r), u[r], 1)
+    }
     return(pmin(pmax(u, 0), 1))
   }
 
@@ -132,7 +151,13 @@ ilm_sim_cond <- function(object, B, seed = 1L) {
   ## it is parameterised internally
   disp <- if (!is.null(object$dispersion)) log(unname(object$dispersion))
           else numeric(0)
-  vapply(seq_len(B), function(b) as.numeric(fam$sim(eta, w, disp)), numeric(N))
+  ## A replicate has to be censored the way the data were, or every envelope
+  ## built on it is calibrated against a process that is not the fitted one.
+  ## Whether a given draw lands beyond the limit is itself random, which is
+  ## part of the variability the envelope is meant to carry.
+  vapply(seq_len(B), function(b)
+    ilm_censor_apply(object$censor, as.numeric(fam$sim(eta, w, disp))),
+    numeric(N))
 }
 
 #' Simulate category draws from a fitted probability matrix
@@ -311,7 +336,7 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
   ys <- ilm_sim_cond(object, B, seed + 1L)
   X <- object$X; J <- object$J; rl <- ilm_re_list_of(object); rs <- object$re_struct
   arr <- object$ar; yl <- object$ylevels; asg <- object$assign; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights
+  fm <- object$family; wt <- object$weights; cnsr <- object$censor
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   ## `stat` may close over data the workers do not have (e.g. a covariate the
@@ -326,7 +351,7 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
   }
   one <- function(b) {
     f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl,
-                      weights = wt, family = fm,
+                      weights = wt, censor = cnsr, family = fm,
                       verbose = FALSE, restarts = 1L), silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
     f$assign <- asg; f$term_labels <- tl

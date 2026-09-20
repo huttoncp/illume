@@ -128,7 +128,7 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
       P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
       out[, s] <- apply(P, 1, function(pr) sample.int(J, 1L, prob = pr))
     } else {
-      out[, s] <- as.numeric(fam$sim(eta, wts, dsp))
+      out[, s] <- ilm_censor_apply(fit$censor, as.numeric(fam$sim(eta, wts, dsp)))
     }
   }
   out

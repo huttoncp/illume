@@ -42,6 +42,52 @@ mgcv penalised smooths and AR(1) correlation.
   univariate family and did not match the one residual series those families
   have.
 
+## Correlation over irregular time
+
+* `ilm_car1()` fits a first-order autoregression whose correlation is `rho`
+  raised to the gap between observations, so the spacing need not be regular.
+  `ilm_ar1()` is the evenly spaced constructor; neither existed before, and the
+  bare `list(idx =, n_group =, Tt =)` the fitter used to take still works.
+* `ilm_variogram()` and `ilm_plot_variogram()` bin every within-group pair by
+  separation and report the residual correlation in each bin against the
+  refit-based envelope. This is what makes a `ilm_car1()` term checkable, and it
+  tells apart the three shapes that need three different remedies:
+  autoregression, an unabsorbed group effect, and a cycle.
+* The latent budget checks no longer fail a gaussian model. With a gaussian
+  response and gaussian latents the model is linear-Gaussian and the Laplace
+  approximation is exact, so there is no approximation error to run out of
+  observations for.
+
+## Censored responses
+
+* `ilm_censor()` marks observations known only as an interval -- at or below a
+  floor, at or above a ceiling -- and `ilm_model(censor = )` fits them as the
+  probability of that interval. With no random effects this is the Tobit model.
+* `ilm_describe()` names a pile-up at either extreme of a continuous variable,
+  and points at `ilm_censor()`, so the problem is visible before the model is
+  fitted rather than after.
+* Censoring switches off the exact t and F path, because a censored likelihood
+  is only asymptotically normal and the `N/(N-p)` correction is an
+  ordinary-least-squares result.
+* Quantile residuals for censored rows are drawn across the probability of the
+  censoring interval, the same randomisation Dunn and Smyth apply to a discrete
+  response.
+* Simulated replicates are censored by the same limits the data were, so the
+  envelope diagnostics are calibrated against the fitted process rather than an
+  uncensored one.
+
+## Time to an event
+
+* Three accelerated failure time families -- `"weibull"`, `"lognormal"` and
+  `"loglogistic"` -- fitting `log T = X beta + scale * W`, so a coefficient is a
+  log time ratio whatever the baseline hazard does.
+* `ilm_surv(time, event)` builds the censoring specification in the convention
+  `survival::Surv()` uses, which is the opposite of the code stored internally.
+* A family now carries its own distribution function, and the residual
+  machinery asks it rather than keeping a third switch over families. Two
+  separate switches is how the quantile and Pearson residuals both came to
+  assume a multinomial response.
+
 ## Findings behind those changes
 
 Summary notes; the full tables belong with the methods paper.
@@ -72,6 +118,55 @@ Summary notes; the full tables belong with the methods paper.
   spanning more than one column (`g`, `g:x`) were invariant, since both codings
   span the same subspace. `ilm_anova()` now warns and names the fix.
 
+* **The log-likelihood was missing a constant that grew with the model.** The
+  random-effect priors are written as `0.5 u'Sigma^-1 u + 0.5 log|Sigma|`,
+  leaving out the `(1/2)log(2*pi)` each latent scalar contributes; TMB's Laplace
+  step then subtracts `(q/2)log(2*pi)` of its own. On a random-intercept fit
+  with 50 groups illume reported -595.083 where lme4 and nlme both reported
+  -641.030 -- a gap of 45.947 against `25 * log(2*pi) = 45.947` predicted. Every
+  extra latent value was worth about 0.92 log-likelihood units for free, so AIC
+  and BIC preferred whichever model carried the larger random structure.
+* **The latent AR process was in the model but not in `fitted()`.** Residuals
+  were therefore taken against a fitted value that omitted it, so every
+  residual diagnostic on such a model measured the structure the model had
+  already accounted for. Measured: residual correlation at the shortest
+  separations went *up* after fitting CAR(1), from 0.23 to 0.49, where it should
+  fall toward zero. It now falls inside the envelope.
+* **CAR(1) reproduces AR(1) exactly on equal spacing** -- same rho, same
+  log-likelihood to 7e-11, from two separately written branches of the
+  likelihood -- and matches `nlme`'s `corExp(nugget = TRUE)`, which is the
+  marginal form of a latent process plus a residual, to four decimal places in
+  log-likelihood and five in the coefficients.
+* **Exact-lag matching does not survive irregular times.** On a 60-by-6 panel
+  with times drawn from 1..30 it found 53 pairs at lag 1, five at lag 2 and none
+  beyond, so five of six lags returned no verdict. Binning by separation uses
+  all 900 pairs.
+
+* **The censored fit matches `survival::survreg()`** to five decimal places in
+  the coefficients, 1e-5 in the scale and 1e-6 in the log-likelihood, on both a
+  ceiling and a floor. On a 60-unit panel censored at 18% -- which `survreg()`
+  cannot fit, having no random effects -- ignoring the ceiling attenuated the
+  slope from 1.02 to 0.79 against a truth of 1.0, and the between-unit standard
+  deviation from 0.78 to 0.65 against a truth of 0.8.
+* **The residual uniformity check does not detect ignored censoring.** Fitting
+  the same data without `censor` left the quantile residuals uniform
+  (Kolmogorov-Smirnov p = 0.18), because the fitted means vary from row to row
+  and spread the pile-up out. The pile-up is visible in the data, not in the
+  residuals, which is why `ilm_describe()` now names it.
+
+* **All three AFT families match `survival::survreg()`** to about 1e-7 in the
+  coefficients and 1e-10 in the log-likelihood, with standard errors agreeing to
+  five decimal places, at 41% censoring. On a study `survreg()` cannot fit --
+  80 centres, 44% censored -- a frailty Weibull recovered 0.746 / 0.597 / 0.465
+  against truths of 0.7 / 0.6 / 0.5, while dropping the centre term pushed the
+  between-centre spread into the scale, which rose from 0.597 to 0.729.
+* **The natural AFT residual is not usable when anything is censored.** The
+  error on the log-time scale, `(log t - eta) / scale`, is evaluated at the
+  censoring time rather than at the event, so it sits systematically low: at 40%
+  censoring the mean came to -0.64, -0.84 and -0.56 for the three families. The
+  normal score of the quantile residual fills the interval in and stays centred
+  and unit-scaled, which is what the diagnostics now use.
+
 ## Fixes
 
 * `ilm_model()` kept the caller's formula environment. `lme4::nobars()`,
@@ -83,6 +178,12 @@ Summary notes; the full tables belong with the methods paper.
   them and `stats::terms(formula, data = )` does not, so `predict()` was
   rebuilding `ns()`, `poly()` and `scale()` from whatever rows it was handed:
   `ns()` errored, and `poly()` and `scale()` returned quietly wrong numbers.
+* `ilm_describe()` accepts a data frame again. With no `y` it handed the whole
+  frame to the categorical branch, which failed with "the condition has length
+  > 1" for any frame of more than one column, and returned nonsense rather than
+  failing for a frame of exactly one. It now describes every column when they
+  are all of a kind, takes several column names, and names
+  `ilm_describe_all()` when the kinds are mixed.
 * `ilm_plot_model(what = "effect")` draws one curve per interaction partner. It
   previously held the partner at its most common level, drew one of several
   quite different slopes, and did not say so.
