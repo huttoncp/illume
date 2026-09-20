@@ -8,9 +8,11 @@ ilm_variogram(
   object,
   time,
   group,
+  coords = NULL,
   breaks = 8L,
   B = 100L,
   type = "correlation",
+  min_effect = 0.1,
   ncores = 1L,
   seed = 1L,
   max_pairs = 2e+05,
@@ -21,9 +23,14 @@ ilm_variogram(
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{time}{Time, one value per observation.}
+\item{time}{Time, one value per observation. Give this or \code{coords}.}
 
-\item{group}{Grouping variable, one value per observation.}
+\item{group}{Grouping variable, one value per observation. Pairs are only
+formed within a group. Optional for a spatial variogram, where the default
+treats every observation as comparable with every other.}
+
+\item{coords}{Spatial coordinates, one to three columns, for a variogram
+over distance rather than over time.}
 
 \item{breaks}{Number of separation bins, or explicit break points. Bins are
 chosen to hold roughly equal numbers of pairs, so a bin far out is not
@@ -33,6 +40,12 @@ estimated from a handful of them.}
 \code{1/(B+1)}, so about 100 is needed before \code{FAIL} is reachable.}
 
 \item{type}{\code{"correlation"} or \code{"semivariance"}.}
+
+\item{min_effect}{Smallest departure from the simulated null worth a
+verdict. A bin outside the envelope by less than this is reported as \code{OK}.
+Each bin rests on thousands of pairs, so the envelope narrows until any
+imperfection clears it, and significance stops being the same thing as
+something to act on. Set to \code{0} to flag on the envelope alone.}
 
 \item{ncores}{Worker processes for the refits.}
 

@@ -36,30 +36,50 @@
 #' @return A list with `i`, `j`, `d` and `n_total`.
 #' @keywords internal
 #' @noRd
-ilm_pair_index <- function(grp, tim, max_pairs = 2e5, seed = 1L) {
-  o <- order(grp, tim)
+ilm_pair_index <- function(grp, coords, max_pairs = 2e5, seed = 1L) {
+  cm <- if (is.matrix(coords)) coords else matrix(as.numeric(coords), ncol = 1L)
+  o <- order(grp, cm[, 1L])
   g <- grp[o]
   runs <- rle(g)
   starts <- cumsum(c(0L, utils::head(runs$lengths, -1L)))
-  ii <- jj <- vector("list", length(runs$lengths))
-  for (k in seq_along(runs$lengths)) {
-    m <- runs$lengths[k]
-    if (m < 2L) next
-    cb <- utils::combn(m, 2L)
-    ii[[k]] <- o[starts[k] + cb[1, ]]
-    jj[[k]] <- o[starts[k] + cb[2, ]]
+  ## Enumerating every pair is fine for a panel and impossible for a large
+  ## spatial layout: one group of 5000 has 12.5 million of them. Above the cap
+  ## the pairs are sampled directly rather than enumerated and then thinned.
+  n_total <- sum(vapply(runs$lengths, function(m) m * (m - 1) / 2, 0))
+  set.seed(seed)
+  if (n_total > max_pairs) {
+    big <- runs$lengths >= 2L
+    share <- vapply(runs$lengths, function(m) m * (m - 1) / 2, 0)
+    take <- pmax(0L, round(max_pairs * share / sum(share)))
+    ii <- jj <- vector("list", length(runs$lengths))
+    for (k in which(big)) {
+      if (take[k] < 1L) next
+      a <- sample.int(runs$lengths[k], take[k], replace = TRUE)
+      b <- sample.int(runs$lengths[k], take[k], replace = TRUE)
+      keep <- a != b
+      ii[[k]] <- o[starts[k] + a[keep]]
+      jj[[k]] <- o[starts[k] + b[keep]]
+    }
+    i <- unlist(ii); j <- unlist(jj)
+  } else {
+    ii <- jj <- vector("list", length(runs$lengths))
+    for (k in seq_along(runs$lengths)) {
+      m <- runs$lengths[k]
+      if (m < 2L) next
+      cb <- utils::combn(m, 2L)
+      ii[[k]] <- o[starts[k] + cb[1, ]]
+      jj[[k]] <- o[starts[k] + cb[2, ]]
+    }
+    i <- unlist(ii); j <- unlist(jj)
   }
-  i <- unlist(ii); j <- unlist(jj)
-  n_total <- length(i)
-  if (!n_total)
+  if (!length(i))
     stop("no group has two or more observations, so there are no pairs to ",
          "measure a correlation over", call. = FALSE)
-  if (n_total > max_pairs) {
-    set.seed(seed)
-    keep <- sample.int(n_total, max_pairs)
-    i <- i[keep]; j <- j[keep]
-  }
-  list(i = i, j = j, d = abs(tim[j] - tim[i]), n_total = n_total)
+  ## Euclidean separation, which is the absolute time difference when the
+  ## coordinate is one-dimensional -- the temporal case is the spatial one in
+  ## one dimension, not a separate calculation.
+  dd <- sqrt(rowSums((cm[j, , drop = FALSE] - cm[i, , drop = FALSE])^2))
+  list(i = i, j = j, d = dd, n_total = n_total)
 }
 
 #' Correlation of residual pairs, by separation bin
@@ -119,14 +139,23 @@ ilm_bin_cor <- function(z, pr, bin, nb, min_pairs = 30L) {
 #' the form `nlme::Variogram()` uses.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param time Time, one value per observation.
-#' @param group Grouping variable, one value per observation.
+#' @param time Time, one value per observation. Give this or `coords`.
+#' @param group Grouping variable, one value per observation. Pairs are only
+#'   formed within a group. Optional for a spatial variogram, where the default
+#'   treats every observation as comparable with every other.
+#' @param coords Spatial coordinates, one to three columns, for a variogram
+#'   over distance rather than over time.
 #' @param breaks Number of separation bins, or explicit break points. Bins are
 #'   chosen to hold roughly equal numbers of pairs, so a bin far out is not
 #'   estimated from a handful of them.
 #' @param B Simulated datasets behind the envelope. A p-value cannot fall below
 #'   `1/(B+1)`, so about 100 is needed before `FAIL` is reachable.
 #' @param type `"correlation"` or `"semivariance"`.
+#' @param min_effect Smallest departure from the simulated null worth a
+#'   verdict. A bin outside the envelope by less than this is reported as `OK`.
+#'   Each bin rests on thousands of pairs, so the envelope narrows until any
+#'   imperfection clears it, and significance stops being the same thing as
+#'   something to act on. Set to `0` to flag on the envelope alone.
 #' @param ncores Worker processes for the refits.
 #' @param seed Random seed.
 #' @param max_pairs Cap on the number of within-group pairs used. A group of
@@ -152,9 +181,10 @@ ilm_bin_cor <- function(z, pr, bin, nb, min_pairs = 30L) {
 #'                verbose = FALSE)
 #' ilm_variogram(f, d$t, d$id, breaks = 4, B = 15, plot = FALSE)
 #' @export
-ilm_variogram <- function(object, time, group, breaks = 8L, B = 100L,
-                          type = "correlation", ncores = 1L, seed = 1L,
-                          max_pairs = 2e5, plot = TRUE, verbose = TRUE) {
+ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
+                          B = 100L, type = "correlation", min_effect = 0.1,
+                          ncores = 1L, seed = 1L, max_pairs = 2e5,
+                          plot = TRUE, verbose = TRUE) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -162,22 +192,49 @@ ilm_variogram <- function(object, time, group, breaks = 8L, B = 100L,
     stop("unknown `type`: ", paste(sQuote(type), collapse = ", "),
          ". Options are 'correlation' and 'semivariance'.", call. = FALSE)
   N <- nrow(object$X)
-  if (missing(time) || missing(group))
-    stop("`time` and `group` are both required: a variogram measures how ",
-         "correlation falls away with separation within a unit. Supply one ",
-         "value of each per observation (the model has ", N, " rows).",
-         call. = FALSE)
-  if (length(time) != N || length(group) != N)
-    stop("`time` has ", length(time), " values and `group` has ", length(group),
-         ", but the model has ", N, " rows.", call. = FALSE)
-  if (is.factor(time))
-    stop("`time` is a factor. Converting it here would use the level order ",
-         "rather than the labels, and silently change what a separation means. ",
-         "Pass as.integer(time) if the levels are equally spaced steps.",
-         call. = FALSE)
-  tim <- suppressWarnings(as.numeric(time))
-  if (anyNA(tim))
-    stop("`time` must be numeric, integer or Date, not ", class(time)[1],
+  ## Time and space are the same statistic over a different separation, so this
+  ## is one function: a one-dimensional coordinate gives the absolute time
+  ## difference, a two-dimensional one the Euclidean distance.
+  spatial <- !is.null(coords)
+  if (spatial && !missing(time))
+    stop("give `time` or `coords`, not both: they are two ways of saying what ",
+         "separates a pair of observations.", call. = FALSE)
+  if (!spatial && (missing(time) || missing(group)))
+    stop("`time` and `group` are both required, or `coords` for a spatial ",
+         "variogram. A variogram measures how correlation falls away with ",
+         "separation, so it has to know what separates two observations ",
+         "(the model has ", N, " rows).", call. = FALSE)
+  if (spatial) {
+    cm <- as.matrix(if (is.data.frame(coords)) coords else coords)
+    if (!is.numeric(cm))
+      stop("`coords` must be numeric: one column per spatial dimension.",
+           call. = FALSE)
+    if (nrow(cm) != N)
+      stop("`coords` has ", nrow(cm), " rows but the model has ", N,
+           call. = FALSE)
+    if (ncol(cm) < 1L || ncol(cm) > 3L)
+      stop("`coords` must have one to three columns, one per dimension; it ",
+           "has ", ncol(cm), ".", call. = FALSE)
+    if (anyNA(cm))
+      stop("`coords` cannot contain missing values", call. = FALSE)
+    if (missing(group) || is.null(group)) group <- rep(1L, N)
+  } else {
+    if (length(time) != N || length(group) != N)
+      stop("`time` has ", length(time), " values and `group` has ",
+           length(group), ", but the model has ", N, " rows.", call. = FALSE)
+    if (is.factor(time))
+      stop("`time` is a factor. Converting it here would use the level order ",
+           "rather than the labels, and silently change what a separation ",
+           "means. Pass as.integer(time) if the levels are equally spaced ",
+           "steps.", call. = FALSE)
+    tim <- suppressWarnings(as.numeric(time))
+    if (anyNA(tim))
+      stop("`time` must be numeric, integer or Date, not ", class(time)[1],
+           call. = FALSE)
+    cm <- matrix(tim, ncol = 1L)
+  }
+  if (length(group) != N)
+    stop("`group` has ", length(group), " values but the model has ", N,
          call. = FALSE)
   B <- suppressWarnings(as.integer(B)[1])
   if (is.na(B) || B < 2L)
@@ -189,7 +246,7 @@ ilm_variogram <- function(object, time, group, breaks = 8L, B = 100L,
             ", so a FAIL verdict is unreachable. Use B >= 100.", call. = FALSE)
 
   grp <- as.integer(factor(group))
-  pr <- ilm_pair_index(grp, tim, max_pairs, seed)
+  pr <- ilm_pair_index(grp, cm, max_pairs, seed)
 
   ## Equal-count bins, so a bin out at the far separations is not estimated
   ## from six pairs while the near ones rest on thousands.
@@ -230,6 +287,18 @@ ilm_variogram <- function(object, time, group, breaks = 8L, B = 100L,
                         exports = c("pr", "bin", "nb"), where = environment())
   v <- ilm_lag_verdict(obs, env$null, labels, npair)
   tab <- v$table
+  ## AN EFFECT FLOOR, for the same reason the gaussian index is not a normality
+  ## test. A bin here rests on thousands of pairs, so the envelope narrows
+  ## until any imperfection clears it: measured on a spatial field with a
+  ## smooth of the coordinates already fitted, the residual correlation had
+  ## fallen from 0.242 to -0.033 -- a factor of seven, and nothing anyone would
+  ## act on -- and four of five bins were still flagged against an envelope
+  ## 0.02 wide. Statistical and practical significance part company as the
+  ## pair count grows, and only the second is worth a verdict.
+  if (is.finite(min_effect) && min_effect > 0) {
+    small <- abs(tab$estimate - tab$null_mean) < min_effect
+    tab$status[small & tab$status %in% c("WARN", "FAIL")] <- "OK"
+  }
   names(tab)[names(tab) == "lag"] <- "bin"
   names(tab)[names(tab) == "n_pairs"] <- "n_pairs"
   tab <- cbind(tab[1L], separation = round(dmid, 3), tab[-1L])
@@ -248,7 +317,7 @@ ilm_variogram <- function(object, time, group, breaks = 8L, B = 100L,
 
   res <- list(table = tab, null = env$null, n_ok = env$n_ok, B = B,
               type = type, n_pairs_total = pr$n_total, breaks = br,
-              rho = object$rho)
+              rho = object$rho, spatial = spatial, min_effect = min_effect)
   if (verbose) ilm_variogram_report(res)
   if (plot) ilm_plot_variogram(res)
   invisible(res)
@@ -303,7 +372,12 @@ ilm_variogram_advice <- function(res) {
   sgn <- sign(dv); sgn <- sgn[sgn != 0]
   flips <- if (length(sgn) > 1L) sum(diff(sgn) != 0) else 0L
   if (flips >= 2L)
-    return(paste0("the correlation alternates in sign across separations ",
+    return(if (isTRUE(res$spatial))
+      paste0("the correlation alternates in sign with distance rather than ",
+             "decaying away, which is a repeating spatial pattern rather than ",
+             "a field: look for a periodic feature of the layout, such as ",
+             "transects or a grid, before reaching for a smooth")
+      else paste0("the correlation alternates in sign across separations ",
                   "rather than decaying away, which is a cycle and not ",
                   "autoregression: see ilm_fourier() and ilm_cyclic()"))
   if (all(dv > 0) && diff(range(dv)) < 0.4 * mean(dv))
@@ -311,10 +385,23 @@ ilm_variogram_advice <- function(res) {
                   "separation rather than decaying, which is a group effect: ",
                   "add or widen a random effect for the unit before reaching ",
                   "for ilm_car1()"))
-  if (dv[1] > 0)
+  if (dv[1] > 0) {
+    ## The honest spatial answer. illume has no spatial covariance -- no
+    ## Matern, no exponential field -- so the remedy is to put the structure in
+    ## the MEAN, where a tensor-product smooth of the coordinates can absorb
+    ## it, or in a random effect for a spatial grouping. Saying "fit a spatial
+    ## correlation" would name something the package does not have.
+    if (isTRUE(res$spatial))
+      return(paste0("the correlation is strongest between nearby points and ",
+                    "decays with distance. illume fits no spatial covariance, ",
+                    "so put the structure in the mean instead: a smooth of the ",
+                    "coordinates, t2(x, y), absorbs smooth spatial variation, ",
+                    "and a random effect for a spatial grouping absorbs the ",
+                    "coarse kind"))
     return(paste0("the correlation is strongest at the shortest separations ",
                   "and decays from there, which is what ilm_car1(time, group) ",
                   "fits; ilm_ar1() if the times are evenly spaced"))
+  }
   paste0("residual correlation departs from what the model implies, but not ",
          "in a shape any one correlation structure fixes; check the mean ",
          "structure first with ilm_check_omitted()")
@@ -356,13 +443,15 @@ ilm_plot_variogram <- function(res, colour = "grey25", fill = "grey85",
   pad <- diff(ylim) * 0.18
   if (is.null(main))
     main <- if (identical(res$type, "semivariance")) "Residual semivariogram"
+            else if (isTRUE(res$spatial)) "Residual correlation by distance"
             else "Residual correlation by separation"
 
   op <- par(mar = c(6.4, 4.2, 3.6, 1.2)); on.exit(par(op), add = TRUE)
   plot(x, est, type = "n", ylim = c(ylim[1] - pad, ylim[2] + pad), xlab = "",
        ylab = if (identical(res$type, "semivariance")) "semivariance"
               else "correlation", main = main)
-  title(xlab = "separation in time (within group)", line = 2.3)
+  title(xlab = if (isTRUE(res$spatial)) "distance"
+               else "separation in time (within group)", line = 2.3)
   w <- diff(range(x, na.rm = TRUE)) / (2.6 * max(nrow(tb), 1L))
   for (k in seq_len(nrow(tb))) {
     if (!is.finite(lo[k]) || !is.finite(hi[k]) || !is.finite(x[k])) next
@@ -396,6 +485,9 @@ ilm_plot_variogram <- function(res, colour = "grey25", fill = "grey85",
         col = if (!length(bad)) "grey30" else
           ILM_STATUS_COL[[if (any(tb$status == "FAIL")) "FAIL" else "WARN"]])
   foot <- if (length(bad)) ilm_variogram_advice(res)
+          else if (isTRUE(res$min_effect > 0))
+            sprintf("band: 95%% envelope from %d refits; departures under %.2f are not flagged",
+                    res$n_ok, res$min_effect)
           else sprintf("band: 95%% envelope from %d refits of simulated data",
                        res$n_ok)
   ilm_mtext_wrap(foot, line = 3.6, cex = 0.62, col = "grey30")

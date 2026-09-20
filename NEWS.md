@@ -58,6 +58,18 @@ mgcv penalised smooths and AR(1) correlation.
   approximation is exact, so there is no approximation error to run out of
   observations for.
 
+## Correlation in space
+
+* `ilm_variogram(coords = )` bins pairs by Euclidean distance rather than by
+  separation in time. Time and space are the same statistic over a different
+  distance, so it is the same function; a one-dimensional coordinate gives the
+  absolute time difference exactly.
+* The advice is spatial where the question is. illume fits no spatial
+  covariance, so it names what it does have: a tensor-product smooth of the
+  coordinates for smooth variation, a random effect for the coarse kind.
+* `min_effect`, 0.1 by default, is the smallest departure from the simulated
+  null worth a verdict.
+
 ## Modelling the spread
 
 * `ilm_model(dispformula = )` models the logarithm of the dispersion:
@@ -158,6 +170,14 @@ Summary notes; the full tables belong with the methods paper.
   with times drawn from 1..30 it found 53 pairs at lag 1, five at lag 2 and none
   beyond, so five of six lags returned no verdict. Binning by separation uses
   all 900 pairs.
+
+* **With thousands of pairs per bin, significance stops meaning anything
+  actionable.** On 300 points carrying an exponential field, adding
+  `t2(sx, sy)` cut the residual correlation at the shortest distance from 0.242
+  to -0.033, dropped AIC from 1165.7 to 1069.4 and narrowed the standard error
+  on the covariate from 0.100 to 0.083 -- and four of five bins were still
+  flagged, against an envelope 0.02 wide. Hence `min_effect`: the same stance
+  the gaussian index takes against normality tests.
 
 * **The dispersion model matches `glmmTMB` and `nlme`.** On a three-group
   design illume, `glmmTMB::glmmTMB(dispformula = ~ g)` and

@@ -44,8 +44,12 @@ test_that("the pair count is capped rather than left to explode", {
   g <- rep(1L, 200); t <- seq_len(200)
   pr <- illume:::ilm_pair_index(g, t, max_pairs = 500L)
   expect_equal(pr$n_total, 19900L)      # 200 choose 2
-  expect_length(pr$i, 500L)
-  expect_length(pr$d, 500L)
+  # above the cap the pairs are sampled rather than enumerated, and a draw
+  # that pairs a point with itself is dropped, so the cap is a ceiling
+  expect_lte(length(pr$i), 500L)
+  expect_gt(length(pr$i), 450L)
+  expect_length(pr$d, length(pr$i))
+  expect_true(all(pr$i != pr$j))
   expect_error(illume:::ilm_pair_index(1:5, 1:5), "no pairs")
 })
 
@@ -199,4 +203,111 @@ test_that("too few successful refits gives no verdict rather than a wrong one", 
   v <- suppressWarnings(ilm_variogram(f, d$t, d$id, breaks = 3L, B = 5L,
                                       plot = FALSE, verbose = FALSE))
   expect_true(all(v$table$status == "INCONCLUSIVE"))
+})
+
+
+## ---- distance in space -----------------------------------------------------
+
+test_that("a two-dimensional coordinate gives Euclidean distance", {
+  co <- cbind(c(0, 3, 0), c(0, 4, 1))
+  pr <- illume:::ilm_pair_index(rep(1L, 3), co)
+  expect_equal(sort(pr$d), sort(c(5, 1, sqrt(9 + 9))))
+  # one dimension is the absolute difference, which is the temporal case: the
+  # two are the same calculation, not two calculations
+  expect_equal(illume:::ilm_pair_index(rep(1L, 3), c(0, 3, 7))$d,
+               illume:::ilm_pair_index(rep(1L, 3), cbind(c(0, 3, 7)))$d)
+})
+
+test_that("time and coords are alternatives, and one is required", {
+  set.seed(6)
+  n <- 200
+  d <- data.frame(sx = stats::runif(n), sy = stats::runif(n),
+                  x = stats::rnorm(n))
+  d$y <- d$x + stats::rnorm(n)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
+  expect_error(ilm_variogram(f), "or `coords` for a spatial")
+  expect_error(ilm_variogram(f, time = seq_len(n), group = rep(1, n),
+                             coords = d[, c("sx", "sy")]),
+               "not both")
+  expect_error(ilm_variogram(f, coords = d[, c("sx", "sy")][-1, ]),
+               "rows but the model has")
+  expect_error(ilm_variogram(f, coords = cbind(letters[1:n])), "must be numeric")
+  expect_error(ilm_variogram(f, coords = matrix(0, n, 4)), "one to three columns")
+  cc <- as.matrix(d[, c("sx", "sy")]); cc[1, 1] <- NA
+  expect_error(ilm_variogram(f, coords = cc), "missing values")
+})
+
+test_that("a spatial field is detected and sent to a smooth of the coordinates", {
+  # an exponential field, which is what spatial data looks like: correlation
+  # decays with distance rather than oscillating
+  set.seed(4)
+  n <- 300
+  d <- data.frame(sx = stats::runif(n), sy = stats::runif(n),
+                  x = stats::rnorm(n))
+  S <- exp(-as.matrix(stats::dist(cbind(d$sx, d$sy))) / 0.25) + diag(1e-8, n)
+  fld <- as.vector(t(chol(S)) %*% stats::rnorm(n))
+  d$y <- 1 + 0.8 * d$x + 1.5 * fld / stats::sd(fld) + stats::rnorm(n, 0, 0.7)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
+  v <- suppressWarnings(ilm_variogram(f, coords = d[, c("sx", "sy")],
+                                      breaks = 5L, B = 40L, plot = FALSE,
+                                      verbose = FALSE))
+  expect_true(isTRUE(v$spatial))
+  expect_true(any(v$table$status != "OK"))
+  # strongest at the shortest distance, which is what a field looks like
+  expect_equal(which.max(v$table$estimate), 1L)
+  a <- illume:::ilm_variogram_advice(v)
+  expect_match(a, "t2(x, y)", fixed = TRUE)
+  # and it does NOT name a temporal remedy for a spatial problem
+  expect_false(grepl("ilm_car1", a, fixed = TRUE))
+})
+
+test_that("a spatial variogram with no field stays quiet", {
+  set.seed(7)
+  n <- 300
+  d <- data.frame(sx = stats::runif(n), sy = stats::runif(n),
+                  x = stats::rnorm(n))
+  d$y <- 1 + 0.8 * d$x + stats::rnorm(n, 0, 0.9)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
+  v <- suppressWarnings(ilm_variogram(f, coords = d[, c("sx", "sy")],
+                                      breaks = 5L, B = 40L, plot = FALSE,
+                                      verbose = FALSE))
+  expect_false(any(v$table$status == "FAIL"))
+  ff <- tempfile(fileext = ".png")
+  grDevices::png(ff, width = 700, height = 450)
+  on.exit({grDevices::dev.off(); unlink(ff)}, add = TRUE)
+  out <- capture.output(ilm_plot_variogram(v))
+  grDevices::dev.off()
+  on.exit(unlink(ff), add = FALSE)
+  expect_gt(file.size(ff), 4000)
+})
+
+test_that("a departure too small to act on is not called a failure", {
+  # Each bin rests on thousands of pairs, so the envelope narrows until any
+  # imperfection clears it. Measured on a spatial field with a smooth already
+  # fitted, the residual correlation had fallen from 0.242 to -0.033 -- a
+  # factor of seven -- and four of five bins were still flagged against an
+  # envelope 0.02 wide.
+  set.seed(4)
+  n <- 300
+  d <- data.frame(sx = stats::runif(n), sy = stats::runif(n),
+                  x = stats::rnorm(n))
+  S <- exp(-as.matrix(stats::dist(cbind(d$sx, d$sy))) / 0.25) + diag(1e-8, n)
+  fld <- as.vector(t(chol(S)) %*% stats::rnorm(n))
+  d$y <- 1 + 0.8 * d$x + 1.5 * fld / stats::sd(fld) + stats::rnorm(n, 0, 0.7)
+  vg <- function(f, me) suppressWarnings(
+    ilm_variogram(f, coords = d[, c("sx", "sy")], breaks = 5L, B = 40L,
+                  min_effect = me, plot = FALSE, verbose = FALSE))
+  f0 <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
+  f1 <- ilm_model(y ~ x + t2(sx, sy, k = 6), data = d, family = "gaussian",
+                  verbose = FALSE)
+  # the floor does not hide a real field
+  expect_gt(sum(vg(f0, 0.1)$table$status != "OK"), 0L)
+  # and the remedy the advice names does clear the diagnosis
+  expect_equal(sum(vg(f1, 0.1)$table$status != "OK"), 0L)
+  # with the floor off, a negligible residual correlation is still flagged,
+  # which is what the floor is for
+  expect_gt(sum(vg(f1, 0)$table$status != "OK"), 1L)
+  # and fitting the smooth is what made the difference, not the floor
+  expect_lt(AIC(f1), AIC(f0))
+  expect_lt(sqrt(diag(vcov(f1)))[["x"]], sqrt(diag(vcov(f0)))[["x"]])
 })

@@ -393,6 +393,41 @@ on zero: residuals within a group sum to roughly zero, so pairs of them
 correlate negatively even under a correct model, and more so the further apart
 they are.
 
+### Correlation in space
+
+The same function takes coordinates instead of a time, because separation in
+space and separation in time are the same statistic over a different distance:
+
+```{r spatialvg, eval = FALSE}
+ilm_variogram(fit, coords = dd[, c("easting", "northing")])
+```
+
+The remedy it names is different, and deliberately so. illume fits no spatial
+covariance — no Matern field, no exponential one — so the advice does not
+pretend otherwise. What it points at is putting the structure in the **mean**:
+a tensor-product smooth of the coordinates, `t2(x, y)`, absorbs smooth spatial
+variation, and a random effect for a spatial grouping absorbs the coarse kind.
+
+Measured on 300 points carrying an exponential field, residual correlation ran
+0.242 at the shortest distance down through 0.071 to −0.072 at the longest.
+Adding `t2(sx, sy)` cut the first of those to −0.033, dropped AIC from 1165.7 to
+1069.4, and narrowed the standard error on the covariate of interest from 0.100
+to 0.083.
+
+### A departure too small to act on
+
+Each bin rests on thousands of pairs, so the envelope narrows until any
+imperfection clears it. In the example above the residual correlation after the
+smooth was about 0.03 against an envelope 0.02 wide — a seventh of what it had
+been, and nothing anyone would act on — and four of five bins were still
+flagged.
+
+`min_effect` is the floor, 0.1 by default: a bin outside the envelope by less
+than that is reported as `OK`. It is the same stance the gaussian index takes
+against normality tests. With the floor in place the field is still caught
+before the smooth is added and the diagnosis is clean after it; with
+`min_effect = 0` both are flagged and the verdict stops distinguishing them.
+
 `type = "semivariance"` reports the same information in the form
 `nlme::Variogram()` uses, since for standardised residuals the semivariance at
 separation `d` is `1 - r(d)`.
