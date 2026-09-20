@@ -366,3 +366,168 @@ ilm_binned_residuals <- function(object, nbins = NULL, plot = TRUE) {
   }
   invisible(out)
 }
+
+## ---- homoscedasticity ------------------------------------------------------
+
+## Two ways the variance can be wrong, each with a different remedy:
+## a spread that trends with the fitted value, and a spread that differs
+## between groups. Both are measured on randomised quantile residuals, which
+## are standard normal when the model -- INCLUDING its variance -- is right, so
+## any remaining pattern in their spread is variance misspecification.
+ilm_var_stats <- function(fit, by_vec, seed) {
+  u <- ilm_rqr(fit, TRUE, seed)
+  z <- stats::qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
+  mu <- as.numeric(ilm_fitted(fit, TRUE)[, 1])
+  ok <- is.finite(z) & is.finite(mu)
+  ## Spearman, so a curved mean-variance relationship is still caught and no
+  ## scale assumption is smuggled in
+  trend <- if (sum(ok) > 10L)
+    suppressWarnings(stats::cor(mu[ok], abs(z[ok]), method = "spearman")) else NA_real_
+  ratio <- NA_real_
+  if (!is.null(by_vec)) {
+    v <- tapply(z[ok], by_vec[ok], stats::var)
+    v <- v[is.finite(v) & v > 0]
+    if (length(v) > 1L) ratio <- max(v) / min(v)
+  }
+  c(trend = trend, ratio = ratio)
+}
+
+#' Is the residual spread constant?
+#'
+#' The assumption illume had no check for. Heteroscedasticity does not usually
+#' bias the coefficients much, but it does bias their standard errors, which is
+#' what an inference package is for.
+#'
+#' Two patterns are tested, because they call for different fixes: spread that
+#' trends with the fitted value, and spread that differs between the levels of
+#' a grouping variable. Both are measured on randomised quantile residuals,
+#' which are standard normal when the model and its variance are both correct,
+#' and both are compared against a null simulated from the fitted model rather
+#' than against an assumed distribution.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @param by Optional name of a column in the model frame, or a vector, whose
+#'   levels might have different variances.
+#' @param B Simulated datasets. A simulated p-value cannot fall below
+#'   `1 / (B + 1)`, so B must exceed 100 for the strongest verdict to be
+#'   reachable.
+#' @param seed Random seed.
+#' @param ncores Worker processes for the refits.
+#' @param plot Draw the scale-location panel.
+#' @param verbose Print the verdict.
+#' @return Invisibly, a list with the observed statistics, their simulated
+#'   nulls, p-values, a `status` and a suggested remedy.
+#' @seealso [ilm_rqr_test()] for other residual statistics,
+#'   [ilm_check_dispersion()] when the whole response is over-dispersed rather
+#'   than unevenly dispersed.
+#' @examples
+#' set.seed(1)
+#' d <- ilm_sim(n_id = 25)
+#' f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
+#'                verbose = FALSE)
+#' ilm_check_variance(f, B = 20, plot = FALSE)
+#' @export
+ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
+                               ncores = 1L, plot = TRUE, verbose = TRUE) {
+  if (!inherits(object, "ilm_model"))
+    stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
+         call. = FALSE)
+  if (1 / (B + 1) > 0.01)
+    warning("B = ", B, " puts the smallest achievable p-value at ",
+            signif(1 / (B + 1), 2), ", so a FAIL verdict is unreachable. ",
+            "Use B >= 100.", call. = FALSE)
+
+  by_vec <- NULL; by_lab <- NULL
+  if (!is.null(by)) {
+    if (length(by) == 1L && is.character(by)) {
+      mf <- object$model
+      if (is.null(mf) || !by %in% names(mf))
+        stop("`by` (", by, ") is not a column of the model frame. Available: ",
+             paste(names(mf), collapse = ", "), call. = FALSE)
+      by_vec <- factor(mf[[by]]); by_lab <- by
+    } else {
+      if (length(by) != nrow(object$X))
+        stop("`by` has ", length(by), " values but the model has ",
+             nrow(object$X), " rows", call. = FALSE)
+      by_vec <- factor(by); by_lab <- "by"
+    }
+  }
+
+  obs <- ilm_var_stats(object, by_vec, seed)
+  ys <- ilm_sim_cond(object, B, seed + 1L)
+  X <- object$X; J <- object$J; rl <- ilm_re_list_of(object)
+  rs <- object$re_struct; arr <- object$ar; yl <- object$ylevels
+  asg <- object$assign; tl <- object$term_labels
+  fm <- object$family; wt <- object$weights
+  cl <- ilm_pool(ncores)
+  on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
+  if (!is.null(cl)) try(parallel::clusterExport(cl, "by_vec", envir = environment()),
+                        silent = TRUE)
+  one <- function(b) {
+    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl, weights = wt,
+                      family = fm, verbose = FALSE, restarts = 1L), silent = TRUE)
+    if (inherits(f, "try-error") || f$opt$convergence != 0)
+      return(c(trend = NA_real_, ratio = NA_real_))
+    f$assign <- asg; f$term_labels <- tl
+    ilm_var_stats(f, by_vec, seed + 1000L + b)
+  }
+  nullm <- do.call(rbind, ilm_lapply(cl, seq_len(B), one))
+  nok <- sum(is.finite(nullm[, "trend"]))
+  if (nok < 10L) {
+    if (verbose) cat("INCONCLUSIVE: only", nok, "of", B, "replicates refitted.\n")
+    return(invisible(list(status = "INCONCLUSIVE", observed = obs, null = nullm)))
+  }
+
+  ## two-sided for the trend, one-sided for the ratio, which cannot be small
+  pv <- function(o, nl, sided) {
+    nl <- nl[is.finite(nl)]
+    if (!is.finite(o) || !length(nl)) return(NA_real_)
+    if (sided == 2) {
+      m <- stats::median(nl)
+      (1 + sum(abs(nl - m) >= abs(o - m))) / (length(nl) + 1)
+    } else (1 + sum(nl >= o)) / (length(nl) + 1)
+  }
+  p_trend <- pv(obs[["trend"]], nullm[, "trend"], 2)
+  p_ratio <- pv(obs[["ratio"]], nullm[, "ratio"], 1)
+  worst <- suppressWarnings(min(c(p_trend, p_ratio), na.rm = TRUE))
+  if (!is.finite(worst)) worst <- NA_real_
+  status <- if (is.na(worst)) "INCONCLUSIVE" else
+            if (worst < 0.01) "FAIL" else if (worst < 0.05) "WARN" else "OK"
+
+  ## the remedy depends on which pattern fired
+  fix <- character(0)
+  if (isTRUE(p_trend < 0.05))
+    fix <- c(fix, "spread changes with the fitted value: model the variance, or use a family whose variance grows with the mean")
+  if (isTRUE(p_ratio < 0.05))
+    fix <- c(fix, sprintf("spread differs across %s: allow a separate variance per level",
+                          if (is.null(by_lab)) "groups" else by_lab))
+
+  if (plot) {
+    u <- ilm_rqr(object, TRUE, seed)
+    z <- stats::qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
+    mu <- as.numeric(ilm_fitted(object, TRUE)[, 1])
+    ok <- is.finite(z) & is.finite(mu)
+    graphics::plot(mu[ok], sqrt(abs(z[ok])), pch = 19,
+                   col = grDevices::adjustcolor("black", 0.35),
+                   xlab = "fitted", ylab = expression(sqrt(abs(residual))),
+                   main = sprintf("Scale-location (%s)", status))
+    if (sum(ok) > 20L) {
+      lw <- try(stats::lowess(mu[ok], sqrt(abs(z[ok]))), silent = TRUE)
+      if (!inherits(lw, "try-error")) graphics::lines(lw, col = "red", lwd = 2)
+    }
+  }
+
+  res <- list(trend = unname(obs[["trend"]]), p_trend = round(p_trend, 4),
+              ratio = unname(obs[["ratio"]]), p_ratio = round(p_ratio, 4),
+              n_refits = nok, B = B, status = status,
+              suggestion = paste(fix, collapse = "; "))
+  if (verbose) {
+    cat(sprintf("spread vs fitted: rho = %.3f, p = %s\n", res$trend,
+                format(res$p_trend)))
+    if (is.finite(res$ratio))
+      cat(sprintf("variance ratio across %s: %.2f, p = %s\n",
+                  by_lab, res$ratio, format(res$p_ratio)))
+    cat(status, if (nzchar(res$suggestion)) paste0(" -- ", res$suggestion) else "", "\n", sep = "")
+  }
+  invisible(res)
+}

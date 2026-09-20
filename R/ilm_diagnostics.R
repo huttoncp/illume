@@ -51,16 +51,51 @@
 #' @export
 ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
   set.seed(seed)
-  P <- ilm_fitted(object, conditional); y <- object$y
-  N <- nrow(P)
+  fam <- if (!is.null(object$family)) object$family$name else "gaussian"
+  y <- as.numeric(object$y)
+  N <- length(y)
+
+  ## Randomised quantile residuals (Dunn & Smyth 1996). For a continuous
+  ## response the CDF at the observation is already uniform. For a discrete one
+  ## the CDF jumps, so the residual is drawn uniformly across the jump, which
+  ## restores uniformity. Only the multinomial needs the log-score construction
+  ## below, because its outcomes have no natural order to take a CDF along.
+  if (!identical(fam, "multinomial")) {
+    mu <- as.numeric(ilm_fitted(object, conditional)[, 1])
+    w <- if (is.null(object$weights)) rep(1, N) else object$weights
+    disp <- object$dispersion
+    u <- switch(fam,
+      gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp[1]) else 1),
+      poisson  = {
+        lo <- stats::ppois(y - 1, mu); hi <- stats::ppois(y, mu)
+        lo + stats::runif(N) * (hi - lo)
+      },
+      nbinom = {
+        k <- unname(disp[1])
+        lo <- stats::pnbinom(y - 1, size = k, mu = mu)
+        hi <- stats::pnbinom(y, size = k, mu = mu)
+        lo + stats::runif(N) * (hi - lo)
+      },
+      binomial = {
+        ## y is a proportion when weights give the number of trials, and 0/1
+        ## otherwise; both are counts of successes out of size
+        size <- pmax(1, round(w)); k <- round(y * size)
+        lo <- stats::pbinom(k - 1, size, mu); hi <- stats::pbinom(k, size, mu)
+        lo + stats::runif(N) * (hi - lo)
+      },
+      stop("no quantile residual is defined for family ", fam, call. = FALSE))
+    return(pmin(pmax(u, 0), 1))
+  }
+
+  P <- ilm_fitted(object, conditional)
   S <- -log(pmax(P, .Machine$double.eps))       # atom values, N x J
-  obs <- S[cbind(seq_len(N), y)]                # observed log score
+  obs <- S[cbind(seq_len(N), as.integer(y))]    # observed log score
   tol <- 1e-10
   ## a length-N vector recycles down the columns of an N x J matrix, so each
   ## element is compared against its own row's observed score
   lo <- rowSums(P * (S <  obs - tol))
   hi <- rowSums(P * (S <= obs + tol))           # ties merged into one atom
-  lo + runif(N) * (hi - lo)
+  lo + stats::runif(N) * (hi - lo)
 }
 
 ## DO NOT TEST THESE AGAINST THE THEORETICAL UNIFORM.  Established by simulation:
