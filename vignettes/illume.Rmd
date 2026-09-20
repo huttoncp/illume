@@ -645,18 +645,75 @@ so underneath rather than quietly showing you the modal level:
 ilm_plot_model(fit, "effect", term = "x")
 ```
 
+## From association to effect
+
+Everything above estimates associations. Three designs turn one into a causal
+claim, each naming an assumption and letting it be partly checked:
+
+```{r causal, eval = FALSE}
+# the regression a causal graph implies, with the graph itself tested
+g <- ilm_dag("dag { x [exposure] ; y [outcome] ; z -> x -> y ; z -> y }")
+ilm_dag_model(g, d)
+
+# a treatment that switches on for some units at some time
+ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
+
+# a treatment assigned by crossing a threshold
+ilm_rdd(d, "score", "running", cutoff = 0)
+```
+
+The rule that makes these safe to automate: the **design** fixes the mean
+structure and nothing searches over it. Only the error structure is adjusted
+when a diagnostic asks. `vignette("causal-models")` covers all three.
+
+## Reading a fit back in words
+
+`ilm_interpret()` writes out what a model says -- each effect on the scale the
+response is measured on, how strong the evidence is, what the diagnostics found,
+and how far to trust the estimates:
+
+```{r interpret, eval = FALSE}
+ilm_interpret(fit)
+```
+
+The prose is templated rather than generated, so the same fit gives the same
+words. It says nothing about bias that a diagnostic did not measure, and it uses
+causal language only when the object carries a design that licenses it --
+otherwise every effect is "associated with".
+
+`ilm_ame()` gives the piece that makes this readable for a model with a link
+function: the average marginal effect on the response scale. An odds ratio of 2
+can be a 3-point change in probability or a 20-point one depending on where the
+data sit, so the change in probability is what gets reported.
+
+```{r ame, eval = FALSE}
+ilm_ame(fit)
+```
+
 ## Working with other packages
 
 `illume` fits into the usual ecosystem. `car::Anova()` dispatches to the correct
 joint test, `performance::model_performance()` and `check_model()` work, and
-`marginaleffects` can be enabled with one call:
+`marginaleffects` and the easystats stack can each be enabled with one call:
 
 ```{r ecosystem, eval = FALSE}
 ilm_register_marginaleffects()
 marginaleffects::avg_slopes(fit, variables = "x1")
+
+ilm_register_insight()          # parameters, performance, report
+parameters::model_parameters(fit)
 ```
 
+`ilm_ame()` agrees with `marginaleffects::avg_slopes()` to 1e-6 on the estimates
+and 1e-7 on the standard errors, which is the point of having both: an
+independent implementation is the only thing that has ever found a real bug
+here.
+
 ## Where to read more
+
+`vignette("causal-models")` covers the DAG workflow, difference in differences
+and regression discontinuity. `vignette("exploring-data")` covers the
+exploration half.
 
 The model itself is a baseline-category logit with random effects; Agresti
 (2013), *Categorical Data Analysis*, chapter 8, is the standard reference. The

@@ -1,3 +1,140 @@
+# illume 0.0.3.9000
+
+Designs that identify an effect, and a way to read a fit back in words.
+
+The inference engine is unchanged from 0.0.2.9000 -- `ilm_model()` returns the
+same estimates -- so the coverage and Type I error evidence recorded under that
+version still applies to everything here. What is new sits on top of it.
+
+## Causal graphs
+
+* `ilm_dag()` reads a causal graph from a dagitty-style string, an edge frame or
+  a `dagitty` object. A bidirected edge is stored as an unobserved common cause,
+  so there is one representation rather than two.
+* `ilm_adjust_sets()` gives the minimal sets of **measured** variables that
+  identify an exposure effect. An empty result is a finding: it says the data
+  cannot answer the question, which is the most useful thing a graph can say and
+  can only be said before the modelling.
+* `ilm_dag_implied()` lists what the graph claims about the data -- one testable
+  independence per missing edge -- and `ilm_dag_test()` checks those claims,
+  with a verdict per claim and one overall.
+* `ilm_dsep()` exposes the d-separation the rest is built on.
+* The graph algorithms are written in-package. `dagitty` imports V8, and a
+  JavaScript engine is a heavy thing to require of someone who wants to fit a
+  regression; it stays in `Suggests` and the tests pin these functions to it.
+
+## The DAG-guided workflow
+
+* `ilm_dag_model()` takes a graph and a data frame and runs the analysis:
+  checks the graph against the data, finds what must be adjusted for, picks a
+  response distribution, looks for grouping structure, fits, diagnoses, and
+  repairs the error structure when a check asks. Verbose by default.
+* **The graph fixes the mean structure and nothing searches over it.** Only the
+  error structure is adjusted -- a dispersion model, a random effect for
+  grouping the graph does not mention. Searching over covariates and reporting
+  the winner's p-values is post-selection inference and would undo the nominal
+  coverage the studies establish. A DAG is a pre-registration device and this
+  treats it as one. Every step is recorded in `$steps`.
+* Where several minimal sets are admissible, all are fitted and reported side by
+  side. They target the same quantity, so the spread across them is a
+  sensitivity analysis that costs only compute.
+* Grouping variables are taken only from **outside** the graph. A variable the
+  graph mentions has a causal role and belongs in the mean structure; anything
+  else can only be structure in how the data were collected.
+
+## Difference in differences
+
+* `ilm_did()` estimates the ATT, tests parallel trends in the pre-period, and
+  returns an event study that `ilm_plot_did()` draws.
+* Staggered adoption is **refused** rather than quietly estimated: under
+  heterogeneous effects a pooled two-way fixed effects estimate is not an
+  average treatment effect, because already-treated units serve as controls for
+  later-treated ones. `allow_staggered = TRUE` returns it with the caveat
+  attached.
+* A unit random intercept is fitted by default and `ar = TRUE` adds AR(1), which
+  is what the serial correlation in a panel calls for.
+
+## Regression discontinuity
+
+* `ilm_rdd()` gives the jump at the cutoff from a local linear fit with a
+  triangular kernel, plus four design checks: density at the cutoff, covariate
+  balance, placebo cutoffs, and how far the estimate moves with the bandwidth.
+  `ilm_plot_rdd()` draws binned means with the fitted lines.
+* Fuzzy assignment is detected and not reported as sharp.
+* The bias-corrected robust intervals of Calonico, Cattaneo and Titiunik are
+  `rdrobust`'s and are not reimplemented. What is reported is an honest local
+  fit with its sensitivity laid out.
+
+## Reading a fit in words
+
+* `ilm_interpret()` writes out what a model says: each effect on the scale the
+  response is measured on, the strength of the evidence, what the diagnostics
+  found, and how far to trust the estimates. Methods for `ilm_model`,
+  `ilm_dag_model`, `ilm_did` and `ilm_rdd`.
+* The prose is **templated, never generated**, so the same fit gives the same
+  words and every sentence is testable.
+* **Causal language is licensed, not assumed.** A coefficient is an association
+  and is called one, unless the object carries a design that identifies an
+  effect -- and where a graph licenses it, the interpretation says the licence
+  is an assumption the user supplied rather than something the data established.
+* Nothing is said about bias that a diagnostic did not measure. Every such
+  sentence traces to a check that ran, carries its verdict and names its remedy.
+* `ilm_ame()` gives average marginal effects on the response scale by the delta
+  method, over the full parameter vector including the covariance parameters,
+  since a population-averaged prediction depends on them.
+* `ilm_register_insight()` makes `parameters`, `performance` and `report` work
+  on an `ilm_model`. `insight` stays in `Suggests`.
+
+## Comparing more than two groups
+
+* `ilm_boot_diff()` compares every pair of levels rather than exactly two, takes
+  a formula, and is simultaneous by default. See the 0.0.2.9000 notes.
+
+## Findings behind those changes
+
+* **The adjustment sets and d-separation agree with `dagitty` exactly.** Across
+  400 random graphs: 1564 d-separation tests with 0 disagreements, 391 of 391
+  identical minimal adjustment sets, and 2532 implied claims every one of which
+  dagitty confirms is a d-separation with no redundant member.
+* **Conditioning sets built from parents silently drop testable claims.** The
+  first version took the parents of each pair and discarded the claim when a
+  parent was unobserved. But a minimal separator usually does not contain that
+  parent -- most often it is empty -- so genuine claims were being lost. The
+  search now runs over subsets of the observed ancestors, where any minimal
+  separator must lie, and returns a minimum rather than merely minimal set, so
+  each test holds as few things fixed as possible.
+* **The parallel-trends check needed the right reference distribution.** It
+  compares two groups of *units'* pre-treatment slopes, so units are the
+  independent replicates. The large-sample normal rejected 0.060, 0.068 and
+  0.050 of the time at 40, 20 and 80 units under trends that really were
+  parallel; t on `units - 2` gave 0.048, 0.055 and 0.045. At 800 replicates the
+  finished check raised a false alarm 0.054 of the time with null p-values
+  uniform by Kolmogorov-Smirnov (p = 0.111), while the ATT itself was unbiased
+  (+0.0029) with 0.946 interval coverage.
+* **A density check can ask the wrong question and look right.** Comparing
+  counts either side of an RD cutoff against 50/50 asks whether the density is
+  SYMMETRIC there; the question is whether it is CONTINUOUS. Over 500
+  unmanipulated data sets the count split flagged 0.044 of uniform running
+  variables but 0.760 of a sloped normal and 1.000 of an exponential, all of
+  them perfectly smooth. A local linear density on each side held 0.046 to 0.060
+  throughout, and had more power too: with 30% of the units just below the
+  cutoff moved above it, the count split caught 0.808 and the local linear fit
+  0.984.
+* **The marginal effects agree with `marginaleffects`.** On a binomial fit the
+  estimates match `avg_slopes()` to 1e-6 and the standard errors to 1e-7, for
+  slopes and for a factor contrast, which are different calculations on both
+  sides.
+
+## Fixes
+
+* `ilm_did()` read a two-level factor's labels in alphabetical order, so
+  `post = factor(x, levels = c("before", "after"))` made "before" the treated
+  period and inverted the estimate. A factor's own level order is the author's
+  intent and is now what is used.
+* `has_rp` and `Drp` are declared in `globalVariables()`. They entered the RTMB
+  data list with the Royston-Parmar work and `getAll()` binds them at run time,
+  which `codetools` cannot see, so `R CMD check` reported them as undefined.
+
 # illume 0.0.2.9000
 
 Time-to-event, censoring, correlation over irregular time, and a model for the

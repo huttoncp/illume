@@ -338,4 +338,11 @@ f <- ilm_model(score ~ income + grp + (1 | id), data = d,
 ilm_plot_model(f, "coef")
 ```
 
-See `vignette("illume")` for the modelling half.
+and, once it is fitted, what it says in words:
+
+```{r}
+ilm_interpret(f, ame = FALSE)
+```
+
+See `vignette("illume")` for the modelling half, and
+`vignette("causal-models")` for turning an association into a causal claim.

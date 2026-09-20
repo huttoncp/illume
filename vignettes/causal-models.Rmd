@@ -1,0 +1,333 @@
+---
+title: "Causal models: DAGs, difference in differences, regression discontinuity"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Causal models: DAGs, difference in differences, regression discontinuity}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.2)
+set.seed(2024)
+library(illume)
+```
+
+A regression coefficient is an association. Turning one into a causal claim
+takes an argument that lives outside the data, and this vignette covers the
+three illume supports: a causal graph you supply, a difference in differences,
+and a regression discontinuity.
+
+What they share is that each names an assumption, and each lets that assumption
+be checked at least partly. The functions here put the check in the same object
+as the estimate, so it is hard to report one without the other.
+
+## The one rule
+
+**The design fixes which regression is fitted, and nothing searches over it.**
+
+That matters more than it might sound. If you try specifications until the
+diagnostics look good and then report the winner's p-values, those p-values are
+no longer what they claim: you have used the data twice, once to choose and once
+to test. illume's coverage is nominal across 23 designs precisely because
+nothing does that.
+
+So `ilm_dag_model()` takes the mean structure from the graph and leaves it
+alone. What it *will* adjust, when a diagnostic asks, is the **error**
+structure -- a model for the dispersion, a random effect for grouping. Those
+change what the standard errors are, not which effect is being estimated. Every
+step is recorded and printed as it happens.
+
+## Part 1: a causal graph
+
+### Writing one down
+
+`ilm_dag()` reads the `dagitty` text form, an edge list, or a `dagitty` object.
+
+```{r}
+g <- ilm_dag("dag {
+  treatment [exposure]
+  recovery  [outcome]
+  severity -> treatment
+  severity -> recovery
+  treatment -> recovery
+  age -> severity
+  age -> recovery
+}")
+g
+```
+
+The graph algorithms are written in illume rather than taken from `dagitty`,
+which imports V8 -- a JavaScript engine is a heavy thing to require of someone
+who wants to fit a regression. `dagitty` is in `Suggests` and the test suite
+pins these functions to it: across 400 random graphs, 1564 d-separation tests
+with no disagreements, 391 of 391 identical adjustment sets, and 2532 implied
+claims all confirmed.
+
+### What has to be adjusted for
+
+```{r}
+ilm_adjust_sets(g)
+```
+
+`severity` closes the back door. `age` does not need to be in the set as well,
+because conditioning on `severity` already blocks the path through it.
+
+The interesting case is when nothing works:
+
+```{r}
+ilm_adjust_sets(g, observed = c("treatment", "recovery", "age"))
+```
+
+An empty result is a **finding**. It says that with these variables measured, no
+regression estimates this effect. That is the most useful thing a graph can tell
+you, and it can only be said before the modelling rather than after.
+
+### What the graph claims about the data
+
+Every missing arrow is a testable claim. `ilm_dag_implied()` lists them and
+`ilm_dag_test()` checks them:
+
+```{r}
+ilm_dag_implied(g)
+```
+
+The conditioning set is minimal -- no member can be dropped. Conditioning on
+both variables' parents always works and is the usual textbook basis, but it is
+often much larger than it needs to be, and every unnecessary covariate costs
+power and invites a modelling error of its own.
+
+```{r}
+n <- 800
+age      <- rnorm(n)
+severity <- 0.7 * age + rnorm(n)
+treatment <- rbinom(n, 1, plogis(0.8 * severity))
+recovery <- 1.2 * treatment - 0.9 * severity + 0.5 * age + rnorm(n)
+d <- data.frame(age, severity, treatment, recovery)
+
+ilm_dag_test(g, d)
+```
+
+A failed claim does not say which side is at fault. The graph may be missing an
+arrow, or a variable may not measure what its name supposes. Both are worth
+knowing before any estimate is taken seriously. Note the two thresholds: a claim
+counts as contradicted only if it is both significant after adjustment *and*
+larger than `min_effect`. With a few thousand rows a correlation of 0.03 is
+significant and means nothing.
+
+### The whole workflow
+
+```{r}
+fit <- ilm_dag_model(g, d)
+```
+
+```{r}
+fit
+```
+
+Compare that with ignoring the graph entirely:
+
+```{r}
+coef(ilm_model(recovery ~ treatment, data = d, family = "gaussian",
+               verbose = FALSE))["treatment"]
+```
+
+The truth is 1.2. Adjusting for what the graph says to adjust for recovers it;
+not adjusting does not.
+
+### Several adjustment sets are a sensitivity analysis
+
+When more than one minimal set is admissible, all of them are fitted. They
+target the same quantity, so if the graph is right they should agree.
+
+```{r}
+g2 <- ilm_dag("dag {
+  x [exposure] ; y [outcome]
+  u -> a -> x ; u -> b -> y ; x -> y
+}")
+ilm_adjust_sets(g2)
+```
+
+The back-door path can be blocked at `a`, at `u`, or at `b`. Agreement across
+the three supports the graph; a set that disagrees markedly is worth more
+attention than any single point estimate.
+
+### Reading it back in words
+
+```{r}
+ilm_interpret(fit, ame = FALSE)
+```
+
+Note that this says "leads to" rather than "is associated with", and says why.
+Without a design that identifies an effect, `ilm_interpret()` will not use
+causal language at all -- and it tells you that the licence rests on the graph
+being right, which is an assumption you supplied rather than something the data
+established.
+
+## Part 2: difference in differences
+
+Some units get treated at a point in time, others do not, and the comparison is
+between the two groups' *changes* rather than their levels.
+
+```{r}
+panel <- expand.grid(unit = 1:40, time = 1:8)
+panel$treated <- as.integer(panel$unit <= 20)
+panel$post    <- as.integer(panel$time >= 5)
+panel$y <- 1 + 0.3 * panel$time + rnorm(40)[panel$unit] +
+  0.8 * panel$treated * panel$post + rnorm(nrow(panel))
+
+did <- ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
+```
+
+```{r}
+did
+```
+
+The estimate is an interaction in a mixed model, so the fit is an ordinary
+`ilm_model` and every method and diagnostic in the package applies to it.
+
+### Parallel trends
+
+The identifying assumption is that without the treatment the two groups would
+have moved together. That cannot be checked where it matters -- it concerns a
+world that did not happen -- but it can be checked *before* the treatment, and
+the event study shows the shape of any departure:
+
+```{r}
+ilm_plot_did(did)
+```
+
+Pre-treatment coefficients should sit near zero. Here is what a violation looks
+like:
+
+```{r}
+bad <- panel
+bad$y <- bad$y + 0.35 * bad$treated * bad$time   # already diverging
+did_bad <- ilm_did(bad, "y", "unit", "time", treated = "treated",
+                   post = "post", verbose = FALSE)
+did_bad$parallel$status
+ilm_plot_did(did_bad)
+```
+
+Getting that check calibrated took choosing the right reference distribution.
+The comparison is between two groups of *units'* slopes, so units are the
+independent replicates and the large-sample normal is too generous when there
+are few: it rejected 6.0%, 6.8% and 5.0% of the time at 40, 20 and 80 units,
+where `t` on `units - 2` gave 4.8%, 5.5% and 4.5%. A check that cries wolf is
+worse than no check, because the remedy for a failed parallel-trends test is to
+abandon the design.
+
+### Staggered adoption is refused
+
+When units are treated at different times, a pooled two-way fixed effects
+estimate is **not** an average treatment effect if the effect varies:
+already-treated units end up serving as controls for later-treated ones.
+
+```{r, error = TRUE}
+stag <- panel
+start <- ifelse(stag$unit <= 10, 4, ifelse(stag$unit <= 20, 6, Inf))
+stag$treatment <- as.integer(stag$time >= start)
+ilm_did(stag, "y", "unit", "time", treatment = "treatment", verbose = FALSE)
+```
+
+`allow_staggered = TRUE` returns the estimate with the caveat attached. The
+honest remedy is a cohort-based estimator -- the `did` and `fixest` packages
+implement them -- and illume does not have one.
+
+### Serial correlation
+
+Repeated observations of the same unit are correlated, and difference in
+differences with naive standard errors over-rejects badly as a result. A unit
+random intercept is fitted by default; `ar = TRUE` adds AR(1) on top, which is
+what matters when the correlation decays rather than being constant.
+
+## Part 3: regression discontinuity
+
+Treatment is assigned by whether a running variable crosses a cutoff, so units
+just either side are comparable and the jump at the cutoff is the effect.
+
+```{r}
+n <- 2000
+run <- runif(n, -1, 1)
+score <- 0.5 * run + 0.8 * (run >= 0) + rnorm(n, 0, 0.5)
+rd <- ilm_rdd(data.frame(run = run, score = score), "score", "run", cutoff = 0)
+```
+
+```{r}
+rd
+ilm_plot_rdd(rd)
+```
+
+### The design checks
+
+A regression discontinuity is only as good as the claim that crossing the cutoff
+is the *only* thing that changes there. Four things check that.
+
+**Density.** If people can move themselves across the cutoff, the ones just
+above are not comparable to the ones just below.
+
+```{r}
+rd$density$status
+```
+
+The test is whether the density is *discontinuous* at the cutoff, not whether it
+is *symmetric* about it -- and the difference is not academic. Comparing raw
+counts either side against a 50/50 split flagged 76% of a perfectly smooth
+sloped normal and 100% of a smooth exponential, over 500 unmanipulated data
+sets. A local linear density fitted on each side and compared at the cutoff held
+between 4.6% and 6.0% across uniform, normal and exponential running variables,
+and had more power as well: with 30% of the units just below the cutoff moved
+above it, the count split caught 81% and the local linear fit 98%.
+
+**Covariate balance.** Anything measured before treatment should not jump.
+
+```{r}
+covs <- data.frame(run = run, score = score,
+                   prior = rnorm(n), leaky = rnorm(n) + 0.9 * (run >= 0))
+rd2 <- ilm_rdd(covs, "score", "run", cutoff = 0,
+               covariates = c("prior", "leaky"), verbose = FALSE)
+rd2$balance
+```
+
+`leaky` jumps, which means something other than treatment changes at the cutoff
+and the estimate absorbs it.
+
+**Placebo cutoffs and bandwidth sensitivity.**
+
+```{r}
+rd$placebo
+rd$bandwidth
+```
+
+An effect that appears only in a narrow window is not an effect.
+
+### What this does not do
+
+The interval is the ordinary one for a weighted local fit. It does **not** carry
+the bias correction that a wide bandwidth calls for; `rdrobust` implements the
+Calonico–Cattaneo–Titiunik intervals and does it well. The default here is local
+**linear** for a reason: a high-order global polynomial produces estimates driven
+by points far from the cutoff and is a documented way to manufacture a
+discontinuity.
+
+Fuzzy assignment -- where crossing the cutoff changes the *probability* of
+treatment without determining it -- is detected and not reported as sharp, since
+the jump is then the effect of being eligible rather than of being treated.
+
+## Choosing among the three
+
+| | identifying assumption | checkable? |
+|---|---|---|
+| `ilm_dag_model()` | the graph is right, and the adjustment set is measured | partly: the implied independencies |
+| `ilm_did()` | parallel trends | partly: the pre-treatment periods |
+| `ilm_rdd()` | nothing else changes at the cutoff | partly: density, balance, placebos |
+
+None of them is checkable where it matters, which is the part that concerns a
+counterfactual. Everything above makes an assumption more or less plausible; none
+of it makes one true.
+
+## See also
+
+`vignette("illume")` for the modelling engine and its diagnostics,
+`vignette("exploring-data")` for the exploration side.
