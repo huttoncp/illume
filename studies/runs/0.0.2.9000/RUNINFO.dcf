@@ -1,0 +1,17 @@
+Version: 0.0.2.9000
+Date: 2026-09-20
+R: 4.4.3
+Studies: coverage, power, bench, mclogit, brms
+Note: The coverage and power studies were expanded from 11 and 6 cells to 23
+ and 13, to cover every model type the package fits rather than only the
+ families it started with. New cells: negative binomial; AR(1) and CAR(1) on a
+ gaussian response; a censored response; the three accelerated failure time
+ families and a frailty Weibull; a Royston-Parmar flexible baseline; a
+ dispersion model; a penalised smooth; a random slope. Existing cells are
+ unchanged and reproduce the 0.0.1.9000 results.
+Note: A replicate counts when the gradient condition holds and the standard
+ errors exist, rather than when nlminb reports convergence. Its "false
+ convergence (8)" is a stopping heuristic, not a first-order condition: on
+ flexible parametric fits a third of replicates reported it while sitting at a
+ gradient of 3.7e-03 and recovering the same coefficients as those reporting
+ success. The earlier criterion discarded them.

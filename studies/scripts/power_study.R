@@ -218,7 +218,12 @@ run_rep <- function(i, cell, delta, do_lrt) {
   f <- tryCatch(suppressWarnings(do.call(illume::ilm_model, args)),
        error = function(e) NULL)
   if (is.null(f)) return(list(ok = FALSE, wald = NA_real_, lrt = NA_real_))
-  ok <- isTRUE(f$opt$convergence == 0L) && isTRUE(f$sdr$pdHess)
+  ## Judged on the first-order condition, not on nlminb's stopping code: its
+  ## "false convergence (8)" means it could not verify a descent direction, and
+  ## on flexible parametric fits a third of the replicates reported it while
+  ## sitting at a small gradient and recovering the right coefficients.
+  gst <- f$checks$status[f$checks$check == "gradient"]
+  ok <- (!length(gst) || gst != "FAIL") && isTRUE(f$sdr$pdHess)
   w <- tryCatch(suppressWarnings(pval_x1(illume::ilm_anova(f, type = 3))),
                 error = function(e) NA_real_)
   l <- if (do_lrt)

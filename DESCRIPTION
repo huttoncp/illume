@@ -1,7 +1,7 @@
 Package: illume
 Type: Package
 Title: Exploration and Frequentist Inference in One Toolkit
-Version: 0.0.1.9000
+Version: 0.0.2.9000
 Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
                   email = "craig.hutton@gmail.com")

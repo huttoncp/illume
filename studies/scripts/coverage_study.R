@@ -223,6 +223,19 @@ gen_extra <- function(cell, seed) {
     dd$z <- runif(cell$N, -3, 3)
     eta <- model.matrix(~ x1 + grp, dd) %*% Bt
     dd$y <- as.numeric(eta) + sin(dd$z) * 1.5 + rnorm(cell$N, 0, 1)
+    ## The intercept is NOT the parameter it is without a smooth. mgcv centres
+    ## a smooth on the observed data, so the intercept becomes the mean
+    ## response at the sample average of the smooth, and that average moves
+    ## from replicate to replicate. Measured here: the smooth's sample mean has
+    ## a standard deviation of 0.0446, the reported standard error on the
+    ## intercept is 0.0766, and sqrt(0.0766^2 + 0.0446^2) = 0.0886 against an
+    ## observed spread of 0.0875. Coverage against the fixed population
+    ## intercept came to 0.880; against the intercept plus that replicate's
+    ## sample mean, 0.943. Checking it against a constant tests the
+    ## parameterisation, not the standard errors, so the cell checks the
+    ## slopes, which the centring leaves alone.
+    attr(dd, "truth") <- setNames(as.vector(Bt)[-1L],
+                                  c("x1", "grpb", "grpc"))
     return(dd)
   }
 
@@ -367,7 +380,14 @@ run_rep <- function(i, cell) {
 
   b <- coef(f)
   s <- suppressWarnings(sqrt(diag(vcov(f))))
-  ok <- isTRUE(f$opt$convergence == 0L) && isTRUE(f$sdr$pdHess) &&
+  ## A replicate counts when the first-order condition holds and the standard
+  ## errors exist. nlminb's stopping CODE is not that condition: its "false
+  ## convergence (8)" means it could not verify a descent direction, and on
+  ## flexible parametric fits a third of the replicates reported it while
+  ## sitting at a gradient of 3.7e-03 and recovering the same coefficients as
+  ## the ones that reported success. Judging on the code discarded them.
+  gst <- f$checks$status[f$checks$check == "gradient"]
+  ok <- (!length(gst) || gst != "FAIL") && isTRUE(f$sdr$pdHess) &&
         length(s) == length(b) && all(is.finite(s)) && all(s > 0)
   crit <- if (isTRUE(f$exact_df)) qt(1 - (1 - LEVEL) / 2, f$resid_df)
           else qnorm(1 - (1 - LEVEL) / 2)

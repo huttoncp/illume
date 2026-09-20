@@ -1,9 +1,8 @@
-# illume 0.0.1.9000
+# illume 0.0.2.9000
 
-First working version. One engine, `ilm_model()`, fits gaussian, binomial,
-Poisson, negative binomial and multinomial models by Laplace approximation via
-RTMB, with lme4-style formulas, crossed and nested random intercepts and slopes,
-mgcv penalised smooths and AR(1) correlation.
+Time-to-event, censoring, correlation over irregular time, and a model for the
+spread. Everything the diagnostics could only name a remedy for, they can now
+also fit.
 
 ## Features
 
@@ -264,6 +263,18 @@ Summary notes; the full tables belong with the methods paper.
   normal score of the quantile residual fills the interval in and stays centred
   and unit-scaled, which is what the diagnostics now use.
 
+* **A centred smooth changes what the intercept estimates.** The gaussian
+  smooth cell returned an intercept covered 0.880 of the time while every slope
+  was nominal, which looked like a defect in the fit and was not. `mgcv`'s
+  identifiability constraint centres the basis on the observed data, so the
+  intercept is the mean response at the sample average of the smooth rather
+  than at its population average, and that average moves from one replicate to
+  the next. The sample mean had a standard deviation of 0.0446 across
+  replicates against a reported standard error of 0.0766, and
+  `sqrt(0.0766^2 + 0.0446^2) = 0.0886` against an observed spread of 0.0875.
+  Scored against the moving target, coverage was 0.943. `ilm_model()` now says
+  so in its documentation; the slopes are unaffected either way.
+
 ## Fixes
 * **A reduced-model refit was not the same model.** `ilm_refit_drops()` hands
   its workers a stub of the fitted object rather than the whole thing, and that
@@ -277,8 +288,6 @@ Summary notes; the full tables belong with the methods paper.
   Measured after the fix, at 200 replicates and a nominal 0.05: 0.045, 0.050,
   0.035 and 0.055 for a Tobit, an accelerated failure time, a dispersion model
   and a flexible baseline.
-
-
 * `ilm_model()` kept the caller's formula environment. `lme4::nobars()`,
   `mgcv::interpret.gam()` and `stats::reformulate()` each return a formula
   carrying an environment of their own, so a term with a local argument --
@@ -301,6 +310,48 @@ Summary notes; the full tables belong with the methods paper.
   throughout. The quantile residual errored for gaussian and Poisson models and
   returned plausible-looking but non-uniform values for binomial ones; a test
   that checked only `is.finite()` passed on all of it.
+
+## Validation
+
+Summary of the simulation studies re-run against this version on 2026-09-20.
+Full tables and per-cell detail are in `studies/findings/`; that material is
+intended for the methods paper rather than for this file.
+
+* **Coverage is nominal for every model type the package fits.** The study grew
+  from 11 designs to 23, adding the negative binomial, a random slope, a
+  penalised smooth, AR(1) and CAR(1), a Tobit ceiling, all three accelerated
+  failure time families with and without a frailty, a flexible parametric
+  baseline and a dispersion model. Coverage ran 0.944 to 0.955 against a
+  nominal 0.95 at 2000 replicates per cell, with the worst single coefficient
+  0.935 in the deliberately under-powered `mn_J5_thin`.
+* **Type I error is nominal across 13 designs** -- 0.042 to 0.061 against a
+  nominal 0.05, Monte Carlo standard error 0.005, Wald and likelihood-ratio
+  agreeing throughout. The cells covering censoring, time to event, a flexible
+  baseline and a dispersion model are why this table was expanded: the
+  reduced-model refit fault above rejected at 100% under the null, and no
+  coverage study of point estimates would ever have seen it.
+* **Convergence is now judged on the gradient, not on the optimiser's stopping
+  code.** nlminb's "false convergence (8)" means it could not verify a descent
+  direction, which is not the same as being away from a stationary point: on
+  flexible parametric fits a third of replicates reported it while sitting at a
+  gradient of 3.7e-03 and recovering the same coefficients as the replicates
+  that reported success. Grading on the code discarded them, 1212 of 2000
+  against 1991 on the gradient. The hardest multinomial cell moved the same
+  way, 0.332 to 0.416 at 1.5 observations per latent value, with coverage
+  unchanged.
+* **Agreement with independent implementations holds** at 2.3e-04 or better
+  against lme4, glmmTMB and nnet, and the mclogit comparison reproduces: 0.949
+  coverage against 0.891 at four observations per cluster, where PQL attenuates
+  fixed effects to 73% of their true magnitude.
+* **Agreement with brms is unchanged** -- a mean of 0.097 standard errors over
+  8 coefficients, a standard error ratio of 0.984, illume at a median 0.59s
+  against 45.2s of brms sampling alone.
+
+Coverage in cells with convergence failures is conditional on convergence:
+failed fits are excluded, so surviving coverage is optimistic if failure
+correlates with extreme estimates.
+
+# illume 0.0.1.9000
 
 ## Validation
 

@@ -118,6 +118,17 @@ Random-effect bars are extracted with \code{lme4::findbars()} and smooths with
 \code{mgcv::interpret.gam()}, then reparameterised by \code{ilm_smooth()} so that the
 unpenalised part of each smooth joins the fixed effects and the penalised part
 becomes a random term.
+
+A smooth is centred on the observed data, which changes what the INTERCEPT
+means: it becomes the mean response at the sample average of the smooth,
+not at a fixed point. That average moves from sample to sample, and the
+standard error on the intercept does not carry that movement, so an interval
+for it is narrower than its sampling spread. Measured on 2000 replicates of
+a 600-row design, the intercept covered a fixed population value 88\% of the
+time and the sample-specific value 94.3\%; the slopes were unaffected, which
+is what the centring is for. Read the intercept of a model with a smooth as
+a property of the sample, and take conclusions from the slopes and from
+\code{\link[=ilm_plot_model]{ilm_plot_model()}}'s effect curves.
 }
 \section{Simple models get exact inference}{
 
