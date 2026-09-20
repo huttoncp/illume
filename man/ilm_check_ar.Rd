@@ -37,8 +37,10 @@ ilm_check_ar(
 \item{plot}{Logical. Draw the autocorrelation and its band.}
 }
 \value{
-Invisibly, a list with the per-lag table, per-category z scores and
-the simulated null.
+Invisibly, a list with the per-lag \code{table}, the matching \code{pacf}
+table, the observed values and per-component z scores, the simulated null
+and the number of replicates that refitted. The whole thing can be handed
+straight to \code{\link[=ilm_plot_acf]{ilm_plot_acf()}} to avoid refitting.
 }
 \description{
 Tests whether residuals from observations close together in time within the
@@ -69,16 +71,25 @@ that fit reproduces its own autocorrelation and the discrepancy cancels out.
 
 Built by refitting simulated data rather than using the usual
 \verb{plus or minus 2/sqrt(n)} lines, which assume independent observations and
-would over-flag here. Because the statistic takes a maximum across categories,
-its reference is calibrated by leave-one-out to avoid an artificial bias
-toward significance.
+would over-flag here. Because the statistic takes a maximum across residual
+components, its reference is calibrated by leave-one-out to avoid an
+artificial bias toward significance.
 }
 
+\examples{
+set.seed(1)
+d <- ilm_sim(n_id = 20, n_period = 8)
+f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
+               verbose = FALSE)
+ilm_check_ar(f, time = as.integer(factor(d$date)), group = d$id,
+             maxlag = 3, B = 12)
+}
 \references{
 Rue, H., & Held, L. (2005). \emph{Gaussian Markov Random Fields: Theory and
 Applications}. Chapman & Hall/CRC. (Background on latent autoregressive
 structures.)
 }
 \seealso{
-\code{\link[=ilm_appraise]{ilm_appraise()}}, \code{\link[=ilm_check_omitted]{ilm_check_omitted()}}.
+\code{\link[=ilm_plot_acf]{ilm_plot_acf()}} for the picture, \code{\link[=ilm_appraise]{ilm_appraise()}},
+\code{\link[=ilm_check_omitted]{ilm_check_omitted()}}.
 }

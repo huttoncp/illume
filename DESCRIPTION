@@ -34,6 +34,7 @@ Imports:
     stats,
     graphics,
     grDevices,
+    splines,
     utils,
     parallel,
     codetools

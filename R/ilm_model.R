@@ -152,9 +152,21 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
   if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
 
+  ## Where the terms of the formula get evaluated. lme4::nobars(),
+  ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying
+  ## an environment of their own, so without this the model frame is built
+  ## somewhere the caller's local variables do not exist -- and a term such as
+  ## ilm_fourier(t, 12, K), or ns(x, df = d), written inside a function fails
+  ## with "object 'K' not found".
+  fenv <- environment(formula)
+  if (is.null(fenv)) fenv <- parent.frame()
+
   bars  <- lme4::findbars(formula)
   fform <- lme4::nobars(formula)
+  environment(fform) <- fenv
   gp    <- mgcv::interpret.gam(fform)
+  environment(gp$pf) <- fenv
+  if (!is.null(gp$fake.formula)) environment(gp$fake.formula) <- fenv
   smsp  <- gp$smooth.spec
   respn <- deparse(formula[[2]])
 
@@ -183,7 +195,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   wnm <- if (is.null(wexpr)) NULL else deparse(wexpr)
   if (!is.null(wnm)) rhs <- c(rhs, wnm)
   if (!length(rhs)) rhs <- "1"
-  form_all <- stats::reformulate(rhs, response = formula[[2]])
+  form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
 
@@ -221,6 +233,22 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
 
   ## ---- fixed effects ------------------------------------------------------
   mt <- stats::terms(gp$pf, data = mf)
+  ## model.frame() is what runs makepredictcall(), and it is the only thing
+  ## that does -- terms(formula, data = ) does not. Without carrying the result
+  ## across, any term that stores state fitted from the data (ns, bs, poly,
+  ## scale) gets recomputed by predict() from whatever rows it was handed, on a
+  ## different basis. ns() errors outright on a short newdata; poly() returns
+  ## numbers, quietly wrong ones. Copy the prediction calls model.frame()
+  ## worked out onto the terms the model keeps.
+  pvt <- attr(mf, "terms")
+  pv <- attr(pvt, "predvars")
+  if (!is.null(pv)) {
+    src <- vapply(as.list(attr(pvt, "variables"))[-1], deparse1, "")
+    want <- vapply(as.list(attr(mt, "variables"))[-1], deparse1, "")
+    idx <- match(want, src)
+    if (!anyNA(idx))
+      attr(mt, "predvars") <- as.call(c(quote(list), as.list(pv)[-1][idx]))
+  }
   X  <- stats::model.matrix(mt, mf, contrasts.arg = contrasts)
   xlev <- stats::.getXlevels(mt, mf)
   ctr  <- attr(X, "contrasts")

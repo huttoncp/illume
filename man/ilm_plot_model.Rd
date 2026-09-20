@@ -22,7 +22,9 @@ ilm_plot_model(
 
 \item{what}{\code{"coef"} for fixed effects with intervals, \code{"effect"} for the
 partial effect of one predictor, \code{"random"} for a caterpillar plot of the
-estimated group effects, or \code{"residual"} to hand off to \code{\link[=ilm_appraise]{ilm_appraise()}}.}
+estimated group effects, \code{"residual"} to hand off to \code{\link[=ilm_appraise]{ilm_appraise()}}, or
+\code{"acf"} to hand off to \code{\link[=ilm_plot_acf]{ilm_plot_acf()}}, which also needs \code{time} and
+\code{group}.}
 
 \item{term}{Which predictor or grouping factor to show, for \code{"effect"} and
 \code{"random"}.}

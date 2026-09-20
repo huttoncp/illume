@@ -14,14 +14,16 @@
 ## found by prefix completion.
 ## ---------------------------------------------------------------------------
 
-ILM_MODEL_PLOTS <- c("coef", "effect", "random", "residual")
+ILM_MODEL_PLOTS <- c("coef", "effect", "random", "residual", "acf")
 
 #' Diagnostic and summary plots for a fitted model
 #'
 #' @param model A fitted `"ilm_model"` object.
 #' @param what `"coef"` for fixed effects with intervals, `"effect"` for the
 #'   partial effect of one predictor, `"random"` for a caterpillar plot of the
-#'   estimated group effects, or `"residual"` to hand off to [ilm_appraise()].
+#'   estimated group effects, `"residual"` to hand off to [ilm_appraise()], or
+#'   `"acf"` to hand off to [ilm_plot_acf()], which also needs `time` and
+#'   `group`.
 #' @param term Which predictor or grouping factor to show, for `"effect"` and
 #'   `"random"`.
 #' @param conf Confidence level for intervals.
@@ -52,7 +54,9 @@ ilm_plot_model <- function(model, what = "coef", term = NULL, conf = 0.95,
     coef     = ilm_plot_coef(model, conf, colour, size, main, ...),
     effect   = ilm_plot_effect(model, term, conf, colour, fill, alpha, main, ...),
     random   = ilm_plot_random(model, term, conf, colour, size, main, ...),
-    residual = ilm_appraise(model, ...))
+    residual = ilm_appraise(model, ...),
+    acf      = ilm_plot_acf(model, colour = colour, fill = fill, alpha = alpha,
+                            size = size, main = main, ...))
 }
 
 #' Plot a fitted model
