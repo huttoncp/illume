@@ -320,6 +320,106 @@ for this model and this amount of data.
 ilm_consistency(fit, B = 50, ncores = 4)
 ```
 
+## Structure over time
+
+Repeated measurements on the same unit are rarely independent, and there are two
+quite different reasons why -- which matter because they need opposite remedies.
+
+`ilm_plot_acf()` draws the residual autocorrelation and partial autocorrelation
+by lag, within group, with a verdict on each lag:
+
+```{r acfplot, eval = FALSE}
+ilm_plot_acf(fit, time = dd$time, group = dd$subj, maxlag = 14)
+```
+
+Three things make this not `stats::acf()`:
+
+- Pairs are matched on exact time differences **within group**. A panel dataset
+  stacked long is many short series, and pairing across the joins manufactures
+  correlation that is not there.
+- The band is not `2/sqrt(n)`. Residuals within a group sum to roughly zero, so
+  pairs of them correlate *negatively* even when the model is exactly right --
+  measured, around -0.07 at every lag on a 60-unit panel. A band centred on zero
+  calls correct models wrong. The band here comes from simulating from the fit
+  and refitting.
+- The band is drawn at the critical value the p-value is computed against, so a
+  point outside the band is exactly a lag the check flags. The picture and the
+  table cannot disagree.
+
+### A cycle is not autocorrelation
+
+Both fill the autocorrelation plot with flagged lags. Only one of them is fixed
+by an AR term.
+
+The partial autocorrelation is what separates them, and so is the *shape* of the
+ordinary one. Autoregression decays through zero and stays there. A cycle comes
+back up to a positive peak at its period -- a spike at lag 12 in monthly data,
+lag 7 in daily data. `ilm_check_ar()` reads that difference and names the period
+rather than reaching for AR(1), which cannot represent a cycle at all.
+
+The remedy is ordinary fixed effects; there is no new likelihood involved, only
+the right columns:
+
+```{r seasonterms}
+head(round(ilm_fourier(1:12, period = 12, K = 2), 3), 3)
+```
+
+```{r seasonfit, eval = FALSE}
+# a smooth annual cycle in monthly data
+ilm_model(y ~ x + ilm_fourier(month, 12, K = 2) + (1 | subj), data = dd,
+          family = "gaussian")
+
+# local flexibility instead, for a long cycle such as day-of-year
+ilm_model(y ~ x + ilm_cyclic(doy, 365.25, df = 8) + (1 | subj), data = dd,
+          family = "gaussian")
+```
+
+`ilm_cyclic()` is a cubic spline that closes on itself: the value and its first
+two derivatives match across the wrap, so December runs into January without a
+step. An ordinary `bs()` or `ns()` on a phase variable does not know the two
+ends of the cycle are the same point, and leaves a jump there.
+
+Which to use is less consequential than it looks. Measured at matched degrees of
+freedom on a twelve-phase cycle, Fourier terms and the cyclic spline came within
+a few AIC of each other across four shapes. Where the shape genuinely *jumped*,
+a plain `factor(month)` beat both by more than a hundred, because no smooth
+basis buys a step cheaply. The spline pulls ahead only on long cycles, and only
+above about six degrees of freedom, by at most 23 AIC. Pick on the shape you
+expect, not on the basis.
+
+## Interactions
+
+Interactions are ordinary terms: `x * z` and `g * x` fit, their columns are
+grouped into one multi-degree-of-freedom row in `ilm_anova()`, and
+`ilm_check_collinearity()` reports them as single terms.
+
+Two things are worth knowing.
+
+**Type III depends on how factors are coded.** With R's default treatment
+contrasts, the main-effect row for a variable involved in an interaction tests
+its effect *at the reference level* of the factor it interacts with, not
+averaged over it. On a 600-row model the `x` row came back at a chi-square of
+167 under `contr.treatment` and 1086 under `contr.sum` -- same model, same data.
+Only the second is what a Type III main effect is supposed to mean, so
+`ilm_anova()` warns and names the fix:
+
+```{r type3, eval = FALSE}
+ilm_model(y ~ g * x + (1 | subj), data = dd, family = "gaussian",
+          contrasts = list(g = "contr.sum"))
+```
+
+`type = 2` sidesteps the question entirely, at the cost of testing a different
+(and for main effects, usually more useful) hypothesis.
+
+**An effect plot cannot show one curve.** When a term is in an interaction it has
+no single effect, so `ilm_plot_model(fit, "effect")` draws one curve per level of
+the interacting factor -- or, for a numeric partner, one per quartile -- and says
+so underneath rather than quietly showing you the modal level:
+
+```{r effectinter, eval = FALSE}
+ilm_plot_model(fit, "effect", term = "x")
+```
+
 ## Working with other packages
 
 `illume` fits into the usual ecosystem. `car::Anova()` dispatches to the correct

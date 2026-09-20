@@ -166,52 +166,141 @@ ilm_plot_effect <- function(model, term = NULL, conf = 0.95, colour = "black",
   grid <- if (is.numeric(v) && !is.logical(v))
     seq(min(v, na.rm = TRUE), max(v, na.rm = TRUE), length.out = n_grid)
     else sort(unique(v[!is.na(v)]))
-  nd <- mf[rep(1L, length(grid)), , drop = FALSE]
+
+  ## An interaction means this term has no single effect to plot. Holding the
+  ## partner at its most common level, the way every other predictor is held,
+  ## would draw one of several quite different slopes and say nothing about it.
+  ## Draw one line per partner value instead.
+  part <- ilm_effect_partner(term, tl, mf)
+
+  nd1 <- mf[rep(1L, length(grid)), , drop = FALSE]
   for (cn in vars) if (!identical(cn, term)) {
     cv <- mf[[cn]]
-    nd[[cn]] <- if (is.numeric(cv) && !is.logical(cv)) stats::median(cv, na.rm = TRUE)
-                else { tb <- sort(table(cv), decreasing = TRUE); as.character(names(tb)[1]) }
-    if (is.factor(mf[[cn]])) nd[[cn]] <- factor(nd[[cn]], levels = levels(mf[[cn]]))
+    nd1[[cn]] <- if (is.numeric(cv) && !is.logical(cv)) stats::median(cv, na.rm = TRUE)
+                 else { tb <- sort(table(cv), decreasing = TRUE); as.character(names(tb)[1]) }
+    if (is.factor(mf[[cn]])) nd1[[cn]] <- factor(nd1[[cn]], levels = levels(mf[[cn]]))
   }
-  nd[[term]] <- grid
-  pr <- tryCatch(stats::predict(model, newdata = nd, se.fit = TRUE),
-                 error = function(e)
-                   stop("predict() failed for this model: ", conditionMessage(e),
-                        call. = FALSE))
-  fit <- if (is.list(pr)) pr$fit else pr
-  se  <- if (is.list(pr) && !is.null(pr$se.fit)) pr$se.fit else NULL
-  fit <- as.matrix(fit)[, 1]
+  nd1[[term]] <- grid
+
+  pred1 <- function(nd) {
+    pr <- tryCatch(stats::predict(model, newdata = nd, se.fit = TRUE),
+                   error = function(e)
+                     stop("predict() failed for this model: ", conditionMessage(e),
+                          call. = FALSE))
+    f <- as.matrix(if (is.list(pr)) pr$fit else pr)[, 1]
+    s <- if (is.list(pr) && !is.null(pr$se.fit)) as.matrix(pr$se.fit)[, 1] else NULL
+    list(fit = f, se = s)
+  }
+  if (is.null(part)) {
+    curves <- list(pred1(nd1)); names(curves) <- ""
+  } else {
+    curves <- lapply(part$values, function(val) {
+      nd <- nd1
+      nd[[part$var]] <- if (is.factor(mf[[part$var]]))
+        factor(val, levels = levels(mf[[part$var]])) else as.numeric(val)
+      pred1(nd)
+    })
+    names(curves) <- part$labels
+  }
+  fit <- curves[[1]]$fit; se <- curves[[1]]$se
   crit <- stats::qnorm(1 - (1 - conf) / 2)
 
   ttl <- main %||% paste("Partial effect of", term)
+  nc <- length(curves)
+  cols <- if (nc == 1L) colour else ilm_curve_colours(nc)
+  band <- nc <= 3L                 # overlapping ribbons stop being readable
+  ylim <- range(unlist(lapply(curves, function(cu)
+    if (!is.null(cu$se)) c(cu$fit - crit * cu$se, cu$fit + crit * cu$se)
+    else cu$fit)), na.rm = TRUE)
+
   if (is.numeric(grid)) {
-    ylim <- if (!is.null(se)) range(c(fit - crit * as.matrix(se)[, 1],
-                                      fit + crit * as.matrix(se)[, 1])) else range(fit)
     graphics::plot(grid, fit, type = "n", xlab = term, ylab = "predicted",
                    main = ttl, ylim = ylim, ...)
-    if (!is.null(se)) {
-      s1 <- as.matrix(se)[, 1]
-      graphics::polygon(c(grid, rev(grid)),
-                        c(fit - crit * s1, rev(fit + crit * s1)),
-                        col = grDevices::adjustcolor(fill, alpha %||% 0.5),
-                        border = NA)
+    for (i in seq_len(nc)) {
+      cu <- curves[[i]]
+      if (band && !is.null(cu$se))
+        graphics::polygon(c(grid, rev(grid)),
+                          c(cu$fit - crit * cu$se, rev(cu$fit + crit * cu$se)),
+                          col = grDevices::adjustcolor(
+                            if (nc == 1L) fill else cols[i], alpha %||% 0.25),
+                          border = NA)
+      graphics::lines(grid, cu$fit, col = cols[i], lwd = 2)
     }
-    graphics::lines(grid, fit, col = colour, lwd = 2)
   } else {
-    graphics::plot(seq_along(grid), fit, xaxt = "n", xlab = term,
-                   ylab = "predicted", main = ttl, pch = 19, col = colour,
-                   ylim = if (!is.null(se)) range(c(fit - crit * as.matrix(se)[,1],
-                                                    fit + crit * as.matrix(se)[,1]))
-                          else range(fit), ...)
-    graphics::axis(1, seq_along(grid), as.character(grid))
-    if (!is.null(se)) { s1 <- as.matrix(se)[, 1]
-      graphics::segments(seq_along(grid), fit - crit * s1,
-                         seq_along(grid), fit + crit * s1, col = colour) }
+    xs <- seq_along(grid)
+    graphics::plot(xs, fit, type = "n", xaxt = "n", xlab = term,
+                   ylab = "predicted", main = ttl, ylim = ylim,
+                   xlim = c(0.5, length(xs) + 0.5), ...)
+    graphics::axis(1, xs, as.character(grid))
+    for (i in seq_len(nc)) {
+      cu <- curves[[i]]
+      off <- if (nc == 1L) 0 else (i - (nc + 1) / 2) * 0.12
+      if (!is.null(cu$se))
+        graphics::segments(xs + off, cu$fit - crit * cu$se,
+                           xs + off, cu$fit + crit * cu$se, col = cols[i])
+      graphics::points(xs + off, cu$fit, pch = 19, col = cols[i])
+    }
   }
-  graphics::mtext(sprintf("other predictors held at median / most common level"),
-                  side = 3, line = 0.2, cex = 0.7, col = "grey35")
-  invisible(data.frame(term = term, value = as.character(grid), fit = fit,
-                       row.names = NULL))
+  if (nc > 1L)
+    graphics::legend("topleft", legend = names(curves), col = cols, lwd = 2,
+                     bty = "n", cex = 0.75, title = part$var)
+  note <- if (is.null(part))
+    "other predictors held at median / most common level"
+  else paste0(term, " interacts with ", part$var, ", so it has no one effect: ",
+              "a line per ", part$var,
+              if (!band) ", intervals omitted" else "", ". Others at median/mode")
+  graphics::mtext(ilm_fit_one_line(note, 0.66), side = 3, line = 0.2,
+                  cex = 0.66, col = "grey35")
+  invisible(do.call(rbind, lapply(seq_len(nc), function(i)
+    data.frame(term = term, value = as.character(grid),
+               by = names(curves)[i], fit = curves[[i]]$fit,
+               row.names = NULL))))
+}
+
+## Which variable does `term` interact with, and at what values should its
+## effect be shown? A factor gets one line per level, capped, because a legend
+## of twenty is not a plot. A numeric gets its quartiles, which is the
+## conventional way to show a numeric-by-numeric interaction.
+#' @keywords internal
+#' @noRd
+ilm_effect_partner <- function(term, term_labels, mf, max_levels = 6L) {
+  if (is.null(term_labels)) return(NULL)
+  inter <- grep(":", term_labels, fixed = TRUE, value = TRUE)
+  if (!length(inter)) return(NULL)
+  parts <- strsplit(inter, ":", fixed = TRUE)
+  hit <- parts[vapply(parts, function(q) term %in% q, TRUE)]
+  if (!length(hit)) return(NULL)
+  cand <- setdiff(unlist(hit), term)
+  cand <- cand[cand %in% names(mf)]
+  if (!length(cand)) return(NULL)
+  nm <- cand[1]
+  v <- mf[[nm]]
+  if (is.numeric(v) && !is.logical(v)) {
+    q <- unname(stats::quantile(v, c(0.25, 0.5, 0.75), na.rm = TRUE))
+    return(list(var = nm, values = as.list(q),
+                labels = paste0(nm, " = ", signif(q, 3))))
+  }
+  lv <- if (is.factor(v)) levels(v) else sort(unique(as.character(v[!is.na(v)])))
+  trimmed <- length(lv) > max_levels
+  if (trimmed) lv <- lv[seq_len(max_levels)]
+  list(var = nm, values = as.list(lv),
+       labels = paste0(as.character(lv), if (trimmed) "" else ""))
+}
+
+#' @keywords internal
+#' @noRd
+ilm_curve_colours <- function(n)
+  grDevices::hcl.colors(max(n, 2L), "Dark 3")[seq_len(n)]
+
+## mtext does not wrap, and a caption running off the panel is worse than a
+## shortened one.
+#' @keywords internal
+#' @noRd
+ilm_fit_one_line <- function(x, cex = 0.66, pad = 0.96) {
+  w <- graphics::strwidth(x, units = "inches", cex = cex)
+  if (!is.finite(w) || w <= 0) return(x)
+  cap <- floor(nchar(x) * graphics::par("pin")[1] * pad / w)
+  if (cap >= nchar(x)) x else paste0(substr(x, 1L, max(1L, cap - 3L)), "...")
 }
 
 ## ---- random effects --------------------------------------------------------

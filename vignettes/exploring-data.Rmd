@@ -213,7 +213,7 @@ That table is not just documentation — it is what the argument checks read, so
 the documented requirements and the enforced ones cannot drift apart. Ask for
 something impossible and the error says what would work:
 
-```{r, error = TRUE}
+```{r, error = TRUE, purl = FALSE}
 ilm_plot(d, "grp", geom = "histogram")
 ```
 

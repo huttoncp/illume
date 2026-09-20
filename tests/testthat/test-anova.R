@@ -47,3 +47,69 @@ test_that("bad type arguments are rejected", {
   fit <- fit_basic()
   expect_error(ilm_anova(fit, type = 1), "type must be")
 })
+
+## ---- Type III depends on the coding ----------------------------------------
+
+test_that("Type III with interactions warns when the coding is not orthogonal", {
+  set.seed(11)
+  n <- 600
+  d <- data.frame(id = factor(rep(1:60, each = 10)), x = stats::rnorm(n),
+                  z = stats::rnorm(n),
+                  g = factor(sample(c("a", "b", "c"), n, TRUE)))
+  b <- stats::rnorm(60, 0, 0.5)[as.integer(d$id)]
+  d$y <- 0.5 + 0.8 * d$x + 0.3 * d$z +
+    c(a = 0, b = 0.9, c = -0.6)[as.character(d$g)] +
+    ifelse(d$g == "b", 1, 0) * d$x + b + stats::rnorm(n, 0, 0.8)
+
+  ftrt <- ilm_model(y ~ g * x + z + (1 | id), d, family = "gaussian",
+                    verbose = FALSE)
+  fsum <- ilm_model(y ~ g * x + z + (1 | id), d, family = "gaussian",
+                    verbose = FALSE, contrasts = list(g = "contr.sum"))
+
+  expect_warning(ilm_anova(ftrt, type = 3), "not Type III tests")
+  expect_warning(ilm_anova(ftrt, type = 3), "contr.sum", fixed = TRUE)
+  # the orthogonal coding is the one the label means, so it says nothing
+  expect_silent(ilm_anova(fsum, type = 3))
+  # Type II does not depend on the coding at all
+  expect_silent(ilm_anova(ftrt, type = 2))
+
+  # and the warning is earned: the main-effect row really does change
+  a1 <- suppressWarnings(ilm_anova(ftrt, type = 3))
+  a2 <- ilm_anova(fsum, type = 3)
+  expect_gt(a2["x", "Chisq"] / a1["x", "Chisq"], 3)
+  # the multi-column rows are invariant, because both codings span the same
+  # subspace for those terms
+  expect_equal(a1["g", "Chisq"], a2["g", "Chisq"], tolerance = 1e-6)
+  expect_equal(a1["g:x", "Chisq"], a2["g:x", "Chisq"], tolerance = 1e-6)
+})
+
+test_that("a model without interactions is never warned about", {
+  set.seed(12)
+  d <- data.frame(id = factor(rep(1:40, each = 10)), x = stats::rnorm(400),
+                  g = factor(sample(c("a", "b"), 400, TRUE)))
+  d$y <- d$x + stats::rnorm(400)
+  f <- ilm_model(y ~ g + x + (1 | id), d, family = "gaussian", verbose = FALSE)
+  expect_silent(ilm_anova(f, type = 3))
+})
+
+test_that("interaction terms are grouped, tested and predicted as one term", {
+  set.seed(13)
+  n <- 600
+  d <- data.frame(id = factor(rep(1:60, each = 10)), x = stats::rnorm(n),
+                  z = stats::rnorm(n),
+                  g = factor(sample(c("a", "b", "c"), n, TRUE)))
+  b <- stats::rnorm(60, 0, 0.5)[as.integer(d$id)]
+  d$y <- 0.5 + 0.8 * d$x + 0.3 * d$z + 0.7 * d$x * d$z + b +
+    stats::rnorm(n, 0, 0.8)
+  f <- ilm_model(y ~ x * z + g + (1 | id), d, family = "gaussian",
+                 verbose = FALSE)
+  expect_true("x:z" %in% f$term_labels)
+  expect_equal(unname(coef(f)[["x:z"]]), 0.7, tolerance = 0.15)
+  a <- suppressWarnings(ilm_anova(f, type = 3))
+  expect_equal(a["g", "Df"], 2L)      # a 3-level factor is one 2-df row
+  expect_equal(a["x:z", "Df"], 1L)
+  # the collinearity check reports one row per term, interactions included
+  cc <- ilm_check_collinearity(f)
+  expect_setequal(cc$term, f$term_labels)
+  expect_equal(cc$df[cc$term == "g"], 2L)
+})

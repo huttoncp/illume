@@ -16,10 +16,10 @@
 #'   formula model.frame model.matrix delete.response reformulate na.omit
 #'   setNames AIC BIC logLik nobs predict coef vcov ppoints lowess
 #'   complete.cases aggregate .getXlevels printCoefmat getCall qqnorm
-#'   qqline
+#'   qqline density
 #' @importFrom graphics par plot points lines abline arrows legend axis title
 #'   mtext polygon text plot.new segments strwidth
-#' @importFrom grDevices adjustcolor
+#' @importFrom grDevices adjustcolor hcl.colors
 #' @importFrom utils head tail
 #' @importFrom collapse fcount fmatch fmean fndistinct fnobs fquantile
 #'   fsd fsum fvar group

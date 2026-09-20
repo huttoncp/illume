@@ -162,6 +162,12 @@ ilm_se_fixef <- function(object) {
 #' trustworthy when the random structure is held fixed, so that the
 #' approximation error largely cancels.
 #'
+#' The value is on the same scale as `lme4::lmer()` and `nlme::lme()`, and
+#' agrees with both to numerical tolerance for a gaussian model they can also
+#' fit. It therefore includes every normalising constant, so `AIC()` and `BIC()`
+#' may be compared across models with *different* random structures as well as
+#' the same one.
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param ... Unused.
 #' @return An object of class `"logLik"`.
@@ -171,7 +177,27 @@ ilm_se_fixef <- function(object) {
 logLik.ilm_model <- function(object, ...) {
   ## df counts fixed effects AND covariance parameters: both are estimated, and
   ## anova()-style comparisons need the total.
-  val <- -object$opt$objective
+  ##
+  ## The correction is not cosmetic. The random-effect priors in the likelihood
+  ## are written as 0.5 * u' Sigma^-1 u + 0.5 * log|Sigma|, which leaves out the
+  ## (1/2) log(2*pi) each latent scalar contributes to the gaussian density.
+  ## TMB's Laplace step then subtracts (q/2) log(2*pi) of its own, so the
+  ## objective it reports is the true negative log-likelihood MINUS that
+  ## constant -- and the constant grows with the number of latent values.
+  ##
+  ## Left uncorrected, every extra latent value bought a model about 0.92
+  ## log-likelihood units for free, so AIC and BIC preferred whichever model
+  ## had the larger random structure. Measured on a random-intercept fit with
+  ## 50 groups, illume reported -595.083 where lme4 and nlme both reported
+  ## -641.030: a gap of 45.947, against 25 * log(2*pi) = 45.947 predicted.
+  ##
+  ## Comparisons that hold the random structure fixed -- which is what
+  ## ilm_anova(test = "LRT") does -- are unaffected, because the constant is
+  ## then the same in both models and cancels. That is why this survived the
+  ## coverage and power studies.
+  q <- object$n_integrated
+  if (is.null(q)) q <- 0L
+  val <- -object$opt$objective - (q / 2) * log(2 * pi)
   structure(val, df = length(object$opt$par), nobs = nrow(object$X), class = "logLik")
 }
 

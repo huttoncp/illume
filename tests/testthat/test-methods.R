@@ -62,3 +62,82 @@ test_that("print and summary run and surface the checks", {
   expect_true(any(grepl("Model checks", out)))
   expect_true(any(grepl("SUM-TO-ZERO", out)))   # the contrast warning
 })
+
+## ---- the log-likelihood is on the same scale as everyone else's ------------
+
+test_that("logLik agrees with lme4 and nlme, constants included", {
+  # This is pinned to external implementations on purpose. The random-effect
+  # priors are written by hand as 0.5 u'Sigma^-1 u + 0.5 log|Sigma|, which
+  # omits the (1/2) log(2*pi) per latent scalar; TMB's Laplace step then
+  # subtracts (q/2) log(2*pi) of its own, so the reported objective was the
+  # true negative log-likelihood minus a constant that GROWS with the number
+  # of latent values. Every extra latent bought about 0.92 log-likelihood
+  # units for free and AIC preferred the bigger random structure.
+  skip_if_not_installed("lme4")
+  set.seed(4)
+  ng <- 50; nt <- 8; n <- ng * nt
+  d <- data.frame(id = factor(rep(seq_len(ng), each = nt)),
+                  t = rep(seq_len(nt), ng), x = stats::rnorm(n))
+  b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
+  d$y <- 0.5 + 0.8 * d$x + b + stats::rnorm(n, 0, 0.9)
+
+  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                 verbose = FALSE)
+  l <- lme4::lmer(y ~ x + (1 | id), data = d, REML = FALSE)
+  expect_equal(as.numeric(logLik(f)), as.numeric(logLik(l)), tolerance = 1e-4)
+  expect_equal(unname(AIC(f)), unname(AIC(l)), tolerance = 1e-3)
+
+  # the correction is exactly (q/2) log(2*pi) for q integrated scalars
+  expect_equal(f$n_integrated, ng)
+  expect_equal(as.numeric(logLik(f)),
+               -f$opt$objective - (ng / 2) * log(2 * pi), tolerance = 1e-10)
+})
+
+test_that("the latent AR process matches the marginal form nlme fits", {
+  # illume's AR is a latent process PLUS an independent residual, so the
+  # covariance it implies marginally is corExp with a nugget -- not corAR1,
+  # which has no nugget and is a different model.
+  skip_if_not_installed("nlme")
+  set.seed(4)
+  ng <- 50; nt <- 8; n <- ng * nt
+  d <- data.frame(id = factor(rep(seq_len(ng), each = nt)),
+                  t = rep(seq_len(nt), ng), x = stats::rnorm(n))
+  u <- unlist(lapply(seq_len(ng), function(i) {
+    z <- numeric(nt); z[1] <- stats::rnorm(1)
+    for (k in 2:nt) z[k] <- 0.7 * z[k - 1] + stats::rnorm(1, 0, sqrt(1 - 0.49))
+    z
+  }))
+  b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
+  d$y <- 0.5 + 0.8 * d$x + b + 1.2 * u + stats::rnorm(n, 0, 0.6)
+
+  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                 ar = suppressWarnings(ilm_ar1(d$t, d$id)), verbose = FALSE)
+  g <- nlme::lme(y ~ x, random = ~ 1 | id, data = d, method = "ML",
+                 correlation = nlme::corExp(form = ~ t | id, nugget = TRUE),
+                 control = nlme::lmeControl(opt = "optim", msMaxIter = 400))
+  expect_equal(as.numeric(logLik(f)), as.numeric(logLik(g)), tolerance = 1e-3)
+  expect_equal(unname(coef(f)[["x"]]), unname(nlme::fixef(g)[["x"]]),
+               tolerance = 1e-3)
+  # same number of estimated parameters, so AIC must agree too
+  expect_equal(attr(logLik(f), "df"), attr(logLik(g), "df"))
+})
+
+test_that("AIC no longer rewards a model for carrying more latent values", {
+  # the symptom: adding a correlation structure to data with none used to
+  # improve AIC by hundreds, because the extra latents came with a bonus
+  skip_if_not_installed("nlme")
+  set.seed(9)
+  ng <- 40; nt <- 6; n <- ng * nt
+  d <- data.frame(id = factor(rep(seq_len(ng), each = nt)),
+                  t = rep(seq_len(nt), ng), x = stats::rnorm(n))
+  b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
+  d$y <- 0.5 + 0.8 * d$x + b + stats::rnorm(n, 0, 0.9)   # no autocorrelation
+
+  f0 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                  verbose = FALSE)
+  f1 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                  ar = suppressWarnings(ilm_ar1(d$t, d$id)), verbose = FALSE)
+  expect_gt(f1$n_integrated, f0$n_integrated)
+  # a structure the data do not support must not look hugely better
+  expect_lt(as.numeric(logLik(f1)) - as.numeric(logLik(f0)), 8)
+})

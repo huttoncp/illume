@@ -41,6 +41,7 @@ Imports:
 Suggests:
     boot,
     lme4,
+    nlme,
     mgcv,
     car,
     marginaleffects,

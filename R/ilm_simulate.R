@@ -103,12 +103,24 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
     }
     if (!is.null(fit$ar)) {
       ar <- fit$ar; La <- ilm_msqrt(fit$Sigma[["ar"]]); rho <- fit$rho
-      Ba <- matrix(0, ar$n_group * ar$Tt, C)
-      for (g in seq_len(ar$n_group)) {
-        r0 <- (g - 1L) * ar$Tt
-        Ba[r0 + 1L, ] <- rnorm(C) %*% La
-        for (tt in 2:ar$Tt)
-          Ba[r0 + tt, ] <- rho * Ba[r0 + tt - 1L, ] + sqrt(1 - rho^2) * (rnorm(C) %*% La)
+      ## Simulating must walk the same chain the likelihood scores, or every
+      ## envelope built on top of it is calibrated against the wrong process.
+      Ba <- matrix(0, ar$n_cell, C)
+      if (identical(ar$type, "car1")) {
+        Ba[ar$first, ] <- matrix(rnorm(length(ar$first) * C), ncol = C) %*% La
+        phi <- rho ^ ar$gap
+        ## transitions are in cell order, so the predecessor is always already
+        ## filled by the time its successor is reached
+        for (k in seq_along(ar$rest))
+          Ba[ar$rest[k], ] <- phi[k] * Ba[ar$prev[k], ] +
+            sqrt(1 - phi[k]^2) * (rnorm(C) %*% La)
+      } else {
+        for (g in seq_len(ar$n_group)) {
+          r0 <- (g - 1L) * ar$Tt
+          Ba[r0 + 1L, ] <- rnorm(C) %*% La
+          for (tt in 2:ar$Tt)
+            Ba[r0 + tt, ] <- rho * Ba[r0 + tt - 1L, ] + sqrt(1 - rho^2) * (rnorm(C) %*% La)
+        }
       }
       eta <- eta + Ba[ar$idx, , drop = FALSE]
     }

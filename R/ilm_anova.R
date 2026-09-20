@@ -136,6 +136,45 @@ ilm_wald_block <- function(b, V, idx) {
   tryCatch(as.numeric(t(bb) %*% solve(VV, bb)), error = function(e) NA_real_)
 }
 
+## Type III main effects depend on how the factors are coded, and R's default
+## coding is not the one the label implies. Measured on y ~ g * x + z with
+## 600 rows, the x row came back Chisq 167 under contr.treatment and 1086 under
+## contr.sum -- same model, same data, same term. Under treatment coding the x
+## row tests the slope at the REFERENCE level of g; only under a coding whose
+## columns sum to zero does it test the average slope, which is what a Type III
+## main effect is supposed to mean. car::Anova() warns for the same reason.
+#' @keywords internal
+#' @noRd
+ilm_orth_contr <- function(z) {
+  if (is.character(z))
+    return(z %in% c("contr.sum", "contr.helmert", "contr.poly"))
+  if (is.matrix(z)) return(all(abs(colSums(z)) < 1e-8))
+  FALSE
+}
+
+#' @keywords internal
+#' @noRd
+ilm_warn_type3_coding <- function(labs, contrasts) {
+  inter <- grep(":", labs, fixed = TRUE, value = TRUE)
+  if (!length(inter)) return(invisible(FALSE))
+  involved <- unique(unlist(strsplit(inter, ":", fixed = TRUE)))
+  bad <- character(0)
+  if (length(contrasts))
+    bad <- names(contrasts)[names(contrasts) %in% involved &
+                            !vapply(contrasts, ilm_orth_contr, TRUE)]
+  if (!length(bad)) return(invisible(FALSE))
+  warning("this model has interactions and ", paste(sQuote(bad), collapse = ", "),
+          if (length(bad) > 1L) " use " else " uses ",
+          "a coding whose columns do not sum to zero, so the main-effect rows ",
+          "are not Type III tests: each one is measured at the reference level ",
+          "of the factor it interacts with, not averaged over it. Refit with ",
+          "contrasts = list(", bad[1], " = \"contr.sum\"), or use type = 2, ",
+          "which does not depend on the coding. Numeric predictors in an ",
+          "interaction have the same issue unless they are centred.",
+          call. = FALSE)
+  invisible(TRUE)
+}
+
 #' Analysis of deviance for fixed effects
 #'
 #' Tests each fixed-effect term, **jointly across all category dimensions**.
@@ -201,6 +240,7 @@ ilm_anova <- function(object, type = 3, test = c("Wald", "LRT"),
             "See object$checks.", call. = FALSE)
 
   mt <- object$terms; labs <- object$term_labels; nt <- length(labs)
+  if (type3) ilm_warn_type3_coding(labs, object$contrasts)
   rel <- lapply(seq_len(nt), function(j) ilm_relatives_of(mt, j))
   if (type3) rel <- lapply(rel, function(z) integer(0))   # III conditions on all
 

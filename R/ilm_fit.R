@@ -661,7 +661,7 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
         if (ope < 5) "drop this grouping factor or pool levels" else "")
     }
   }
-  if (!is.null(ar)) lat["ar"] <- ar$n_group * ar$Tt * C
+  if (!is.null(ar)) lat["ar"] <- ar$n_cell * C
 
   ## ---- GLOBAL latent budget -------------------------------------------------
   ## The binding constraint is total observations per latent VALUE, not any
@@ -674,7 +674,33 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
   tot <- sum(lat)
   if (tot == 0L) return(ck)
   ratio <- N / tot
-  st <- if (ratio < 3) "FAIL" else if (ratio < 5) "WARN" else "OK"
+
+  ## THE BUDGET DOES NOT APPLY TO A GAUSSIAN MODEL.
+  ##
+  ## Everything above measures how much the Laplace approximation is being
+  ## asked to do. With a gaussian response and gaussian latents the model is
+  ## linear-Gaussian, the integral over the latents is a gaussian integral, and
+  ## the Laplace "approximation" evaluates it EXACTLY -- there is no
+  ## approximation error to run out of observations for. Measured: illume's
+  ## log-likelihood agrees with lme4 and nlme, which compute that integral in
+  ## closed form, to four decimal places.
+  ##
+  ## This matters because CAR(1) puts one latent value under every observation
+  ## by construction, so the thresholds below -- calibrated on MULTINOMIAL
+  ## experiments, where one categorical observation says very little about its
+  ## own latent -- would FAIL every correctly specified continuous-time model.
+  ## Over 400 replicates at exactly 1.00 observations per latent, Wald coverage
+  ## for a fixed effect came back 0.955, 0.937 and 0.949 against a nominal
+  ## 0.95, with standard-error ratios of 0.98, 0.98 and 0.97.
+  ##
+  ## What can still go wrong for a gaussian model is identifiability rather
+  ## than approximation -- a latent process and the residual describing the
+  ## same variation -- and that surfaces as a non-positive-definite Hessian,
+  ## which has its own check after the fit.
+  gaus <- !is.null(family) &&
+    identical(if (is.list(family)) family$name else family, "gaussian")
+  st <- if (gaus) "OK" else
+        if (ratio < 3) "FAIL" else if (ratio < 5) "WARN" else "OK"
   sug <- ""
   if (st != "OK") {
     big <- names(lat)[which.max(lat)]
@@ -689,18 +715,29 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
                           N, as.integer(target), lat[["ar"]])
   }
   ck <- ilm_add_check(ck, "latent_budget", st,
-    sprintf("%.2f observations per latent value (%g observations, %d latent values: %s)",
-            ratio, N, tot, paste(sprintf("%s %d", names(lat), lat), collapse = ", ")),
+    sprintf("%.2f observations per latent value (%g observations, %d latent values: %s)%s",
+            ratio, N, tot, paste(sprintf("%s %d", names(lat), lat), collapse = ", "),
+            if (gaus) "; not a constraint for a gaussian response, where the Laplace approximation is exact" else ""),
     if (st != "OK") "too few observations per latent value; the Laplace approximation attenuates the variance components and the covariance estimates go rank deficient, even when every individual term passes its own level check" else "",
     sug)
 
   if (!is.null(ar)) {
-    nlat <- ar$n_group * ar$Tt; r2 <- N / nlat
+    nlat <- ar$n_cell; r2 <- N / nlat
+    car <- identical(ar$type, "car1")
+    ## For a gaussian response this ratio is reported but not failed on, for
+    ## the reason given above: one latent per observation is what continuous
+    ## time produces, and coverage there is nominal.
+    thin <- !gaus && r2 < 4
     ck <- ilm_add_check(ck, "obs_per_ar_latent",
-      if (r2 < 2) "FAIL" else if (r2 < 4) "WARN" else "OK",
-      sprintf("%.2f observations per AR latent time point (%d time points)", r2, as.integer(nlat)),
-      if (r2 < 4) "latent AR carries about one categorical observation per latent value; Laplace attenuates the variance components and rho is driven toward the boundary" else "",
-      if (r2 < 4) "coarsen the AR time grid, use a reduced-rank AR, or replace AR with s(time) plus a random slope" else "")
+      if (gaus) "OK" else if (r2 < 2) "FAIL" else if (r2 < 4) "WARN" else "OK",
+      sprintf("%.2f observations per %s latent time point (%d time points)%s",
+              r2, if (car) "CAR(1)" else "AR", as.integer(nlat),
+              if (gaus && r2 < 4) "; expected for continuous time and not a problem for a gaussian response" else ""),
+      if (thin) "the latent process carries about one categorical observation per latent value; Laplace attenuates the variance components and rho is driven toward the boundary" else "",
+      if (thin) {
+        if (car) "coarsen the time passed to ilm_car1() so observations share a latent value, or replace the term with s(time) plus a random slope"
+        else "coarsen the AR time grid, use a reduced-rank AR, or replace AR with s(time) plus a random slope"
+      } else "")
   }
   ck
 }
@@ -727,7 +764,10 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @param obj The `RTMB` objective object.
 #' @param sdr Output of `TMB::sdreport()`.
 #' @param C Integer. Number of category dimensions.
-#' @param has_ar Logical. Whether an AR(1) term was fitted.
+#' @param has_ar Logical. Whether an AR(1) or CAR(1) term was fitted.
+#' @param gap For CAR(1), the gaps between consecutive observations, so the
+#'   boundary check can judge the correlation across a typical gap rather than
+#'   across one time unit.
 #' @param pre The pre-fit checks, used for cross-referencing.
 #' @param Sig Named list of fitted category covariance matrices.
 #' @param Sigd Named list of fitted within-group covariance matrices.
@@ -738,7 +778,7 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @keywords internal
 #' @noRd
 ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, kinds = NULL,
-                      pnames = NULL) {
+                      pnames = NULL, gap = NULL) {
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
   ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
   ck <- ilm_add_check(ck, "optimizer",
@@ -843,14 +883,26 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   if (has_ar) {
     rho <- est[nmv == "rho"]
     lat <- pre$status[pre$check == "obs_per_ar_latent"]
+    ## Judge the correlation across a TYPICAL gap, not across one time unit.
+    ## Under CAR(1) rho is per unit of time, so with fine units (days, seconds)
+    ## it sits at 0.999-something for a process that is nowhere near a random
+    ## walk over the window actually observed.
+    car <- !is.null(gap) && length(gap)
+    eff <- if (length(rho) && car) rho^stats::median(gap) else rho
+    lbl <- if (car) sprintf("rho = %.4f per time unit, %.4f across the median gap of %s",
+                            if (length(rho)) rho else NA_real_,
+                            if (length(eff)) eff else NA_real_,
+                            signif(stats::median(gap), 3))
+           else sprintf("rho = %.4f", if (length(rho)) rho else NA_real_)
     ck <- ilm_add_check(ck, "rho_boundary",
-      if (length(rho) && abs(rho) > 0.99) "FAIL" else if (length(rho) && abs(rho) > 0.95) "WARN" else "OK",
-      sprintf("rho = %.4f", if (length(rho)) rho else NA_real_),
-      if (length(rho) && abs(rho) > 0.95)
-        paste0("AR process is near a random walk",
+      if (length(eff) && abs(eff) > 0.99) "FAIL" else if (length(eff) && abs(eff) > 0.95) "WARN" else "OK",
+      lbl,
+      if (length(eff) && abs(eff) > 0.95)
+        paste0("the process is near a random walk",
                if (length(lat) && lat %in% c("WARN", "FAIL"))
                  "; the obs-per-AR-latent check also failed, which is the likely driver" else "") else "",
-      if (length(rho) && abs(rho) > 0.95) "coarsen the AR grid or drop the AR term" else "")
+      if (length(eff) && abs(eff) > 0.95)
+        paste0("coarsen the ", if (car) "CAR(1)" else "AR", " time grid or drop the term") else "")
   }
   cf <- sdr$cov.fixed
   if (!is.null(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
@@ -1004,6 +1056,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
                      verbose = TRUE, restarts = 3L, joint = FALSE) {
   fam <- if (is.list(family)) family else ilm_family(family)
+  ## Accept a spec from ilm_ar1()/ilm_car1(), or the bare list the fitter took
+  ## before those existed.
+  ar <- ilm_as_cor(ar)
+  if (!is.null(ar) && length(ar$idx) != nrow(X))
+    stop("the correlation structure covers ", length(ar$idx),
+         " observations but the model matrix has ", nrow(X),
+         " rows. Build it from the same rows the model is fitted to.",
+         call. = FALSE)
   ## J is the number of outcome categories, and is meaningful only for the
   ## multinomial; every other family uses a single linear predictor.
   if (is.null(J)) J <- 2L
@@ -1090,12 +1150,25 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
              t_idx = lapply(seq_len(K), function(k) (toff[k] + 1L):toff[k + 1L]),
              nlk = as.integer(nlk), dk = as.integer(dk), wk = as.integer(wk),
              npc = as.integer(npc), ty = as.character(ty), rk = as.integer(rk),
-             dcor = as.logical(dcor), K = K, C = C, has_ar = !is.null(ar))
+             dcor = as.logical(dcor), K = K, C = C, has_ar = !is.null(ar),
+             is_car = isTRUE(ar$type == "car1"))
   if (!is.null(ar)) {
-    i1 <- (seq_len(ar$n_group) - 1L) * ar$Tt + 1L
-    dl$ar_idx <- ar$idx; dl$idx1 <- i1
-    dl$idx_t <- setdiff(seq_len(ar$n_group * ar$Tt), i1); dl$idx_lag <- dl$idx_t - 1L
-    dl$n_g <- ar$n_group; dl$Tt <- ar$Tt
+    if (identical(ar$type, "car1")) {
+      ## cells are ordered by group then time, so the preceding observation of
+      ## a group is always the cell before it -- the same fact the evenly
+      ## spaced case relies on, and why the index arithmetic is shared
+      dl$ar_idx <- ar$idx; dl$idx1 <- ar$first
+      dl$idx_t <- ar$rest; dl$idx_lag <- ar$prev
+      dl$ar_gap <- as.numeric(ar$gap)
+      dl$n_g <- ar$n_group; dl$Tt <- NA_integer_
+    } else {
+      i1 <- (seq_len(ar$n_group) - 1L) * ar$Tt + 1L
+      dl$ar_idx <- ar$idx; dl$idx1 <- i1
+      dl$idx_t <- setdiff(seq_len(ar$n_cell), i1); dl$idx_lag <- dl$idx_t - 1L
+      dl$ar_gap <- numeric(0)
+      dl$n_g <- ar$n_group; dl$Tt <- ar$Tt
+    }
+    dl$nre_ar <- length(dl$idx_t)
   }
 
   fam_nll <- fam$nll                    # captured in the closure, not via dl
@@ -1151,12 +1224,36 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       sdv <- c(sdv, sqrt(diag(S)))
     }
     if (has_ar) {
-      La <- ilm_mkL(lchol_ar, C); rho <- tanh(rho_raw)
+      La <- ilm_mkL(lchol_ar, C)
+      ## the first observation of each group, marginally
       W1 <- B_ar[idx1, , drop = FALSE] %*% solve(t(La))
       nll <- nll + 0.5 * sum(W1 * W1) + n_g * sum(log(diag(La)))
-      rsd <- B_ar[idx_t, , drop = FALSE] - rho * B_ar[idx_lag, , drop = FALSE]
-      W <- (rsd %*% solve(t(La))) / sqrt(1 - rho^2); nre <- n_g * (Tt - 1L)
-      nll <- nll + 0.5 * sum(W * W) + nre * (sum(log(diag(La))) + (C / 2) * log(1 - rho^2))
+      ## Every transition after that is Markov.  The only difference between
+      ## the two structures is whether the correlation from one observation to
+      ## the next is a single number or depends on the gap.
+      if (is_car) {
+        ## CAR(1): phi_k = rho ^ d_k, innovation variance 1 - phi_k^2.  Exact
+        ## for the Ornstein-Uhlenbeck process, so an irregular gap costs
+        ## nothing in accuracy.
+        ##
+        ## Parameterised on log(range) rather than on rho.  rho is the
+        ## correlation one TIME UNIT apart, so with fine units (seconds, days)
+        ## it sits at 0.9999-something and the gradient in it is negligible;
+        ## the range is in the units of time and just shifts when they change.
+        rng <- exp(rho_raw)
+        phi <- exp(-ar_gap / rng)
+        rho <- exp(-1 / rng)
+        rsd <- B_ar[idx_t, , drop = FALSE] - phi * B_ar[idx_lag, , drop = FALSE]
+        W <- (rsd / sqrt(1 - phi^2)) %*% solve(t(La))
+        nll <- nll + 0.5 * sum(W * W) + nre_ar * sum(log(diag(La))) +
+               (C / 2) * sum(log(1 - phi^2))
+      } else {
+        rho <- tanh(rho_raw)
+        rsd <- B_ar[idx_t, , drop = FALSE] - rho * B_ar[idx_lag, , drop = FALSE]
+        W <- (rsd %*% solve(t(La))) / sqrt(1 - rho^2)
+        nll <- nll + 0.5 * sum(W * W) +
+               nre_ar * (sum(log(diag(La))) + (C / 2) * log(1 - rho^2))
+      }
       eta <- eta + B_ar[ar_idx, , drop = FALSE]
       Sa <- La %*% t(La); sdv <- c(sdv, sqrt(diag(Sa)))
       ADREPORT(rho)
@@ -1180,8 +1277,12 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   if (fam$n_disp > 0L) pars$logdisp <- rep(0, fam$n_disp)
   rnd <- if (sum(bl) > 0L) "bvec" else character(0)
   if (!is.null(ar)) {
-    pars$lchol_ar <- rep(0, ilm_ncov(C)); pars$rho_raw <- 0.5
-    pars$B_ar <- matrix(0, ar$n_group * ar$Tt, C); rnd <- c(rnd, "B_ar")
+    pars$lchol_ar <- rep(0, ilm_ncov(C))
+    ## for CAR(1) rho_raw is log(range); starting at the median gap puts the
+    ## correlation between consecutive observations near exp(-1)
+    pars$rho_raw <- if (identical(ar$type, "car1"))
+      log(stats::median(ar$gap)) else 0.5
+    pars$B_ar <- matrix(0, ar$n_cell, C); rnd <- c(rnd, "B_ar")
   }
   t0 <- proc.time()[3]
   obj <- MakeADFun(f, pars, random = if (length(rnd)) rnd else NULL,
@@ -1216,6 +1317,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   if (!is.null(ar)) { La <- ilm_mkL_num(pe[pn == "lchol_ar"], C); Sig[["ar"]] <- La %*% t(La) }
 
   post <- ilm_postcheck(opt, obj, sdr, C, !is.null(ar), pre, Sig, Sigd, re_struct,
+                        gap = if (identical(ar$type, "car1")) ar$gap else NULL,
                     kinds = as.list(vapply(re, `[[`, "", "kind")), pnames = pnames)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
@@ -1237,6 +1339,10 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
                  J = J, C = C, n_latent = sum(bl), n_covpar = sum(tl),
+                 ## how many scalars TMB actually integrated out. logLik() needs
+                 ## it to put back the (q/2)log(2*pi) the hand-written gaussian
+                 ## priors below leave out of the joint density.
+                 n_integrated = length(obj$env$random),
                  ## index bookkeeping kept so set_coef() can rebuild every
                  ## derived quantity from a perturbed parameter vector
                  npc = as.integer(npc), npd = as.integer(npd), toff = toff,
@@ -1256,6 +1362,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  } else NULL,
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
                  beta = matrix(pe[pn == "beta"], p, C),
-                 rho = if (!is.null(ar)) tanh(pe[pn == "rho_raw"]) else NA_real_,
+                 ## rho is the correlation ONE TIME UNIT apart under both
+                 ## structures, so the two are directly comparable. For CAR(1)
+                 ## the fitted parameter is log(range), and rho = exp(-1/range).
+                 rho = unname(if (is.null(ar)) NA_real_
+                       else if (identical(ar$type, "car1"))
+                         exp(-1 / exp(pe[pn == "rho_raw"]))
+                       else tanh(pe[pn == "rho_raw"])),
+                 ar_range = unname(if (!is.null(ar) && identical(ar$type, "car1"))
+                   exp(pe[pn == "rho_raw"]) else NA_real_),
                  ok = !any(st == "FAIL")), class = "ilm_model")
 }

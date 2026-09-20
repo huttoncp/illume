@@ -35,6 +35,12 @@ Because it is an approximation, differences between models are most
 trustworthy when the random structure is held fixed, so that the
 approximation error largely cancels.
 
+The value is on the same scale as \code{lme4::lmer()} and \code{nlme::lme()}, and
+agrees with both to numerical tolerance for a gaussian model they can also
+fit. It therefore includes every normalising constant, so \code{AIC()} and \code{BIC()}
+may be compared across models with \emph{different} random structures as well as
+the same one.
+
 Because it is an approximation, differences between models are most
 trustworthy when the random structure is held fixed, so that the
 approximation error largely cancels.
