@@ -59,13 +59,13 @@ ilm_relatives_of <- function(mt, j) {
 #' @noRd
 ilm_refit_drop <- function(object, drop_terms, restarts = 2L) {
   keep <- is.na(object$assign) | !(object$assign %in% drop_terms)
-  ## ilm_fit() defaults to the multinomial family, so an internal refit that
-  ## does not pass the fitted family is silently a DIFFERENT model.  Weights
-  ## must carry over for the same reason.
-  f <- ilm_fit(object$X[, keep, drop = FALSE], object$y, object$J,
-                ilm_re_list_of(object), object$re_struct, object$ar,
-                ylevels = object$ylevels, weights = object$weights,
-                family = object$family, verbose = FALSE, restarts = restarts)
+  ## Everything that makes this the same model -- family, weights, censoring,
+  ## the dispersion model, the baseline spline -- travels through
+  ## ilm_refit_like(). A reduced fit that quietly drops one of them is not a
+  ## reduced model, and the test built on it is meaningless: omitting the
+  ## censoring put the null rejection rate at 100%.
+  f <- ilm_refit_like(object, X = object$X[, keep, drop = FALSE],
+                      keep = keep, restarts = restarts)
   f$assign <- object$assign[keep]
   f$term_labels <- object$term_labels
   f
@@ -107,6 +107,13 @@ ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L) {
   rl <- ilm_re_list_of(object); rs <- object$re_struct; arr <- object$ar
   yl <- object$ylevels; tl <- object$term_labels
   fm <- object$family; wt <- object$weights; Cc <- object$C
+  ## Everything else that makes the reduced fit the SAME model. The stub below
+  ## is what the refit sees, so a field missing from it is a field the refit
+  ## silently does without: leaving the censoring out gave a reduced likelihood
+  ## computed as if nothing were censored, and the likelihood-ratio test built
+  ## on it rejected at 100% under the null.
+  cnsr <- object$censor; zdd <- object$Zd
+  dmu <- isTRUE(object$disp_mu); rpp <- object$rp
   ## ilm_drop_summary() calls ilm_re_list_of(), which needs $re; hand over the already
   ## normalised terms so workers do not re-derive them.
   rl_re <- object$re
@@ -117,10 +124,13 @@ ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L) {
     ## NULL and the subtraction yields a zero-length vector.
     stub <- list(X = X, y = y, J = J, assign = asg, re = rl_re, re_struct = rs,
                  ar = arr, ylevels = yl, term_labels = tl, C = Cc,
-                 family = fm, weights = wt)
+                 family = fm, weights = wt,
+                 censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp)
     ilm_drop_summary(stub, drop_sets[[i]], restarts)
   }
-  if (!is.null(cl)) parallel::clusterExport(cl, "rl_re", envir = environment())
+  if (!is.null(cl))
+    parallel::clusterExport(cl, c("rl_re", "cnsr", "zdd", "dmu", "rpp"),
+                            envir = environment())
   ilm_lapply(cl, seq_along(drop_sets), one)
 }
 

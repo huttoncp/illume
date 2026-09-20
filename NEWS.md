@@ -265,6 +265,19 @@ Summary notes; the full tables belong with the methods paper.
   and unit-scaled, which is what the diagnostics now use.
 
 ## Fixes
+* **A reduced-model refit was not the same model.** `ilm_refit_drops()` hands
+  its workers a stub of the fitted object rather than the whole thing, and that
+  stub carried the family and the weights and nothing else. For a censored
+  model the reduced likelihood was therefore computed as if nothing were
+  censored -- two likelihoods on different scales, differenced -- and
+  `ilm_anova(test = "LRT")` rejected at **100%** under the null. The same held
+  for a dispersion model, and a flexible parametric baseline errored outright.
+  Everything that makes a model what it is now travels through one function,
+  `ilm_refit_like()`, so there is a single place to add the next structure to.
+  Measured after the fix, at 200 replicates and a nominal 0.05: 0.045, 0.050,
+  0.035 and 0.055 for a Tobit, an accelerated failure time, a dispersion model
+  and a flexible baseline.
+
 
 * `ilm_model()` kept the caller's formula environment. `lme4::nobars()`,
   `mgcv::interpret.gam()` and `stats::reformulate()` each return a formula

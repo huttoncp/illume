@@ -99,7 +99,7 @@ ilm_refit_many <- function(fit, ys, ncores = 1L, restarts = 2L, verbose = FALSE)
   ## and must never be serialised to a worker.
   X <- fit$X; J <- fit$J; rl <- ilm_re_list_of(fit)
   rs <- fit$re_struct; arr <- fit$ar; yl <- fit$ylevels
-  fm <- fit$family; wt <- fit$weights; cnsr <- fit$censor
+  fm <- fit$family; wt <- fit$weights; cnsr <- fit$censor; zdd <- fit$Zd; dmu <- isTRUE(fit$disp_mu); rpp <- fit$rp
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   if (verbose)
@@ -107,7 +107,7 @@ ilm_refit_many <- function(fit, ys, ncores = 1L, restarts = 2L, verbose = FALSE)
                 if (is.null(cl)) 1L else length(cl)))
   one <- function(b) {
     f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl,
-                      weights = wt, censor = cnsr, family = fm,
+                      weights = wt, censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp, family = fm,
                       verbose = FALSE, restarts = restarts), silent = TRUE)
     if (inherits(f, "try-error")) return(NULL)
     if (f$opt$convergence != 0 || !isTRUE(f$sdr$pdHess)) return(NULL)

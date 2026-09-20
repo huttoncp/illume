@@ -1569,6 +1569,42 @@ ilm_disp_rows <- function(Zd, gamma, mu_pow, fam, X, beta) {
   exp(ls)
 }
 
+## ---- refitting a fitted model ----------------------------------------------
+
+## Every internal refit -- the likelihood-ratio tests, the parametric
+## bootstrap, every simulation envelope -- has to rebuild the SAME model with a
+## different response or a reduced design. Each new structural argument is
+## another thing those sites can forget, and forgetting one is silent: the
+## family default gave multinomial fits to gaussian data once, and omitting the
+## censoring made a reduced likelihood that ignored it, which put the
+## likelihood-ratio test's rejection rate at 100% under the null.
+##
+## So there is one place that knows what "the same model" means.
+#' @keywords internal
+#' @noRd
+ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
+                           restarts = 1L, verbose = FALSE) {
+  if (is.null(X)) X <- object$X
+  if (is.null(y)) y <- object$y
+  rp <- object$rp
+  if (!is.null(rp) && !is.null(keep)) {
+    ## the derivative design has one column per column of X, so it is subset
+    ## the same way; the spline columns are always kept, because their
+    ## term map is NA, and they move to wherever they now sit
+    rp$D <- rp$D[, keep, drop = FALSE]
+    rp$cols <- match(object$rp$cols, which(keep))
+    if (anyNA(rp$cols))
+      stop("internal: a baseline spline column was dropped from a refit",
+           call. = FALSE)
+  }
+  Zd <- object$Zd
+  ilm_fit(X, y, object$J, ilm_re_list_of(object), object$re_struct, object$ar,
+          ylevels = object$ylevels, weights = object$weights,
+          family = object$family, verbose = verbose, restarts = restarts,
+          censor = object$censor, Zd = Zd, disp_mu = isTRUE(object$disp_mu),
+          rp = rp)
+}
+
 #' Fitted dispersion, one value per observation
 #'
 #' The dispersion a model implies for each row. A constant repeated when the
