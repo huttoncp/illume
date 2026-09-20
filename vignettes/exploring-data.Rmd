@@ -1,0 +1,317 @@
+---
+title: "Exploring data before you model it"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Exploring data before you model it}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, dpi = 96)
+set.seed(2026)
+library(illume)
+```
+
+## What this half of the package is for
+
+Most exploratory tools answer "what does this data look like". `illume` asks a
+narrower question: **what about this data will break a model?**
+
+That is a different emphasis, and it shows up everywhere in the output. A
+factor summary reports how many levels are too thin to estimate, because that
+is the usual reason a model fails to fit. A date summary reports whether the
+spacing is regular, because an AR(1) term requires it. A numeric summary
+reports how far the variable is from gaussian *and why*, because the reason
+determines what you do next.
+
+The functions share one prefix with the modelling half, so exploring and
+fitting feel like one workflow rather than two packages bolted together.
+
+```{r}
+d <- ilm_sim()
+dim(d)
+```
+
+`ilm_sim()` generates a synthetic dataset for examples and tests. Every column
+is there because some check should have something to say about it — a fixture
+where nothing is wrong tests nothing.
+
+## Describing everything at once
+
+```{r}
+r <- ilm_describe_all(d)
+names(r)
+```
+
+One table per class, because columns of different classes do not share a
+sensible set of statistics. Constant columns are split out separately: a
+variable with one value tells you nothing a statistic can show, and it will
+break a model matrix.
+
+```{r}
+r$numeric
+```
+
+Reading across: `p_zero` flags zero inflation, `dispersion` is the
+variance-to-mean ratio for count-like variables, and `gauss` with `gauss_note`
+say how far the variable is from normal and why.
+
+```{r}
+r$constant
+```
+
+## The gaussian index, and why it is not a p-value
+
+`gauss` runs from 0 to 1. A value of 1 means the departure from normality is no
+larger than sampling noise would produce at this sample size.
+
+```{r}
+ilm_gauss_check(rnorm(500))$gauss
+ilm_gauss_check(rlnorm(500))$gauss
+```
+
+It deliberately is **not** a normality test p-value. Any test of exact
+normality rejects everything once *n* is large, so the p-value ends up
+answering a question nobody asked — you already know real data is not exactly
+normal. What matters is *how far* from normal it is, which is an effect size.
+
+```{r}
+# a normality test would reject this; the index does not
+ilm_gauss_check(rnorm(1e5))$gauss
+```
+
+The measure underneath is the Kolmogorov distance to the best-fitting normal:
+the largest amount, on the cumulative probability scale, by which a normal
+model misstates the data. Ask for it directly with `gauss = "ks_d"` if you
+would rather apply your own threshold.
+
+```{r}
+ilm_describe(d, "income", gauss = "both")[, c("gauss", "ks_d", "gauss_note")]
+```
+
+### The reason matters more than the number
+
+```{r}
+notes <- function(x) ilm_gauss_check(x)$gauss_note
+notes(rlnorm(2000))
+notes(rt(2000, 3))
+notes(rpois(2000, 3))
+notes(c(rnorm(1000), rnorm(1000, 5)))
+```
+
+That last one is the case worth dwelling on. A mixture of two normals is
+**multimodal**, and the advice — check for subgroups — is what you actually
+need. An earlier version of this feature tried to name the single best-fitting
+distribution family instead, and on that data it confidently answered
+"uniform". It was not close to right, and it offered nothing to act on.
+
+## What the summaries are looking for
+
+```{r}
+r$categorical[, c("variable", "n_empty", "n_unique", "n_rare", "n_unused",
+                  "case_variants", "note")]
+```
+
+Each of those columns exists because of a specific failure:
+
+- `n_empty` — `""` is not `NA` to R, but it is almost always missing to you,
+  and it silently becomes a factor level.
+- `n_rare` — levels with only a handful of observations are the usual reason a
+  factor model will not fit, and in a logistic model a direct route to
+  separation.
+- `n_unused` — a declared but unobserved level produces an all-zero column in
+  the model matrix and then breaks `predict()` on new data.
+- `case_variants` — `"North"`, `"north"` and `"North "` counted as three
+  things.
+
+```{r}
+r$logical[, c("variable", "p_TRUE", "note")]
+```
+
+An indicator that is almost always `TRUE` is a separation risk in any binary
+model.
+
+### Dates carry the AR(1) precondition
+
+```{r}
+r$time[, c("variable", "n_unique", "spacing", "regular", "n_gaps", "note")]
+```
+
+`regular` and `n_gaps` matter because `ilm_model()`'s AR(1) term needs
+regularly spaced observations within group. Seeing "irregular, 3 gaps" here is
+much better than discovering it when the model fails.
+
+Repeated dates are *described* rather than warned about: many units sharing a
+date is simply what long-format panel data looks like.
+
+## Problems that belong to pairs of columns
+
+Some problems are not properties of any single variable.
+
+```{r}
+dd <- d
+dd$score_copy <- dd$score
+ilm_frame_issues(dd)
+```
+
+Note that `score` is not reported as identifier-like even though every value is
+distinct — a continuous variable is unique per row by construction. Only
+discrete-valued columns earn that flag.
+
+## Missingness
+
+```{r}
+head(ilm_describe_na_all(d), 4)
+```
+
+Sorted with the most missing first, since those are the variables worth
+looking at.
+
+## Plots that carry the verdict
+
+`ilm_plot()` chooses a plot from the classes of what you give it, and annotates
+it with the same verdict `ilm_describe()` reports.
+
+```{r}
+ilm_plot(d, "income")
+```
+
+The subtitle is not decoration. A histogram of a skewed variable looks like a
+histogram; the annotation says how far from gaussian it is and in which
+direction.
+
+You can ask what would be drawn without drawing it:
+
+```{r}
+ilm_pick_geom(d$score)$geom
+ilm_pick_geom(d$grp, d$score)$geom
+```
+
+### Rendering is aware of how much data there is
+
+```{r}
+big <- data.frame(a = rnorm(50000), b = rnorm(50000))
+ilm_pick_geom(big$a, big$b)
+```
+
+A scatter of fifty thousand points is a black rectangle. Above `n_max` the plot
+becomes a binned density, and says so rather than misleading you quietly.
+
+```{r}
+ilm_plot(big, "a", "b")
+```
+
+### Choosing the geom yourself
+
+```{r}
+ilm_geom_spec()
+```
+
+That table is not just documentation — it is what the argument checks read, so
+the documented requirements and the enforced ones cannot drift apart. Ask for
+something impossible and the error says what would work:
+
+```{r, error = TRUE}
+ilm_plot(d, "grp", geom = "histogram")
+```
+
+### Appearance
+
+Colours, fills, transparency, point size, palettes and themes are all
+available, with ggplot2-style names:
+
+```{r}
+ilm_plot(d, "grp", "score", geom = "violin", fill = "lightblue",
+         alpha = 0.7, theme = "clean")
+```
+
+```{r}
+ilm_plot(d, "score", "income", by = "grp", palette = "Dark 2", alpha = 0.6)
+```
+
+## Cleaning
+
+```{r}
+messy <- data.frame(
+  "Study ID"  = c("1", "2", "3", ""),
+  someFlag    = c("TRUE", "FALSE", "TRUE", ""),
+  measurement = c("1.5", "2.5", "n/a", ""),
+  allEmpty    = c("", "", "", ""),
+  check.names = FALSE, stringsAsFactors = FALSE)
+
+ilm_wash_df(messy)
+```
+
+Names become snake_case, the empty row and column go, and text columns that are
+really numeric or logical are converted. `measurement` stays character on
+purpose: one value does not convert, and silently turning a column into `NA`s
+is worse than leaving it alone.
+
+Known-bad codes are handled separately, because a sentinel that means missing
+in one column can be a real measurement in another:
+
+```{r}
+ilm_recode_errors(data.frame(x = c(1, 999, 3), y = c(999, 2, 3)),
+                  errors = 999, cols = "x")
+```
+
+And recoding against a lookup table:
+
+```{r}
+ilm_translate(c(1, 2, 3, 99), old = 1:3, new = c("low", "mid", "high"))
+```
+
+Unmatched values become `NA` rather than passing through, so codes your
+dictionary does not cover cannot hide.
+
+## Duplicates and counts
+
+```{r}
+ilm_counts(d$grp)
+ilm_counts_tb(d$site, n = 2)
+```
+
+`ilm_counts_tb()` shows both ends at once because that is where the problems
+are: a level that dominates, and levels too thin to model.
+
+```{r}
+dup <- data.frame(a = c(1, 1, 2, 2, 2, 3), b = c("x", "x", "y", "y", "z", "w"))
+ilm_copies(dup)
+```
+
+## Uncertainty without a model
+
+```{r}
+ilm_boot_ci(d, "score", R = 500, seed = 1)
+```
+
+For a difference between two groups, ask for the difference directly:
+
+```{r}
+d2 <- d[d$grp %in% c("alpha", "beta"), ]
+d2$grp <- factor(d2$grp)
+ilm_boot_diff(d2, "score", "grp", R = 500, seed = 1)
+```
+
+`excludes_zero` answers the question people actually ask. Comparing two
+separate intervals for overlap is a conservative and lossy substitute: two
+intervals can overlap while the difference is clearly non-zero.
+
+On skewed data, `"percentile"` and `"bca"` hold their nominal coverage better
+than `"normal"` and `"basic"`.
+
+## Into the model
+
+The point of all this is what comes next. The exploration tells you which
+family to consider, which variables will cause trouble, and whether an AR(1)
+term is even possible:
+
+```{r}
+f <- ilm_model(score ~ income + grp + (1 | id), data = d,
+               family = "gaussian", verbose = FALSE)
+ilm_plot_model(f, "coef")
+```
+
+See `vignette("illume")` for the modelling half.

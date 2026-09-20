@@ -15,3 +15,7 @@ inst/doc/
 # add ~3.8 MB per version to history permanently, and .rds does not
 # delta-compress. Summary CSVs and generated findings ARE tracked.
 studies/runs/**/*.rds
+
+# stray device output from tests or examples
+Rplots.pdf
+**/Rplots.pdf

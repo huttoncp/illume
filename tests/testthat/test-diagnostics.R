@@ -31,7 +31,9 @@ test_that("scoring rules are on their expected scales", {
 
 test_that("calibration returns one entry per category", {
   fit <- fit_basic()
-  cal <- ilm_calibration(fit, nbins = 4L, B = 20L)
+  # B is kept small for speed; the envelope is then unstable and says so, which
+  # is not what this test is about
+  cal <- suppressWarnings(ilm_calibration(fit, nbins = 4L, B = 20L))
   expect_length(cal, fit$J)
   ok <- Filter(Negate(is.null), cal)
   expect_true(all(vapply(ok, function(z) all(z$lo <= z$hi, na.rm = TRUE), TRUE)))
@@ -56,7 +58,16 @@ test_that("simulation produces valid category codes and is reproducible", {
 test_that("appraise draws without error", {
   fit <- fit_basic()
   pdf(NULL); on.exit(dev.off())
-  expect_silent(invisible(ilm_appraise(fit, nbins = 4L, B = 20L)))
+  # as above: a deliberately cheap B draws a legitimate warning from the
+  # calibration panel, so the silence being checked is at the default
+  expect_silent(suppressWarnings(invisible(ilm_appraise(fit, nbins = 4L, B = 20L))))
+})
+
+test_that("appraise passes a small B through to the calibration warning", {
+  fit <- fit_basic()
+  pdf(NULL); on.exit(dev.off())
+  expect_warning(invisible(ilm_appraise(fit, nbins = 4L, B = 20L)),
+                 "unstable envelope")
 })
 
 test_that("a targeted covariate check runs and reports a status", {
