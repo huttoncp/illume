@@ -162,16 +162,37 @@ ilm_orth_contr <- function(z) {
   FALSE
 }
 
+## Which factors in an interaction are coded in a way that stops a Type III
+## main effect from meaning what it says. Separated from the warning because
+## the useful response is to fix it, not only to say it.
 #' @keywords internal
 #' @noRd
-ilm_warn_type3_coding <- function(labs, contrasts) {
+ilm_type3_bad_coding <- function(labs, contrasts, mf = NULL) {
   inter <- grep(":", labs, fixed = TRUE, value = TRUE)
-  if (!length(inter)) return(invisible(FALSE))
+  if (!length(inter)) return(character(0))
   involved <- unique(unlist(strsplit(inter, ":", fixed = TRUE)))
-  bad <- character(0)
-  if (length(contrasts))
-    bad <- names(contrasts)[names(contrasts) %in% involved &
-                            !vapply(contrasts, ilm_orth_contr, TRUE)]
+  bad <- if (length(contrasts))
+    names(contrasts)[names(contrasts) %in% involved &
+                     !vapply(contrasts, ilm_orth_contr, TRUE)] else character(0)
+  ## A numeric predictor in an interaction has exactly the same problem and no
+  ## contrast to blame it on: the main effect of x in x:z is the slope where
+  ## z = 0, and only when z is centred is that the average slope. The existing
+  ## warning has always said so; this is what finds it.
+  if (!is.null(mf)) {
+    num <- involved[vapply(involved, function(v) {
+      z <- mf[[v]]
+      !is.null(z) && is.numeric(z) && !is.matrix(z) &&
+        abs(mean(z, na.rm = TRUE)) > 1e-8 * max(1, stats::sd(z, na.rm = TRUE))
+    }, TRUE)]
+    bad <- unique(c(bad, num))
+  }
+  bad
+}
+
+#' @keywords internal
+#' @noRd
+ilm_warn_type3_coding <- function(labs, contrasts, mf = NULL) {
+  bad <- ilm_type3_bad_coding(labs, contrasts, mf)
   if (!length(bad)) return(invisible(FALSE))
   warning("this model has interactions and ", paste(sQuote(bad), collapse = ", "),
           if (length(bad) > 1L) " use " else " uses ",
@@ -183,6 +204,50 @@ ilm_warn_type3_coding <- function(labs, contrasts) {
           "interaction have the same issue unless they are centred.",
           call. = FALSE)
   invisible(TRUE)
+}
+
+## Refit the same model with sum-to-zero coding on the named factors, so that
+## a Type III main effect is averaged over the levels it interacts with rather
+## than measured at one of them. afex does this and says so; saying nothing
+## and reporting the other test would be worse, and so would refusing to
+## report anything.
+##
+## Only the coding changes. The likelihood, the fitted values and every test
+## that does not involve a main effect inside an interaction are identical.
+#' @keywords internal
+#' @noRd
+ilm_recode_sum <- function(object, which) {
+  ## A smooth's null-space columns and a Royston-Parmar baseline are appended
+  ## to the design outside model.matrix(), so rebuilding from the terms alone
+  ## would drop them. Those models keep the warning instead of a silent
+  ## half-refit.
+  if (length(object$smooths) || !is.null(object$rp)) return(NULL)
+  ctr <- object$contrasts
+  mf <- object$model
+  for (v in which) {
+    if (!is.null(ctr[[v]])) ctr[[v]] <- "contr.sum"
+    else if (!is.null(mf[[v]]) && is.numeric(mf[[v]]) && !is.matrix(mf[[v]]))
+      ## centring a numeric does for it what sum coding does for a factor:
+      ## it puts zero at the average, so the other term's main effect is
+      ## measured there rather than at an arbitrary origin
+      mf[[v]] <- mf[[v]] - mean(mf[[v]], na.rm = TRUE)
+  }
+  Xn <- try(ilm_drop_intercept(
+    stats::model.matrix(object$terms, mf, contrasts.arg = ctr),
+    object), silent = TRUE)
+  if (inherits(Xn, "try-error") || ncol(Xn) != ncol(object$X)) return(NULL)
+  f <- try(suppressWarnings(ilm_refit_like(object, X = Xn, restarts = 1L)),
+           silent = TRUE)
+  if (inherits(f, "try-error") || !isTRUE(f$ok)) return(NULL)
+  ## ilm_fit() knows nothing about formulas, so the pieces every downstream
+  ## accessor reads have to be carried across by hand
+  f$assign <- attr(Xn, "assign")
+  f$contrasts <- attr(Xn, "contrasts")
+  for (nm in c("call", "formula", "fixed_formula", "terms", "xlev", "model",
+               "smooths", "bars", "na.action", "n_dropped", "ylevels",
+               "term_labels"))
+    f[[nm]] <- object[[nm]]
+  f
 }
 
 #' Analysis of deviance for fixed effects
@@ -217,7 +282,15 @@ ilm_warn_type3_coding <- function(labs, contrasts) {
 #' large-sample approximations.
 #'
 #' @param object A fitted `"ilm_model"` object, fitted through the formula interface.
-#' @param type `3` or `"III"`, or `2` or `"II"`.
+#' @param type `2` or `"II"` (the default), or `3` or `"III"`. Type II tests
+#'   each term against everything not containing it, which does not depend on
+#'   how the factors are coded. Type III tests each term against every other,
+#'   which does -- see `recode`.
+#' @param recode When `type = 3` and a term inside an interaction is coded in a
+#'   way that makes its main-effect row something other than a Type III test,
+#'   refit with [stats::contr.sum()] for those factors and say so. `FALSE`
+#'   tests the model exactly as coded and warns instead. The fit passed in is
+#'   never modified either way.
 #' @param test `"Wald"` or `"LRT"`.
 #' @param ncores Integer. Worker processes for the refits.
 #' @param restarts Integer. Optimiser restarts in refits.
@@ -237,8 +310,8 @@ ilm_warn_type3_coding <- function(labs, contrasts) {
 #' 851--853.
 #' @seealso [ilm_pb_lrt()], [ilm_coef_table()].
 #' @export
-ilm_anova <- function(object, type = 3, test = c("Wald", "LRT"),
-                        ncores = 1L, restarts = 2L) {
+ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
+                        ncores = 1L, restarts = 2L, recode = TRUE) {
   test <- match.arg(test)
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
@@ -250,7 +323,33 @@ ilm_anova <- function(object, type = 3, test = c("Wald", "LRT"),
             "See object$checks.", call. = FALSE)
 
   mt <- object$terms; labs <- object$term_labels; nt <- length(labs)
-  if (type3) ilm_warn_type3_coding(labs, object$contrasts)
+  if (type3) {
+    bad <- ilm_type3_bad_coding(labs, object$contrasts, object$model)
+    alt <- if (length(bad) && isTRUE(recode)) ilm_recode_sum(object, bad) else NULL
+    if (!is.null(alt)) {
+      fac <- bad[bad %in% names(object$contrasts)]
+      num <- setdiff(bad, fac)
+      message("ilm_anova: refitted for these tests",
+              if (length(fac)) paste0(", with contrasts = list(",
+                paste(sprintf("%s = \"contr.sum\"", fac), collapse = ", "),
+                ")") else "",
+              if (length(num)) paste0(
+                if (length(fac)) " and with " else ", with ",
+                paste(num, collapse = ", "), " centred") else "",
+              ". A Type III main effect of a term that is also in an ",
+              "interaction is the average over the other term only when ",
+              "that term has zero at its own average -- sum-to-zero ",
+              "coding for a factor, a centred value for a numeric. ",
+              "Otherwise it is the effect at that factor's reference ",
+              "level, or where the numeric is zero. Nothing else about ",
+              "the model changes, and ",
+              "the fit you passed in is untouched. Use type = 2 to avoid the ",
+              "question, or recode = FALSE to test the model as coded.")
+      object <- alt
+      mt <- object$terms; labs <- object$term_labels
+    } else if (length(bad))
+      ilm_warn_type3_coding(labs, object$contrasts, object$model)
+  }
   rel <- lapply(seq_len(nt), function(j) ilm_relatives_of(mt, j))
   if (type3) rel <- lapply(rel, function(z) integer(0))   # III conditions on all
 

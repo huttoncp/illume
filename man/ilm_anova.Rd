@@ -6,22 +6,32 @@
 \usage{
 ilm_anova(
   object,
-  type = 3,
+  type = 2,
   test = c("Wald", "LRT"),
   ncores = 1L,
-  restarts = 2L
+  restarts = 2L,
+  recode = TRUE
 )
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object, fitted through the formula interface.}
 
-\item{type}{\code{3} or \code{"III"}, or \code{2} or \code{"II"}.}
+\item{type}{\code{2} or \code{"II"} (the default), or \code{3} or \code{"III"}. Type II tests
+each term against everything not containing it, which does not depend on
+how the factors are coded. Type III tests each term against every other,
+which does -- see \code{recode}.}
 
 \item{test}{\code{"Wald"} or \code{"LRT"}.}
 
 \item{ncores}{Integer. Worker processes for the refits.}
 
 \item{restarts}{Integer. Optimiser restarts in refits.}
+
+\item{recode}{When \code{type = 3} and a term inside an interaction is coded in a
+way that makes its main-effect row something other than a Type III test,
+refit with \code{\link[stats:contrast]{stats::contr.sum()}} for those factors and say so. \code{FALSE}
+tests the model exactly as coded and warns instead. The fit passed in is
+never modified either way.}
 }
 \value{
 An \code{"anova"} data frame with one row per fixed-effect term. The

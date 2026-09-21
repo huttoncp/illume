@@ -66,21 +66,68 @@ test_that("Type III with interactions warns when the coding is not orthogonal", 
   fsum <- ilm_model(y ~ g * x + z + (1 | id), d, family = "gaussian",
                     verbose = FALSE, contrasts = list(g = "contr.sum"))
 
-  expect_warning(ilm_anova(ftrt, type = 3), "not Type III tests")
-  expect_warning(ilm_anova(ftrt, type = 3), "contr.sum", fixed = TRUE)
-  # the orthogonal coding is the one the label means, so it says nothing
-  expect_silent(ilm_anova(fsum, type = 3))
-  # Type II does not depend on the coding at all
+  # Type III on a treatment-coded fit now REFITS with sum coding and says so,
+  # rather than reporting a test that is not the one the label claims
+  expect_message(ilm_anova(ftrt, type = 3), "refitted")
+  expect_message(ilm_anova(ftrt, type = 3), "contr.sum", fixed = TRUE)
+  # recode = FALSE keeps the old behaviour: test it as coded, and warn
+  expect_warning(ilm_anova(ftrt, type = 3, recode = FALSE), "not Type III tests")
+  # Type II does not depend on the coding at all, and is the default
   expect_silent(ilm_anova(ftrt, type = 2))
+  expect_silent(ilm_anova(ftrt))
+  expect_equal(ilm_anova(ftrt)$Chisq, ilm_anova(ftrt, type = 2)$Chisq)
 
-  # and the warning is earned: the main-effect row really does change
-  a1 <- suppressWarnings(ilm_anova(ftrt, type = 3))
-  a2 <- ilm_anova(fsum, type = 3)
+  # the refit lands exactly where fitting with contr.sum by hand lands
+  expect_equal(suppressMessages(ilm_anova(ftrt, type = 3))$Chisq,
+               suppressMessages(ilm_anova(fsum, type = 3))$Chisq,
+               tolerance = 1e-4)
+  # and it does not touch the fit it was given
+  expect_equal(unname(unlist(ftrt$contrasts["g"])), "contr.treatment")
+  expect_true("gb" %in% names(stats::coef(ftrt)))
+
+  # The recode is earned: the main-effect row really does change. Both of
+  # these leave x uncentred, so the ONLY difference between them is how g is
+  # coded -- comparing against a recoded fit would move the x origin too, and
+  # confound the two things this is separating.
+  a1 <- suppressWarnings(ilm_anova(ftrt, type = 3, recode = FALSE))
+  a2 <- suppressWarnings(ilm_anova(fsum, type = 3, recode = FALSE))
   expect_gt(a2["x", "Chisq"] / a1["x", "Chisq"], 3)
   # the multi-column rows are invariant, because both codings span the same
   # subspace for those terms
   expect_equal(a1["g", "Chisq"], a2["g", "Chisq"], tolerance = 1e-6)
   expect_equal(a1["g:x", "Chisq"], a2["g:x", "Chisq"], tolerance = 1e-6)
+  # but the g row is NOT invariant to where x sits, which is the other half
+  # of the same point: it is tested at x = 0 either way, and centring moves
+  # that to the average
+  a3 <- suppressMessages(ilm_anova(fsum, type = 3))
+  expect_false(isTRUE(all.equal(a2["g", "Chisq"], a3["g", "Chisq"])))
+})
+
+test_that("an uncentred numeric in an interaction is the same problem", {
+  # the main effect of x in x:z is the slope where z = 0, and only when z is
+  # centred is that the average slope -- no contrast to blame, same issue
+  set.seed(13); n <- 600
+  d <- data.frame(x = stats::rnorm(n, mean = 5), z = stats::rnorm(n, mean = 3),
+                  g = factor(sample(c("a", "b", "c"), n, TRUE)))
+  d$y <- 0.5 + 0.8 * d$x + 0.3 * d$z + 0.7 * (d$x - 5) * (d$z - 3) +
+    stats::rnorm(n, 0, 0.8)
+  f <- ilm_model(y ~ x * z + g, data = d, family = "gaussian", verbose = FALSE)
+  expect_message(ilm_anova(f, type = 3), "centred")
+  # it matches fitting on centred data directly
+  d2 <- d; d2$x <- d$x - mean(d$x); d2$z <- d$z - mean(d$z)
+  f2 <- ilm_model(y ~ x * z + g, data = d2, family = "gaussian",
+                  verbose = FALSE)
+  expect_equal(suppressMessages(ilm_anova(f, type = 3))[["F value"]],
+               ilm_anova(f2, type = 3)[["F value"]], tolerance = 1e-3)
+  # already centred, so nothing to do and nothing to say
+  expect_silent(ilm_anova(f2, type = 3))
+  # and the uncorrected test really is a different number
+  a_raw <- suppressWarnings(ilm_anova(f, type = 3, recode = FALSE))
+  a_fix <- suppressMessages(ilm_anova(f, type = 3))
+  expect_gt(abs(a_raw["x", "F value"] - a_fix["x", "F value"]), 100)
+  # the interaction row does not depend on any of this
+  expect_equal(a_raw["x:z", "F value"], a_fix["x:z", "F value"],
+               tolerance = 1e-3)
 })
 
 test_that("a model without interactions is never warned about", {
@@ -90,6 +137,9 @@ test_that("a model without interactions is never warned about", {
   d$y <- d$x + stats::rnorm(400)
   f <- ilm_model(y ~ g + x + (1 | id), d, family = "gaussian", verbose = FALSE)
   expect_silent(ilm_anova(f, type = 3))
+  # with nothing in an interaction, the two types are the same test
+  expect_equal(ilm_anova(f, type = 2)$Chisq, ilm_anova(f, type = 3)$Chisq,
+               tolerance = 1e-8)
 })
 
 test_that("interaction terms are grouped, tested and predicted as one term", {
