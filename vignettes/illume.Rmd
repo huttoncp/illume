@@ -85,18 +85,44 @@ is the shape of the whole package.
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
 | **Design and decision** | `ilm_power()`, `ilm_scenario()`, `ilm_interpret()` |
 
-## One gap worth naming
+## The multinomial claim, stated carefully
 
-The **multinomial** family closes a specific hole. If an outcome has three or
-more categories with no natural order -- a diagnosis, a habitat type, a choice
-among options -- and the data are grouped, R has had no good frequentist
-option: `nnet::multinom()` has no random effects, `lme4::glmer()` and `glmmTMB`
-have no multinomial family, and `brms` is much slower and answers a different
-question.
+If an outcome has three or more categories with no natural order -- a
+diagnosis, a habitat type, a choice among options -- and the data are grouped,
+the frequentist options are thin. `nnet::multinom()` has no random effects;
+`lme4::glmer()` and `glmmTMB` have no multinomial family; `brms` is Bayesian
+and much slower.
 
 ```{r, eval = FALSE}
 ilm_model(choice ~ price + (1 | household), data = dd, family = "multinomial")
 ```
+
+**They are not absent, though.** `mclogit::mblogit()` fits this model, by
+penalised quasi-likelihood rather than by maximising a Laplace-approximated
+marginal likelihood. The difference is measurable, and it is not uniform:
+
+```
+                       illume    mclogit
+  40 clusters x 25
+    coverage              0.953     0.949      <- no meaningful difference
+    attenuation           1.005     0.960
+  100 clusters x 4
+    coverage              0.949     0.891
+    attenuation           1.004     0.731      <- 27% shrunk toward zero
+    bias                  0.035     0.188
+    RMSE                  0.409     0.336      <- mclogit WINS here
+```
+
+With well-populated clusters the two agree and there is nothing to choose
+between them. PQL degrades where the clusters are small, because it shrinks the
+fixed effects toward zero -- and its standard errors do not know it, so the
+interval is centred in the wrong place at close to the right width.
+
+The last row is the honest caveat: mclogit's **RMSE is lower**, because
+shrinkage buys a variance reduction that more than pays for the bias. If the
+goal is prediction that is a defensible trade. If the goal is a coefficient
+with an interval you intend to interpret, it is not, and coverage is the
+measure that says so. `studies/findings/mclogit.md` has the full table.
 
 ## Working with other packages
 
@@ -119,7 +145,7 @@ here.
 
 ## Where to read more
 
-`vignette("workflow")` is the map: ten stages from power to scenario, with a
+`vignette("workflow")` is the map: eleven stages from power to reporting, with a
 pointer for each.
 
 | Vignette | Covers |

@@ -157,6 +157,62 @@ summarise_study <- function(dir, study) {
       "These answer different questions (MLE with a Wald interval vs posterior",
       "mean with a credible interval), so exact agreement is not expected; the",
       "residual gap is prior shrinkage.")
+
+  } else if (study == "imputation") {
+    d <- read_all(dir, "^summary.csv$"); if (is.null(d)) return(NULL)
+    cells <- unique(d$cell)
+    meths <- c("mean", "fcs", "lowrank", "lowrank_pa", "glrm")
+    ## coverage as cells x methods, so "who wins where" is a row operation
+    pull <- function(m) vapply(cells, function(cl) {
+      z <- d$coverage[d$cell == cl & d$method == m]
+      if (length(z)) z[1] else NA_real_
+    }, numeric(1))
+    M <- vapply(meths, pull, numeric(length(cells)))
+    if (is.null(dim(M))) M <- matrix(M, 1, dimnames = list(cells, meths))
+    best <- apply(M, 1, function(r) if (all(is.na(r))) NA_character_ else
+      paste(meths[which(r == max(r, na.rm = TRUE))], collapse = "/"))
+
+    nrep <- max(d$n_ok, na.rm = TRUE)
+    mcse <- sqrt(0.95 * 0.05 / nrep)          # MC error at the nominal rate
+    same <- 2 * mcse                          # below this is not a difference
+
+    fcs_ok <- is.finite(M[, "fcs"])
+    fcs_best <- sum(fcs_ok & grepl("fcs", best, fixed = TRUE))
+
+    ## the question the study was built to settle: how the rank is chosen
+    cv <- M[, "lowrank"]; pa <- M[, "lowrank_pa"]
+    ok <- is.finite(cv) & is.finite(pa)
+    pa_win <- sum(pa[ok] - cv[ok] > same)
+    cv_win <- sum(cv[ok] - pa[ok] > same)
+
+    c(paste0("Five methods over ", length(cells), " designs, ", nrep,
+             " replicates each, scored on reconstruction of hidden cells AND"),
+      paste0("on coverage of a downstream coefficient after Rubin pooling.",
+             " Monte Carlo error on"),
+      paste0("coverage is ", num(mcse), ", so a gap under ", num(same, 2),
+             " is not a gap."),
+      "", md_table(d), "",
+      paste0("Best coverage per design: ",
+             paste0(cells, " -> ", best, collapse = "; "), "."),
+      "",
+      paste0("Chained equations could not be fitted in ", sum(!fcs_ok), " of ",
+             length(cells), " designs. Where it could, it takes or"),
+      paste0("shares the best coverage in ", fcs_best, " of ", sum(fcs_ok),
+             ", so it remains the default."),
+      "",
+      paste0("Rank selection -- cross-validation (lowrank) against parallel",
+             " analysis (lowrank_pa):"),
+      paste0("parallel analysis better in ", pa_win, " designs,",
+             " cross-validation better in ", cv_win, ", the rest"),
+      paste0("indistinguishable. ",
+             if (pa_win > 0 && cv_win > 0)
+               "Neither dominates, so ilm_lowrank_ncp() is UNCHANGED."
+             else "One dominates; revisit ilm_lowrank_ncp()."),
+      "",
+      "CAVEAT that must travel with this result: reconstruction error and",
+      "coverage disagree, and only coverage is what an analysis needs. A",
+      "method can reconstruct hidden cells as well as the best one and still",
+      "cover at half the nominal rate.")
   } else NULL
 }
 

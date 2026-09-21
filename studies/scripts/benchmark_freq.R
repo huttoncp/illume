@@ -125,7 +125,7 @@ for (J in c(3L, 5L)) {
   }
 }
 
-## ---- multinomial mixed: no frequentist competitor --------------------------
+## ---- multinomial mixed: against mclogit (PQL), the one frequentist rival ----
 ## Recorded for timing only; brms is handled separately because it compiles.
 for (J in c(3L, 5L)) {
   for (r in seq_len(NREP)) {

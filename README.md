@@ -1,0 +1,187 @@
+# illume
+
+**Exploration and frequentist inference in one toolkit.**
+
+`illume` is an analysis workflow for R aimed at **inference** rather than
+prediction. It covers the path from a sample-size calculation, through
+exploration and missing data, to a model, its diagnostics, and a scenario a
+stakeholder can act on -- with one object and one vocabulary the whole way.
+
+> Not on CRAN yet. This is pre-release software under active development.
+
+## Two commitments
+
+**One engine fits everything.** `ilm_model()` goes from a simple regression to a
+mixed model with smooths and correlated errors, across families from gaussian
+through counts, proportions, ordered and unordered categories, and survival
+times. All of them are fitted by approximate maximum likelihood using the
+Laplace approximation via [RTMB](https://github.com/kaskr/RTMB). Because a
+single engine fits them all, `summary()`, `ilm_anova()`, `predict()` and every
+diagnostic stay the same as the model gets harder.
+
+**Every check names a remedy that exists in this package.** A diagnostic that
+tells you an assumption fails and leaves you to find the fix elsewhere is a
+complaint, not a tool. `ilm_check_variance()` names `dispformula`;
+`ilm_check_zeros()` names `ziformula`; `ilm_check_proportional()` names
+`family = "multinomial"`. Where a remedy did not exist, it was built -- which is
+most of what this package is.
+
+## Installation
+
+```r
+# install.packages("remotes")
+remotes::install_github("craig-hutton/illume")
+```
+
+R >= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.
+
+## A worked example, end to end
+
+```r
+library(illume)
+
+d <- ilm_sim()                       # a grouped dataset with a known structure
+
+## what is in it
+ilm_describe_all(d)
+ilm_check_missing(d, downtime ~ income + region)
+
+## a model: a count outcome, repeated within worker
+fit <- ilm_model(downtime ~ income + region + (1 | id), data = d,
+                 family = "poisson")
+
+## does it hold up?
+ilm_appraise(fit)                    # the whole battery at once
+ilm_check_zeros(fit)                 # more zeros than poisson allows?
+
+## what does it say?
+ilm_anova(fit)
+ilm_effects(fit)                     # incidence rate ratios
+em <- ilm_emmeans(fit, "region")
+ilm_contrast(em)                     # every pair, simultaneously
+
+## what would happen if we changed something?
+ilm_scenario(fit, income = c(20, 40, 60), contrast = "first")
+
+## say it in words
+ilm_interpret(fit)
+```
+
+If `ilm_check_zeros()` flags excess zeros, the next line is
+`ilm_model(..., ziformula = ~ 1)` and everything downstream is unchanged. That
+is the shape of the whole package.
+
+## What is in it
+
+| | |
+|---|---|
+| **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
+| **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
+| **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_ame()`, `ilm_robust()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` |
+| **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
+| **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
+| **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
+| **Design and decision** | `ilm_power()`, `ilm_scenario()`, `ilm_interpret()` |
+
+## The multinomial claim, stated carefully
+
+If an outcome has three or more categories with no natural order and the data
+are grouped, the frequentist options are thin. `nnet::multinom()` has no random
+effects; `lme4::glmer()` and `glmmTMB` have no multinomial family; `brms` is
+Bayesian and much slower.
+
+```r
+ilm_model(choice ~ price + (1 | household), data = dd, family = "multinomial")
+```
+
+They are not absent, though. `mclogit::mblogit()` fits this model by penalised
+quasi-likelihood. At nominal 0.95:
+
+```
+                       illume    mclogit
+  40 clusters x 25
+    coverage              0.953     0.949      <- no meaningful difference
+  100 clusters x 4
+    coverage              0.949     0.891
+    attenuation           1.004     0.731      <- 27% shrunk toward zero
+    RMSE                  0.409     0.336      <- mclogit wins here
+```
+
+With well-populated clusters the two agree. PQL degrades where the clusters are
+small, and its standard errors do not know it -- the interval is centred in the
+wrong place at close to the right width. The last row is the caveat that travels
+with the result: mclogit's RMSE is *lower*, because shrinkage buys a variance
+reduction that more than pays for the bias. For prediction that is a defensible
+trade; for a coefficient you intend to interpret it is not.
+
+## How it is validated
+
+Every claim in the documentation is a measurement. The `studies/` directory
+holds the scripts, the retained runs, and a generated findings log per study:
+
+| Study | Against | Reports |
+|---|---|---|
+| `coverage` | 23 model configurations | interval coverage per family and structure |
+| `power` | closed form where one exists | 13 designs |
+| `bench` | `lme4`, `glmmTMB`, `nlme`, `survreg` | agreement and timing |
+| `mclogit` | `mclogit::mblogit` | the table above |
+| `brms` | `brms` | the Bayesian comparison |
+| `imputation` | 5 methods over 6 designs | reconstruction *and* downstream coverage |
+
+Individual features are checked against outside implementations rather than
+against expectations: `emmeans`, `pscl`, `ordinal`, `sandwich`, `survey`,
+`glmmTMB`, closed-form 2SLS, and the SVD. **Every real defect found in this
+package came from one of those comparisons, or from widening a simulation. None
+came from the test suite** -- which is worth knowing about test suites.
+
+## Working with other packages
+
+`car::Anova()` dispatches to the correct joint test, and
+`performance::model_performance()` and `check_model()` work directly.
+`marginaleffects` and the easystats stack each need one call:
+
+```r
+ilm_register_marginaleffects()
+marginaleffects::avg_slopes(fit, variables = "x1")
+
+ilm_register_insight()
+parameters::model_parameters(fit)
+```
+
+## Documentation
+
+| Vignette | Covers |
+|---|---|
+| `workflow` | the whole path, eleven stages |
+| `regression-models` | `ilm_model()` in depth, every family, mixed multinomial |
+| `exploring-data` | descriptives, plots, bootstrap intervals |
+| `profiling` | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
+| `anomaly-detection` | rows that are implausible as combinations |
+| `missing-data` | diagnosing it, imputing it, pooling |
+| `causal-models` | DAGs, difference in differences, discontinuities |
+| `effect-size-and-power` | effect sizes, power, scenario projection |
+
+```r
+vignette("workflow", package = "illume")
+```
+
+## References
+
+Kristensen, Nielsen, Berg, Skaug and Bell (2016). TMB: Automatic
+Differentiation and Laplace Approximation. *Journal of Statistical Software*
+70(5).
+
+Halekoh and Hojsgaard (2014). A Kenward-Roger Approximation and Parametric
+Bootstrap Methods for Tests in Linear Mixed Models. *Journal of Statistical
+Software* 59(9).
+
+Agresti (2013). *Categorical Data Analysis*, 3rd ed., chapter 8.
+
+Wood (2017). *Generalized Additive Models: An Introduction with R*, 2nd ed.,
+section 5.4.
+
+## License
+
+MIT. See `LICENSE`.

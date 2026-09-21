@@ -6,18 +6,26 @@ Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
                   email = "craig.hutton@gmail.com")
 Description: A frequentist regression workflow built around inference rather
-    than prediction. One engine fits gaussian, binomial, Poisson, negative
-    binomial and multinomial models by approximate maximum likelihood using the
-    Laplace approximation via 'RTMB', with 'lme4'-style formulas supporting
-    crossed and nested random intercepts and slopes, penalised smooth terms via
-    'mgcv', and AR(1) temporal correlation. Because one engine fits them all,
-    every model shares a single object, a single set of methods, and a single
-    diagnostic system that reports whether each assumption is consistent with
-    the data, with a stated reason and suggested remedy when it is not. The
-    multinomial family fits mixed models for nominal categorical outcomes, for
-    which no frequentist implementation was previously available. Methods of
-    Kristensen, Nielsen, Berg, Skaug and Bell (2016)
-    <doi:10.18637/jss.v070.i05> and Halekoh and Hojsgaard (2014)
+    than prediction, together with the exploratory steps that precede it. One
+    engine fits gaussian, binomial, Poisson, negative binomial, multinomial,
+    beta, ordinal, zero-inflated, hurdle and accelerated failure time models by
+    approximate maximum likelihood using the Laplace approximation via 'RTMB',
+    with 'lme4'-style formulas supporting crossed and nested random intercepts
+    and slopes, penalised smooth terms via 'mgcv', non-constant dispersion,
+    censoring, and AR(1) or CAR(1) correlation. Because one engine fits them
+    all, every model shares a single object, a single set of methods, and a
+    single diagnostic system that reports whether each assumption is consistent
+    with the data, with a stated reason and a suggested remedy when it is not.
+    Inference extends to cluster-robust standard errors, complex survey
+    designs, instrumental variables, causal mediation, estimated marginal means
+    and contrasts, effect sizes on each family's own scale, scenario
+    projection, and a-priori power by simulation. The exploratory half covers
+    description, outlier and multivariate anomaly detection, dimension
+    reduction, clustering and profiling, and evaluation and imputation of
+    missing values. Mixed models for nominal categorical outcomes are fitted by
+    maximising the Laplace-approximated marginal likelihood rather than by
+    penalised quasi-likelihood. Methods of Kristensen, Nielsen, Berg, Skaug and
+    Bell (2016) <doi:10.18637/jss.v070.i05> and Halekoh and Hojsgaard (2014)
     <doi:10.18637/jss.v059.i09>.
 License: MIT + file LICENSE
 Encoding: UTF-8
