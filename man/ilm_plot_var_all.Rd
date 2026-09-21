@@ -22,8 +22,9 @@ ilm_plot_var_all(
 
 \item{by}{Optional grouping column.}
 
-\item{cols}{Columns to plot, as a character vector. Default is all of them
-except \code{var2} and \code{by}.}
+\item{cols}{Columns to use. A character vector of names, a
+regular expression, a predicate function such as \code{is.numeric}, or
+\code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{nrow, ncol}{Panel grid. Default is as square as it goes.}
 

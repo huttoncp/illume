@@ -415,6 +415,9 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 #' @param ncores Worker processes for the refits.
 #' @param plot Draw the scale-location panel.
 #' @param verbose Print the verdict.
+#' @param progress Show a progress bar. Defaults to [interactive()], so a
+#'   bar appears when someone is watching and nothing is written in a
+#'   script or a knitted document. See [ilm_progress_arg].
 #' @return Invisibly, a list with the observed statistics, their simulated
 #'   nulls, p-values, a `status` and a suggested remedy.
 #' @seealso [ilm_rqr_test()] for other residual statistics,
@@ -428,7 +431,8 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 #' ilm_check_variance(f, B = 20, plot = FALSE)
 #' @export
 ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
-                               ncores = 1L, plot = TRUE, verbose = TRUE) {
+                               ncores = 1L, plot = TRUE, verbose = TRUE,
+                               progress = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -471,7 +475,9 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
     f$assign <- asg; f$term_labels <- tl
     ilm_var_stats(f, by_vec, seed + 1000L + b)
   }
-  nullm <- do.call(rbind, ilm_lapply(cl, seq_len(B), one))
+  nullm <- do.call(rbind,
+                   ilm_lapply_progress(cl, seq_len(B), one,
+                                       progress = progress))
   nok <- sum(is.finite(nullm[, "trend"]))
   if (nok < 10L) {
     if (verbose) cat("INCONCLUSIVE: only", nok, "of", B, "replicates refitted.\n")

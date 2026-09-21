@@ -10,9 +10,12 @@ ilm_impute(
   predictors = NULL,
   exclude = NULL,
   maxit = 5L,
+  method = c("auto", "fcs", "lowrank"),
+  ncp = NULL,
   single = FALSE,
   seed = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  progress = NULL
 )
 }
 \arguments{
@@ -29,11 +32,22 @@ identifier.}
 
 \item{maxit}{Cycles through the variables per imputation.}
 
+\item{method}{\code{"auto"} uses chained equations and falls back to the
+low-rank route when they cannot be fitted; \code{"fcs"} and \code{"lowrank"} force
+one. See the section below for what each costs.}
+
+\item{ncp}{Rank for the low-rank route. \code{NULL} chooses it by
+cross-validation over held-out observed cells.}
+
 \item{single}{Return a single completed data frame instead. Warns.}
 
 \item{seed}{Random seed.}
 
 \item{verbose}{Narrate progress.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_mids"} holding the \code{m} completed data sets,
@@ -82,6 +96,38 @@ Imputing an outcome from nothing but the predictors of the model you intend
 to fit adds no information at all -- the imputations lie on the very surface
 you are about to estimate. Auxiliary variables are what make imputing an
 outcome worthwhile.
+}
+
+\section{Which method, and what it costs}{
+
+
+\code{method = "auto"} uses chained equations and falls back to the low-rank
+route only when the per-variable regressions cannot be fitted -- when there
+are more predictors than rows on which a variable was observed. That
+ordering is not a preference, it is what the ablation says. Hiding known
+cells and scoring the imputations against them, with a noise floor of 0.500:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{  design                          mean-fill    fcs   lowrank
+  n=200 p=8  rank 3                   2.289  1.177     1.963
+  n=200 p=8  full rank                2.739  2.622     3.581
+  n=400 p=12 rank 4, 30\% missing      2.010  1.054     1.683
+  n=60  p=80 rank 3  (p > n)          1.920      -     0.887
+}\if{html}{\out{</div>}}
+
+Where chained equations can be fitted it is clearly better: the per-variable
+regressions use everything, where a rank-k fit discards whatever falls
+outside those k components. Where \code{p > n} it cannot be fitted at all, and
+the low-rank route gets within twice the noise floor.
+
+The middle row is the warning. With no low-rank structure to find, the
+reconstruction imposes one, and does \strong{worse than filling in column means}.
+\code{ilm_impute()} warns when cross-validation picks the largest rank it was
+offered, which is the signature of that case.
+
+Reconstruction accuracy is not the whole story either. It says how close the
+filled values are, not whether inference computed afterwards is calibrated --
+single imputation scores well on the first and fails the second. The
+coverage table below is the one that matters for inference.
 }
 
 \section{What this is calibrated for}{
@@ -136,6 +182,11 @@ Rubin, D. B. (1987). Multiple Imputation for Nonresponse in Surveys. Wiley.
 
 van Buuren, S. and Groothuis-Oudshoorn, K. (2011). mice: Multivariate
 Imputation by Chained Equations in R. Journal of Statistical Software 45(3).
+
+Josse, J. and Husson, F. (2016). missMDA: A Package for Handling Missing
+Values in Multivariate Data Analysis. Journal of Statistical Software 70(1).
+The low-rank route follows their multiple imputation PCA: a regularised
+iterative fit, bootstrapped so the imputations differ, then pooled.
 }
 \seealso{
 \code{\link[=ilm_mi_pool]{ilm_mi_pool()}} to analyse them, \code{\link[=ilm_check_missing]{ilm_check_missing()}} to decide

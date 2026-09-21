@@ -12,7 +12,8 @@ ilm_boot_ci(
   R = 2000L,
   conf = 0.95,
   ci_type = "percentile",
-  seed = NULL
+  seed = NULL,
+  progress = NULL
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ data percentile and BCa hold their nominal coverage better than the other
 two.}
 
 \item{seed}{Random seed.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 A one-row data frame per group, with \code{observed}, \code{lower}, \code{upper}

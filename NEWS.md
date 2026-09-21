@@ -1,3 +1,91 @@
+# illume 0.0.6.9000
+
+Faster where it was slow, a way to choose columns, progress where it is worth
+showing, and an imputation route for data too wide to regress.
+
+## Choosing columns
+
+* `cols` and `by` accept a character vector, a **regular expression**, a
+  **predicate function** such as `is.numeric`, or `NULL` -- see [ilm_selection].
+  All four are ordinary values, so a selection can be held in a variable and
+  passed on, which a bare-name interface gives up. No non-standard evaluation
+  and no new dependency.
+* A lone string is ambiguous between a name and a pattern. A name wins, and
+  when neither works the error says both readings were tried.
+
+## Progress
+
+* `progress` on the bootstrap functions, `ilm_impute()`, `ilm_cluster()` and
+  the refit-based diagnostics. It defaults to [interactive()], so a bar appears
+  when a person is watching and nothing is written into a script, a test or a
+  knitted document.
+* Where work is spread over cores the bar advances per chunk, since workers are
+  separate processes and cannot write to the parent's console.
+
+## Imputation for data too wide to regress
+
+* `ilm_impute(method = )` takes `"auto"`, `"fcs"` or `"lowrank"`. Chained
+  equations needs more rows than predictors; past that point there is no
+  regression to fit, and `"auto"` falls back to a regularised low-rank
+  reconstruction, bootstrapped so the imputations differ and pooled by
+  `ilm_mi_pool()` -- multiple imputation PCA, after Josse and Husson (2016).
+* The rank is chosen by cross-validation over held-out observed cells.
+
+## Findings behind those changes
+
+* **The BCa jackknife was quadratic in n.** It needs every leave-one-out value
+  of the statistic, which is n evaluations on vectors of n - 1: 4.31s of a
+  6.07s call at n = 20,000, against 2.55s for the resampling itself. The mean,
+  variance and standard deviation have exact leave-one-out forms in the running
+  sums, which is linear and measured at 0.00s, matching the loop to 1e-16. A
+  BCa interval for the default statistic now costs the same as a percentile
+  one, 6.07s to 2.52s.
+* **The resampler could not scale.** Drawing every index at once into an n by R
+  matrix is a 160 MB allocation at n = 20,000 and 8 GB at a million rows, so
+  the function stopped working rather than slowing down. Per replicate it is
+  also 12% faster.
+* **Binding a frame per group was most of the cost of a grouped outlier scan.**
+  28 columns by 8 groups is 224 rbind calls, each copying everything
+  accumulated: 1.58s to 0.98s by accumulating into vectors and binding once.
+* **A low-rank fit is better than chained equations only where chained
+  equations cannot be fitted.** Hiding known cells and scoring against them,
+  noise floor 0.500:
+
+  ```
+    design                          mean-fill    fcs   lowrank
+    n=200 p=8  rank 3                   2.289  1.177     1.963
+    n=200 p=8  full rank                2.739  2.622     3.581
+    n=400 p=12 rank 4, 30% missing      2.010  1.054     1.683
+    n=60  p=80 rank 3  (p > n)          1.920      -     0.887
+  ```
+
+  The middle row is the warning: with no low-rank structure to find, imposing
+  one is worse than filling in column means. `ilm_impute()` detects that by
+  asking whether a rank-k fit predicts held-out cells better than the column
+  means do, and says so when it does not. A first attempt warned when
+  cross-validation hit its rank ceiling and MISSED the case entirely -- on pure
+  noise it picked rank 5 of an allowed 7.
+* Reconstruction accuracy is not the measure that governs here. It says how
+  close the filled values are, not whether inference afterwards is calibrated;
+  single imputation scores respectably on the first and covers at 0.79 to 0.89.
+
+## Fixes
+
+* `ilm_reduce()` failed outright on any two-column selection. The number of
+  dimensions available from p columns is min(n - 1, p), not p - 1 -- two
+  columns have two components, and asking PCAmix for one is an error rather
+  than a smaller answer. It also under-counted everywhere else: three columns
+  returned two.
+* A bootstrap draw leaves some rows with weight zero, and the low-rank fit
+  rescaled its reconstruction by the inverse of those weights, producing `Inf`
+  for exactly those rows and failing the next decomposition. The shrinkage is
+  now a ratio applied to an unweighted projection.
+* The test for "too wide for chained equations" counted rows complete across
+  every column, where what matters is rows on which each variable was observed:
+  8 columns at 20% missing leaves 17% of rows complete and every one of them
+  usable.
+* The fitted noise scale was indexed by column name while carrying none.
+
 # illume 0.0.5.9000
 
 The rest of the exploration layer: unusual values, and named plots.

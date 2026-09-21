@@ -62,10 +62,13 @@ ilm_cluster_funcluster <- function(method, dist_method, hclust_method, nstart) {
 
 #' @keywords internal
 #' @noRd
-ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B) {
+ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B,
+                                  progress = NULL) {
   n <- nrow(coords)
   jac_sum <- numeric(k); jac_n <- integer(k)
+  pb <- ilm_progress(B, progress); on.exit(pb$done(), add = TRUE)
   for (b in seq_len(B)) {
+    pb$tick(b)
     idx <- sample.int(n, n, replace = TRUE)
     drawn <- unique(idx)
     boot_cluster <- tryCatch(FUNcluster(coords[idx, , drop = FALSE], k)$cluster,
@@ -140,6 +143,9 @@ ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B) {
 #' @param ambiguous_threshold Silhouette width below which an observation is
 #'   flagged individually.
 #' @param seed Random seed.
+#' @param progress Show a progress bar. Defaults to [interactive()], so a
+#'   bar appears when someone is watching and nothing is written in a
+#'   script or a knitted document. See [ilm_progress_arg].
 #' @return An object of class `"ilm_cluster"`: `method`, `k`, `gap` (the
 #'   search, or `NULL` when `k` was given), `clusters` (one row per cluster,
 #'   with `size`, `pct`, `jaccard`, `stability` labelled `"stable"` above 0.75,
@@ -162,7 +168,7 @@ ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
                         dist_method = "euclidean", hclust_method = "ward.D2",
                         nstart = 25, B = 100, gap_method = "firstSEmax",
                         small_cluster_frac = 0.05, ambiguous_threshold = 0.1,
-                        seed = NULL) {
+                        seed = NULL, progress = NULL) {
   method <- match.arg(method)
   coords <- if (inherits(x, "ilm_reduce"))
     as.matrix(x$ind_coord[, setdiff(names(x$ind_coord), "row_id"), drop = FALSE])
@@ -188,7 +194,8 @@ ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
   }
 
   cluster_assign <- FUNcluster(coords, k)$cluster
-  stability <- ilm_cluster_stability(coords, FUNcluster, k, cluster_assign, B)
+  stability <- ilm_cluster_stability(coords, FUNcluster, k, cluster_assign, B,
+                                     progress)
 
   ## the silhouette's distance matches whatever the clustering used: k-means is
   ## implicitly Euclidean, hclust uses what it was told

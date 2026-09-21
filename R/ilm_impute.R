@@ -133,6 +133,37 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' you are about to estimate. Auxiliary variables are what make imputing an
 #' outcome worthwhile.
 #'
+#' @section Which method, and what it costs:
+#'
+#' `method = "auto"` uses chained equations and falls back to the low-rank
+#' route only when the per-variable regressions cannot be fitted -- when there
+#' are more predictors than rows on which a variable was observed. That
+#' ordering is not a preference, it is what the ablation says. Hiding known
+#' cells and scoring the imputations against them, with a noise floor of 0.500:
+#'
+#' ```
+#'   design                          mean-fill    fcs   lowrank
+#'   n=200 p=8  rank 3                   2.289  1.177     1.963
+#'   n=200 p=8  full rank                2.739  2.622     3.581
+#'   n=400 p=12 rank 4, 30% missing      2.010  1.054     1.683
+#'   n=60  p=80 rank 3  (p > n)          1.920      -     0.887
+#' ```
+#'
+#' Where chained equations can be fitted it is clearly better: the per-variable
+#' regressions use everything, where a rank-k fit discards whatever falls
+#' outside those k components. Where `p > n` it cannot be fitted at all, and
+#' the low-rank route gets within twice the noise floor.
+#'
+#' The middle row is the warning. With no low-rank structure to find, the
+#' reconstruction imposes one, and does **worse than filling in column means**.
+#' `ilm_impute()` warns when cross-validation picks the largest rank it was
+#' offered, which is the signature of that case.
+#'
+#' Reconstruction accuracy is not the whole story either. It says how close the
+#' filled values are, not whether inference computed afterwards is calibrated --
+#' single imputation scores well on the first and fails the second. The
+#' coverage table below is the one that matters for inference.
+#'
 #' @section What this is calibrated for:
 #'
 #' 200 replicates, 400 rows, `y = 0.5x + 0.3z + e`, with `x` made missing three
@@ -179,9 +210,17 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' @param exclude Columns never to impute and never to use, such as an
 #'   identifier.
 #' @param maxit Cycles through the variables per imputation.
+#' @param method `"auto"` uses chained equations and falls back to the
+#'   low-rank route when they cannot be fitted; `"fcs"` and `"lowrank"` force
+#'   one. See the section below for what each costs.
+#' @param ncp Rank for the low-rank route. `NULL` chooses it by
+#'   cross-validation over held-out observed cells.
 #' @param single Return a single completed data frame instead. Warns.
 #' @param seed Random seed.
 #' @param verbose Narrate progress.
+#' @param progress Show a progress bar. Defaults to [interactive()], so a
+#'   bar appears when someone is watching and nothing is written in a
+#'   script or a knitted document. See [ilm_progress_arg].
 #' @return An object of class `"ilm_mids"` holding the `m` completed data sets,
 #'   or a data frame when `single = TRUE`.
 #' @seealso [ilm_mi_pool()] to analyse them, [ilm_check_missing()] to decide
@@ -191,6 +230,11 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #'
 #' van Buuren, S. and Groothuis-Oudshoorn, K. (2011). mice: Multivariate
 #' Imputation by Chained Equations in R. Journal of Statistical Software 45(3).
+#'
+#' Josse, J. and Husson, F. (2016). missMDA: A Package for Handling Missing
+#' Values in Multivariate Data Analysis. Journal of Statistical Software 70(1).
+#' The low-rank route follows their multiple imputation PCA: a regularised
+#' iterative fit, bootstrapped so the imputations differ, then pooled.
 #' @examples
 #' set.seed(1); n <- 200
 #' d <- data.frame(x = rnorm(n), z = rnorm(n))
@@ -200,8 +244,10 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' imp
 #' @export
 ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
-                       maxit = 5L, single = FALSE, seed = NULL,
-                       verbose = TRUE) {
+                       maxit = 5L, method = c("auto", "fcs", "lowrank"),
+                       ncp = NULL, single = FALSE, seed = NULL,
+                       verbose = TRUE, progress = NULL) {
+  method <- match.arg(method)
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
   m <- as.integer(m); maxit <- as.integer(maxit)
@@ -232,6 +278,30 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
       list(imputations = list(data), m = 1L, incomplete = character(),
            data = data, families = character()), class = "ilm_mids"))
   }
+  ## Chained equations regresses each incomplete variable on all the others,
+  ## which needs more complete rows than predictors. Past that point there is
+  ## no regression to fit and the old behaviour was to skip the variable
+  ## entirely, leaving it NA. A low-rank fit has no such limit: it never fits a
+  ## p-predictor regression, only a rank-ncp approximation.
+  pred_pool <- if (is.null(predictors)) usable else intersect(predictors, usable)
+  num_inc <- inc[vapply(inc, function(v) is.numeric(data[[v]]), TRUE)]
+  ## What limits chained equations is the rows on which each variable was
+  ## OBSERVED, since the others are filled in before it is regressed on them --
+  ## not the rows complete across every column. Counting complete cases instead
+  ## makes the constraint look far tighter than it is: 8 columns at 20% missing
+  ## leaves only 17% of rows complete while every one of them is usable here.
+  n_fit <- if (length(inc))
+    min(vapply(inc, function(v) sum(!is.na(data[[v]])), 1L)) else nrow(data)
+  n_pred <- length(pred_pool) - 1L
+  too_wide <- n_pred >= max(n_fit - 2L, 1L)
+  use_lowrank <- method == "lowrank" ||
+    (method == "auto" && too_wide && length(num_inc))
+  if (method == "fcs" && too_wide)
+    warning("there are ", n_pred, " predictors and about ", n_fit,
+            " usable rows, so the per-variable regressions cannot be fitted ",
+            "and those variables will be left as they are. method = ",
+            "\"lowrank\" imputes them from a low-rank approximation instead.",
+            call. = FALSE)
   if (isTRUE(single) && m > 1L) m <- 1L
   if (isTRUE(single))
     warning("a single imputation treats the filled-in values as if they had ",
@@ -239,7 +309,6 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
             "errors that are too small. Use the default and ilm_mi_pool() for ",
             "inference.", call. = FALSE)
 
-  pred_pool <- if (is.null(predictors)) usable else intersect(predictors, usable)
   say("== multiple imputation ==")
   say("  ", length(inc), " variable(s) to impute: ",
       paste(sprintf("%s (%s)", inc, fams[inc]), collapse = ", "))
@@ -290,15 +359,69 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
     cur
   }
 
-  imps <- vector("list", m)
-  for (i in seq_len(m)) {
-    imps[[i]] <- one_imputation(i)
-    if (verbose && m > 1L && (i %% max(1L, m %/% 4L) == 0L))
-      say("  ", i, " of ", m)
+  if (use_lowrank) {
+    if (verbose)
+      say("  using a low-rank (MIPCA) route: ", n_pred, " predictors against ",
+          "about ", n_fit, " usable rows")
+    cats <- setdiff(inc, num_inc)
+    if (length(cats) && verbose)
+      say("  NOT imputed, since a low-rank reconstruction is defined for ",
+          "numeric columns only: ", paste(cats, collapse = ", "))
+    X <- as.matrix(data[intersect(pred_pool, names(data))[
+      vapply(intersect(pred_pool, names(data)), function(v)
+        is.numeric(data[[v]]), TRUE)]])
+    miss <- is.na(X)
+    k <- if (is.null(ncp)) ilm_lowrank_ncp(X, miss, seed = seed) else
+      as.integer(ncp)
+    if (verbose) say("  rank ", k,
+                     if (is.null(ncp)) " (chosen by cross-validation)" else "")
+    ## A rank at the ceiling of the search means cross-validation never found a
+    ## point where more components stopped helping -- which is what happens when
+    ## there is no low-rank structure to find. That is the regime where this
+    ## method does real harm: on full-rank data it scored 3.581 against 2.739
+    ## for simply filling in column means.
+    if (is.null(ncp) && isFALSE(attr(k, "beats_mean")))
+      warning("a rank-", as.integer(k), " reconstruction predicts held-out ",
+              "cells no better than the column means do (",
+              signif(attr(k, "cv_error"), 3), " against ",
+              signif(attr(k, "mean_error"), 3),
+              "), so these columns have no low-rank structure to exploit. ",
+              "Imposing one is worse than not imputing at all; prefer ",
+              "method = \"fcs\" wherever it can be fitted.", call. = FALSE)
+    k <- as.integer(k)
+    pb <- ilm_progress(m, progress)
+    imps <- vector("list", m)
+    for (i in seq_len(m)) {
+      ## the bootstrap, as row weights: a row drawn twice counts twice
+      w <- tabulate(sample.int(nrow(X), nrow(X), replace = TRUE),
+                    nbins = nrow(X))
+      fit <- ilm_lowrank_fit(X, miss, k, w = w)
+      cur <- data
+      for (v in intersect(num_inc, colnames(X))) {
+        mi <- miss[, v]
+        ## the reconstruction is the fitted value; the imputation is a DRAW
+        ## from around it, which is what keeps the m data sets apart
+        cur[[v]][mi] <- fit$filled[mi, v] +
+          stats::rnorm(sum(mi), 0, fit$sigma[[v]])
+      }
+      imps[[i]] <- cur; pb$tick(i)
+    }
+    pb$done()
+    if (isTRUE(single)) return(imps[[1]])
+    return(structure(list(imputations = imps, m = m, incomplete = num_inc,
+                          data = data, families = stats::setNames(
+                            rep("lowrank", length(num_inc)), num_inc),
+                          maxit = maxit, method = "lowrank", ncp = k),
+                     class = "ilm_mids"))
   }
+
+  pb <- ilm_progress(m, progress)
+  imps <- vector("list", m)
+  for (i in seq_len(m)) { imps[[i]] <- one_imputation(i); pb$tick(i) }
+  pb$done()
   if (isTRUE(single)) return(imps[[1]])
   structure(list(imputations = imps, m = m, incomplete = inc, data = data,
-                 families = fams[inc], maxit = maxit),
+                 families = fams[inc], maxit = maxit, method = "fcs"),
             class = "ilm_mids")
 }
 
@@ -426,4 +549,104 @@ print.ilm_pooled <- function(x, ...) {
   cat("\n  fmi is the fraction of information lost to missingness.\n")
   cat("  Above about 0.5, more imputations are worth having.\n")
   invisible(x)
+}
+
+## ---- low-rank imputation, for when a regression per variable cannot be fitted
+
+## Regularised iterative PCA on a matrix with holes (Josse and Husson 2016).
+##
+## Fill the gaps with column means, take the rank-`ncp` reconstruction, put the
+## reconstruction back into the gaps only, and repeat until the fill stops
+## moving. The singular values are SHRUNK by the noise variance before
+## reconstructing, which is what the "regularised" means and what stops the
+## fit chasing the very values it just invented: without it the procedure
+## overfits the observed cells and the imputations are too confident.
+##
+## Row weights carry the bootstrap. A row drawn twice counts twice, which
+## perturbs the estimated subspace exactly as refitting on the resample would,
+## without having to re-index the missing cells.
+#' @keywords internal
+#' @noRd
+ilm_lowrank_fit <- function(X, miss, ncp, w = NULL, maxit = 200L, tol = 1e-6) {
+  n <- nrow(X); p <- ncol(X)
+  if (is.null(w)) w <- rep(1, n)
+  sw <- sqrt(w / mean(w))
+  ctr <- vapply(seq_len(p), function(j) {
+    v <- X[!miss[, j], j]; if (length(v)) mean(v) else 0 }, 1)
+  sc <- vapply(seq_len(p), function(j) {
+    v <- X[!miss[, j], j]; s <- if (length(v) > 1L) stats::sd(v) else 1
+    if (!is.finite(s) || s <= 0) 1 else s }, 1)
+  Z <- sweep(sweep(X, 2L, ctr, "-"), 2L, sc, "/")
+  Z[miss] <- 0                                   # the mean, once centred
+  ncp <- max(1L, min(ncp, min(n, p) - 1L))
+
+  old <- Z[miss]; sig2 <- 0
+  for (it in seq_len(maxit)) {
+    sv <- svd(Z * sw, nu = ncp, nv = ncp)
+    d <- sv$d[seq_len(ncp)]
+    ## the noise variance, from the discarded directions
+    tot <- sum(sv$d^2); kept <- sum(d^2)
+    dfres <- max(n * p - length(miss[miss]) - (n + p) * ncp, 1)
+    sig2 <- max((tot - kept) / dfres, 0)
+    ## Shrink each component by how much of it is signal rather than noise.
+    ## As a RATIO in [0, 1], applied to an unweighted projection onto the
+    ## weighted subspace -- not by rescaling a weighted reconstruction back.
+    ## A bootstrap draw leaves some rows with weight zero, so dividing by the
+    ## weights produces Inf for exactly those rows and the next svd() fails
+    ## with "infinite or missing values in 'x'".
+    f <- pmax(d^2 - sig2, 0) / pmax(d^2, .Machine$double.eps)
+    V <- sv$v[, seq_len(ncp), drop = FALSE]
+    rec <- Z %*% V %*% diag(f, ncp, ncp) %*% t(V)
+    Z[miss] <- rec[miss]
+    if (it > 1L && mean(abs(Z[miss] - old)) < tol) break
+    old <- Z[miss]
+  }
+  ## sigma is indexed by column name downstream, so it carries them
+  sg <- sqrt(sig2) * sc
+  names(sg) <- colnames(X)
+  list(filled = sweep(sweep(Z, 2L, sc, "*"), 2L, ctr, "+"),
+       sigma = sg, ncp = ncp)
+}
+
+## How many components? Too few over-smooths, too many fits the noise, and the
+## number is not free -- so it is chosen by holding out observed cells and
+## seeing which rank predicts them best, rather than fixed at a guess.
+#' @keywords internal
+#' @noRd
+ilm_lowrank_ncp <- function(X, miss, ncp_max = NULL, folds = 3L, seed = NULL) {
+  n <- nrow(X); p <- ncol(X)
+  hi <- min(ncp_max %||% (min(n, p) - 1L), min(n, p) - 1L, 8L)
+  if (hi < 2L) return(1L)
+  obs <- which(!miss)
+  if (length(obs) < 40L) return(min(2L, hi))
+  if (!is.null(seed)) set.seed(seed)
+  fold <- sample(rep_len(seq_len(folds), length(obs)))
+  err <- numeric(hi); base <- 0; nb <- 0L
+  for (k in seq_len(hi)) {
+    e <- 0; m <- 0L
+    for (f in seq_len(folds)) {
+      hold <- obs[fold == f]
+      Xh <- X; mh <- miss; Xh[hold] <- NA; mh[hold] <- TRUE
+      ## the column means WITHOUT the held-out cells: what a rank-0 fit, i.e.
+      ## no structure at all, would predict. Scored once, on the first pass.
+      if (k == 1L) {
+        cm <- colMeans(Xh, na.rm = TRUE)
+        pred <- cm[((hold - 1L) %/% nrow(X)) + 1L]
+        base <- base + sum((pred - X[hold])^2, na.rm = TRUE)
+        nb <- nb + length(hold)
+      }
+      fit <- tryCatch(ilm_lowrank_fit(Xh, mh, k, maxit = 30L),
+                      error = function(z) NULL)
+      if (is.null(fit)) next
+      e <- e + sum((fit$filled[hold] - X[hold])^2); m <- m + length(hold)
+    }
+    err[k] <- if (m) e / m else Inf
+  }
+  if (all(!is.finite(err))) return(min(2L, hi))
+  k <- which.min(err)
+  ## Does a low-rank fit beat no structure at all? If it does not, these
+  ## columns have none to find, and imposing one is worse than the column
+  ## means -- measured at 3.581 against 2.739 on full-rank data.
+  structure(k, beats_mean = nb > 0 && err[k] < base / nb,
+            cv_error = err[k], mean_error = if (nb) base / nb else NA_real_)
 }

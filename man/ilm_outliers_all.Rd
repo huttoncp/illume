@@ -20,8 +20,9 @@ ilm_outliers_all(
 \item{by}{Grouping column(s), as a character vector. Reference statistics,
 and so the flags, are computed separately within each group.}
 
-\item{cols}{Numeric columns to check, as a character vector. Default is
-every numeric column except those in \code{by}.}
+\item{cols}{Columns to use. A character vector of names, a
+regular expression, a predicate function such as \code{is.numeric}, or
+\code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{method}{\code{"iqr"}, \code{"mad"} or \code{"zscore"}.}
 

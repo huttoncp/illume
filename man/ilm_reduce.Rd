@@ -9,8 +9,9 @@ ilm_reduce(data, cols = NULL, ndim = 5)
 \arguments{
 \item{data}{A data frame.}
 
-\item{cols}{Columns to include, as a character vector. Default is all of
-them.}
+\item{cols}{Columns to use. A character vector of names, a
+regular expression, a predicate function such as \code{is.numeric}, or
+\code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{ndim}{Number of dimensions to keep.}
 }

@@ -13,6 +13,7 @@ ilm_plot_survival(
   conf = 0.95,
   ncores = 1L,
   seed = 1L,
+  progress = NULL,
   colour = "#2C7FB8",
   fill = "grey85",
   alpha = NULL,
@@ -37,6 +38,10 @@ curve and one Kaplan-Meier per level.}
 \item{ncores}{Worker processes for the refits.}
 
 \item{seed}{Random seed.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 
 \item{colour, fill, alpha, size}{Appearance.}
 

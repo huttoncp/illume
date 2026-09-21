@@ -11,7 +11,8 @@ ilm_check_variance(
   seed = 1L,
   ncores = 1L,
   plot = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  progress = NULL
 )
 }
 \arguments{
@@ -31,6 +32,10 @@ reachable.}
 \item{plot}{Draw the scale-location panel.}
 
 \item{verbose}{Print the verdict.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 Invisibly, a list with the observed statistics, their simulated

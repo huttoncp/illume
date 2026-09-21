@@ -9,8 +9,9 @@ ilm_plot_var_pairs(data, cols = NULL, by = NULL, ...)
 \arguments{
 \item{data}{A data frame.}
 
-\item{cols}{Columns to include, as a character vector. Default is all except
-\code{by}.}
+\item{cols}{Columns to use. A character vector of names, a
+regular expression, a predicate function such as \code{is.numeric}, or
+\code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{by}{Optional grouping column.}
 

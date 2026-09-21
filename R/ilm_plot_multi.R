@@ -182,8 +182,9 @@ ilm_panel_grid <- function(n, nrow, ncol) {
 #' [ilm_plot_var()] once per column, arranged in a grid.
 #'
 #' @inheritParams ilm_plot_var
-#' @param cols Columns to plot, as a character vector. Default is all of them
-#'   except `var2` and `by`.
+#' @param cols Columns to use. A character vector of names, a
+#'   regular expression, a predicate function such as `is.numeric`, or
+#'   `NULL` for all of them -- see [ilm_selection].
 #' @param nrow,ncol Panel grid. Default is as square as it goes.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_plot_all()], [ilm_plot_var_pairs()].
@@ -198,8 +199,7 @@ ilm_plot_var_all <- function(data, var2 = NULL, by = NULL, cols = NULL,
   if (length(miss))
     stop("column(s) not found in the data: ", paste(miss, collapse = ", "),
          call. = FALSE)
-  target <- if (is.null(cols)) setdiff(names(data), c(var2, g))
-            else as.character(cols)
+  target <- ilm_resolve_cols(data, cols, exclude = c(var2, g))
   if (!length(target)) stop("no columns to plot", call. = FALSE)
   ## several grouping columns become one real column on a local copy, since the
   ## single-variable plotters each take one `by` column by name
@@ -220,8 +220,9 @@ ilm_plot_var_all <- function(data, var2 = NULL, by = NULL, cols = NULL,
 #' columns rather than only numeric ones as a classic scatterplot matrix does.
 #'
 #' @param data A data frame.
-#' @param cols Columns to include, as a character vector. Default is all except
-#'   `by`.
+#' @param cols Columns to use. A character vector of names, a
+#'   regular expression, a predicate function such as `is.numeric`, or
+#'   `NULL` for all of them -- see [ilm_selection].
 #' @param by Optional grouping column.
 #' @param ... Passed to [tinyplot::tinypairs()].
 #' @return `NULL`, invisibly.
@@ -237,7 +238,7 @@ ilm_plot_var_pairs <- function(data, cols = NULL, by = NULL, ...) {
   if (length(miss))
     stop("column(s) not found in the data: ", paste(miss, collapse = ", "),
          call. = FALSE)
-  target <- if (is.null(cols)) setdiff(names(data), g) else as.character(cols)
+  target <- ilm_resolve_cols(data, cols, exclude = g)
   if (length(target) < 2L)
     stop("at least 2 columns are needed to plot pairs of them; ",
          length(target), " given", call. = FALSE)

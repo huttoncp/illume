@@ -13,7 +13,8 @@ ilm_check_ar(
   ncores = 1L,
   seed = 1L,
   verbose = TRUE,
-  plot = FALSE
+  plot = FALSE,
+  progress = NULL
 )
 }
 \arguments{
@@ -35,6 +36,10 @@ ilm_check_ar(
 \item{verbose}{Logical. Print the table.}
 
 \item{plot}{Logical. Draw the autocorrelation and its band.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 Invisibly, a list with the per-lag \code{table}, the matching \code{pacf}

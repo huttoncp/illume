@@ -115,8 +115,9 @@ ilm_outliers <- function(y, method = c("iqr", "mad", "zscore"),
 #' @param data A data frame.
 #' @param by Grouping column(s), as a character vector. Reference statistics,
 #'   and so the flags, are computed separately within each group.
-#' @param cols Numeric columns to check, as a character vector. Default is
-#'   every numeric column except those in `by`.
+#' @param cols Columns to use. A character vector of names, a
+#'   regular expression, a predicate function such as `is.numeric`, or
+#'   `NULL` for all of them -- see [ilm_selection].
 #' @param flagged_only Return only the flagged values. `FALSE` returns every
 #'   value's score.
 #' @inheritParams ilm_outliers
@@ -134,21 +135,22 @@ ilm_outliers_all <- function(data, by = NULL, cols = NULL,
   method <- match.arg(method)
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
-  g <- if (is.null(by)) character() else as.character(by)
-  miss <- setdiff(c(g, cols), names(data))
-  if (length(miss))
-    stop("column(s) not found in the data: ", paste(miss, collapse = ", "),
-         ". Available: ", paste(utils::head(names(data), 12), collapse = ", "),
-         call. = FALSE)
-  cand <- if (is.null(cols)) setdiff(names(data), g) else as.character(cols)
-  num <- cand[vapply(data[cand], is.numeric, TRUE)]
+  g <- ilm_resolve_cols(data, by, arg = "by")
+  if (is.null(by)) g <- character()
+  num <- ilm_resolve_cols(data, cols, exclude = g, arg = "cols",
+                          eligible = names(data)[vapply(data, is.numeric, TRUE)])
   if (!length(num))
     stop("no numeric columns to check for unusual values", call. = FALSE)
 
   ## one grouping key, or a single group when none was asked for
   key <- if (!length(g)) rep("", nrow(data))
          else interaction(data[g], drop = TRUE, sep = "\r")
-  rows <- list()
+  ## Accumulate into plain vectors and build ONE frame at the end. Binding a
+  ## frame per (column, group) means 28 columns x 8 groups = 224 rbind calls,
+  ## each copying everything accumulated so far; that alone was most of the
+  ## 1.58s a grouped run took on 20,000 rows.
+  ri <- vi <- va <- sc <- io <- vector("list", length(num) * length(unique(key)))
+  k <- 0L
   for (v in num) {
     for (lv in unique(key)) {
       idx <- which(key == lv)
@@ -157,14 +159,21 @@ ilm_outliers_all <- function(data, by = NULL, cols = NULL,
                                  threshold = threshold, na.rm = na.rm),
                     error = function(e) NULL)
       if (is.null(o)) next
-      part <- data.frame(row_id = idx, variable = v, value = o$value,
-                         score = o$score, is_outlier = o$is_outlier,
-                         stringsAsFactors = FALSE)
-      if (length(g)) part <- cbind(data[idx, g, drop = FALSE], part)
-      rows[[length(rows) + 1L]] <- part
+      k <- k + 1L
+      ri[[k]] <- idx; vi[[k]] <- rep(v, length(idx))
+      va[[k]] <- o$value; sc[[k]] <- o$score; io[[k]] <- o$is_outlier
     }
   }
-  out <- if (length(rows)) do.call(rbind, rows) else NULL
+  out <- if (!k) NULL else {
+    rid <- unlist(ri[seq_len(k)], use.names = FALSE)
+    o2 <- data.frame(row_id = rid,
+                     variable = unlist(vi[seq_len(k)], use.names = FALSE),
+                     value = unlist(va[seq_len(k)], use.names = FALSE),
+                     score = unlist(sc[seq_len(k)], use.names = FALSE),
+                     is_outlier = unlist(io[seq_len(k)], use.names = FALSE),
+                     stringsAsFactors = FALSE)
+    if (length(g)) cbind(data[rid, g, drop = FALSE], o2) else o2
+  }
   if (is.null(out)) {
     out <- data.frame(row_id = integer(), variable = character(),
                       value = numeric(), score = numeric(),

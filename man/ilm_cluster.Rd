@@ -16,7 +16,8 @@ ilm_cluster(
   gap_method = "firstSEmax",
   small_cluster_frac = 0.05,
   ambiguous_threshold = 0.1,
-  seed = NULL
+  seed = NULL,
+  progress = NULL
 )
 }
 \arguments{
@@ -53,6 +54,10 @@ data are flagged.}
 flagged individually.}
 
 \item{seed}{Random seed.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_cluster"}: \code{method}, \code{k}, \code{gap} (the

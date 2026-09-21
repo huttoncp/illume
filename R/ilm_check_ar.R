@@ -223,7 +223,8 @@ ilm_lag_verdict <- function(obs, arr, labels, n_pairs = NULL) {
 #' @keywords internal
 #' @noRd
 ilm_refit_stat <- function(object, statfun, dims, B, ncores, seed,
-                           exports = NULL, where = parent.frame()) {
+                           exports = NULL, where = parent.frame(),
+                           progress = NULL) {
   ys <- ilm_sim_cond(object, B, seed + 1L)
   X <- object$X; J <- object$J; rl <- ilm_re_list_of(object)
   rs <- object$re_struct; arstr <- object$ar; yl <- object$ylevels
@@ -246,7 +247,7 @@ ilm_refit_stat <- function(object, statfun, dims, B, ncores, seed,
     f$assign <- asg; f$term_labels <- tl; f$y <- ys[, b]
     as.numeric(statfun(f))
   }
-  reps <- ilm_lapply(cl, seq_len(B), one)
+  reps <- ilm_lapply_progress(cl, seq_len(B), one, progress = progress)
   arr <- array(unlist(reps), c(dims, length(reps)))
   list(null = arr, n_ok = sum(!is.na(arr[1, 1, ])))
 }
@@ -261,7 +262,7 @@ ilm_refit_stat <- function(object, statfun, dims, B, ncores, seed,
 #' @keywords internal
 #' @noRd
 ilm_ar_envelope <- function(object, time, group, maxlag = 8L, B = 30L,
-                            ncores = 1L, seed = 1L) {
+                            ncores = 1L, seed = 1L, progress = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -334,7 +335,7 @@ ilm_ar_envelope <- function(object, time, group, maxlag = 8L, B = 30L,
 
   env <- ilm_refit_stat(object, acf_all, c(maxlag, C), B, ncores, seed,
                         exports = c("grp", "tim", "maxlag"),
-                        where = environment())
+                        where = environment(), progress = progress)
   nullarr <- env$null; nok <- env$n_ok
 
   ## the same lags in partial form, derived from the autocorrelations rather
@@ -545,6 +546,9 @@ ilm_ar_report <- function(spec, which = "acf") {
 #' @param seed Integer. Random seed.
 #' @param verbose Logical. Print the table.
 #' @param plot Logical. Draw the autocorrelation and its band.
+#' @param progress Show a progress bar. Defaults to [interactive()], so a
+#'   bar appears when someone is watching and nothing is written in a
+#'   script or a knitted document. See [ilm_progress_arg].
 #' @return Invisibly, a list with the per-lag `table`, the matching `pacf`
 #'   table, the observed values and per-component z scores, the simulated null
 #'   and the number of replicates that refitted. The whole thing can be handed
@@ -564,8 +568,10 @@ ilm_ar_report <- function(spec, which = "acf") {
 #'              maxlag = 3, B = 12)
 #' @export
 ilm_check_ar <- function(object, time, group, maxlag = 8L, B = 30L,
-                         ncores = 1L, seed = 1L, verbose = TRUE, plot = FALSE) {
-  spec <- ilm_ar_envelope(object, time, group, maxlag, B, ncores, seed)
+                         ncores = 1L, seed = 1L, verbose = TRUE, plot = FALSE,
+                         progress = NULL) {
+  spec <- ilm_ar_envelope(object, time, group, maxlag, B, ncores, seed,
+                          progress = progress)
   if (verbose) ilm_ar_report(spec, "acf")
   if (plot) ilm_acf_panel(spec, "acf")
   invisible(list(table = spec$acf, pacf = spec$pacf,

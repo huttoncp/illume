@@ -21,6 +21,7 @@ ilm_boot_diff(x, ...)
   adjust = "max_t",
   ref = NULL,
   seed = NULL,
+  progress = NULL,
   ...
 )
 }
@@ -53,6 +54,10 @@ level of the whole family of comparisons, not of one interval.}
 \code{J - 1} comparisons instead of \code{J * (J - 1) / 2}.}
 
 \item{seed}{Random seed.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 One row per comparison, with \code{from}, \code{to}, \code{observed}, \code{lower},

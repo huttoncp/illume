@@ -201,3 +201,81 @@ test_that("the imputation agrees with mice", {
     expect_lt(ia$se / ib$std.error, 1.25)
   }
 })
+
+lowrank_data <- function(n = 200L, p = 8L, rank = 3L, pmiss = 0.2, seed = 1L) {
+  set.seed(seed)
+  T0 <- matrix(rnorm(n * rank), n, rank) %*% matrix(rnorm(rank * p), rank, p) +
+    matrix(rnorm(n * p, 0, 0.5), n, p)
+  dm <- T0; mi <- sample(n * p, round(pmiss * n * p)); dm[mi] <- NA
+  d <- as.data.frame(dm); names(d) <- paste0("v", seq_len(p))
+  list(d = d, truth = T0, mi = mi)
+}
+rmse_imp <- function(r, z)
+  mean(vapply(r$imputations,
+              function(q) sqrt(mean((as.matrix(q)[z$mi] - z$truth[z$mi])^2)), 1))
+
+test_that("the low-rank route fills what chained equations cannot", {
+  ## p > n: every per-variable regression has more predictors than rows
+  z <- lowrank_data(n = 60L, p = 80L, rank = 3L, pmiss = 0.15, seed = 3L)
+  a <- ilm_impute(z$d, m = 3, seed = 1, verbose = FALSE, progress = FALSE)
+  expect_equal(a$method, "lowrank")
+  expect_equal(a$ncp, 3L)                       # recovers the true rank
+  expect_false(anyNA(a$imputations[[1]]))
+  ## and it beats filling in column means by a wide margin
+  base <- sqrt(mean((rep(colMeans(as.matrix(z$d), na.rm = TRUE), each = 60)[z$mi]
+                     - z$truth[z$mi])^2))
+  expect_lt(rmse_imp(a, z), base / 2)
+})
+
+test_that("chained equations stays the default where it can be fitted", {
+  z <- lowrank_data()
+  expect_equal(ilm_impute(z$d, m = 2, seed = 1, verbose = FALSE,
+                          progress = FALSE)$method, "fcs")
+  ## and it is the better of the two there, which is why it is the default
+  f <- ilm_impute(z$d, m = 3, method = "fcs", seed = 1, verbose = FALSE,
+                  progress = FALSE)
+  l <- ilm_impute(z$d, m = 3, method = "lowrank", seed = 1, verbose = FALSE,
+                  progress = FALSE)
+  expect_lt(rmse_imp(f, z), rmse_imp(l, z))
+})
+
+test_that("the low-rank route says so when there is no structure to find", {
+  ## full-rank noise: a reconstruction imposes structure that is not there and
+  ## does worse than the column means, so it has to be flagged
+  set.seed(2); n <- 200L; p <- 8L
+  X <- matrix(rnorm(n * p), n, p)
+  X[sample(n * p, round(0.2 * n * p))] <- NA
+  d <- as.data.frame(X); names(d) <- paste0("v", seq_len(p))
+  expect_warning(ilm_impute(d, m = 2, method = "lowrank", seed = 1,
+                            verbose = FALSE, progress = FALSE),
+                 "no low-rank structure")
+  ## genuine structure draws no warning
+  z <- lowrank_data()
+  expect_silent(ilm_impute(z$d, m = 2, method = "lowrank", seed = 1,
+                           verbose = FALSE, progress = FALSE))
+})
+
+test_that("low-rank imputations differ from each other, and pool", {
+  z <- lowrank_data(n = 60L, p = 80L, rank = 3L, pmiss = 0.15, seed = 3L)
+  a <- ilm_impute(z$d, m = 5, seed = 1, verbose = FALSE, progress = FALSE)
+  ## the bootstrap is what makes them differ; without that there is nothing
+  ## for Rubin's rules to work with
+  f1 <- as.matrix(a$imputations[[1]])[z$mi]
+  f2 <- as.matrix(a$imputations[[2]])[z$mi]
+  expect_false(isTRUE(all.equal(f1, f2)))
+  expect_gt(stats::sd(f1 - f2), 0)
+  p <- ilm_mi_pool(a, v1 ~ v2 + v3, family = "gaussian")
+  expect_s3_class(p, "ilm_pooled")
+  expect_true(all(p$se > 0))
+})
+
+test_that("progress is silent by default and controllable", {
+  z <- lowrank_data(n = 80L, p = 5L)
+  expect_silent(ilm_impute(z$d, m = 2, seed = 1, verbose = FALSE))
+  expect_silent(ilm_boot_ci(data.frame(y = rnorm(200)), "y", R = 50))
+  ## the helper itself: off returns no-ops, on returns a real bar
+  q <- ilm_progress(10, progress = FALSE)
+  expect_silent(q$tick(5)); expect_silent(q$done())
+  expect_output(local({ b <- ilm_progress(10, progress = TRUE)
+                        b$tick(5); b$done() }))
+})

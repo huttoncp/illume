@@ -40,8 +40,9 @@ ilm_require_pcamixdata <- function() {
 #' coordinates.
 #'
 #' @param data A data frame.
-#' @param cols Columns to include, as a character vector. Default is all of
-#'   them.
+#' @param cols Columns to use. A character vector of names, a
+#'   regular expression, a predicate function such as `is.numeric`, or
+#'   `NULL` for all of them -- see [ilm_selection].
 #' @param ndim Number of dimensions to keep.
 #' @return An object of class `"ilm_reduce"`: `method` (`"pca"`, `"mca"` or
 #'   `"famd"`), `eig` (dimension, eigenvalue, percent of variance and its
@@ -66,12 +67,7 @@ ilm_reduce <- function(data, cols = NULL, ndim = 5) {
   ilm_require_pcamixdata()
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
-  keep <- if (is.null(cols)) names(data) else as.character(cols)
-  miss <- setdiff(keep, names(data))
-  if (length(miss))
-    stop("column(s) not found in the data: ", paste(miss, collapse = ", "),
-         ". Available: ", paste(utils::head(names(data), 12), collapse = ", "),
-         call. = FALSE)
+  keep <- ilm_resolve_cols(data, cols)
   sub <- data[keep]
 
   is_num <- vapply(sub, is.numeric, TRUE)
@@ -90,11 +86,24 @@ ilm_reduce <- function(data, cols = NULL, ndim = 5) {
   method <- if (!is.null(quanti) && !is.null(quali)) "famd"
             else if (!is.null(quanti)) "pca" else "mca"
 
-  ## MCA's dimensionality is the number of levels less the number of variables,
-  ## not the number of variables: asking for more than that is degenerate
+  ## How many dimensions exist at all. For MCA that is the number of levels
+  ## less the number of variables. For PCA and the mixed case it is
+  ## min(n - 1, p) -- NOT p - 1, which is a different quantity and one short:
+  ## two columns have two components, not one, and asking PCAmix for one is an
+  ## error rather than a smaller answer, so ilm_reduce() used to fail outright
+  ## on any two-column selection.
   max_dim <- if (method == "mca")
-               sum(vapply(quali, nlevels, 1L)) - ncol(quali) else ncol(sub) - 1L
-  ndim <- max(1L, min(ndim, max_dim, nrow(sub) - 1L))
+               sum(vapply(quali, nlevels, 1L)) - ncol(quali)
+             else min(nrow(sub) - 1L, ncol(sub))
+  ## PCAmix needs at least two, and with fewer than two available there is
+  ## nothing to reduce
+  ndim <- min(ndim, max_dim)
+  if (ndim < 2L) {
+    if (max_dim < 2L)
+      stop("there are only ", max_dim, " dimension(s) available from these ",
+           "columns, and a reduction needs at least 2", call. = FALSE)
+    ndim <- 2L
+  }
 
   fit <- PCAmixdata::PCAmix(X.quanti = quanti, X.quali = quali, ndim = ndim,
                             rename.level = TRUE, graph = FALSE)
@@ -183,7 +192,9 @@ ilm_build_na_indicator <- function(data, cols) {
 #' lost to one skipped section from values that went missing independently.
 #'
 #' @param data A data frame.
-#' @param cols Columns to consider, as a character vector. Default is all.
+#' @param cols Columns to use. A character vector of names, a
+#'   regular expression, a predicate function such as `is.numeric`, or
+#'   `NULL` for all of them -- see [ilm_selection].
 #' @param ndim Number of dimensions to keep.
 #' @return An object of class `"ilm_reduce_na"`, which is also an
 #'   `"ilm_reduce"` -- see [ilm_reduce()] for the shared structure. In

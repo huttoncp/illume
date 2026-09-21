@@ -186,6 +186,9 @@ ilm_typical_row <- function(object) {
 #' @param colour,fill,alpha,size Appearance.
 #' @param main Title.
 #' @param verbose Print the verdict.
+#' @param progress Show a progress bar. Defaults to [interactive()], so a
+#'   bar appears when someone is watching and nothing is written in a
+#'   script or a knitted document. See [ilm_progress_arg].
 #' @return Invisibly, a list with the fitted curve, the Kaplan-Meier, the
 #'   largest gap between them and a `status`.
 #' @seealso [ilm_survival()], [ilm_surv()].
@@ -201,6 +204,7 @@ ilm_typical_row <- function(object) {
 #' @export
 ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
                               conf = 0.95, ncores = 1L, seed = 1L,
+                              progress = NULL,
                               colour = "#2C7FB8", fill = "grey85",
                               alpha = NULL, size = 1, main = NULL,
                               verbose = TRUE) {
@@ -273,7 +277,7 @@ ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
     env <- ilm_refit_stat(object, stat, c(length(grid), length(lev)), B,
                           ncores, seed,
                           exports = c("grid", "gvec", "lev"),
-                          where = environment())
+                          where = environment(), progress = progress)
     nullarr <- env$null; n_ok <- env$n_ok
   }
 

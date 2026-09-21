@@ -17,7 +17,8 @@ ilm_variogram(
   seed = 1L,
   max_pairs = 2e+05,
   plot = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  progress = NULL
 )
 }
 \arguments{
@@ -59,6 +60,10 @@ precision but not what is being estimated.}
 \item{plot}{Draw the variogram.}
 
 \item{verbose}{Print the table.}
+
+\item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
+bar appears when someone is watching and nothing is written in a
+script or a knitted document. See \link{ilm_progress_arg}.}
 }
 \value{
 Invisibly, a list with the per-bin \code{table}, the simulated null, and
