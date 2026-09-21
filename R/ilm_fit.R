@@ -1119,16 +1119,17 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      reml = FALSE) {
   zi_type <- match.arg(zi_type)
   fam <- if (is.list(family)) family else ilm_family(family)
-  ## Integrating the fixed effects out under a flat prior is a legitimate
-  ## integrated likelihood for any family, but it is REML -- with REML's
-  ## unbiasedness and its exact n - p divisor -- only for a linear model, where
-  ## the Laplace approximation to that integral is exact. Calling it REML
-  ## elsewhere would be claiming a property it does not have.
-  if (isTRUE(reml) && !identical(fam$name, "gaussian"))
-    stop("`reml = TRUE` is defined for LINEAR mixed models, and this is a ",
-         fam$name, " fit. Restricted likelihood has no standard meaning here. ",
-         "Fit by maximum likelihood and use ilm_pb_lrt() if the concern is ",
-         "small-sample inference.", call. = FALSE)
+  ## Integrating the fixed effects out under a flat prior is available for any
+  ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-
+  ## c(randomArg, "beta")`. What differs is how much it delivers. For a linear
+  ## model the integral is exact and the result is textbook REML, unbiased with
+  ## the n - p divisor. For anything else the Laplace approximation to that
+  ## integral is itself an approximation, so what comes out is an
+  ## approximately-restricted likelihood: it still removes most of the
+  ## downward bias in the variance components, and it is not entitled to REML's
+  ## exact properties. Recorded on the fit as `reml_exact` so nothing has to
+  ## infer which of the two it is holding.
+  reml_exact <- isTRUE(reml) && identical(fam$name, "gaussian")
   ## Censoring: derive the codes from THIS response, so a simulated replicate
   ## is censored by the same rule the data were rather than inheriting the
   ## observed pattern. See ilm_censor().
@@ -1770,7 +1771,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
-                 obj_ml = obj_ml, reml = reml,
+                 obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
                  censor = censor, n_censored = if (is.null(cens)) 0L else sum(cens != 0L),

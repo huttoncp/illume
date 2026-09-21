@@ -122,9 +122,12 @@ the default, then refit with \code{reml = TRUE} for the estimates you report --
 maximum likelihood biases the variance components downward, and with few
 clusters that carries through to standard errors and to the degrees of
 freedom from \code{\link[=ilm_denom_df]{ilm_denom_df()}}. Once set, any likelihood-ratio test refuses
-rather than quietly comparing things that are not comparable. Defined for
-gaussian responses only. \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE}, because
-there the graph fixed the adjustment set before any data were seen.}
+rather than quietly comparing things that are not comparable, and so does
+\code{\link[=ilm_robust]{ilm_robust()}}, whose sandwich needs per-observation scores that a
+restricted likelihood does not have. Available for every family, but it
+delivers different amounts depending on the family -- see the section
+below. \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE}, because there the graph fixed
+the adjustment set before any data were seen.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

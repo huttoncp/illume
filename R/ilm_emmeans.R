@@ -44,6 +44,66 @@ ilm_ref_grid <- function(object, at = NULL) {
   g
 }
 
+#' Cell weights for averaging over the grid
+#'
+#' The difference between the two frequency schemes is the whole reason for
+#' offering both: a product of MARGINAL counts gives every level of `specs` the
+#' same mix of everything else, so a contrast is the effect alone, while the
+#' JOINT count gives each level its own mix, so a contrast also carries
+#' whatever the composition does.
+#'
+#' @param g A reference grid.
+#' @param mf The fit's model frame, which supplies the observed frequencies.
+#' @param weights One of `"equal"`, `"cells"`, `"proportional"`.
+#' @return A numeric weight per grid row.
+#' @keywords internal
+#' @noRd
+ilm_emm_cellw <- function(g, mf, weights) {
+  fv <- names(g)[vapply(g, is.factor, TRUE)]
+  w <- if (weights == "equal" || !length(fv)) rep(1, nrow(g)) else
+    if (weights == "cells") {
+      tb <- table(interaction(mf[fv], drop = FALSE, sep = "\r"))
+      key <- as.character(interaction(g[fv], drop = FALSE, sep = "\r"))
+      as.numeric(tb[match(key, names(tb))])
+    } else {
+      ## outer product of the one-way margins
+      Reduce(`*`, lapply(fv, function(v) {
+        tb <- table(mf[[v]])
+        as.numeric(tb[match(as.character(g[[v]]), names(tb))])
+      }))
+    }
+  w[!is.finite(w)] <- 0
+  w
+}
+
+#' Average model-matrix rows within each level of `specs`
+#'
+#' Shared by [ilm_emmeans()] and [ilm_trends()]. The only thing that differs
+#' between them is what the matrix holds: the grid's own model matrix for a
+#' mean, its derivative with respect to a covariate for a slope. The averaging
+#' is identical, and so is everything downstream of it.
+#'
+#' @param mm A matrix with one row per grid row.
+#' @param g The reference grid.
+#' @param specs Variables whose levels the rows are grouped by.
+#' @param w Cell weights from [ilm_emm_cellw()].
+#' @return A list with `L` and the level labels `lv`.
+#' @keywords internal
+#' @noRd
+ilm_emm_avg <- function(mm, g, specs, w) {
+  keyspec <- if (length(specs)) interaction(g[specs], drop = TRUE, sep = "\r")
+             else factor(rep("", nrow(g)))
+  lv <- levels(keyspec)
+  L <- matrix(0, length(lv), ncol(mm), dimnames = list(NULL, colnames(mm)))
+  for (i in seq_along(lv)) {
+    k <- which(keyspec == lv[i])
+    ww <- w[k]
+    if (sum(ww) <= 0) ww <- rep(1, length(k))
+    L[i, ] <- colSums(mm[k, , drop = FALSE] * (ww / sum(ww)))
+  }
+  list(L = L, lv = lv)
+}
+
 #' Estimated marginal means
 #'
 #' The model's predicted mean for each level of the variables asked for, with
@@ -149,38 +209,9 @@ ilm_emmeans <- function(object, specs, at = NULL,
          "marginal mean is not defined for it", call. = FALSE)
   V <- suppressWarnings(as.matrix(stats::vcov(object)))
 
-  ## Cell weights for the averaging. The difference between the two frequency
-  ## schemes is the whole reason for offering both: a product of MARGINAL
-  ## counts gives every level of `specs` the same mix of everything else, so a
-  ## contrast is the effect alone, while the JOINT count gives each level its
-  ## own mix, so a contrast also carries whatever the composition does.
-  fv <- names(g)[vapply(g, is.factor, TRUE)]
-  w <- if (weights == "equal" || !length(fv)) rep(1, nrow(g)) else
-    if (weights == "cells") {
-      tb <- table(interaction(mf[fv], drop = FALSE, sep = "\r"))
-      key <- as.character(interaction(g[fv], drop = FALSE, sep = "\r"))
-      as.numeric(tb[match(key, names(tb))])
-    } else {
-      ## outer product of the one-way margins
-      Reduce(`*`, lapply(fv, function(v) {
-        tb <- table(mf[[v]])
-        as.numeric(tb[match(as.character(g[[v]]), names(tb))])
-      }))
-    }
-  w[!is.finite(w)] <- 0
-
-  ## group the grid by the levels of `specs`, and average the model-matrix rows
-  keyspec <- if (length(specs)) interaction(g[specs], drop = TRUE, sep = "\r")
-             else factor(rep("", nrow(g)))
-  lv <- levels(keyspec)
-  L <- matrix(0, length(lv), ncol(mmg),
-              dimnames = list(NULL, colnames(mmg)))
-  for (i in seq_along(lv)) {
-    k <- which(keyspec == lv[i])
-    ww <- w[k]
-    if (sum(ww) <= 0) ww <- rep(1, length(k))
-    L[i, ] <- colSums(mmg[k, , drop = FALSE] * (ww / sum(ww)))
-  }
+  w <- ilm_emm_cellw(g, mf, weights)
+  av <- ilm_emm_avg(mmg, g, specs, w)
+  L <- av$L; lv <- av$lv
   est <- as.numeric(L %*% b)
   Vem <- L %*% V %*% t(L)
   se <- sqrt(pmax(diag(Vem), 0))

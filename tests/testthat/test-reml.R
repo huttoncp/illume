@@ -84,15 +84,63 @@ test_that("a likelihood-ratio test on a REML fit is refused, not fudged", {
   expect_s3_class(ilm_anova(f), "data.frame")
 })
 
-test_that("REML is refused for families it has no meaning for", {
+test_that("REML works for non-gaussian families and matches glmmTMB", {
+  ## glmmTMB does `if (REML) randomArg <- c(randomArg, "beta")` for every
+  ## family, and so does this. For a linear model that integral is exact and
+  ## the result is textbook REML; elsewhere the Laplace approximation to it is
+  ## itself approximate, which `reml_exact` records.
+  skip_if_not_installed("glmmTMB")
+  set.seed(9)
+  ncl <- 25; per <- 12; N <- ncl * per
+  d <- data.frame(g = factor(rep(seq_len(ncl), each = per)), x = rnorm(N))
+  d$grp <- factor(rep(c("a", "b"), each = N / 2))
+  u <- rnorm(ncl, 0, 0.8)
+  eta <- 0.3 + 0.5 * d$x + 0.4 * (d$grp == "b") + u[as.integer(d$g)]
+  d$yp <- rpois(N, exp(pmin(eta, 4)))
+
+  fi <- ilm_model(yp ~ x + grp + (1 | g), data = d, family = "poisson",
+                  reml = TRUE, verbose = FALSE)
+  fg <- glmmTMB::glmmTMB(yp ~ x + grp + (1 | g), data = d,
+                         family = stats::poisson(), REML = TRUE)
+  expect_equal(unname(coef(fi)), unname(glmmTMB::fixef(fg)$cond),
+               tolerance = 1e-6)
+  expect_equal(sqrt(unname(fi$Sigma[[1]][1, 1])),
+               sqrt(unname(glmmTMB::VarCorr(fg)$cond[[1]][1, 1])),
+               tolerance = 1e-6)
+  ## the whole point: REML pulls the variance component up off ML's bias
+  fm <- ilm_model(yp ~ x + grp + (1 | g), data = d, family = "poisson",
+                  verbose = FALSE)
+  expect_gt(fi$Sigma[[1]][1, 1], fm$Sigma[[1]][1, 1])
+  ## and it does not claim to be exact where it is not
+  expect_false(isTRUE(fi$reml_exact))
+})
+
+test_that("reml_exact separates the exact case from the approximate one", {
   d <- reml_data(20, 4)
-  d$yb <- as.integer(d$y > stats::median(d$y))
-  expect_error(ilm_model(yb ~ grp + (1 | id), data = d, family = "binomial",
-                         reml = TRUE, verbose = FALSE),
+  fg <- ilm_model(y ~ grp + (1 | id), data = d, family = "gaussian",
+                  reml = TRUE, verbose = FALSE)
+  expect_true(isTRUE(fg$reml_exact))
+  d$yc <- pmax(round(exp(d$y / 3)), 0L)
+  fp <- ilm_model(yc ~ grp + (1 | id), data = d, family = "poisson",
+                  reml = TRUE, verbose = FALSE)
+  expect_true(isTRUE(fp$reml))
+  expect_false(isTRUE(fp$reml_exact))
+  ## Satterthwaite is still a LINEAR mixed model result and still refuses
+  expect_error(ilm_denom_df(fp, c(0, 1), method = "satterthwaite"),
                "LINEAR mixed models")
-  expect_error(ilm_model(yb ~ grp + (1 | id), data = d, family = "binomial",
-                         reml = TRUE, verbose = FALSE),
-               "ilm_pb_lrt")
+})
+
+test_that("a sandwich is refused on a REML fit", {
+  ## Under REML the coefficients are integrated out, so there is no
+  ## per-observation score for a sandwich to sum. glmmTMB's estfun refuses the
+  ## same combination.
+  set.seed(4)
+  d <- data.frame(x = rnorm(200), cl = factor(rep(1:20, 10)))
+  d$y <- 0.4 * d$x + rnorm(200)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", reml = TRUE,
+                 verbose = FALSE)
+  expect_error(ilm_robust(f, cluster = ~ cl), "REML")
+  expect_error(ilm_robust(f, cluster = ~ cl), "reml = FALSE")
 })
 
 test_that("the variance components survive the layout rewrite", {

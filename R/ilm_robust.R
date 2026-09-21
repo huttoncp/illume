@@ -53,6 +53,15 @@
 #' @keywords internal
 #' @noRd
 ilm_estfun <- function(object) {
+  ## Under REML the fixed effects were integrated out, so what the objective
+  ## scores is a restricted likelihood of contrasts orthogonal to X -- not the
+  ## per-observation contribution to a coefficient, which is what a sandwich
+  ## sums. glmmTMB refuses the same combination outright, and so does this.
+  if (isTRUE(object$reml))
+    stop("this model was fitted by REML, where the fixed effects are ",
+         "integrated out, so a coefficient has no per-observation score for a ",
+         "sandwich to sum. Refit with `reml = FALSE` for cluster-robust ",
+         "standard errors.", call. = FALSE)
   if (length(object$re))
     stop("this model has random effects, so the within-cluster correlation is ",
          "already in the likelihood and a cluster's score is not the sum of ",
