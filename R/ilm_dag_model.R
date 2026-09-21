@@ -75,9 +75,13 @@ ilm_dag_remediate <- function(fit, form, data, family, verbose, ...) {
       message("      spread check: ", cv$status,
               sprintf(" (rho = %.3f, p = %s)", cv$trend, format(cv$p_trend)),
               " -- refitting with dispformula = ~ mu")
+    ## Match the estimator of the fit being remediated. The two differ only in
+    ## the variance structure, not in X, so the AIC comparison below stays
+    ## valid under REML -- which it would not be if the fixed effects moved.
     alt <- tryCatch(suppressWarnings(
              ilm_model(form, data = data, family = family,
-                       dispformula = ~ mu, verbose = FALSE, ...)),
+                       dispformula = ~ mu, verbose = FALSE,
+                       reml = isTRUE(fit$reml), ...)),
            error = function(e) NULL)
     if (!is.null(alt)) {
       better <- tryCatch(stats::AIC(alt) < stats::AIC(fit), error = function(e) FALSE)
@@ -150,6 +154,13 @@ ilm_dag_remediate <- function(fit, form, data, family, verbose, ...) {
 #' @param test_dag Test the graph's implied conditional independencies first.
 #' @param max_sets Stop after this many adjustment sets.
 #' @param verbose Narrate each step.
+#' @param reml Estimate the variance components by restricted maximum
+#'   likelihood. Defaults to `TRUE` here, unlike [ilm_model()], because the
+#'   graph fixed the adjustment set before any data were looked at: the fixed
+#'   effects are not being selected, so the one thing REML forbids -- comparing
+#'   likelihoods across different fixed structures -- never arises, and its
+#'   unbiased variance components are simply better. Ignored for non-gaussian
+#'   responses, where restricted likelihood has no meaning.
 #' @param ... Passed to [ilm_model()].
 #' @return An object of class `"ilm_dag_model"`: the graph, the sets, the fits,
 #'   an `effects` table with one row per set, the DAG test, and `steps`.
@@ -163,7 +174,8 @@ ilm_dag_remediate <- function(fit, form, data, family, verbose, ...) {
 #' @export
 ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
                           family = NULL, cluster = NULL, auto_error = TRUE,
-                          test_dag = TRUE, max_sets = 8L, verbose = TRUE, ...) {
+                          test_dag = TRUE, max_sets = 8L, verbose = TRUE,
+                          reml = TRUE, ...) {
   g <- ilm_dag(dag)
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
@@ -281,8 +293,15 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
     environment(form) <- environment()
     say("  set ", i, " of ", length(sets), ": ",
         paste(deparse(form), collapse = " "))
+    ## The DAG fixed the adjustment set before any data were looked at, so the
+    ## fixed effects are not up for selection here and REML is the right
+    ## estimator: unbiased variance components, and no likelihood comparison
+    ## across fixed structures that it would invalidate. It has no meaning
+    ## outside a linear model, so it applies only where it applies.
+    use_reml <- isTRUE(reml) && identical(fam, "gaussian")
     fit <- tryCatch(suppressWarnings(
-             ilm_model(form, data = data, family = fam, verbose = FALSE, ...)),
+             ilm_model(form, data = data, family = fam, verbose = FALSE,
+                       reml = use_reml, ...)),
            error = function(e) structure(list(msg = conditionMessage(e)),
                                          class = "ilm_failed"))
     if (inherits(fit, "ilm_failed")) {

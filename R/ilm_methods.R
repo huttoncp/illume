@@ -101,7 +101,10 @@ vcov.ilm_model <- function(object, full = FALSE, ...) {
   ## Maximum likelihood divides the residual sum of squares by n; an ordinary
   ## linear model divides by n - p.  Rescaling by n / (n - p) makes the
   ## covariance, and therefore the standard errors, agree exactly with lm().
-  if (isTRUE(object$exact_df)) {
+  ## REML has already done precisely that -- restricting the likelihood to
+  ## contrasts orthogonal to X is what produces the n - p divisor -- so
+  ## applying the correction again would inflate every standard error twice.
+  if (isTRUE(object$exact_df) && !isTRUE(object$reml)) {
     n <- nrow(object$X); k <- ilm_n_fixed(object)
     V[seq_len(k), seq_len(k)] <- V[seq_len(k), seq_len(k)] * n / object$resid_df
   }

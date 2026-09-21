@@ -69,6 +69,7 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
                         restarts = 1L, verbose = TRUE) {
   if (is.null(object$assign))
     stop("ilm_pb_lrt() needs a model fitted through the formula interface")
+  ilm_stop_reml_lrt(object, "ilm_pb_lrt()")
   j <- if (is.numeric(term)) as.integer(term) else which(object$term_labels == term)
   if (!length(j) || is.na(j)) stop("term '", term, "' not found")
   lab <- object$term_labels[j]

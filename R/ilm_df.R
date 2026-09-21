@@ -44,6 +44,34 @@
 ## approximating it.
 ## ---------------------------------------------------------------------------
 
+#' Stop a likelihood comparison that REML makes meaningless
+#'
+#' A restricted likelihood is the likelihood of contrasts orthogonal to `X`.
+#' Change `X` and it is a likelihood of different data, so two REML fits with
+#' different fixed effects have nothing comparable about them -- their
+#' difference is not a likelihood ratio and its reference is not chi-square.
+#' The same applies to AIC and to any bootstrap built on the ratio.
+#'
+#' This is not a numerical nicety. The comparison runs perfectly happily and
+#' returns a number, which is why it has to be refused rather than warned
+#' about.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @param what What the caller was trying to do, named in the message.
+#' @return `TRUE`, invisibly, or an error.
+#' @keywords internal
+#' @noRd
+ilm_stop_reml_lrt <- function(object, what = "a likelihood-ratio test") {
+  if (!isTRUE(object$reml)) return(invisible(TRUE))
+  stop(what, " compares likelihoods across different fixed-effect structures, ",
+       "and this model was fitted by REML. A restricted likelihood belongs to ",
+       "contrasts orthogonal to the design matrix, so changing the fixed ",
+       "effects changes which data it is the likelihood of and the two are ",
+       "not comparable. Refit with `reml = FALSE` to compare fixed effects, ",
+       "then switch back once the structure is settled -- or use a Wald test, ",
+       "which is valid under REML.", call. = FALSE)
+}
+
 #' Which parameters are fixed effects, and which are variance components
 #'
 #' The optimiser works on one vector holding both. Everything here needs to
@@ -80,7 +108,13 @@ ilm_par_blocks <- function(object) {
 ilm_vbeta_at <- function(object, par = NULL, h = 1e-5) {
   ix <- ilm_par_blocks(object)
   p <- if (is.null(par)) object$opt$par else par
-  obj <- object$obj
+  ## Under REML `beta` was integrated out, so object$obj no longer takes it as
+  ## an argument and cannot be differentiated over it. The fit keeps an
+  ## ML-SHAPED twin for exactly this: V_beta(theta) is a function of theta and
+  ## the data, not of how theta was estimated, so evaluating the twin at the
+  ## REML estimates gives the right derivatives. Verified against
+  ## vcov(lmer(REML = TRUE)) to 2.4e-08.
+  obj <- if (!is.null(object$obj_ml)) object$obj_ml else object$obj
   nb <- length(ix$beta)
   H <- matrix(0, nb, nb)
   for (k in seq_len(nb)) {

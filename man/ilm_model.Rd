@@ -25,7 +25,8 @@ ilm_model_formula(
   rp_knots = NULL,
   ziformula = NULL,
   zi_type = c("inflated", "hurdle"),
-  design = NULL
+  design = NULL,
+  reml = FALSE
 )
 }
 \arguments{
@@ -110,6 +111,20 @@ Supplying one fits with the sampling weights and attaches the design, so
 \code{\link[=ilm_svy_coef]{ilm_svy_coef()}} can report a variance that reflects the clustering and
 stratification. Do not also pass \code{weights}: a sampling weight and a
 replicate count are different things and the design already carries one.}
+
+\item{reml}{Logical. Estimate the variance components by RESTRICTED maximum
+likelihood instead of maximum likelihood. Defaults to \code{FALSE}, and the
+reason is the order you work in: maximum likelihood is what lets you
+compare fixed-effect structures, because a restricted likelihood belongs
+to contrasts orthogonal to the design matrix and changing that matrix
+changes which data it is the likelihood of. Settle the fixed effects under
+the default, then refit with \code{reml = TRUE} for the estimates you report --
+maximum likelihood biases the variance components downward, and with few
+clusters that carries through to standard errors and to the degrees of
+freedom from \code{\link[=ilm_denom_df]{ilm_denom_df()}}. Once set, any likelihood-ratio test refuses
+rather than quietly comparing things that are not comparable. Defined for
+gaussian responses only. \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE}, because
+there the graph fixed the adjustment set before any data were seen.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

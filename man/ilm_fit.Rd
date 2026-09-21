@@ -22,7 +22,8 @@ ilm_fit(
   disp_mu = FALSE,
   rp = NULL,
   Zzi = NULL,
-  zi_type = c("inflated", "hurdle")
+  zi_type = c("inflated", "hurdle"),
+  reml = FALSE
 )
 }
 \arguments{
@@ -93,6 +94,14 @@ Built by \code{\link[=ilm_model]{ilm_model()}} from \code{ziformula}.}
 from the zero process or from the count itself, or \code{"hurdle"}, where every
 zero comes from the zero process and the positives come from a count that
 cannot be zero. Ignored when \code{Zzi} is \code{NULL}.}
+
+\item{reml}{Logical. Integrate the fixed effects out along with the random
+ones, giving restricted maximum likelihood. Under a flat prior that
+integral IS the restricted likelihood, and for a linear-gaussian model the
+Laplace approximation to it is exact -- so this is REML rather than an
+approximation to it. Gaussian responses only; elsewhere the integral is
+still well defined but has none of REML's properties, so it is refused.
+See \code{\link[=ilm_model]{ilm_model()}} for when to switch it on.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

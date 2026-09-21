@@ -128,6 +128,19 @@
 #'   random parameters. `NULL` (the default) switches it on when the model
 #'   contains smooths, which is when [predict.ilm_model()] needs it.
 #' @param na.action How to handle missing values; default [stats::na.omit()].
+#' @param reml Logical. Estimate the variance components by RESTRICTED maximum
+#'   likelihood instead of maximum likelihood. Defaults to `FALSE`, and the
+#'   reason is the order you work in: maximum likelihood is what lets you
+#'   compare fixed-effect structures, because a restricted likelihood belongs
+#'   to contrasts orthogonal to the design matrix and changing that matrix
+#'   changes which data it is the likelihood of. Settle the fixed effects under
+#'   the default, then refit with `reml = TRUE` for the estimates you report --
+#'   maximum likelihood biases the variance components downward, and with few
+#'   clusters that carries through to standard errors and to the degrees of
+#'   freedom from [ilm_denom_df()]. Once set, any likelihood-ratio test refuses
+#'   rather than quietly comparing things that are not comparable. Defined for
+#'   gaussian responses only. [ilm_dag_model()] defaults to `TRUE`, because
+#'   there the graph fixed the adjustment set before any data were seen.
 #'
 #' @return An object of class `"ilm_model"`. Beyond the elements listed in
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
@@ -203,7 +216,8 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
                          censor = NULL, dispformula = NULL,
                          rp_df = 3L, rp_knots = NULL, ziformula = NULL,
-                         zi_type = c("inflated", "hurdle"), design = NULL) {
+                         zi_type = c("inflated", "hurdle"), design = NULL,
+                         reml = FALSE) {
   zi_type <- match.arg(zi_type)
   ## A survey design supplies the weights, so taking them from both places
   ## would silently apply one and ignore the other.
@@ -543,7 +557,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
-                  restarts = restarts, joint = joint)
+                  restarts = restarts, joint = joint, reml = reml)
 
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
   fit$design    <- design

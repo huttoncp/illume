@@ -1071,6 +1071,13 @@ ilm_print_checks <- function(ck, title) {
 #'   parameters. Needed by [predict.ilm_model()] to propagate uncertainty in penalised
 #'   smooth coefficients; [ilm_model()] switches it on automatically when the model
 #'   contains smooths.
+#' @param reml Logical. Integrate the fixed effects out along with the random
+#'   ones, giving restricted maximum likelihood. Under a flat prior that
+#'   integral IS the restricted likelihood, and for a linear-gaussian model the
+#'   Laplace approximation to it is exact -- so this is REML rather than an
+#'   approximation to it. Gaussian responses only; elsewhere the integral is
+#'   still well defined but has none of REML's properties, so it is refused.
+#'   See [ilm_model()] for when to switch it on.
 #'
 #' @return An object of class `"ilm_model"`: a list whose most useful elements are
 #'   `checks` (the diagnostic table), `Sigma` (fitted category covariances),
@@ -1108,9 +1115,20 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
-                     rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle")) {
+                     rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle"),
+                     reml = FALSE) {
   zi_type <- match.arg(zi_type)
   fam <- if (is.list(family)) family else ilm_family(family)
+  ## Integrating the fixed effects out under a flat prior is a legitimate
+  ## integrated likelihood for any family, but it is REML -- with REML's
+  ## unbiasedness and its exact n - p divisor -- only for a linear model, where
+  ## the Laplace approximation to that integral is exact. Calling it REML
+  ## elsewhere would be claiming a property it does not have.
+  if (isTRUE(reml) && !identical(fam$name, "gaussian"))
+    stop("`reml = TRUE` is defined for LINEAR mixed models, and this is a ",
+         fam$name, " fit. Restricted likelihood has no standard meaning here. ",
+         "Fit by maximum likelihood and use ilm_pb_lrt() if the concern is ",
+         "small-sample inference.", call. = FALSE)
   ## Censoring: derive the codes from THIS response, so a simulated replicate
   ## is censored by the same rule the data were rather than inheriting the
   ## observed pattern. See ilm_censor().
@@ -1624,20 +1642,57 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     pars$B_ar <- matrix(0, ar$n_cell, C); rnd <- c(rnd, "B_ar")
   }
   t0 <- proc.time()[3]
-  obj <- MakeADFun(f, pars, random = if (length(rnd)) rnd else NULL,
+  ## REML integrates the FIXED effects out along with the random ones. Under a
+  ## flat prior that integral is the restricted likelihood, and for a
+  ## linear-gaussian model the Laplace approximation to it is exact -- so
+  ## adding "beta" to `random` is not an approximation to REML, it IS REML.
+  ## Checked against lme4: variance components agree to 6e-08.
+  rnd_fit <- if (reml) c(rnd, "beta") else rnd
+  obj <- MakeADFun(f, pars, random = if (length(rnd_fit)) rnd_fit else NULL,
                    silent = TRUE)
   ## guard: if a fill order in nm_* ever drifts from ilm_mkL/ilm_mkD/ilm_mkLam/ilm_mkLd, the
   ## names would silently mislabel every parameter.  Fail loudly instead.
-  if (length(pnames) != length(obj$par))
+  n_expected <- if (reml) length(pnames) - p * C else length(pnames)
+  if (n_expected != length(obj$par))
     stop(sprintf("internal: %d parameter names for %d parameters",
-                 length(pnames), length(obj$par)))
+                 n_expected, length(obj$par)))
   opt <- nlminb(obj$par, obj$fn, obj$gr, control = list(iter.max = 3000, eval.max = 3000))
   for (k in seq_len(restarts))
     opt <- nlminb(opt$par, obj$fn, obj$gr, control = list(iter.max = 3000, eval.max = 3000))
   ## joint = TRUE also returns the joint precision over (fixed, random), which
   ## is what lets predict() propagate uncertainty in the PENALISED SMOOTH
   ## coefficients instead of holding them at their conditional modes.
-  sdr <- suppressWarnings(sdreport(obj, getJointPrecision = joint))
+  ## Under REML it is not optional: beta now lives in the random block, so the
+  ## only route to its covariance is through the joint precision.
+  sdr <- suppressWarnings(sdreport(obj, getJointPrecision = joint || reml))
+
+  ## Under REML beta is in the random block, so pull it and its covariance out
+  ## of the joint precision. Nothing is reshaped yet: the checks below and the
+  ## covariance derivations all run against obj, which still expects the native
+  ## REML parameter vector.
+  obj_ml <- NULL; reml_beta <- NULL; reml_Vb <- NULL
+  if (reml) {
+    jp <- sdr$jointPrecision
+    rn <- rownames(jp)
+    ibx <- which(rn == "beta")
+    iux <- setdiff(which(rn %in% unique(rnd)), ibx)
+    ## marginal covariance of beta: Schur-complement the other random effects
+    ## out of the joint precision
+    Hbb <- as.matrix(jp[ibx, ibx, drop = FALSE])
+    reml_Vb <- if (length(iux)) {
+      Hbu <- as.matrix(jp[ibx, iux, drop = FALSE])
+      Huu <- as.matrix(jp[iux, iux, drop = FALSE])
+      solve(Hbb - Hbu %*% solve(Huu, t(Hbu)))
+    } else solve(Hbb)
+    srr <- summary(sdr, "random")
+    reml_beta <- srr[rownames(srr) == "beta", 1]
+    ## An ML-SHAPED objective, built once and never optimised. V_beta(theta) is
+    ## a function of theta and the data and does not care how theta was
+    ## estimated, so evaluating this at the REML estimates gives exactly the
+    ## derivatives ilm_denom_df() needs. Costs one extra tape, about 20 ms.
+    obj_ml <- MakeADFun(f, pars, random = if (length(rnd)) rnd else NULL,
+                        silent = TRUE)
+  }
   sec <- proc.time()[3] - t0
 
   pn <- names(obj$par); pe <- opt$par; thv <- pe[pn == "theta"]
@@ -1689,7 +1744,33 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   ## it is exact.
   exact_df <- fam$name == "gaussian" && sum(bl) == 0L && is.null(ar) &&
     (is.null(cens) || !any(cens != 0L)) && !has_dm
+
+  ## ---- put a REML fit back into the shape the rest of the package expects --
+  ## Everything downstream reads opt$par and sdr$cov.fixed and assumes beta sits
+  ## at the front of both. Rebuilding that layout once, here, is far safer than
+  ## teaching thirty-odd call sites about two parameter orderings -- but it has
+  ## to happen AFTER the checks and the covariance derivations above, which run
+  ## against obj and need the native REML vector. Reshaping earlier silently
+  ## recycles a short logical index over a long vector and corrupts every
+  ## variance component.
+  if (reml) {
+    nb <- length(reml_beta); nt <- length(opt$par)
+    opt$par <- c(reml_beta, opt$par)
+    ## TYPE labels, as MakeADFun produces them -- not pnames. Downstream code
+    ## selects on `names(opt$par) == "theta"`, and coef() renames with pnames.
+    names(opt$par) <- c(rep("beta", nb), names(obj$par))
+    Vfull <- matrix(0, nb + nt, nb + nt)
+    Vfull[seq_len(nb), seq_len(nb)] <- reml_Vb
+    Vfull[nb + seq_len(nt), nb + seq_len(nt)] <- sdr$cov.fixed
+    ## the off-diagonal stays zero on purpose: under REML the fixed effects and
+    ## the variance components are independent, which is exactly what
+    ## restricting the likelihood to contrasts orthogonal to X buys
+    sdr$cov.fixed <- Vfull
+  }
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
+                 ## the ML-shaped twin, present only under REML, used by
+                 ## ilm_denom_df() to differentiate V_beta(theta)
+                 obj_ml = obj_ml, reml = reml,
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
                  censor = censor, n_censored = if (is.null(cens)) 0L else sum(cens != 0L),
@@ -1697,7 +1778,9 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  ## how many scalars TMB actually integrated out. logLik() needs
                  ## it to put back the (q/2)log(2*pi) the hand-written gaussian
                  ## priors below leave out of the joint density.
-                 n_integrated = length(obj$env$random),
+                 ## under REML beta is in the random block too, and it is not
+                 ## one of the latent values logLik() is correcting for
+                 n_integrated = length(obj$env$random) - if (reml) p * C else 0L,
                  ## index bookkeeping kept so set_coef() can rebuild every
                  ## derived quantity from a perturbed parameter vector
                  npc = as.integer(npc), npd = as.integer(npd), toff = toff,

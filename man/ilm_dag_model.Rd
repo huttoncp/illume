@@ -15,6 +15,7 @@ ilm_dag_model(
   test_dag = TRUE,
   max_sets = 8L,
   verbose = TRUE,
+  reml = TRUE,
   ...
 )
 }
@@ -38,6 +39,14 @@ them among variables the graph does not mention; \code{character(0)} fits none.}
 \item{max_sets}{Stop after this many adjustment sets.}
 
 \item{verbose}{Narrate each step.}
+
+\item{reml}{Estimate the variance components by restricted maximum
+likelihood. Defaults to \code{TRUE} here, unlike \code{\link[=ilm_model]{ilm_model()}}, because the
+graph fixed the adjustment set before any data were looked at: the fixed
+effects are not being selected, so the one thing REML forbids -- comparing
+likelihoods across different fixed structures -- never arises, and its
+unbiased variance components are simply better. Ignored for non-gaussian
+responses, where restricted likelihood has no meaning.}
 
 \item{...}{Passed to \code{\link[=ilm_model]{ilm_model()}}.}
 }

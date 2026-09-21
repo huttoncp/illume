@@ -313,6 +313,7 @@ ilm_recode_sum <- function(object, which) {
 ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
                         ncores = 1L, restarts = 2L, recode = TRUE) {
   test <- match.arg(test)
+  if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
   type3 <- type %in% c("3", "III")
