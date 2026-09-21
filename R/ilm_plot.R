@@ -214,7 +214,10 @@ ilm_geom_spec <- function(geom = NULL) {
 #' @param size Point size for `"point"`, line or border width elsewhere.
 #' @param palette Colours for groups: a vector of colour names, or the name of
 #'   a palette such as `"Dark 2"`.
-#' @param theme A tinyplot theme name; see [tinyplot::tinytheme_list()].
+#' @param theme A tinyplot theme name, such as `"clean"`. With tinyplot 0.7.0
+#'   or later the available names are listed by `tinyplot::tinytheme_list()`
+#'   and an unknown one is reported here; on earlier versions tinyplot reports
+#'   it instead.
 #' @param n_max Above this many points a scatter becomes a binned density.
 #' @param max_levels Categorical levels beyond this are pooled into `(other)`.
 #' @param verdict Annotate the plot with the diagnostic verdict.

@@ -224,7 +224,9 @@ ilm_plot_var_all <- function(data, var2 = NULL, by = NULL, cols = NULL,
 #'   regular expression, a predicate function such as `is.numeric`, or
 #'   `NULL` for all of them -- see [ilm_selection].
 #' @param by Optional grouping column.
-#' @param ... Passed to [tinyplot::tinypairs()].
+#' @param ... Passed to `tinyplot::tinypairs()`, which needs tinyplot 0.7.0 or
+#'   later. On an earlier tinyplot this is the one plot in the package that
+#'   cannot be drawn, and it says so.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_plot_scatter()] for one pair,
 #'   [ilm_check_collinearity()] for what a pairs plot cannot show about a fit.

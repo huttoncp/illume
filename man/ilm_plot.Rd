@@ -46,7 +46,10 @@ ilm_plot(
 \item{palette}{Colours for groups: a vector of colour names, or the name of
 a palette such as \code{"Dark 2"}.}
 
-\item{theme}{A tinyplot theme name; see \code{\link[tinyplot:tinytheme_register]{tinyplot::tinytheme_list()}}.}
+\item{theme}{A tinyplot theme name, such as \code{"clean"}. With tinyplot 0.7.0
+or later the available names are listed by \code{tinyplot::tinytheme_list()}
+and an unknown one is reported here; on earlier versions tinyplot reports
+it instead.}
 
 \item{n_max}{Above this many points a scatter becomes a binned density.}
 

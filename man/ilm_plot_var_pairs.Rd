@@ -15,7 +15,9 @@ regular expression, a predicate function such as \code{is.numeric}, or
 
 \item{by}{Optional grouping column.}
 
-\item{...}{Passed to \code{\link[tinyplot:tinyplot.data.frame]{tinyplot::tinypairs()}}.}
+\item{...}{Passed to \code{tinyplot::tinypairs()}, which needs tinyplot 0.7.0 or
+later. On an earlier tinyplot this is the one plot in the package that
+cannot be drawn, and it says so.}
 }
 \value{
 \code{NULL}, invisibly.
