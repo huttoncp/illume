@@ -171,6 +171,50 @@ parameters::model_parameters(fit)
 vignette("workflow", package = "illume")
 ```
 
+## How this package was built
+
+`illume` was developed in collaboration with
+[Claude Opus 5](https://www.anthropic.com), run at maximum reasoning effort,
+under a human-in-the-loop model. The division of labour was consistent
+throughout and is worth stating plainly rather than leaving to be inferred.
+
+**What the model did.** Prototyped and drafted the implementation, the
+documentation and the simulation studies. Proposed designs, and argued for them
+when it thought a choice was wrong.
+
+**What the author did.** Specified what the package should be and what it
+should refuse to do. Set the standing constraints -- no new hard dependencies,
+every diagnostic names a remedy that exists in the package, no claim without a
+measurement behind it. Made the decisions the design turned on: which methods
+to include, which defaults to set, what to do when two defensible options
+existed. Directed the ordering of the work, and rejected proposals.
+
+**Status of independent review.** The author is reviewing the package and
+testing it independently of the development process, and that work is *in
+progress at the time of writing*. It will be complete before any release, and
+this paragraph will say so when it is. Until then the package is pre-release
+and should be treated as such.
+
+### Why this is disclosed rather than mentioned quietly
+
+Partly because it is true and the provenance of a statistical tool is a
+reasonable thing for its users to know. Partly because it is increasingly
+required: the Journal of Open Source Software has mandated an AI usage
+disclosure since January 2026, and other venues are moving the same way.
+
+But mostly because the disclosure is less load-bearing than it looks, and
+saying so is the honest position. The question that matters about a statistical
+package is not who typed it. It is whether its claims are checkable and whether
+anyone checked them. Every validity claim here is a comparison against an
+independent implementation that somebody else wrote -- `lme4`, `glmmTMB`,
+`emmeans`, `afex`, `car`, `lmerTest`, `survey`, `sandwich`, `mice` and the rest
+-- and the scripts, the retained runs and the generated findings are in
+[`studies/`](https://github.com/craig-hutton/illume/tree/main/studies) for
+anyone who wants to re-run them. Every real defect this package has had was
+found that way. None was found by reading the code, and none by the test suite.
+
+That is the standard the package asks to be judged by, and it is the same
+standard whoever wrote it.
 ## Standing on other people's shoulders
 
 Almost nothing here is new mathematics. What `illume` mostly does is put

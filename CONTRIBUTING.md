@@ -54,6 +54,13 @@ Permitted, and disclose it. Say in the pull request which tools you used and
 what for. You are responsible for reviewing and validating anything they
 produced, and for the design decisions either way.
 
+This is not a rule imposed on contributors from outside it: the package itself
+was drafted in collaboration with a language model under human direction, and
+says so in the README. The standard asked of a contribution is the standard the
+package holds itself to -- that a claim about behaviour comes with a
+measurement, and that the measurement is against something somebody else
+wrote.
+
 ## Code of conduct
 
 By participating you agree to abide by the [code of conduct](CODE_OF_CONDUCT.md).
