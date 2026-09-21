@@ -603,18 +603,38 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
   ## al. 1998; Rabe-Hesketh & Skrondal 2006) plus a sandwich variance.  Neither
   ## is implemented, so this refuses to stay quiet about it.
   noninteger <- any(abs(weights - round(weights)) > 1e-8)
-  flat <- length(weights) > 1L && all(weights == weights[1]) && weights[1] > 1
-  wst <- if (noninteger) "FAIL" else if (flat) "WARN" else "OK"
+  ## For a binomial response the weights ARE trial counts, so a constant 60
+  ## trials a row is ordinary rather than suspicious; neither rule below
+  ## applies to it.
+  binom <- identical(family$name, "binomial")
+  flat <- !binom && length(weights) > 1L && all(weights == weights[1]) &&
+    weights[1] > 1
+  ## Sampling weights are often rounded, so being whole numbers proves nothing.
+  ## What does give them away is the total: replicate counts sum to the number
+  ## of observations they stand for, while sampling weights sum to a
+  ## POPULATION. Grouped binomial data is the one legitimate case where the
+  ## weights are genuinely large -- they are trial counts -- so it is excluded
+  ## rather than warned about every time.
+  inflated <- !noninteger && !all(weights == 1) &&
+    sum(weights) > 10 * length(weights) && !binom
+  wst <- if (noninteger) "FAIL" else if (flat || inflated) "WARN" else "OK"
+  mixed <- length(re) > 0L
   ck <- ilm_add_check(ck, "weights_type", wst,
     sprintf("%s weights; range %g to %g, total %g",
             if (all(weights == 1)) "none (all 1)" else if (noninteger) "non-integer" else "integer",
             min(weights), max(weights), sum(weights)),
     if (wst != "OK") paste0(
       if (noninteger) "non-integer weights cannot be replicate counts, so these look like sampling weights"
+      else if (inflated) sprintf("the weights total %.0f across %d rows, which is a population rather than a count of replicates, so these look like sampling weights",
+                                 sum(weights), length(weights))
       else "every row carries the same weight > 1, which is a scaling rather than replicate counts",
-      "; ilm_model() treats weights as FREQUENCIES. Applied as sampling weights they bias the fixed effects AND understate the standard errors") else "",
-    if (wst != "OK")
-      "aggregate genuine replicate counts instead; for survey data use a design-based method -- scaled level-specific weights plus a sandwich variance are not implemented here" else "")
+      "; ilm_model() treats weights as FREQUENCIES. The standard errors are then too small by at least sqrt(n / sum(w)), because the likelihood believes it saw sum(w) observations",
+      if (mixed)
+        ", and in a model with random effects the COEFFICIENTS move too: the weight multiplies the conditional likelihood inside the Laplace integral, so each cluster appears to carry w times its real information and the random effects are under-shrunk"
+      else ". The COEFFICIENTS are fine in a fixed-effects fit -- a weighted likelihood is design-consistent for the population parameter -- which is what makes this easy to miss") else "",
+    if (wst != "OK") paste0(
+      "aggregate genuine replicate counts instead; for a complex sample pass design = ilm_design(weights = , ids = , strata = ) and read the standard errors from ilm_svy_coef()",
+      if (mixed) ", which refuses a model with random effects for the reason above" else "") else "")
 
   lat <- integer(0)
   for (nm in names(re)) {

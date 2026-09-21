@@ -24,7 +24,8 @@ ilm_model_formula(
   rp_df = 3L,
   rp_knots = NULL,
   ziformula = NULL,
-  zi_type = c("inflated", "hurdle")
+  zi_type = c("inflated", "hurdle"),
+  design = NULL
 )
 }
 \arguments{
@@ -103,6 +104,12 @@ have come from either. \code{"hurdle"} is two processes: whether the response
 clears zero, and how far past it goes, the latter fitted to a count that
 cannot be zero. Choose by what the zeros mean, not by fit -- a structural
 zero is a unit that was never at risk. See \code{\link[=ilm_zi_coef]{ilm_zi_coef()}}.}
+
+\item{design}{An \code{\link[=ilm_design]{ilm_design()}} describing how a complex sample was drawn.
+Supplying one fits with the sampling weights and attaches the design, so
+\code{\link[=ilm_svy_coef]{ilm_svy_coef()}} can report a variance that reflects the clustering and
+stratification. Do not also pass \code{weights}: a sampling weight and a
+replicate count are different things and the design already carries one.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

@@ -58,7 +58,8 @@ Suggests:
     mice,
     emmeans,
     pscl,
-    sandwich
+    sandwich,
+    survey
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/craig-hutton/illume

@@ -100,6 +100,11 @@
 #'   clears zero, and how far past it goes, the latter fitted to a count that
 #'   cannot be zero. Choose by what the zeros mean, not by fit -- a structural
 #'   zero is a unit that was never at risk. See [ilm_zi_coef()].
+#' @param design An [ilm_design()] describing how a complex sample was drawn.
+#'   Supplying one fits with the sampling weights and attaches the design, so
+#'   [ilm_svy_coef()] can report a variance that reflects the clustering and
+#'   stratification. Do not also pass `weights`: a sampling weight and a
+#'   replicate count are different things and the design already carries one.
 #' @param weights Optional **frequency** weights: the number of replicate
 #'   observations each row stands for. Evaluated inside `data`. See [ilm_fit()]
 #'   for when this is valid, and why survey weights are not.
@@ -198,8 +203,19 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
                          censor = NULL, dispformula = NULL,
                          rp_df = 3L, rp_knots = NULL, ziformula = NULL,
-                         zi_type = c("inflated", "hurdle")) {
+                         zi_type = c("inflated", "hurdle"), design = NULL) {
   zi_type <- match.arg(zi_type)
+  ## A survey design supplies the weights, so taking them from both places
+  ## would silently apply one and ignore the other.
+  if (!is.null(design)) {
+    if (!inherits(design, "ilm_design"))
+      stop("`design` must come from ilm_design(), not ", class(design)[1],
+           call. = FALSE)
+    if (!is.null(substitute(weights)))
+      stop("give the weights to ilm_design() or to `weights`, not both: a ",
+           "design already carries them, and they mean different things.",
+           call. = FALSE)
+  }
   fam <- if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
@@ -458,6 +474,25 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## default wherever a smooth is present.
   if (is.null(joint)) joint <- length(smsp) > 0L
   w <- if (is.null(wnm)) NULL else as.numeric(mf[[wnm]])
+  ## The design's weights enter the likelihood the same way frequency
+  ## weights do -- the pseudo-likelihood is the weighted one -- and it is
+  ## only the VARIANCE that has to know the difference. The rows the
+  ## design describes are the rows the model frame kept, so any dropped
+  ## by na.action come out of the weights too.
+  if (!is.null(design)) {
+    om <- attr(mf, "na.action")
+    dw <- design$weights
+    if (!is.null(om) && length(om)) {
+      if (length(dw) != nrow(mf) + length(om))
+        stop("the design describes ", length(dw), " rows and the model ",
+             "frame kept ", nrow(mf), " of a different total; build the ",
+             "design from the same data.", call. = FALSE)
+      design <- ilm_design_subset(design, -as.integer(om))
+    } else if (length(dw) != nrow(mf))
+      stop("the design describes ", length(dw), " rows and the model ",
+           "frame has ", nrow(mf), ".", call. = FALSE)
+    w <- design$weights
+  }
   Zd <- NULL
   if (!is.null(dispformula)) {
     dfm <- stats::update(dispformula, ~ . )
@@ -511,6 +546,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                   restarts = restarts, joint = joint)
 
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
+  fit$design    <- design
   fit$call      <- cl
   fit$formula   <- formula
   fit$fixed_formula <- gp$pf
