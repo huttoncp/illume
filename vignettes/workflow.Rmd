@@ -12,9 +12,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
 ```
 
 This is a map rather than a tutorial. It walks one analysis from a sample-size
-calculation to a scenario a stakeholder can act on, ten stages, with a short
-paragraph and a minimal block for each and a pointer to the vignette or help
-page that covers it properly.
+calculation through to reporting, eleven stages, with a short paragraph and a
+minimal block for each, and a pointer to the vignette or help page that covers
+it properly.
 
 Nothing here is compulsory. Most analyses skip several stages, and a few use
 only one. The point of the map is that when you do need a stage, the function

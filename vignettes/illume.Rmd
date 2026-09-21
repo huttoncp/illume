@@ -10,6 +10,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 set.seed(2024)
+library(illume)
 ```
 
 ## What this package is for

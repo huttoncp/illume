@@ -23,7 +23,7 @@ slopes, smooths, correlation over time and space, non-constant spread,
 censoring. The *Introduction* vignette is the shorter orientation; the
 *Workflow* vignette is the map of where this stage sits.
 
-```{r, eval = FALSE}
+```{r}
 library(illume)
 ```
 
