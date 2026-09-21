@@ -10,7 +10,7 @@ ilm_impute(
   predictors = NULL,
   exclude = NULL,
   maxit = 5L,
-  method = c("auto", "fcs", "lowrank"),
+  method = c("auto", "fcs", "lowrank", "glrm"),
   ncp = NULL,
   single = FALSE,
   seed = NULL,
@@ -33,6 +33,9 @@ identifier.}
 \item{maxit}{Cycles through the variables per imputation.}
 
 \item{method}{\code{"auto"} uses chained equations and falls back to the
+\code{"glrm"} fits a generalized low rank model instead, which uses a loss
+suited to each column's type and so can impute CATEGORICAL columns,
+which \code{"lowrank"} leaves alone -- see \code{\link[=ilm_glrm]{ilm_glrm()}}.
 low-rank route when they cannot be fitted; \code{"fcs"} and \code{"lowrank"} force
 one. See the section below for what each costs.}
 

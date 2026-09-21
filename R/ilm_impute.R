@@ -211,6 +211,9 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #'   identifier.
 #' @param maxit Cycles through the variables per imputation.
 #' @param method `"auto"` uses chained equations and falls back to the
+#'   `"glrm"` fits a generalized low rank model instead, which uses a loss
+#'   suited to each column's type and so can impute CATEGORICAL columns,
+#'   which `"lowrank"` leaves alone -- see [ilm_glrm()].
 #'   low-rank route when they cannot be fitted; `"fcs"` and `"lowrank"` force
 #'   one. See the section below for what each costs.
 #' @param ncp Rank for the low-rank route. `NULL` chooses it by
@@ -244,7 +247,8 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' imp
 #' @export
 ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
-                       maxit = 5L, method = c("auto", "fcs", "lowrank"),
+                       maxit = 5L,
+                       method = c("auto", "fcs", "lowrank", "glrm"),
                        ncp = NULL, single = FALSE, seed = NULL,
                        verbose = TRUE, progress = NULL) {
   method <- match.arg(method)
@@ -357,6 +361,38 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
       }
     }
     cur
+  }
+
+  if (method == "glrm") {
+    if (verbose)
+      say("  using a generalized low-rank route: a loss per column type, so ",
+          "categorical columns are imputed too")
+    k <- if (is.null(ncp)) max(1L, min(2L, length(inc))) else as.integer(ncp)
+    gcols <- intersect(pred_pool, names(data))
+    ## the rank is fitted once on the full data so every replicate answers to
+    ## the same structure; only the row weights differ between them
+    base <- ilm_glrm(data[gcols], rank = k, progress = FALSE)
+    if (verbose)
+      say("  rank ", base$rank, ", ridge ", signif(base$lambda, 3),
+          if (is.null(ncp)) " (chosen by cross-validation)" else "")
+    pb <- ilm_progress(m, progress)
+    imps <- vector("list", m)
+    for (i in seq_len(m)) {
+      w <- tabulate(sample.int(nrow(data), nrow(data), replace = TRUE),
+                    nbins = nrow(data))
+      fit <- tryCatch(ilm_glrm(data[gcols], rank = k, lambda = base$lambda,
+                               weights = w, progress = FALSE),
+                      error = function(e) base)
+      imps[[i]] <- ilm_glrm_draw(fit, data, inc)
+      pb$tick(i)
+    }
+    pb$done()
+    if (isTRUE(single)) return(imps[[1]])
+    return(structure(list(imputations = imps, m = m, incomplete = inc,
+                          data = data, families = stats::setNames(
+                            base$loss[inc], inc),
+                          maxit = maxit, method = "glrm", ncp = base$rank),
+                     class = "ilm_mids"))
   }
 
   if (use_lowrank) {

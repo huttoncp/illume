@@ -157,9 +157,10 @@ ilm_profile_summary_lines <- function(characterization, cluster_res) {
 #' p <- ilm_profile(mtcars, k_max = 5, B = 25, seed = 1)
 #' cat(p$summary, sep = "\n")
 #' @export
-ilm_profile <- function(data, cols = NULL, ndim = 5, ...,
+ilm_profile <- function(data, cols = NULL, ndim = 5,
+                        method = c("pcamix", "glrm"), ...,
                         vtest_threshold = 1.96, top_n_vars = 2) {
-  rr <- ilm_reduce(data, cols = cols, ndim = ndim)
+  rr <- ilm_reduce(data, cols = cols, ndim = ndim, method = method)
   cr <- ilm_cluster(rr, ...)
   ch <- ilm_characterize_clusters(rr, cr, vtest_threshold, top_n_vars,
                                   ilm_label_var_direction)

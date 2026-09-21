@@ -8,6 +8,7 @@ ilm_profile(
   data,
   cols = NULL,
   ndim = 5,
+  method = c("pcamix", "glrm"),
   ...,
   vtest_threshold = 1.96,
   top_n_vars = 2
@@ -21,6 +22,13 @@ regular expression, a predicate function such as \code{is.numeric}, or
 \code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{ndim}{Number of dimensions to keep.}
+
+\item{method}{\code{"pcamix"} (the default) for PCA, MCA or FAMD depending on
+the column types, in closed form. \code{"glrm"} fits a generalized low rank
+model instead, which uses a loss appropriate to each column's type rather
+than squared error on one-hot indicators, and reconstructs a category as a
+category. It costs an iterative fit, and on all-numeric data the two are
+the same model -- see \code{\link[=ilm_glrm]{ilm_glrm()}} for when it is worth that.}
 
 \item{...}{Passed to \code{\link[=ilm_cluster]{ilm_cluster()}}, for instance \code{k}, \code{k_max}, \code{method},
 \code{B} or \code{seed}.}

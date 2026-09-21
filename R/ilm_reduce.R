@@ -43,6 +43,13 @@ ilm_require_pcamixdata <- function() {
 #' @param cols Columns to use. A character vector of names, a
 #'   regular expression, a predicate function such as `is.numeric`, or
 #'   `NULL` for all of them -- see [ilm_selection].
+#' @param method `"pcamix"` (the default) for PCA, MCA or FAMD depending on
+#'   the column types, in closed form. `"glrm"` fits a generalized low rank
+#'   model instead, which uses a loss appropriate to each column's type rather
+#'   than squared error on one-hot indicators, and reconstructs a category as a
+#'   category. It costs an iterative fit, and on all-numeric data the two are
+#'   the same model -- see [ilm_glrm()] for when it is worth that.
+#' @param ... Passed to [ilm_glrm()] when `method = "glrm"`.
 #' @param ndim Number of dimensions to keep.
 #' @return An object of class `"ilm_reduce"`: `method` (`"pca"`, `"mca"` or
 #'   `"famd"`), `eig` (dimension, eigenvalue, percent of variance and its
@@ -63,7 +70,10 @@ ilm_require_pcamixdata <- function() {
 #' r
 #' head(r$var_contrib[order(-r$var_contrib$sqload), ])
 #' @export
-ilm_reduce <- function(data, cols = NULL, ndim = 5) {
+ilm_reduce <- function(data, cols = NULL, ndim = 5,
+                       method = c("pcamix", "glrm"), ...) {
+  method <- match.arg(method)
+  if (method == "glrm") return(ilm_reduce_glrm(data, cols, ndim, ...))
   ilm_require_pcamixdata()
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
@@ -218,4 +228,60 @@ ilm_reduce_na <- function(data, cols = NULL, ndim = 5) {
   out <- ilm_reduce(ilm_build_na_indicator(data, cols), ndim = ndim)
   class(out) <- c("ilm_reduce_na", class(out))
   out
+}
+
+## ---- the generalized low rank route ----------------------------------------
+##
+## The same SHAPE of answer as the PCAmix one -- scores per row, a contribution
+## per variable per dimension -- so ilm_cluster() and ilm_profile() need to
+## know nothing about which produced it. What differs is underneath: a loss per
+## column type rather than squared error on scaled indicators.
+##
+## "Variance explained" here is the share of the fitted linear predictor each
+## dimension carries. That coincides with the usual quantity when every loss is
+## quadratic and generalises it when they are not. It is not an eigenvalue, and
+## nothing downstream treats it as one.
+
+#' @keywords internal
+#' @noRd
+ilm_reduce_glrm <- function(data, cols, ndim, ...) {
+  g <- ilm_glrm(data, cols = cols, rank = ndim, ...)
+  k <- g$rank
+  n <- nrow(g$scores)
+  ss <- vapply(seq_len(k), function(j)
+    sum((as.matrix(g$scores)[, j, drop = FALSE] %*%
+           g$archetypes[j, , drop = FALSE])^2), 0)
+  ## Against the TOTAL variation in the encoded data, not against the part
+  ## these dimensions already account for -- normalising by the latter makes
+  ## the retained dimensions explain 100% of it by construction, whatever the
+  ## rank, which tells the reader nothing.
+  A <- do.call(cbind, lapply(g$encoding$blocks, function(b) {
+    if (b$loss %in% c("quadratic", "poisson")) {
+      v <- b$target; v[is.na(v)] <- 0; matrix(v, ncol = 1L)
+    } else {
+      yi <- b$target; M <- matrix(0, n, length(b$cols))
+      okr <- !is.na(yi); M[cbind(which(okr), yi[okr])] <- 1
+      sweep(M, 2L, colMeans(M), "-")
+    }
+  }))
+  tot <- max(sum(A^2), .Machine$double.eps)
+  pct <- 100 * pmin(ss / tot, 1)
+  ord <- order(-pct)
+  eig <- data.frame(dim = seq_len(k), eigenvalue = ss[ord],
+                    pct_var = pct[ord], cum_pct_var = cumsum(pct[ord]),
+                    row.names = NULL)
+  ## a variable contributes to a dimension through every column its block
+  ## occupies, so the squared loadings are summed over the block
+  vc <- do.call(rbind, lapply(seq_len(k), function(j) {
+    sq <- vapply(g$encoding$blocks, function(b)
+      sum(g$archetypes[ord[j], b$cols]^2), 0)
+    data.frame(dim = j, variable = names(g$encoding$blocks),
+               sqload = sq / max(sum(sq), .Machine$double.eps),
+               row.names = NULL)
+  }))
+  co <- as.data.frame(as.matrix(g$scores)[, ord, drop = FALSE])
+  names(co) <- paste0("dim", seq_len(k))
+  structure(list(method = "glrm", eig = eig, ind_coord = co,
+                 var_contrib = vc, n = n, ndim = k,
+                 cols = g$columns, fit = g), class = "ilm_reduce")
 }

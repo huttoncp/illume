@@ -4,7 +4,7 @@
 \alias{ilm_reduce}
 \title{Reduce a data frame's variables to a few dimensions}
 \usage{
-ilm_reduce(data, cols = NULL, ndim = 5)
+ilm_reduce(data, cols = NULL, ndim = 5, method = c("pcamix", "glrm"), ...)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -14,6 +14,15 @@ regular expression, a predicate function such as \code{is.numeric}, or
 \code{NULL} for all of them -- see \link{ilm_selection}.}
 
 \item{ndim}{Number of dimensions to keep.}
+
+\item{method}{\code{"pcamix"} (the default) for PCA, MCA or FAMD depending on
+the column types, in closed form. \code{"glrm"} fits a generalized low rank
+model instead, which uses a loss appropriate to each column's type rather
+than squared error on one-hot indicators, and reconstructs a category as a
+category. It costs an iterative fit, and on all-numeric data the two are
+the same model -- see \code{\link[=ilm_glrm]{ilm_glrm()}} for when it is worth that.}
+
+\item{...}{Passed to \code{\link[=ilm_glrm]{ilm_glrm()}} when \code{method = "glrm"}.}
 }
 \value{
 An object of class \code{"ilm_reduce"}: \code{method} (\code{"pca"}, \code{"mca"} or
