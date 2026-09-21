@@ -1057,6 +1057,13 @@ ilm_print_checks <- function(ck, title) {
 #'   model -- you may aggregate within subject and covariate pattern, but not
 #'   across subjects. These are **not** sampling weights; see the
 #'   `weights_type` check and the note below.
+#' @param Zzi Optional design matrix for the zero part of a count model, one
+#'   row per observation, modelling the logit of an excess-zero probability.
+#'   Built by [ilm_model()] from `ziformula`.
+#' @param zi_type `"inflated"` for a mixture, where a zero may have come either
+#'   from the zero process or from the count itself, or `"hurdle"`, where every
+#'   zero comes from the zero process and the positives come from a count that
+#'   cannot be zero. Ignored when `Zzi` is `NULL`.
 #' @param verbose Logical. Print the checks while fitting.
 #' @param restarts Integer. Number of optimiser restarts from the previous
 #'   solution, which helps on difficult surfaces.

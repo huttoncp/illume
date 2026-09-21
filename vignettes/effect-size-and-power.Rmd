@@ -1,0 +1,197 @@
+---
+title: "Effect size and power"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Effect size and power}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+Three questions that bracket an analysis. Before it: how large does the study
+need to be. After it: how large is the effect, on a scale someone can act on.
+And then: what would happen if we changed something.
+
+```{r}
+library(illume)
+```
+
+## Before: how large a study
+
+`ilm_power()` treats a fitted model as the truth, simulates studies at the sizes
+you are considering, refits each one, and counts how often the term is detected.
+Nothing in it needs a closed-form variance, so it covers mixed models,
+zero-inflated counts and ordinal outcomes as readily as a linear regression.
+
+```{r}
+pilot <- ilm_model(y ~ dose, data = pilot_data, family = "binomial")
+pw <- ilm_power(pilot, n = c(200, 400, 800), effect = c(0.3, 0.5), sims = 500)
+pw
+plot(pw)
+```
+
+Two things it reports that most software does not, and both change what the
+number means.
+
+### The power estimate is itself an estimate
+
+A power of 0.80 from 200 replicates is a proportion, so it carries a standard
+error of `sqrt(0.8 * 0.2 / 200)`, about 2.8%. The power is 0.74 to 0.86, and a
+sample size read off that curve is a range rather than a number.
+
+```{r}
+ilm_power_n(pw, target = 0.8)
+#>   effect     n  n_lower  n_upper
+#>      0.3   240      207      272
+```
+
+Quoting "you need 240 participants" from that is false precision. Quoting
+"somewhere between 210 and 270, and more replicates will narrow it" is the
+answer the simulation supports. Raising `sims` narrows the interval and nothing
+else does -- collecting more pilot data changes the estimate, not its Monte
+Carlo error.
+
+The interval is Wilson rather than Wald, because power estimates live near 1,
+where a Wald interval reaches above it.
+
+### Some fits will not converge
+
+A replicate that fails to fit has not detected anything. `power` counts it as a
+non-detection; `power_converged` divides only by the replicates that worked,
+which is **power conditional on convergence** -- a different and more
+flattering quantity, and the one most software reports.
+
+```{r}
+#>   n effect power mc_lower mc_upper power_converged converged
+#>  40  2.072 0.850    0.756    0.912           0.872     0.975
+```
+
+When `converged` is below one the two differ, and the gap is the size of the
+problem rather than something to smooth over. A design where a fifth of studies
+fail to fit is a design worth reconsidering, and averaging over only the
+successes hides exactly that.
+
+### Mixed designs
+
+For a model with a grouping factor, `n` is the number of rows but the number of
+**clusters** moves with it, because that is what a mixed design's power actually
+depends on. Resampling rows would hold the number of groups fixed while n grew,
+which is the wrong thing to hold fixed. A cluster drawn twice becomes two
+clusters, or the design has fewer independent groups than it appears to.
+
+## After: how large the effect
+
+`ilm_effects()` reports each coefficient on the scale its family puts it on.
+
+```{r}
+fit <- ilm_model(relapse ~ dose + age, data = d, family = "binomial")
+ilm_effects(fit)
+```
+
+| family | scale |
+|---|---|
+| binomial, beta | odds ratio |
+| poisson, negative binomial | incidence rate ratio |
+| ordinal | proportional odds ratio |
+| weibull, lognormal, loglogistic | time ratio (an acceleration factor, **not** a hazard ratio) |
+| Royston-Parmar | hazard ratio |
+| gaussian | the coefficient, plus partial variance explained |
+
+Three details that are easy to get wrong.
+
+**The interval is built on the link scale and transformed.** `exp()` of the
+endpoints is exact and asymmetric, which is the shape a ratio's uncertainty
+really has. A standard error computed on the ratio scale and doubled either way
+is symmetric and can reach below zero.
+
+**A ratio from a mixed model is conditional.** `exp(beta)` there is the odds
+ratio for a *given cluster* -- two patients in the same hospital, one exposed --
+not for the population, and the gap widens as the random effects grow. The
+print says so and names `ilm_ame()` for the population-averaged quantity:
+
+```{r}
+ilm_effects(fit)      # conditional odds ratio, e.g. 2.58
+ilm_ame(fit, "dose")  # marginal effect on the probability scale, e.g. 0.193
+```
+
+**Standardising a binary predictor is meaningless.** Dividing by the standard
+deviation of a 0/1 variable answers what happens per standard deviation of
+treatment, which is not a question anyone asks. Those are left alone, and the
+reason is printed rather than the number quietly omitted. `standardise =
+"gelman"` divides numeric predictors by *two* standard deviations, which is what
+makes them comparable with a binary one.
+
+```{r}
+ilm_effects(fit, standardise = "gelman")
+```
+
+A robust covariance can be substituted, so the same table can be built on
+clustered or design-based standard errors:
+
+```{r}
+ilm_effects(fit, vcov = ilm_vcov_cluster(fit, ~ clinic))
+```
+
+## Then: what would happen if
+
+`ilm_scenario()` sets predictors to values someone is considering and reports
+what the model implies.
+
+```{r}
+ilm_scenario(fit, dose = c(0, 10, 20), contrast = "first")
+```
+
+The default averages over **the observed units**: set the intervention for
+everyone, keep each unit's own covariates, predict, average. That is
+standardisation, and when the adjustment set is valid it is the causal
+estimand.
+
+This is not the same as building one row with the predictors set and predicting
+from it. That row is a *representative unit* -- what happens to someone who
+looks like this -- and under any non-linear link it is a different number,
+because the average of a prediction is not the prediction at the average. On a
+logistic fit at the same dose: 0.657 averaged over the units, 0.683 at the
+average covariate. `over = "reference"` gives the second, and the print says
+which was used.
+
+```{r}
+ilm_scenario(fit, dose = 10)                        # the population
+ilm_scenario(fit, dose = 10, over = "reference")    # a unit like this
+```
+
+### It checks whether the scenario is inside the data
+
+A model returns a number for a dose nobody received, and the interval around it
+looks like any other, because the interval carries uncertainty about the
+coefficients rather than about whether the functional form survives out there.
+Each scenario is checked twice.
+
+**By value**, against each predictor's observed range -- with a 2% tolerance, so
+asking for `dose = 0` when the smallest observed is 0.013 is not flagged.
+Flagging that every time is how a warning gets ignored.
+
+**By combination**, which no range check catches. Every value can sit inside its
+own range while the point sits in a corner nobody occupies. On personnel data
+where years of service is roughly age minus 22, a 25-year-old with 35 years of
+service has both values well inside their ranges, and sits 2.39 standardised
+units from the nearest real person against 0.25 for a typical one.
+
+```{r}
+ilm_scenario(fit, age = c(45, 25), service = c(23, 35))
+#>  age service estimate lower upper extrapolating
+#>   45      23    3.095 3.003 3.180         FALSE
+#>   25      35    2.820 1.292 4.192          TRUE
+```
+
+A flagged scenario is reported rather than refused. Sometimes extrapolating is
+the point -- but the reader should know they are doing it, and nothing in the
+number tells them.
+
+## See also
+
+`vignette("workflow")` for where these sit in an analysis, `?ilm_power`,
+`?ilm_effects`, `?ilm_scenario`, and `?ilm_ame` for the marginal effect of a
+one-unit change rather than a named scenario.

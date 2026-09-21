@@ -1,7 +1,7 @@
 Package: illume
 Type: Package
 Title: Exploration and Frequentist Inference in One Toolkit
-Version: 0.0.6.9000
+Version: 0.0.7.9000
 Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
                   email = "craig.hutton@gmail.com")
@@ -59,7 +59,8 @@ Suggests:
     emmeans,
     pscl,
     sandwich,
-    survey
+    survey,
+    ordinal
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/craig-hutton/illume

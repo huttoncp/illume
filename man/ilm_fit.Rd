@@ -84,6 +84,15 @@ that predictor, making the dispersion a power of the mean.}
 \item{rp}{Internal. The flexible parametric baseline: knots, the derivative
 design and which columns of \code{X} hold the spline. Built by \code{\link[=ilm_model]{ilm_model()}}
 from \code{rp_df}.}
+
+\item{Zzi}{Optional design matrix for the zero part of a count model, one
+row per observation, modelling the logit of an excess-zero probability.
+Built by \code{\link[=ilm_model]{ilm_model()}} from \code{ziformula}.}
+
+\item{zi_type}{\code{"inflated"} for a mixture, where a zero may have come either
+from the zero process or from the count itself, or \code{"hurdle"}, where every
+zero comes from the zero process and the positives come from a count that
+cannot be zero. Ignored when \code{Zzi} is \code{NULL}.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

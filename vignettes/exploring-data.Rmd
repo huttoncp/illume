@@ -529,5 +529,8 @@ and, once it is fitted, what it says in words:
 ilm_interpret(f, ame = FALSE)
 ```
 
-See `vignette("illume")` for the modelling half, and
-`vignette("causal-models")` for turning an association into a causal claim.
+See `vignette("workflow")` for where this sits in an analysis,
+`vignette("regression-models")` for the modelling half,
+`vignette("profiling")` for structure across many columns,
+`vignette("anomaly-detection")` for rows that are implausible as combinations,
+and `vignette("causal-models")` for turning an association into a causal claim.

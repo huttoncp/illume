@@ -329,5 +329,9 @@ of it makes one true.
 
 ## See also
 
-`vignette("illume")` for the modelling engine and its diagnostics,
-`vignette("exploring-data")` for the exploration side.
+`vignette("regression-models")` for the modelling engine and its diagnostics,
+`vignette("exploring-data")` for the exploration side, and
+`vignette("effect-size-and-power")` for `ilm_scenario()`, which turns a fitted
+causal model into the projection a decision needs. Mediation -- how much of an
+effect runs THROUGH something else -- is `ilm_mediate()`, documented in
+`vignette("regression-models")`.

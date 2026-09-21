@@ -1,3 +1,260 @@
+# illume 0.0.7.9000
+
+Ten features, each validated against an outside implementation where one
+exists. The package now covers the path from a sample-size calculation to a
+scenario a stakeholder can act on.
+
+Every one of them produced at least one real bug, and none of those came from
+the test suite. They came from comparing against something outside or from
+widening a simulation, which remains the only thing that has ever found a
+defect here.
+
+## Estimated marginal means and contrasts
+
+* `ilm_emmeans()` and `ilm_contrast()`. Marginal means are exact linear
+  combinations `L %*% beta` with variance `L V L'`, computed on the link scale
+  where that is exact. Pairwise, against-a-control and polynomial contrasts,
+  with a simultaneous adjustment.
+* Against **emmeans** on the same fit: means to 2.0e-06 and standard errors to
+  3.5e-08 across all three weighting schemes; pairwise contrasts to 3.6e-06;
+  unadjusted and Bonferroni p-values to 4.3e-06 and 2.6e-05.
+* The joint adjustment simulates the maximum of a multivariate **t**, not a
+  normal. Each contrast is divided by an estimated standard error, so the
+  reference carries that estimate's uncertainty too. At n = 30 a normal
+  reference gives intervals that are too narrow.
+* What was called `"proportional"` weighting was the joint cell frequency,
+  which is emmeans' `"cells"` and a different estimand: it averages each group
+  over ITS OWN mix of the other variables, so a difference carries composition
+  as well as effect. On a design where the two factors are associated that
+  moved a contrast by more than 0.5 against a coefficient of 0.4. Proportional
+  is now the product of the one-way margins; `"cells"` remains available, and
+  `ilm_contrast()` warns when asked to difference them.
+
+## Zero-inflated and hurdle counts
+
+* `ilm_model(ziformula = , zi_type = )`. A mixture and a hurdle are different
+  models: under a mixture a zero has two possible origins and `p` is the
+  structural share, under a hurdle `p` is every zero there is. Which applies is
+  a question about the subject rather than about fit, though AIC separates them.
+* Against **pscl**: count coefficients to 4.4e-07, zero coefficients to
+  1.5e-06, zero standard errors to 1.3e-07, and equal log-likelihoods for
+  zero-inflated Poisson, hurdle Poisson and zero-inflated negative binomial.
+* **The residuals had to learn about it, and skipping that is silent.** With the
+  zero part in the quantile residuals, 30 fits gave a median KS p of 0.80 and
+  nothing below 0.05; scoring the same fits against the count part alone gave a
+  median of 1.4e-38 and every one below 0.05.
+* `ilm_sim_cond()`, which five diagnostics build their reference from, had to
+  learn it too -- otherwise `ilm_check_zeros()` compares a zero-inflated fit
+  against draws from the count part and reports the inflation it was told about
+  as a failure. It did: FAIL at 1482 observed zeros against 484 expected. Now
+  1042 against 1041, and 0 of 60 false alarms.
+
+## Ordered outcomes
+
+* `family = "ordinal"`, `"ordinal_probit"` and `"ordinal_cloglog"`: cumulative
+  link models, with the thresholds fitted as a first value and log increments
+  so the ordering holds by construction.
+* Against **ordinal::clm** on all three links: coefficients, thresholds and both
+  sets of standard errors to 1e-7, log-likelihood to 1e-10. The mixed model
+  matches **ordinal::clmm** exactly.
+* The intercept is dropped as a COLUMN, after `model.matrix()` has coded the
+  factors. A `- 1` in the formula instead makes `model.matrix()` expand the
+  first factor to all its levels: the same likelihood, a singular Hessian, and
+  every standard error `NaN`.
+* `ilm_check_proportional()` tests the assumption that makes one coefficient
+  per predictor enough. Its reference is **simulated, not chi-squared** -- the
+  per-cut fits share their data, and a chi-squared reference flagged a
+  perfectly proportional binary predictor 31.5% of the time. Simulating gives
+  0.032 to 0.072 against a nominal 0.05, p-values essentially uniform, and 400
+  of 400 detections of a genuine violation.
+
+## Type II by default
+
+* `ilm_anova()` now defaults to `type = 2`, which does not depend on how the
+  factors are coded and coincides with Type III whenever there is no
+  interaction.
+* `type = 3` refits with `contr.sum` for the offending factors -- and **centres
+  uncentred numerics in interactions**, which the warning had always claimed
+  mattered and had never looked for -- then says so, as afex does. The fit
+  passed in is untouched. `recode = FALSE` keeps the old behaviour.
+* On `y ~ g * h + x`, `g` reads F = 4.55 under treatment coding and F = 7.66
+  under sum coding: the first tests it at `h = "p"`, only the second averages
+  over `h`. On `y ~ x * z` with both uncentred, `x` reads F = 187 against 642
+  centred.
+* `contrasts` also takes a single string now (`"sum"`, `"treatment"`,
+  `"helmert"`, `"poly"`) applying to every unordered factor. Ordered factors
+  keep their polynomial coding, which is a statement about spacing rather than
+  a default.
+
+## Cluster-robust standard errors
+
+* `ilm_vcov_cluster()` and `ilm_robust()`, with CR0, CR1 and CR2 and a t
+  reference on Bell-McCaffrey degrees of freedom.
+* Against **sandwich**: HC0/HC1/HC2 unclustered to 1.3e-09, CR0/CR1 clustered to
+  1.0e-08 for gaussian, 3.0e-08 for poisson and 1.1e-06 for binomial.
+* The defaults are what cover. For a cluster-level predictor, over 600
+  replicates:
+
+  ```
+                         G=10    G=20    G=40   G=20 unbalanced
+    model-based         0.402   0.427   0.427   0.440
+    CR0 + normal        0.798   0.877   0.932   0.897
+    CR1 + t(G-1)        0.860   0.907   0.940   0.923
+    CR2 + t(G-1)        0.912   0.922   0.940   0.937
+    CR2 + Bell-McCaffrey 0.950  0.948   0.952   0.965
+  ```
+
+  Bell-McCaffrey degrees of freedom come out far below `G - 1`: median 4.0
+  where `G - 1` is 9, and 15.2 where it is 39.
+
+## Beta regression, and a zero part for it
+
+* `family = "beta"`, parameterised by a mean and a PRECISION -- larger means
+  less spread, the opposite of every other dispersion parameter here.
+  `dispformula` models the precision.
+* Against **glmmTMB**: coefficients to 2.4e-06, standard errors to 1.1e-08,
+  log-likelihood to 1.5e-09, and the same with a precision model.
+* Boundary values have no likelihood, and the error names both honest
+  responses: a separate process, which `ziformula` now really does model for a
+  beta response, or rounding, which `ilm_squeeze()` handles by the
+  Smithson-Verkuilen shift while reporting how far it moved things.
+* Zero-inflated beta against glmmTMB: mean coefficients to 9.9e-07, zero
+  coefficients to 5.2e-06, log-likelihood to 3.1e-09. It is a hurdle and only a
+  hurdle -- a continuous density has no probability of producing a zero, so a
+  mixture has nothing to add, and asking for one is an error rather than a
+  worse approximation.
+
+## Instrumental variables
+
+* `ilm_iv(y ~ x + w | z + w)`, matching a closed-form 2SLS to 1.1e-14 on
+  coefficients and 9.1e-16 on standard errors, with bias falling from +0.0034
+  at n = 800 to +0.0003 at n = 50,000 and 0.955 coverage.
+* Running `lm()` twice gives the same point estimate and the wrong standard
+  errors, in a direction that depends on the sign of the coefficient and of the
+  endogeneity -- 24% too LARGE in the documented example.
+* The first-stage F is reported against both thresholds: the familiar 10, and
+  the 104.7 a conventional 5% t-test actually needs (Lee et al. 2022).
+  Durbin-Wu-Hausman and Sargan's J print unasked.
+* `ilm_iv_ar()` is the remedy the F diagnoses: an Anderson-Rubin set that stays
+  valid however weak the instrument is. With F = 0.235 the Wald interval reports
+  a tidy [-2.62, 5.82] and the AR set is unbounded.
+
+## Multivariate anomaly detection
+
+* `ilm_anomaly()` finds rows implausible as a COMBINATION. On test data with ten
+  rows pushed off the correlation structure, the column-at-a-time scan caught
+  none of them.
+* The rank comes from parallel analysis, **not** the cross-validation
+  `ilm_impute()` uses: that chose 6 or 7 on a rank-2 structure, on clean data as
+  well as contaminated, and detection fell from 0.975 to 0.560.
+* The fit is trimmed rather than held out in folds. Folds did nothing --
+  matching in-sample scoring to three decimals at four contamination levels --
+  because most anomalies remain in every training fold.
+* The reference is simulated with PER-COLUMN noise, calibrated to the observed
+  median. Getting either wrong flagged **38.9%** of the rows of clean data. As
+  it stands, 11 rows in 40,000 across 100 clean datasets, and 98% detection at
+  2% contamination.
+
+## Generalized low rank models
+
+* `ilm_glrm()`, and `method = "glrm"` on `ilm_reduce()`, `ilm_profile()` and
+  `ilm_impute()`. A loss per column type rather than squared error on one-hot
+  indicators, so a category is reconstructed AS a category.
+* With quadratic loss and no penalty it IS principal components, verified
+  against the SVD to 1e-16 with principal angles of zero.
+* `ilm_impute(method = "glrm")` imputes CATEGORICAL columns, which the low-rank
+  route says plainly it cannot. A category is sampled from its fitted
+  probabilities rather than set to the most likely level.
+* The ridge penalty is chosen by cross-validation, because a fixed one is wrong
+  across sizes: held-out error ran 0.82 at 0.1, 0.68 at 2 and 1.16 at 25,
+  against 0.78 for an iterative SVD and 1.18 for column means.
+
+## Survey weights
+
+* `ilm_design()` and `ilm_svy_coef()`: Taylor linearization with clustering,
+  stratification and finite population correction.
+* Against **survey::svyglm**: coefficients to 8.1e-09, standard errors to
+  1.6e-10, and the same design degrees of freedom -- PSUs less strata, 56 rather
+  than 720 rows.
+* Sampling weights handed to a model that treats weights as frequencies give
+  standard errors too small by at least `sqrt(n / sum(w))`, and by more once
+  clustered: 7.3 and 16.6 times in the documented example.
+* The weights check gained two things it was missing. It only flagged
+  NON-INTEGER weights, and sampling weights are routinely rounded; weights
+  totalling more than ten times the number of rows are now flagged too. And it
+  flagged constant weights above 1, which for a binomial response are trial
+  counts and entirely ordinary; neither rule applies to binomial now.
+
+## Causal mediation
+
+* `ilm_mediate()` estimates the counterfactual ACME and ADE, reproducing the
+  Baron-Kenny product exactly where the product is right (to 0.0004) and
+  differing where it is not: with an interaction the two ACMEs are 0.416 and
+  0.782, and a single product cannot be both.
+* `ilm_mediate_sens()` addresses the assumption nothing can test. Over 30
+  replicates the predicted bias matched the realised one to three decimals at
+  every confounder strength, recovering a true ACME of 0.42 as 0.4205, 0.4188
+  and 0.4167 from observed values of 0.52 to 0.82.
+
+## Effect sizes, scenarios and power
+
+* `ilm_effects()` reports each coefficient on its family's own scale -- odds
+  ratio, incidence rate ratio, time ratio, hazard ratio, proportional odds
+  ratio -- with intervals built on the link scale and transformed. Odds ratios
+  match `glm()` to 1e-6 and their intervals `confint.default()` to 1e-4.
+  A ratio from a MIXED model is labelled conditional, with `ilm_ame()` named for
+  the marginal one.
+* `ilm_scenario()` projects named settings. The default standardises over the
+  observed units, which is not the same as predicting for a unit at the average
+  covariate -- 0.657 against 0.683 on a logistic fit -- and says which it used.
+  It flags extrapolation by value AND by combination: a 25-year-old with 35
+  years of service has both values in range and sits 2.39 standardised units
+  from the nearest real person against 0.25 for a typical one.
+* `ilm_power()` simulates studies at each size and effect. Against the closed
+  form for a linear model, 0.450/0.737/0.956/0.999 predicted against
+  0.450/0.762/0.952/0.997 simulated, and a required n of 240 (207 to 272)
+  against 234. It reports the **Monte Carlo interval**, because 0.80 from 200
+  replicates is 0.74 to 0.86, and the **convergence rate**, because power
+  conditional on convergence is not power.
+
+## What the imputation ablation says
+
+* Five methods across six designs, scored on reconstruction AND on coverage of
+  a downstream coefficient after Rubin pooling -- the two disagree, and only
+  the second is what an analysis needs. `studies/findings/imputation.md`.
+* **Chained equations wins wherever it can be fitted**: best or joint-best
+  coverage in all five such cells (0.900, 0.900, 0.975, 0.900, 0.950), the
+  smallest bias, the best reconstruction. It stays the default.
+* It also recovers CATEGORIES better than the generalized low rank model does
+  -- 0.634 against 0.548, 0.615 against 0.539 -- which was not the expected
+  result. GLRM's claim on imputation is that it can do categorical columns at
+  all where the low-rank route returns `NaN`, not that it does them better.
+* **The low-rank route earns its place in exactly one case and holds it
+  there**: at n = 60, p = 80 chained equations cannot be fitted, and the
+  low-rank reconstruction halves the error against column means (0.559 against
+  1.007) at 0.975 coverage. Elsewhere the low-rank methods under-cover badly,
+  0.50 to 0.65 in four of six cells.
+* **The rank selector is NOT changed, and the earlier finding did not
+  generalise.** One design had suggested `ilm_lowrank_ncp()` simply picks
+  badly. Across six, cross-validation is worse than parallel analysis in four
+  cells and materially better in one -- 0.950 against 0.475 on the design with
+  the most data and the clearest structure, where there are enough held-out
+  cells to choose well. Neither criterion dominates, so neither is imposed.
+  `ilm_anomaly()` continues to use parallel analysis for its own reason: it
+  needs the directions that are real shared structure, not the rank that best
+  predicts a cell.
+* Everything under-covers somewhat, mean-fill included (0.775 to 0.925 against
+  a nominal 0.95). At 40 replicates the Monte Carlo error is 0.034, so the
+  table separates acceptable from broken rather than ranking 0.90 against 0.95.
+
+## Documentation
+
+* Nine vignettes. `workflow` is new and is the map: eleven stages from a power
+  calculation through to reporting, with scenario projection at stage 10. The
+  introduction is now an orientation rather than a tutorial, and the modelling
+  material it used to carry has become `regression-models`. Also new:
+  `profiling`, `anomaly-detection`, `missing-data`, `effect-size-and-power`.
+
 # illume 0.0.6.9000
 
 Faster where it was slow, a way to choose columns, progress where it is worth
@@ -571,7 +828,7 @@ also fit.
   what makes a simultaneous statement possible, and changes the random stream,
   so a two-group result at a given `seed` differs numerically from 0.0.1.9000.
 
-## Findings behind those changes
+## Findings behind those changes
 
 Summary notes; the full tables belong with the methods paper.
 
