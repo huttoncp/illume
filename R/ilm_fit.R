@@ -1139,6 +1139,18 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     if (nrow(Zzi) != nrow(X))
       stop("the zero-part design has ", nrow(Zzi), " rows but the model ",
            "matrix has ", nrow(X), call. = FALSE)
+    ## A mixture adds the probability that the response distribution produced
+    ## a zero by itself. A continuous one never does -- its density at zero is
+    ## a density, not a probability -- so "inflated" has nothing to add and
+    ## every zero necessarily came from the zero process. That is a hurdle,
+    ## and asking for the other thing is asking for something that does not
+    ## exist rather than for a worse approximation of it.
+    if (isTRUE(fam$continuous) && !identical(zi_type, "hurdle"))
+      stop("the ", fam$name, " family is continuous, so a zero-inflated ",
+           "MIXTURE is not defined for it: there is no probability that the ",
+           "response produced a zero on its own to mix with. Every zero comes ",
+           "from the zero process, which is zi_type = \"hurdle\".",
+           call. = FALSE)
   }
   ## An accelerated failure time model works on log(t), so a non-positive time
   ## is not a hard case, it is a contradiction. Say so rather than returning
@@ -1207,7 +1219,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   if (fam$name == "multinomial") {
     yobs <- matrix(0, N, J); yobs[cbind(seq_len(N), y)] <- weights
   } else {
-    ilm_check_response(y, fam)
+    ilm_check_response(y, fam, has_zero_part = has_zi)
     yobs <- as.numeric(y)
   }
   ## For an ordered response the likelihood needs, per row, which threshold
@@ -1279,6 +1291,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
              ord_mu = if (has_ord) ord_idx$mu else numeric(0),
              ord_ml = if (has_ord) ord_idx$ml else numeric(0),
              has_zi = has_zi, zi_hurdle = identical(zi_type, "hurdle"),
+             zi_cont = isTRUE(fam$continuous),
              ## split once, outside the likelihood: the zero rows and the
              ## positive rows take different terms, and indexing them keeps the
              ## hurdle's truncation factor from ever being evaluated on a row
@@ -1440,12 +1453,16 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       lden  <- fam_logden(eta, yobs,  dsp, logsig = lsig)
       lden0 <- fam_logden(eta, yzero, dsp, logsig = lsig)
       if (zi_hurdle) {
-        ## a zero is a zero and nothing else, and a positive count comes from a
-        ## distribution that cannot produce one
+        ## a zero is a zero and nothing else, and a positive value comes from a
+        ## distribution that cannot produce one. For a CONTINUOUS response
+        ## that second part needs no rescaling: the density already puts no
+        ## mass at zero, so 1 - f(0) is 1 and dividing by it would be dividing
+        ## by one minus a density, which is not a probability at all.
         nll <- nll - sum(wrow[i_zero] * (lpz[i_zero] - l1p[i_zero]))
         nll <- nll - sum(wrow[i_pos] *
-          (lden[i_pos] - logspace_sub(0 * lden0[i_pos], lden0[i_pos]) -
-             l1p[i_pos]))
+          (lden[i_pos] - l1p[i_pos] -
+             (if (zi_cont) 0 else
+                logspace_sub(0 * lden0[i_pos], lden0[i_pos]))))
       } else {
         ## a zero has two possible origins and the likelihood adds them
         nll <- nll - sum(wrow[i_zero] *

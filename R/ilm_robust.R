@@ -105,9 +105,10 @@ ilm_estfun <- function(object) {
       mu <- exp(eta); k <- if (is.null(d)) 1 else d
       (y - mu) * k / (k + mu)
     },
+    beta     = ilm_beta_u(y, eta, if (is.null(d)) 1 else d),
     stop("cluster-robust standard errors are not implemented for the ", fam,
          " family. They are available for gaussian, binomial, poisson, ",
-         "nbinom and the ordinal families.", call. = FALSE))
+         "nbinom, beta and the ordinal families.", call. = FALSE))
   X * (w * u)
 }
 
@@ -282,6 +283,7 @@ ilm_estfun_weight <- function(object) {
     binomial = {p <- stats::plogis(eta); p * (1 - p)},
     nbinom   = {mu <- exp(eta); k <- if (is.null(d)) 1 else d
                 mu * k / (k + mu)},
+    beta     = ilm_beta_w(eta, if (is.null(d)) 1 else d),
     rep(1, N))
   w * v
 }

@@ -131,7 +131,7 @@ ilm_aft_family <- function(name) {
 #' ilm_family("nbinom")$disp_names
 #' @export
 ilm_family <- function(family = c("gaussian", "binomial", "poisson",
-                                  "nbinom", "multinomial",
+                                  "nbinom", "beta", "multinomial",
                                   "ordinal", "ordinal_probit",
                                   "ordinal_cloglog",
                                   "weibull", "lognormal", "loglogistic",
@@ -231,6 +231,51 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
         stats::rnbinom(nrow(eta),
                        size = if (is.null(logsig)) exp(disp[1]) else exp(logsig),
                        mu = exp(eta[, 1]))),
+
+    ## A proportion that is not a count of anything. Percent cover, share of
+    ## time, a score already scaled onto the unit interval: a binomial fit
+    ## needs a denominator these have none of, and a gaussian one puts mass
+    ## outside [0, 1] and assumes a spread that does not shrink at the ends.
+    ##
+    ## Parameterised by the mean and a PRECISION, after Ferrari and
+    ## Cribari-Neto: y ~ Beta(mu * phi, (1 - mu) * phi), so the mean is mu and
+    ## the variance is mu (1 - mu) / (1 + phi). Larger phi means LESS spread,
+    ## which is the opposite of every other dispersion parameter here and is
+    ## worth saying twice.
+    beta = list(
+      name = "beta", link = "logit", n_disp = 1L,
+      disp_names = "phi", C_of = function(J) 1L, unit = TRUE,
+      ## A zero part is available, but only as a hurdle. A CONTINUOUS density
+      ## has no mass at zero, so there is no "the count produced a zero on its
+      ## own" route for a mixture to add -- every zero came from the zero
+      ## process, which is what a hurdle says. The truncation factor is then 1
+      ## rather than 1 - f(0), and `continuous` is the flag that says so.
+      zi_ok = TRUE, continuous = TRUE,
+      nll = function(eta, y, w, disp, logsig = NULL, ...) {
+        mu <- 1 / (1 + exp(-eta[, 1]))
+        phi <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
+        -sum(w * dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE))
+      },
+      logden = function(eta, y, disp, logsig = NULL) {
+        mu <- 1 / (1 + exp(-eta[, 1]))
+        phi <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
+        dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE)
+      },
+      p0 = function(mu, disp) rep(0, length(mu)),
+      pcdf = function(q, mu, disp)
+        stats::pbeta(pmin(pmax(q, 0), 1), mu * disp, (1 - mu) * disp),
+      ## continuous, so the quantile residual is the distribution function at
+      ## the observation with nothing to randomise across
+      cdf = function(y, eta, sc) {
+        mu <- stats::plogis(eta)
+        stats::pbeta(y, mu * sc, (1 - mu) * sc)
+      },
+      linkinv = function(e) 1 / (1 + exp(-e)),
+      sim = function(eta, w, disp, logsig = NULL, ...) {
+        mu <- stats::plogis(eta[, 1])
+        phi <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
+        stats::rbeta(nrow(eta), mu * phi, (1 - mu) * phi)
+      }),
 
     multinomial = list(
       name = "multinomial", link = "logit", n_disp = 0L,
@@ -357,7 +402,7 @@ ilm_ord_probs <- function(eta, zeta, pfun) {
 #' @return `TRUE`, invisibly; called for its error messages.
 #' @keywords internal
 #' @noRd
-ilm_check_response <- function(y, family) {
+ilm_check_response <- function(y, family, has_zero_part = FALSE) {
   nm <- family$name
   if (nm == "gaussian" && !is.numeric(y))
     stop("gaussian family needs a numeric response", call. = FALSE)
@@ -372,6 +417,27 @@ ilm_check_response <- function(y, family) {
     if (!is.numeric(y) || any(y < 1) || any(abs(y - round(y)) > 1e-8))
       stop("an ordinal response must be a factor or whole numbers giving the ",
            "category, from 1 upwards", call. = FALSE)
+  }
+  if (nm == "beta") {
+    if (!is.numeric(y))
+      stop("the beta family needs a numeric proportion", call. = FALSE)
+    ## With a zero part in the model the zeros are accounted for, so only
+    ## the ones at the other end are still without a likelihood.
+    bad <- if (isTRUE(has_zero_part)) y >= 1 else y <= 0 | y >= 1
+    if (any(bad))
+      stop("the beta family is defined on the OPEN interval (0, 1), and ",
+           sum(bad), " value", if (sum(bad) > 1L) "s are" else " is",
+           " exactly ", if (isTRUE(has_zero_part)) "1" else "0 or 1",
+           ". The beta density has no mass at either endpoint, so those rows ",
+           "have no likelihood. Either the boundary values are a separate ",
+           "process, in which case model them as one -- ",
+           if (isTRUE(has_zero_part))
+             "this model already does that for the zeros, and a value at 1 needs the same treatment, which is done by modelling 1 - y so the boundary is at zero"
+           else
+             "ilm_model(ziformula = ~ 1, zi_type = \"hurdle\") puts the zeros in their own part, and a boundary at 1 is the same problem on 1 - y",
+           " -- or they are a rounding of interior values, in which case ",
+           "ilm_squeeze() shifts them inside by the Smithson-Verkuilen ",
+           "amount and says how far it moved them.", call. = FALSE)
   }
   if (nm == "binomial" && (any(y < 0) || any(y > 1)))
     stop("binomial family needs a 0/1 response, or a proportion between 0 and 1 ",

@@ -68,7 +68,8 @@
 #' @param formula A formula with random-effect bars and optional smooth terms.
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
-#'   "poisson", "nbinom" or "multinomial". See [ilm_family()].
+#'   "poisson", "nbinom", "beta", "multinomial", or one of the ordinal
+#'   families. See [ilm_family()].
 #' @param data A data frame.
 #' @param re_struct Optional named list of category covariance structures, named
 #'   by grouping variable. See [ilm_fit()].

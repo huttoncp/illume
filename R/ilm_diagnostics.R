@@ -92,9 +92,20 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
       muc <- as.numeric(object$family$linkinv(
         ilm_eta_hat(object, conditional)[, 1]))
       pz <- ilm_zi_p(object)
-      lo <- ilm_zi_cdf(object, y - 1, muc, pz)
-      hi <- ilm_zi_cdf(object, y, muc, pz)
-      lo + stats::runif(N) * (hi - lo)
+      if (isTRUE(object$family$continuous)) {
+        ## A continuous response with a zero part has exactly ONE jump, the
+        ## point mass at zero, and is smooth everywhere above it. Taking
+        ## F(y) - F(y - 1) here, which is right for a count, asks for the mass
+        ## in an interval a whole unit wide on a scale that only runs to one:
+        ## every residual comes back as a fraction of F(y) and the uniformity
+        ## is gone, without anything in the output looking wrong.
+        ifelse(y <= 0, stats::runif(N) * pz,
+               ilm_zi_cdf(object, y, muc, pz))
+      } else {
+        lo <- ilm_zi_cdf(object, y - 1, muc, pz)
+        hi <- ilm_zi_cdf(object, y, muc, pz)
+        lo + stats::runif(N) * (hi - lo)
+      }
     }
     else if (!is.null(object$family$cdf))
       object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),

@@ -35,7 +35,8 @@ ilm_model_formula(
 \item{data}{A data frame.}
 
 \item{family}{Response distribution: one of "gaussian", "binomial",
-"poisson", "nbinom" or "multinomial". See \code{\link[=ilm_family]{ilm_family()}}.}
+"poisson", "nbinom", "beta", "multinomial", or one of the ordinal
+families. See \code{\link[=ilm_family]{ilm_family()}}.}
 
 \item{re_struct}{Optional named list of category covariance structures, named
 by grouping variable. See \code{\link[=ilm_fit]{ilm_fit()}}.}

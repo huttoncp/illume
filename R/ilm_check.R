@@ -272,9 +272,15 @@ ilm_check_zeros <- function(object, B = 200L, seed = 1L) {
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
-  if (!fam %in% c("poisson", "nbinom"))
-    stop("a zero-inflation check applies to count models (poisson, nbinom); ",
-         "for ", fam, " a zero carries no special meaning", call. = FALSE)
+  ## A zero means something when the response distribution gives it its own
+  ## probability -- a count -- or when the model has a part devoted to it. A
+  ## plain beta fit is neither: it could not have been fitted to data
+  ## containing a zero in the first place.
+  if (!fam %in% c("poisson", "nbinom") && is.null(object$Zzi))
+    stop("a zero-inflation check applies to count models (poisson, nbinom), ",
+         "or to any fit with a zero part. For a ", fam, " model without one, ",
+         "a zero carries no special meaning -- and a beta fit cannot contain ",
+         "one at all, since its density has no mass there.", call. = FALSE)
   ## A simulated p-value cannot fall below 1 / (B + 1). At B = 60 the floor is
   ## 0.016, so the FAIL threshold of 0.01 is unreachable and even gross
   ## misspecification can only ever report WARN.

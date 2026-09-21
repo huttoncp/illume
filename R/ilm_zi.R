@@ -88,6 +88,9 @@ ilm_zi_mean <- function(object, mu, Z = NULL) {
   pz <- ilm_zi_p(object, Z)
   if (is.null(pz)) return(mu)
   if (identical(object$zi_type, "hurdle")) {
+    ## a continuous response has no mass at zero, so nothing was truncated
+    ## away and there is nothing to rescale by
+    if (isTRUE(object$family$continuous)) return((1 - pz) * mu)
     f0 <- ilm_zi_f0(object, mu)
     (1 - pz) * mu / pmax(1 - f0, .Machine$double.eps)
   } else (1 - pz) * mu
@@ -124,6 +127,12 @@ ilm_zi_rng <- function(object, mu, disp, pz, ycount) {
   n <- length(mu)
   structural <- stats::runif(n) < pz
   if (identical(object$zi_type, "hurdle")) {
+    ## a continuous response cannot produce a zero anyway, so its own draw
+    ## already clears the hurdle and nothing needs truncating
+    if (isTRUE(object$family$continuous)) {
+      ycount[structural] <- 0
+      return(as.numeric(ycount))
+    }
     ## every non-structural row clears the hurdle, so it is drawn from a count
     ## that cannot be zero -- not from the untruncated one and then rejected
     y <- object$family$rtrunc(n, mu, disp)

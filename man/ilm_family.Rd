@@ -8,9 +8,9 @@ identical for every family and never sees the response; a family supplies only
 the piece that turns a linear predictor into a log-likelihood.}
 \usage{
 ilm_family(
-  family = c("gaussian", "binomial", "poisson", "nbinom", "multinomial", "ordinal",
-    "ordinal_probit", "ordinal_cloglog", "weibull", "lognormal", "loglogistic", "rp",
-    "rp_odds", "rp_normal")
+  family = c("gaussian", "binomial", "poisson", "nbinom", "beta", "multinomial",
+    "ordinal", "ordinal_probit", "ordinal_cloglog", "weibull", "lognormal",
+    "loglogistic", "rp", "rp_odds", "rp_normal")
 )
 }
 \arguments{
