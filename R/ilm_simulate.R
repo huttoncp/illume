@@ -129,7 +129,13 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
     rp_off <- if (!is.null(fit$rp)) as.vector(eta[, 1]) -
       as.vector(ilm_rcs(log(as.numeric(fit$y)), fit$rp$knots) %*%
                 fit$beta[fit$rp$cols, 1L]) else NULL
-    if (mn) {
+    if (isTRUE(fit$ordinal)) {
+      ## Draw the latent variable and see which band it falls in, which is the
+      ## model's own account of where a category comes from -- and keeps the
+      ## random effects and any AR structure already in eta.
+      z <- as.numeric(eta[, 1]) + fit$family$qfun(stats::runif(N))
+      out[, s] <- as.integer(rowSums(outer(z, as.numeric(fit$zeta), `>`))) + 1L
+    } else if (mn) {
       P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
       out[, s] <- apply(P, 1, function(pr) sample.int(J, 1L, prob = pr))
     } else {

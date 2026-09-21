@@ -212,6 +212,20 @@ Dispersion model: ", deparse(o$disp_formula), "
   ct <- ilm_coef_table(o)
   stats::printCoefmat(as.matrix(ct), digits = digits, signif.stars = TRUE,
                       has.Pvalue = TRUE, P.values = TRUE)
+  ## The thresholds are the intercepts of a cumulative link model, and the
+  ## sign convention is the trap: the linear predictor is SUBTRACTED from
+  ## them, so a positive coefficient pushes probability UP the scale. Reading
+  ## it the other way reverses every conclusion, which is worth a line here
+  ## rather than only in the help.
+  if (!is.null(o$zeta)) {
+    cat("\nThresholds (latent scale):\n")
+    zt <- ilm_thresholds(o)
+    zm <- as.matrix(zt[, c("estimate", "se")])
+    dimnames(zm) <- list(zt$cut, c("Estimate", "Std. Error"))
+    print(round(zm, max(3L, digits - 2L)))
+    cat(" P(Y <= j) = F(threshold_j - eta), so a POSITIVE coefficient shifts\n",
+        " probability towards the HIGHER categories.\n", sep = "")
+  }
   ## A zero part is half the model and invisible in the table above, since
   ## those coefficients belong to the count. Printing it here, with what the
   ## probability actually refers to, is the difference between a reader seeing
@@ -269,6 +283,15 @@ Dispersion model: ", deparse(o$disp_formula), "
 #' @return `x`, invisibly.
 #' @export
 print.ilm_model <- function(x, ...) {
+  if (isTRUE(x$ordinal)) {
+    cat(sprintf("ilm_model fit: %d ORDERED categories, %d obs, %d fixed + %d threshold%s\n",
+                x$J, nrow(x$X), ncol(x$X), length(x$zeta),
+                if (length(x$zeta) == 1L) "" else "s",
+                if (x$ok) "" else "  [CHECKS FAILED]"))
+    cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective,
+                suppressWarnings(AIC(x))))
+    return(invisible(x))
+  }
   cat(sprintf("ilm_model fit: %d categories, %d obs, %d fixed + %d covariance parameters%s%s\n",
               x$J, nrow(x$X), ncol(x$X) * x$C, x$n_covpar,
               ## a zero part is not among the fixed effects counted above, and

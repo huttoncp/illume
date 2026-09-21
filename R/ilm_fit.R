@@ -1097,6 +1097,19 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
            nrow(X), " rows", call. = FALSE)
   }
   cens <- ilm_censor_for(censor, y)
+  ## An ordered response has thresholds where every other family has an
+  ## intercept, and a column of ones would be confounded with all of them at
+  ## once rather than with any one of them.
+  has_ord <- isTRUE(fam$ordinal)
+  if (has_ord) {
+    if (is.null(J) || J < 3L)
+      stop("an ordinal family needs at least 3 ordered categories; with 2 the ",
+           "thresholds collapse to a single intercept and the model is a ",
+           "binomial one -- use family = \"binomial\".", call. = FALSE)
+    if ("(Intercept)" %in% colnames(X))
+      stop("internal: an ordinal design still carries an intercept column",
+           call. = FALSE)
+  }
   ## A dispersion model replaces the single dispersion parameter with a linear
   ## predictor for its logarithm. It needs a dispersion to model in the first
   ## place, which a poisson or binomial response does not have -- their spread
@@ -1197,6 +1210,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     ilm_check_response(y, fam)
     yobs <- as.numeric(y)
   }
+  ## For an ordered response the likelihood needs, per row, which threshold
+  ## bounds it above and which below, and whether either of those is actually
+  ## a limit rather than a cut. All of it comes from the response, so it is
+  ## built once here rather than inside the tape.
+  ord_idx <- if (has_ord) list(
+    iu = pmin(as.integer(y), J - 1L), il = pmax(as.integer(y) - 1L, 1L),
+    mu = as.numeric(as.integer(y) < J), ml = as.numeric(as.integer(y) > 1L))
+    else NULL
   K   <- length(re)
   nlk <- vapply(re, `[[`, 1L, "nl"); dk <- vapply(re, `[[`, 1L, "d")
   wk  <- vapply(names(re), function(nm) ilm_str_width(re_struct[[nm]], C), 1L)
@@ -1233,6 +1254,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     if (fam$n_disp > 1L)
       pnames <- c(pnames, fam$disp_names[-1L])
   }
+  if (has_ord) pnames <- c(pnames, paste0("zeta:", ilm_ord_cut_names(ylevels, J)))
   if (has_zi) pnames <- c(pnames, paste0("zi:", colnames(Zzi)))
   if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C), "ar:rho_raw")
 
@@ -1246,6 +1268,16 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
              Zdisp = if (is.null(Zd)) matrix(0, nrow(X), 0L) else Zd,
              has_dm = has_dm, disp_mu = isTRUE(disp_mu),
              Zzi = if (is.null(Zzi)) matrix(0, nrow(X), 0L) else Zzi,
+             has_ord = has_ord,
+             ## rows of cumulative sums: row j adds the first j - 1 gaps, so
+             ## the first threshold gets none and the ordering is structural
+             ord_L = if (has_ord)
+               outer(seq_len(J - 1L), seq_len(J - 2L), `>`) * 1 else
+               matrix(0, 0, 0),
+             ord_iu = if (has_ord) ord_idx$iu else integer(0),
+             ord_il = if (has_ord) ord_idx$il else integer(0),
+             ord_mu = if (has_ord) ord_idx$mu else numeric(0),
+             ord_ml = if (has_ord) ord_idx$ml else numeric(0),
              has_zi = has_zi, zi_hurdle = identical(zi_type, "hurdle"),
              ## split once, outside the likelihood: the zero rows and the
              ## positive rows take different terms, and indexing them keeps the
@@ -1390,6 +1422,13 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       dsp <- if (n_disp > 1L) c(0, logdisp) else numeric(0)
     }
     etad <- if (has_rp) as.vector(Drp %*% beta[, 1]) else NULL
+    ## The thresholds are a first value and a set of log increments, so they
+    ## come out ordered whatever the optimiser does with them.
+    zt <- NULL
+    if (has_ord) {
+      zt <- zeta_raw[1] + ord_L %*% exp(zeta_raw[-1])
+      ADREPORT(zt)
+    }
     if (has_zi) {
       ## Second linear predictor, for the logit of the excess-zero
       ## probability. Everything below is on the log scale through
@@ -1414,8 +1453,12 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
         nll <- nll - sum(wrow[i_pos] * (lden[i_pos] - l1p[i_pos]))
       }
     } else
-    nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens,
-                         logsig = lsig, etad = etad)
+    nll <- nll + fam_nll(eta,
+                         if (has_ord) structure(yobs, ord_idx = list(
+                           iu = ord_iu, il = ord_il,
+                           mu = ord_mu, ml = ord_ml)) else yobs,
+                         wrow, dsp, Tct = Tct, cens = cens,
+                         logsig = lsig, etad = etad, zeta = zt)
     sd_ <- sdv; ADREPORT(sd_)
     if (n_disp > 0L && !has_dm) { disp_ <- exp(logdisp); ADREPORT(disp_) }
     nll
@@ -1478,6 +1521,18 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                 "spread on a covariate instead, or shift the response so the ",
                 "mean stays on one side of zero.", call. = FALSE)
     }
+  }
+  if (has_ord) {
+    ## Start the thresholds at the cuts of the OBSERVED category proportions,
+    ## which is the exact answer for a model with no predictors, and so a good
+    ## place to begin for one with them.
+    tab <- tapply(weights, factor(y, levels = seq_len(J)), sum)
+    tab[is.na(tab)] <- 0
+    cp <- cumsum(tab / sum(tab))[-J]
+    cp <- pmin(pmax(cp, 1 / (2 * N)), 1 - 1 / (2 * N))
+    th <- fam$qfun(cp)
+    d <- pmax(diff(th), 1e-3)
+    pars$zeta_raw <- c(th[1], log(d))
   }
   if (has_zi) {
     pars$gzi <- rep(0, ncol(Zzi))
@@ -1635,6 +1690,20 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                                    pnames[substr(pnames, 1L, 5L) == "disp:"])
                    else NULL,
                  Zd = Zd, disp_mu = isTRUE(disp_mu), rp = rp,
+                 ordinal = has_ord,
+                 zeta = if (has_ord) {
+                   zr <- unname(pe[pn == "zeta_raw"])
+                   stats::setNames(zr[1] + c(0, cumsum(exp(zr[-1]))),
+                                   ilm_ord_cut_names(ylevels, J))
+                 } else NULL,
+                 zeta_se = if (has_ord) {
+                   ## the thresholds are a transform of the fitted parameters,
+                   ## so their standard errors come from ADREPORT rather than
+                   ## from the parameter covariance directly
+                   sv <- summary(sdr, "report")
+                   sv <- sv[rownames(sv) == "zt", , drop = FALSE]
+                   stats::setNames(unname(sv[, 2]), ilm_ord_cut_names(ylevels, J))
+                 } else NULL,
                  Zzi = Zzi, zi_type = if (has_zi) zi_type else NULL,
                  zi_formula = if (has_zi) attr(Zzi, "formula") else NULL,
                  zi_gamma = if (has_zi)

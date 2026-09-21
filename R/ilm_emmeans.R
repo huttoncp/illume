@@ -76,6 +76,16 @@ ilm_ref_grid <- function(object, at = NULL) {
 #' sometimes the quantity you want -- it describes the groups as they are --
 #' but it is not an adjusted comparison.
 #'
+#' @section An ordered response:
+#'
+#' For an ordinal fit these are marginal means of the **latent scale** -- the
+#' linear predictor the thresholds cut up -- and not of the categories, which
+#' have no mean to take. A contrast between two of them is a difference in log
+#' odds of being in a higher category, constant across cuts by the same
+#' assumption [ilm_check_proportional()] tests. `type = "response"` is not
+#' available, because the inverse link of a marginal mean is not a category
+#' probability; use [predict()] for those.
+#'
 #' @section Which scale:
 #'
 #' Marginal means are computed on the **link** scale, where they are exact
@@ -112,6 +122,11 @@ ilm_emmeans <- function(object, specs, at = NULL,
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
+  if (isTRUE(object$ordinal) && identical(type, "response"))
+    stop("an ordinal fit has no response scale to average onto: the inverse ",
+         "link of a marginal latent mean is not a category probability. Use ",
+         "type = \"link\" for the latent scale, or predict() for the ",
+         "category probabilities themselves.", call. = FALSE)
   mf <- object$model
   specs <- as.character(specs)
   miss <- setdiff(specs, names(mf))
@@ -125,7 +140,8 @@ ilm_emmeans <- function(object, specs, at = NULL,
   ## the model matrix of the grid, built with the FIT's terms and contrasts so
   ## the columns line up with the coefficients
   tt <- stats::delete.response(stats::terms(object))
-  mmg <- stats::model.matrix(tt, data = g, contrasts.arg = object$contrasts)
+  mmg <- ilm_drop_intercept(
+    stats::model.matrix(tt, data = g, contrasts.arg = object$contrasts), object)
   b <- stats::coef(object)
   if (ncol(mmg) != length(b))
     stop("the reference grid does not match the fitted coefficients; a term ",
@@ -207,7 +223,12 @@ print.ilm_emm <- function(x, ...) {
       sprintf("(%s scale, %s weights)\n\n", attr(x, "type"),
               attr(x, "weights")))
   print(as.data.frame(x), row.names = FALSE, digits = 4)
-  if (attr(x, "type") == "link" && attr(x, "family") != "gaussian")
+  ord <- startsWith(attr(x, "family"), "ordinal")
+  if (ord)
+    cat("\n  On the LATENT scale, whose origin the thresholds set, so a single\n",
+        " mean is not interpretable on its own -- the differences are.\n",
+        sep = "")
+  else if (attr(x, "type") == "link" && attr(x, "family") != "gaussian")
     cat("\n  On the link scale. type = \"response\" back-transforms.\n")
   cat("  Compare them with ilm_contrast().\n")
   invisible(x)

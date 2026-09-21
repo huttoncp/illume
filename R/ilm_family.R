@@ -132,11 +132,14 @@ ilm_aft_family <- function(name) {
 #' @export
 ilm_family <- function(family = c("gaussian", "binomial", "poisson",
                                   "nbinom", "multinomial",
+                                  "ordinal", "ordinal_probit",
+                                  "ordinal_cloglog",
                                   "weibull", "lognormal", "loglogistic",
                                   "rp", "rp_odds", "rp_normal")) {
   family <- match.arg(family)
   if (family %in% c("weibull", "lognormal", "loglogistic"))
     return(ilm_aft_family(family))
+  if (startsWith(family, "ordinal")) return(ilm_ordinal_family(family))
   if (family %in% c("rp", "rp_odds", "rp_normal"))
     return(ilm_rp_family(family))
 
@@ -247,6 +250,102 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
   )
 }
 
+## ---------------------------------------------------------------------------
+## Cumulative link models for an ordered response.
+##
+## One linear predictor and a set of thresholds:
+##
+##     P(Y <= j | x)  =  F(theta_j - x'beta),    theta_1 < ... < theta_{J-1}
+##
+## so a single beta shifts every cut at once. That is the proportional-odds
+## assumption under a logit link, and it is what buys an ordered outcome its
+## economy: J - 1 categories described by one coefficient per predictor rather
+## than J - 1 of them. It is also an assumption, which ilm_check_proportional()
+## is here to test.
+##
+## The sign convention is the usual one for this model and it is a trap worth
+## naming: the linear predictor is SUBTRACTED from the threshold, so a positive
+## coefficient shifts probability towards the HIGHER categories. Reading it the
+## other way reverses every conclusion.
+##
+## There is no intercept in x -- the thresholds are the intercepts, and a
+## column of ones would be perfectly confounded with all of them at once.
+##
+## The thresholds are fitted as a first value and a set of log increments, so
+## the ordering holds by construction rather than by a constraint the optimiser
+## has to respect. A boundary is then unreachable rather than something to
+## detect: an increment can approach zero only by its logarithm running to
+## minus infinity, which the convergence checks see.
+## ---------------------------------------------------------------------------
+
+#' @keywords internal
+#' @noRd
+ilm_ordinal_family <- function(name) {
+  link <- switch(name, ordinal = "logit", ordinal_probit = "probit",
+                 ordinal_cloglog = "cloglog")
+  ## the distribution function of the latent error, and its numeric twin for
+  ## everything outside the likelihood
+  pf <- switch(link,
+    logit   = function(z) 1 / (1 + exp(-z)),
+    probit  = function(z) pnorm(z),
+    cloglog = function(z) 1 - exp(-exp(z)))
+  pfn <- switch(link,
+    logit   = stats::plogis, probit = stats::pnorm,
+    cloglog = function(z) 1 - exp(-exp(z)))
+  qfn <- switch(link,
+    logit   = stats::qlogis, probit = stats::qnorm,
+    cloglog = function(p) log(-log(1 - p)))
+  list(
+    name = name, link = link, ordinal = TRUE, n_disp = 0L,
+    disp_names = character(0), C_of = function(J) 1L,
+    ## `zeta` arrives as the thresholds themselves, already cumulated and
+    ## ordered. y is the category index, 1 to J.
+    nll = function(eta, y, w, disp, zeta = NULL, ...) {
+      ## The outermost cuts are at plus and minus infinity, and there is no
+      ## way to write that as a number in a vector the tape can hold: pasting
+      ## sentinels onto `zeta` with c() drops its class and the tape breaks.
+      ## Instead every row indexes a real threshold and a MASK, built from the
+      ## response and so constant, selects whether that value or the limit is
+      ## used. Nothing infinite is ever evaluated.
+      e1 <- eta[, 1]
+      idx <- attr(y, "ord_idx")
+      Fu <- idx$mu * pf(zeta[idx$iu] - e1) + (1 - idx$mu)
+      Fl <- idx$ml * pf(zeta[idx$il] - e1)
+      -sum(w * log(Fu - Fl + 1e-300))
+    },
+    ## the cumulative probabilities a fit implies, for prediction and residuals
+    pcum = function(eta, zeta) {
+      outer(-as.numeric(eta), c(-Inf, as.numeric(zeta), Inf), `+`) * -1
+    },
+    pfun = pfn, qfun = qfn,
+    linkinv = function(e) e,
+    sim = function(eta, w, disp, zeta = NULL, ...) {
+      ## draw the latent variable and see which band it falls in, which is the
+      ## model's own account of where a category comes from
+      n <- nrow(eta)
+      z <- as.numeric(eta[, 1]) + qfn(stats::runif(n))
+      as.integer(rowSums(outer(z, as.numeric(zeta), `>`))) + 1L
+    })
+}
+
+#' Category probabilities implied by a cumulative link fit
+#'
+#' @param eta Linear predictor, one value per row.
+#' @param zeta Thresholds, `J - 1` of them, increasing.
+#' @param pfun The link's distribution function.
+#' @return An `N x J` matrix of probabilities whose rows sum to one.
+#' @keywords internal
+#' @noRd
+ilm_ord_probs <- function(eta, zeta, pfun) {
+  eta <- as.numeric(eta); zeta <- as.numeric(zeta)
+  N <- length(eta); J <- length(zeta) + 1L
+  cm <- cbind(0, pfun(outer(-eta, zeta, `+`)), 1)
+  p <- cm[, -1L, drop = FALSE] - cm[, -(J + 1L), drop = FALSE]
+  ## a cut can round to the same double as the one below it in the far tail,
+  ## which shows up as a zero or a whisker below it
+  pmax(p, 0)
+}
+
 #' Check that a response is valid for its family
 #'
 #' Catches the common mistakes early and explains them, rather than letting the
@@ -268,6 +367,11 @@ ilm_check_response <- function(y, family) {
     if (any(abs(y - round(y)) > 1e-8))
       stop(nm, " family needs whole-number counts; the response has fractional ",
            "values. If these are rates, use an offset instead.", call. = FALSE)
+  }
+  if (isTRUE(family$ordinal)) {
+    if (!is.numeric(y) || any(y < 1) || any(abs(y - round(y)) > 1e-8))
+      stop("an ordinal response must be a factor or whole numbers giving the ",
+           "category, from 1 upwards", call. = FALSE)
   }
   if (nm == "binomial" && (any(y < 0) || any(y > 1)))
     stop("binomial family needs a 0/1 response, or a proportion between 0 and 1 ",

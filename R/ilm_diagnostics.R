@@ -60,6 +60,18 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
   ## the CDF jumps, so the residual is drawn uniformly across the jump, which
   ## restores uniformity. Only the multinomial needs the log-score construction
   ## below, because its outcomes have no natural order to take a CDF along.
+  ## An ordered response DOES have a distribution function -- that is the
+  ## whole point of the ordering -- so it takes the discrete construction
+  ## rather than the log-score one the multinomial needs.
+  if (isTRUE(object$ordinal)) {
+    P <- ilm_ord_probs(ilm_eta_hat(object, conditional)[, 1], object$zeta,
+                       object$family$pfun)
+    cm <- cbind(0, t(apply(P, 1L, cumsum)))
+    yi <- as.integer(object$y)
+    lo <- cm[cbind(seq_len(N), yi)]
+    hi <- cm[cbind(seq_len(N), yi + 1L)]
+    return(pmin(pmax(lo + stats::runif(N) * (hi - lo), 1e-10), 1 - 1e-10))
+  }
   if (!identical(fam, "multinomial")) {
     mu <- as.numeric(ilm_fitted(object, conditional)[, 1])
     w <- if (is.null(object$weights)) rep(1, N) else object$weights
@@ -162,6 +174,15 @@ ilm_sim_cond <- function(object, B, seed = 1L) {
     return(vapply(seq_len(B),
                   function(b) fam$sim(eta, NULL, numeric(0), Tct = Tct),
                   integer(N)))
+  }
+  if (isTRUE(object$ordinal)) {
+    ## the thresholds are what turn a latent value into a category, so they
+    ## belong to the simulator as much as the coefficients do
+    e1 <- as.numeric(eta[, 1]); zz <- as.numeric(object$zeta)
+    return(vapply(seq_len(B), function(b)
+      as.integer(rowSums(outer(e1 + object$family$qfun(stats::runif(N)),
+                               zz, `>`))) + 1L,
+      integer(N)))
   }
   w <- if (is.null(object$weights)) rep(1, N) else object$weights
   ## the family simulators take the dispersion on the log scale, which is how

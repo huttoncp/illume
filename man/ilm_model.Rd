@@ -46,9 +46,20 @@ by grouping variable. See \code{\link[=ilm_fit]{ilm_fit()}}.}
 observations each row stands for. Evaluated inside \code{data}. See \code{\link[=ilm_fit]{ilm_fit()}}
 for when this is valid, and why survey weights are not.}
 
-\item{contrasts}{Optional contrasts for factor predictors, passed to
-\code{\link[stats:model.matrix]{stats::model.matrix()}}. Type III tests require orthogonal contrasts such
-as \code{\link[stats:contrast]{stats::contr.sum()}}.}
+\item{contrasts}{How to code factor predictors. \code{NULL} (the default) uses
+R's own setting, which is treatment coding for unordered factors and
+polynomial for ordered ones -- the same as \code{\link[stats:lm]{stats::lm()}}, so a coefficient
+means what it means everywhere else in R. A single string (\code{"treatment"},
+\code{"sum"}, \code{"helmert"} or \code{"poly"}, with or without the \code{contr.} prefix)
+applies that coding to every unordered factor at once. A named list sets
+them one factor at a time, exactly as \code{\link[stats:lm]{stats::lm()}} takes it.
+
+Type III tests of a main effect that is also in an interaction need
+orthogonal coding such as \code{\link[stats:contrast]{stats::contr.sum()}}; \code{\link[=ilm_anova]{ilm_anova()}} checks for
+that and says so rather than reporting a test that is not the one it
+claims. Note that this is a separate matter from the sum-to-zero coding a
+multinomial fit uses across its outcome CATEGORIES, which is not a
+predictor contrast and is not affected by this argument.}
 
 \item{verbose}{Logical. Print checks while fitting.}
 

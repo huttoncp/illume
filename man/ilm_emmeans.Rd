@@ -66,6 +66,18 @@ sometimes the quantity you want -- it describes the groups as they are --
 but it is not an adjusted comparison.
 }
 
+\section{An ordered response}{
+
+
+For an ordinal fit these are marginal means of the \strong{latent scale} -- the
+linear predictor the thresholds cut up -- and not of the categories, which
+have no mean to take. A contrast between two of them is a difference in log
+odds of being in a higher category, constant across cuts by the same
+assumption \code{\link[=ilm_check_proportional]{ilm_check_proportional()}} tests. \code{type = "response"} is not
+available, because the inverse link of a marginal mean is not a category
+probability; use \code{\link[=predict]{predict()}} for those.
+}
+
 \section{Which scale}{
 
 

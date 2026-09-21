@@ -63,7 +63,8 @@ ilm_Bhat_term <- function(object, k, bvec = NULL) {
 ilm_newX <- function(object, newdata) {
   mt <- stats::delete.response(object$terms)
   mf <- stats::model.frame(mt, newdata, xlev = object$xlev)
-  X  <- stats::model.matrix(mt, mf, contrasts.arg = object$contrasts)
+  X  <- ilm_drop_intercept(
+    stats::model.matrix(mt, mf, contrasts.arg = object$contrasts), object)
   sd_list <- list()
   for (lab in names(object$smooths)) {
     sd_list[[lab]] <- ilm_smooth_design(object$smooths[[lab]], newdata)
@@ -262,6 +263,9 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## A univariate family has one linear predictor and its own inverse link; the
   ## multinomial has C dimensions that the softmax maps onto J probabilities.
   multinom <- object$C > 1L
+  ## An ordered response has one linear predictor and J categories, so it is
+  ## neither of the two shapes the rest of this function knows about.
+  ordinal <- isTRUE(object$ordinal)
   linkinv <- if (!is.null(object$family)) object$family$linkinv else identity
   ## A zero part makes the response scale something other than the inverse
   ## link of the linear predictor: that is the mean of the COUNT process, and
@@ -276,6 +280,17 @@ predict.ilm_model <- function(object, newdata = NULL,
   point <- function(beta, bvec = NULL) {
     eta <- ilm_eta(object, nd, beta, bvec)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
+    if (ordinal) {
+      if (!marginal || !length(gk))
+        return(ilm_ord_probs(eta[, 1], object$zeta, object$family$pfun))
+      P <- matrix(0, nrow(eta), object$J)
+      for (m in seq_len(ndraw)) {
+        sh <- Reduce(`+`, lapply(draws, function(d) d[m, ]))
+        P <- P + ilm_ord_probs(eta[, 1] + sh[1], object$zeta,
+                               object$family$pfun)
+      }
+      return(P / ndraw)
+    }
     if (!marginal || !length(gk))
       return(if (multinom) ilm_softmax_J(eta, Tc) else
                matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
@@ -288,13 +303,14 @@ predict.ilm_model <- function(object, newdata = NULL,
     P / ndraw
   }
   est <- point(object$beta)
-  colnames(est) <- if (multinom) object$ylevels else
-    if (type == "link") "link" else "response"
+  colnames(est) <- if (multinom || (ordinal && type != "link")) object$ylevels
+    else if (type == "link") "link" else "response"
   if (type == "class") {
-    if (!multinom)
-      stop("type = \"class\" applies only to the multinomial family", call. = FALSE)
+    if (!multinom && !ordinal)
+      stop("type = \"class\" applies only to a categorical response ",
+           "(multinomial or ordinal)", call. = FALSE)
     cls <- factor(object$ylevels[max.col(est, ties.method = "first")],
-                  levels = object$ylevels)
+                  levels = object$ylevels, ordered = ordinal)
     if (!want_unc) return(cls)
     warning("se.fit / interval are not defined for type = \"class\"", call. = FALSE)
     return(cls)

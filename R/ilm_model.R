@@ -102,9 +102,20 @@
 #' @param weights Optional **frequency** weights: the number of replicate
 #'   observations each row stands for. Evaluated inside `data`. See [ilm_fit()]
 #'   for when this is valid, and why survey weights are not.
-#' @param contrasts Optional contrasts for factor predictors, passed to
-#'   [stats::model.matrix()]. Type III tests require orthogonal contrasts such
-#'   as [stats::contr.sum()].
+#' @param contrasts How to code factor predictors. `NULL` (the default) uses
+#'   R's own setting, which is treatment coding for unordered factors and
+#'   polynomial for ordered ones -- the same as [stats::lm()], so a coefficient
+#'   means what it means everywhere else in R. A single string (`"treatment"`,
+#'   `"sum"`, `"helmert"` or `"poly"`, with or without the `contr.` prefix)
+#'   applies that coding to every unordered factor at once. A named list sets
+#'   them one factor at a time, exactly as [stats::lm()] takes it.
+#'
+#'   Type III tests of a main effect that is also in an interaction need
+#'   orthogonal coding such as [stats::contr.sum()]; [ilm_anova()] checks for
+#'   that and says so rather than reporting a test that is not the one it
+#'   claims. Note that this is a separate matter from the sum-to-zero coding a
+#'   multinomial fit uses across its outcome CATEGORIES, which is not a
+#'   predictor contrast and is not affected by this argument.
 #' @param verbose Logical. Print checks while fitting.
 #' @param restarts Integer. Optimiser restarts.
 #' @param joint Logical or `NULL`. Compute the joint precision over fixed and
@@ -303,7 +314,31 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   }
 
   yraw <- stats::model.response(mf); N <- nrow(mf)
-  if (fam$name == "multinomial") {
+  if (isTRUE(fam$ordinal)) {
+    ## An ordered factor already carries the ordering. A plain factor is taken
+    ## in its level order, which is alphabetical unless someone set it, and
+    ## that is worth saying out loud -- "agree", "disagree", "neutral" is a
+    ## perfectly ordinary alphabetical ordering and a nonsensical one here.
+    if (is.character(yraw)) yraw <- factor(yraw)
+    if (is.factor(yraw)) {
+      if (!is.ordered(yraw))
+        message("ilm_model: the response is an unordered factor, so its ",
+                "levels are taken in the order they are stored: ",
+                paste(levels(yraw), collapse = " < "),
+                ". If that is not the order you mean, make it an ordered ",
+                "factor first.")
+      ylevels <- levels(yraw); yi <- as.integer(yraw)
+    } else {
+      yi <- as.integer(round(as.numeric(yraw)))
+      ylevels <- as.character(sort(unique(yi)))
+      yi <- match(yi, sort(unique(yi)))
+    }
+    J <- length(ylevels)
+    if (J < 3L)
+      stop("an ordinal family needs at least 3 ordered categories; with 2 ",
+           "there is a single cut and the model is a binomial one -- use ",
+           "family = \"binomial\".", call. = FALSE)
+  } else if (fam$name == "multinomial") {
     yf <- factor(yraw)
     J <- nlevels(yf); ylevels <- levels(yf); yi <- as.integer(yf)
     if (J < 3L)
@@ -352,9 +387,35 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
     if (!anyNA(idx))
       attr(mt, "predvars") <- as.call(c(quote(list), as.list(pv)[-1][idx]))
   }
+  contrasts <- ilm_contrasts_arg(contrasts, mf, mt)
   X  <- stats::model.matrix(mt, mf, contrasts.arg = contrasts)
   xlev <- stats::.getXlevels(mt, mf)
   ctr  <- attr(X, "contrasts")
+  ## The thresholds ARE the intercepts of a cumulative link model, so the
+  ## design must not carry one as well: a column of ones is confounded with
+  ## every threshold at once, and the optimiser wanders along that ridge
+  ## rather than failing.
+  ##
+  ## The column is dropped HERE, after model.matrix has coded the factors,
+  ## and not by putting - 1 in the formula. Those are not the same thing: a
+  ## formula without an intercept makes model.matrix expand the first factor
+  ## to ALL its levels instead of contrasting them, which adds a parameter the
+  ## data cannot identify. The fit still reaches the same likelihood -- it is
+  ## the same model written down twice -- but the Hessian is singular and
+  ## every standard error comes back NaN.
+  if (isTRUE(fam$ordinal)) {
+    ic <- match("(Intercept)", colnames(X), nomatch = 0L)
+    if (ic > 0L) {
+      X <- X[, -ic, drop = FALSE]
+      attr(X, "assign") <- attr(stats::model.matrix(mt, mf,
+                                 contrasts.arg = contrasts), "assign")[-ic]
+      attr(X, "contrasts") <- ctr
+    }
+    if (!ncol(X))
+      stop("an ordinal model needs at least one predictor: with none, the ",
+           "thresholds are the whole model and there is nothing to estimate ",
+           "beyond the observed category proportions.", call. = FALSE)
+  }
   ## cbind() below drops attributes, so carry the column -> term map by hand.
   ## Smooth null-space columns get NA: they belong to no parametric term.
   asgn <- attr(X, "assign")
@@ -532,3 +593,39 @@ model.matrix.ilm_model <- function(object, ...) {
 #' @rdname ilm_model-accessors
 #' @export
 getCall.ilm_model <- function(x, ...) x$call
+
+#' Expand a contrast shorthand into what model.matrix() wants
+#'
+#' `model.matrix()` takes a named list of codings, one entry per factor. Naming
+#' every factor to say the same thing about all of them is friction for no
+#' gain, so a single string means "this coding, for every unordered factor".
+#'
+#' Ordered factors are left alone. R codes them with orthogonal polynomials by
+#' default, which is a statement about their spacing rather than an arbitrary
+#' choice, and silently replacing it because someone asked for sum coding on
+#' the unordered ones would change what their coefficients mean.
+#'
+#' @param contrasts `NULL`, a single string, or a named list.
+#' @param mf The model frame.
+#' @param mt The terms.
+#' @return `NULL` or a named list for `contrasts.arg`.
+#' @keywords internal
+#' @noRd
+ilm_contrasts_arg <- function(contrasts, mf, mt) {
+  if (is.null(contrasts) || is.list(contrasts)) return(contrasts)
+  if (!is.character(contrasts) || length(contrasts) != 1L)
+    stop("`contrasts` must be NULL, a single string such as \"sum\", or a ",
+         "named list like lm() takes, not ", class(contrasts)[1],
+         " of length ", length(contrasts), ".", call. = FALSE)
+  nm <- sub("^contr\\.", "", contrasts)
+  ok <- c("treatment", "sum", "helmert", "poly", "SAS")
+  if (!nm %in% ok)
+    stop("`contrasts` should be one of ", paste(dQuote(ok), collapse = ", "),
+         " (with or without the \"contr.\" prefix), or a named list. Got ",
+         dQuote(contrasts), ".", call. = FALSE)
+  vars <- all.vars(stats::delete.response(mt))
+  fac <- vars[vapply(vars, function(v)
+    !is.null(mf[[v]]) && is.factor(mf[[v]]) && !is.ordered(mf[[v]]), TRUE)]
+  if (!length(fac)) return(NULL)
+  stats::setNames(as.list(rep(paste0("contr.", nm), length(fac))), fac)
+}
