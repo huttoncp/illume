@@ -1,24 +1,35 @@
 Version: 0.0.7.9000
 Date: 2026-09-21
 R: 4.4.3
-Studies: imputation
-Note: This is a PARTIAL retention set. Only the imputation ablation was run at
- this version. The coverage, power, bench, mclogit and brms studies were last
- run at 0.0.2.9000 and their findings still stand for the model families that
- existed then, but they do NOT cover anything added at 0.0.3.9000 through
- 0.0.7.9000: zero-inflated and hurdle counts, ordered outcomes, beta
- regression, instrumental variables, survey-weighted fits, or mediation. Those
- were each validated against an outside implementation (pscl, ordinal,
- glmmTMB, closed-form 2SLS, survey, the Baron-Kenny product) but have no
- coverage or timing cells. Re-running the full set is hours of compute and has
- not been done.
-Note: The imputation ablation is new at this version. Five methods across six
- designs, scored on reconstruction AND on coverage of a downstream coefficient
- after Rubin pooling. It was built to settle whether ilm_lowrank_ncp() picks a
- poor rank, which a single earlier design had suggested. It does not settle
- it: cross-validation is worse than parallel analysis in four cells and
- materially better in one. The selector is unchanged. See
+Studies: coverage, power, mclogit, bench, brms, imputation
+Note: A COMPLETE retention set. All five standing studies were re-run at this
+ version alongside the new imputation ablation, at the same parameters as
+ 0.0.2.9000 so the two are directly comparable: coverage and power 2000
+ replicates, mclogit 500, bench 160, brms 3. Every cell that existed at
+ 0.0.2.9000 reproduces it.
+Note: The coverage study grew from 23 cells to 32. Everything added between
+ 0.0.3.9000 and 0.0.7.9000 had agreement against an outside implementation
+ but no coverage of its own, and those are different claims: agreement says
+ the point estimate is right, coverage says the interval is. New cells:
+ zero-inflated Poisson (mixed) and hurdle Poisson, ordered logit fixed and
+ mixed, beta and zero-inflated beta, two-stage least squares, a stratified
+ clustered weighted sample, and a mediation ACME.
+Note: Two of the new cells are not at nominal and both are reported rather
+ than smoothed over. `mediate` OVER-covers at 0.967 with a standard-error
+ ratio of 1.107: the ACME interval is a percentile interval from simulation
+ draws and comes out about 11% wider than the sampling variability of the
+ estimate, which is conservative rather than wrong. `svy_strat` covers at
+ 0.939 with a ratio of 0.956; at 2000 replicates the Monte Carlo error is
+ 0.005, so that is about two standard errors below nominal -- small, real,
+ and in the anti-conservative direction, which is the one that matters.
+Note: The imputation ablation was built to settle whether ilm_lowrank_ncp()
+ picks a poor rank, which a single earlier design had suggested. It does not
+ settle it: cross-validation is worse than parallel analysis in four cells
+ and materially better in one. The selector is unchanged. See
  studies/findings/imputation.md.
 Note: Chained equations cannot be fitted at n = 60, p = 80 and does not fail
  fast when asked -- it runs for hours on rank-deficient per-column
  regressions. That cell is recorded as inapplicable rather than attempted.
+Note: Everything here was fitted by maximum likelihood. REML arrived at this
+ version but is opt-in for ilm_model(), so the defaults these studies
+ exercise are unchanged, and the numbers remain comparable with 0.0.2.9000.

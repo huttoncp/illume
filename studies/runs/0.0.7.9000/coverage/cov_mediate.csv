@@ -1,0 +1,2 @@
+"cell","family","J","coef","truth","n_attempt","n_used","coverage","bias","emp_sd","mean_se","se_ratio","mc_se","secs","N","n_latent","kind","obs_per_latent","conv_rate"
+"mediate","gaussian",NA,"ACME",0.3,2000,2000,0.967,-0.00166904317133126,0.0485934395762168,0.0537739402384399,1.10660905479016,0.00399443362693637,1581.8669219017,600,0,"med",NA,1
