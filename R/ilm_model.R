@@ -243,6 +243,28 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
+  ## Dropping incomplete rows is the default and usually the right thing, but
+  ## doing it SILENTLY is not: a model fitted to 61% of the data with no note
+  ## of it invites conclusions the data cannot carry. Say how many went, and
+  ## which columns took them, so the choice is visible at the point it is made.
+  n_drop <- if (is.data.frame(data)) nrow(data) - nrow(mf) else 0L
+  if (verbose && n_drop > 0L) {
+    culprits <- names(mf)[vapply(names(mf), function(v)
+      anyNA(data[[v]]), TRUE, USE.NAMES = FALSE)]
+    culprits <- culprits[culprits %in% names(data)]
+    message(sprintf(
+      "%d of %d row(s) dropped for missing values (%.1f%%), leaving %d%s",
+      n_drop, nrow(data), 100 * n_drop / nrow(data), nrow(mf),
+      if (length(culprits))
+        paste0("; missing in: ", paste(utils::head(culprits, 6), collapse = ", "))
+      else ""))
+    if (n_drop / nrow(data) > 0.1)
+      message("  that is more than a tenth of the data. Complete cases stay ",
+              "unbiased when missingness is unrelated to the OUTCOME given ",
+              "the predictors, and are biased otherwise -- ilm_check_missing() ",
+              "tells the two apart, and ilm_impute() is the remedy for the ",
+              "second.")
+  }
 
   yraw <- stats::model.response(mf); N <- nrow(mf)
   if (fam$name == "multinomial") {
@@ -395,6 +417,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   fit$smooths   <- sm_store
   fit$bars      <- bars
   fit$na.action <- attr(mf, "na.action")
+  fit$n_dropped <- n_drop
   fit$ylevels   <- ylevels
   ## map each fixed-effect column back to its formula term, so per-term
   ## hypotheses can be blocked across the category dimension later

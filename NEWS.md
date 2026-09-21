@@ -1,3 +1,135 @@
+# illume 0.0.4.9000
+
+Missing data, and the profiling set that reads its patterns.
+
+## Missing values are no longer dropped in silence
+
+* `ilm_model()` reports how many rows went and which columns took them. Past a
+  tenth of the data it also says what that does and does not imply. Dropping
+  incomplete rows is usually right; doing it silently is not, because a model
+  fitted to 61% of the data with no note of it invites conclusions the data
+  cannot carry. The count is kept on the fit as `$n_dropped`.
+
+## Deciding whether it matters
+
+* `ilm_check_missing()` reports how much is missing, which columns go missing
+  together, whether the pattern is monotone, and what missingness is related to
+  -- then says what that implies.
+* **It distinguishes the two cases that need different answers.** For a
+  regression, dropping incomplete rows is unbiased whenever missingness is
+  independent of the OUTCOME *given* the covariates -- which is far weaker than
+  MCAR, and often true. So missingness tied to a covariate gets "complete cases
+  stay unbiased", and only missingness tied to the outcome gets sent to
+  `ilm_impute()`.
+* **MAR versus MNAR is not tested, because it cannot be.** The data that would
+  separate them are the data that are missing. What is testable is MCAR, and
+  that is what is tested; the result says plainly that a dependence on the
+  unseen values themselves cannot be ruled out, and that the remedy for that is
+  a sensitivity analysis rather than a test.
+
+## Filling them in, honestly
+
+* `ilm_impute()` does multiple imputation by chained equations, one
+  [ilm_model()] per incomplete variable with the family its own type calls for.
+  Each value is **drawn** from the predictive distribution -- coefficients from
+  their sampling distribution, the residual scale from its own posterior, then
+  the response's randomness on top -- rather than set to a fitted mean.
+* `ilm_mi_pool()` fits across the imputations and combines by Rubin's rules,
+  with Barnard-Rubin degrees of freedom, and reports the fraction of
+  information lost to missingness per coefficient.
+* `single = TRUE` gives one completed data set and warns, because anything
+  computed from it will be overconfident.
+
+## Profiling: dimension reduction, clustering, and what the clusters are
+
+* `ilm_reduce()` reduces a frame's columns to a few dimensions, choosing PCA,
+  MCA or a mixed method from the column types rather than making the user name
+  it.
+* `ilm_cluster()` groups the rows, choosing `k` by the gap statistic, and
+  reports two different things a bare assignment does not: per-cluster
+  **stability** by bootstrap Jaccard, and per-observation **ambiguity** from
+  the silhouette width. A point can sit on a boundary inside a large, stable
+  cluster, and a size-based flag alone would never show it.
+* `ilm_profile()` runs both and says what each cluster *is* -- "cluster 4 is
+  characterised by dim 1 (high disp, cyl)" -- by v-test, the device FactoMineR's
+  `catdes()` uses. It is documented as a threshold rather than a test, because
+  the clusters were found from the coordinates being tested.
+* `ilm_reduce_na()`, `ilm_cluster_na()` and `ilm_profile_na()` do the same to
+  the *pattern of missingness*: which columns go missing together, and for
+  whom. A block of variables lost as one points at a shared cause, which is a
+  different problem from values going one at a time.
+* `ilm_plot_reduce()`, `ilm_plot_reduce_scree()`, `ilm_plot_reduce_contrib()`,
+  `ilm_plot_cluster()`, `ilm_plot_cluster_gap()` and `ilm_plot_profile()`, each
+  with an `_na` counterpart.
+* `PCAmixdata` and `cluster` join Suggests behind require-guards. Neither is a
+  hard dependency and no new Imports were added.
+
+## Findings behind those changes
+
+* **Complete cases are fine more often than they are given credit for, and the
+  simulation says by how much.** 200 replicates, 400 rows, `y = 0.5x + 0.3z`,
+  coverage of a nominal 95% interval for the coefficient on `x`:
+
+  ```
+                         full   complete   multiple    single
+                         data      cases  imputation  imputation
+    MCAR, 30% missing
+      bias            -0.0028    -0.0012     -0.0035    -0.0069
+      coverage          0.955      0.960       0.970      0.890
+    MAR on a covariate, 40% missing
+      bias            -0.0028     0.0001     -0.0017     0.0002
+      coverage          0.955      0.980       0.970      0.835
+    MAR on the OUTCOME, 41% missing
+      bias            -0.0028    -0.0989     -0.0090    -0.0058
+      coverage          0.955      0.615       0.955      0.790
+  ```
+
+  Complete cases are unbiased at 40% missing when missingness follows a
+  covariate, and fail badly when it follows the outcome: a bias of -0.099 is a
+  fifth of the effect and coverage collapses to 0.615. Multiple imputation
+  repairs exactly that case.
+* **Single imputation is the cautionary column.** Its point estimates are no
+  worse than multiple imputation's anywhere in that table, and its coverage runs
+  0.790 to 0.890, because nothing in its standard errors knows part of the data
+  was invented.
+* **The imputation agrees with `mice`.** On 41% MAR-on-outcome missingness at
+  n = 500 with m = 20, the pooled estimates differ by 0.34 of a pooled standard
+  error and the standard errors by a factor of 1.016, with comparable degrees of
+  freedom -- while complete cases sat at 0.397 against a truth of 0.500.
+* **A marginal test answers the wrong question, and looks right doing it.** The
+  first version of `ilm_check_missing()` asked whether missingness was
+  associated with the outcome, full stop. But when missingness follows a
+  covariate the outcome also depends on, the two are marginally associated
+  while carrying no information about each other once that covariate is held
+  fixed -- measured at 0.273 on data where complete cases covered 0.980. The
+  verdict now comes from a conditional test, which reads 0.039 there and 0.454
+  where the outcome really does drive it. The marginal table is still reported,
+  as description.
+* **Missingness profiling recovers the structure it is given.** On 300 rows
+  where two columns were made to go missing as a block and a third
+  independently, the first dimension loaded the block at 0.9997 each and the
+  independent column at 0.0013, which landed on the second dimension at 0.9987
+  instead.
+
+## Fixes
+
+* `ilm_pool()` was already taken. `R/ilm_parallel.R` defines it to build a
+  cluster of worker processes and six diagnostics call it, so the Rubin's-rules
+  pooler is `ilm_mi_pool()`. Load order happened to favour the existing
+  function, so the new one was unreachable rather than breaking `ilm_anova()`,
+  `ilm_check_ar()` and the rest.
+* A gaussian imputation drew its noise from `sd(y)` where `sigma()` and
+  `residuals()` are unavailable for an `ilm_model`. That is the marginal
+  spread, before the predictors explain any of it, so every imputation carried
+  more noise than the model said was there. `$dispersion` is the residual scale
+  and agrees with `lm()`'s sigma to the printed digits.
+* A cluster summary read "1 of its member sits"; "members" is plural whatever
+  the count, and only the verb agrees.
+* A cluster characterised by two dimensions with the same top-loading variables
+  named them twice in one sentence, which happens whenever there are few
+  variables to go round -- as in a missingness profile of a frame with two
+  incomplete columns.
+
 # illume 0.0.3.9000
 
 Designs that identify an effect, and a way to read a fit back in words.

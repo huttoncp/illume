@@ -326,6 +326,122 @@ than `"normal"` and `"basic"`. When the skew is severe and the groups are
 small, no interval shape rescues a bootstrapped *mean* -- reach for
 `stat = "median"` instead, which stays nominal where the mean does not.
 
+## Profiling: what shape is this data set?
+
+`ilm_describe_all()` tells you about columns one at a time. `ilm_profile()`
+asks a different question -- are there *kinds* of row here? -- by reducing the
+columns to a few dimensions, clustering on those, and then saying what each
+cluster is.
+
+```{r profile, eval = requireNamespace("PCAmixdata", quietly = TRUE) && requireNamespace("cluster", quietly = TRUE)}
+cars <- mtcars
+cars$cyl <- factor(cars$cyl)
+cars$am  <- factor(cars$am)
+
+p <- ilm_profile(cars, k_max = 5, B = 25, seed = 1)
+cat(p$summary, sep = "\n\n")
+```
+
+The reduction picks its own method from the column types: PCA when they are all
+numeric, multiple correspondence analysis when they are all categorical, and a
+mixed method when both are present, as here.
+
+Two things get reported that a bare cluster number does not give you.
+**Stability** is a property of the cluster -- resample the rows, recluster, and
+see whether the same grouping comes back. **Ambiguity** is a property of the
+row, from its silhouette width, and is independent of cluster size: a point can
+sit on the boundary between two clusters inside a large and perfectly stable
+one, which a size-based check would never surface.
+
+```{r profilebits, eval = requireNamespace("PCAmixdata", quietly = TRUE) && requireNamespace("cluster", quietly = TRUE)}
+p$cluster$clusters
+```
+
+A cluster is characterised by v-test, the same device `FactoMineR`'s `catdes()`
+uses. It is a threshold rather than a test, and is documented as one: the
+clusters were found from the very coordinates being tested, so the usual
+sampling argument does not apply. What speaks to whether a partition is real is
+the stability and silhouette figures above, not the characterisation.
+
+## Missing values
+
+`ilm_describe_na_all()` counts them. The harder question is whether they matter,
+and that has a more useful answer than it usually gets.
+
+```{r missing}
+set.seed(4)
+n  <- 500
+z  <- rnorm(n)
+x  <- 0.6 * z + rnorm(n)
+y  <- 0.5 * x + 0.3 * z + rnorm(n)
+d2 <- data.frame(x = x, z = z, y = y)
+d2$x[plogis(1.2 * z - 0.4) > runif(n)] <- NA   # missingness follows z
+
+ilm_check_missing(d2, y = "y", verbose = FALSE)
+```
+
+Note the verdict. Missingness here depends on `z` — so this is emphatically not
+MCAR — and yet **complete-case analysis is unbiased**. Dropping incomplete rows
+needs missingness to be independent of the *outcome* given the covariates, which
+is far weaker than MCAR and is satisfied here. Imputing would buy back some
+precision and nothing else.
+
+That distinction is why the check asks the question conditionally. Missingness
+driven by `z` is *marginally* associated with `y`, because `y` depends on `z`
+too; reading the verdict off that marginal association would send you off to
+impute for nothing.
+
+Change what drives the missingness and the advice changes with it:
+
+```{r missingout}
+d3 <- d2
+d3$x <- x
+d3$x[plogis(1.0 * y - 0.4) > runif(n)] <- NA   # now it follows the outcome
+ilm_check_missing(d3, y = "y", verbose = FALSE)$verdict
+```
+
+Measured over 200 replicates at about 40% missing, the coefficient on `x` came
+back with a bias of 0.0001 and 98% interval coverage in the first case, against
+a bias of −0.099 — a fifth of the effect — and 61.5% coverage in the second.
+
+### Imputing, when it is actually needed
+
+```{r impute}
+imp <- ilm_impute(d3, m = 10, seed = 1, verbose = FALSE)
+ilm_mi_pool(imp, y ~ x + z, family = "gaussian")
+```
+
+Each missing value is **drawn** from the predictive distribution rather than set
+to a fitted mean, and the `m` completed data sets are pooled by Rubin's rules,
+where the spread of the estimates *across* imputations becomes part of the
+reported uncertainty. `fmi` is the fraction of information lost to missingness.
+
+`single = TRUE` gives one completed data set and warns. Filling values in once
+and analysing as though they had been observed gets the point estimate about
+right and the standard errors badly wrong: in that same simulation, single
+imputation covered 79% to 89% where the nominal rate was 95%, because nothing
+in its standard errors knows part of the data was invented.
+
+### Which values go missing together
+
+```{r profilena, eval = requireNamespace("PCAmixdata", quietly = TRUE) && requireNamespace("cluster", quietly = TRUE)}
+pn <- ilm_profile_na(airquality, k_max = 4, B = 25, seed = 1)
+cat(pn$summary[1:2], sep = "\n\n")
+```
+
+The same reduce-cluster-describe pipeline, pointed at present/missing indicators
+instead of values. A block of columns that go missing as one points at a shared
+cause — a section of a form a whole group skipped — which is a different problem
+from values going one at a time, and calls for a different fix.
+
+And the boundary of all this is worth stating plainly: **MAR and MNAR cannot be
+told apart from the observed data.** That is a theorem, not a gap in the
+implementation — the data that would separate them are the ones that are
+missing. Everything above tests MCAR and describes what missingness is related
+to among the things you can see. If the chance of a value going missing depends
+on the value itself, no test will reveal it, and the remedy is a sensitivity
+analysis rather than a better diagnostic.
+
 ## Into the model
 
 The point of all this is what comes next. The exploration tells you which
