@@ -216,6 +216,28 @@ ilm_plot_model(fit)
 A ratio from a mixed model is **conditional** on the cluster, and `ilm_effects()`
 says so rather than letting it be read as a population quantity.
 
+When the significant term is an interaction between a factor and a *continuous*
+predictor -- treatment by time, most often -- a marginal mean cannot take it
+apart, because averaging at the mean of the covariate collapses the thing being
+asked about. `ilm_trends()` estimates the slope within each level instead, and
+answers the two questions separately: whether each slope differs from zero, and
+whether the slopes differ from each other.
+
+```{r}
+tr <- ilm_trends(fit, "group", var = "time")
+tr                                           # is each group's slope non-zero?
+ilm_contrast(tr)                             # do the groups' slopes differ?
+```
+
+For a mixed model the reference is a large-sample one unless you ask otherwise.
+`ilm_denom_df()` supplies Satterthwaite or Kenward-Roger denominator degrees of
+freedom, which matter when the clusters are few.
+
+If the design is a factorial or repeated-measures one and you want it reported
+the way those designs are usually reported -- F, mean squared error, generalized
+eta squared, a sphericity correction -- `ilm_aov_ez()` does the whole of stages
+7 to 9 from a description of the columns. See `vignette("anova")`.
+
 ---
 
 ## 10. Scenario projection

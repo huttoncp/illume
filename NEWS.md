@@ -217,6 +217,142 @@ defect here.
   replicates is 0.74 to 0.86, and the **convergence rate**, because power
   conditional on convergence is not power.
 
+## Finite degrees of freedom for a mixed model
+
+* `ilm_denom_df()` adds Satterthwaite and Kenward-Roger. A Wald statistic
+  treats the variance components as known; they are not, and with few clusters
+  the chi-square reference is anti-conservative -- which is the regime a
+  repeated-measures design lives in.
+* Satterthwaite is the default and works for **every structure this package
+  fits**, because it asks the objective rather than reimplementing `V(theta)`:
+  the fixed-effect covariance with `theta` held fixed is the inverse of the
+  beta block of the Hessian of the Laplace objective, recovered by differencing
+  `obj$gr()` since `obj$he()` is unavailable once anything is integrated out.
+  Checked against `vcov()`, that route reproduces it to **8e-11**.
+* Against `lmerTest::lmer(REML = FALSE)`, the same estimator illume uses,
+  per-coefficient df agree to between **1e-06 and 5e-06** across four designs,
+  and multi-row F denominators match exactly.
+* **Kenward-Roger does not come free from the same route and says so.** It
+  needs `Q_ij` and `R_ij` separately, and differentiating the beta block twice
+  yields only `Q_ij + Q_ji - R_ij`. The pieces separate when the marginal
+  covariance is LINEAR in the variance parameters -- random intercepts and
+  slopes with one residual variance, where Kenward and Roger derived it and
+  where repeated-measures designs live. Once a correlation parameter enters it
+  does not, so `ilm_denom_df()` checks first and refuses with the reason,
+  naming Satterthwaite instead.
+
+## Restricted maximum likelihood
+
+* `ilm_model(reml = TRUE)`. Adding the fixed effects to the block TMB
+  integrates out is not an approximation to REML, it **is** REML: under a flat
+  prior that integral is the restricted likelihood, and for a linear-gaussian
+  model the Laplace approximation to it is exact. Against `lme4`: variance
+  components to 1e-05, coefficients to 1.9e-14, covariance to 1.6e-07.
+* On a fixed-effects gaussian model REML reproduces `lm()`'s standard errors to
+  **3.2e-11**, against maximum likelihood's 3.7e-08 -- as it should, since
+  restricting the likelihood to contrasts orthogonal to `X` is where the
+  `n - p` divisor comes from. `vcov()` no longer applies its own correction on
+  top, which would have inflated every standard error twice.
+* **The default stays maximum likelihood, and the reason is the order you work
+  in.** A restricted likelihood belongs to contrasts orthogonal to the design
+  matrix, so changing the fixed effects changes which data it is the likelihood
+  of. Settle the mean structure under ML, then refit with `reml = TRUE` for what
+  you report. `ilm_dag_model()` defaults to REML instead, because the graph
+  fixed the adjustment set before any data were seen.
+* Available for **every family**, not only gaussian. `glmmTMB` does exactly
+  this -- `if (REML) randomArg <- c(randomArg, "beta")` -- so refusing was
+  stricter than the reference implementation without being more correct.
+  Against glmmTMB with `REML = TRUE`: poisson coefficients to 3.1e-09, binomial
+  to 2.8e-16, variance components to 1.3e-08, with REML lifting them 5.1% and
+  8.4% off ML's downward bias. What differs by family is how much it delivers,
+  which `reml_exact` records: exact for a linear model, approximately
+  restricted elsewhere.
+* Worth recording because it looked like a defect: illume's REML standard
+  errors differ from glmmTMB's by about 0.3%. On a gaussian fit, where `lmer`
+  is the canonical reference, illume matches `lmer` to **7.2e-09** and glmmTMB
+  differs from it by 9.1e-04. The gap is glmmTMB's convention.
+* Guards, because every one of these fails silently otherwise. A
+  likelihood-ratio `ilm_anova()` and `ilm_pb_lrt()` refuse on a REML fit and
+  say what to do. `ilm_robust()` refuses too -- integrating the coefficients
+  out leaves no per-observation score for a sandwich to sum, which is the same
+  combination `glmmTMB`'s `estfun` rejects.
+
+## Marginal slopes
+
+* `ilm_trends()` takes an interaction apart when one side of it is continuous
+  -- the treatment-by-time case, where the omnibus test says an interaction
+  exists and says nothing about what is driving it.
+* Two questions follow and they are **not the same question**: whether the
+  slopes DIFFER between arms, and whether each slope differs from ZERO within
+  an arm. They disagree in both directions -- two arms can have slopes that
+  differ significantly while neither is distinguishable from zero, and both can
+  be strongly non-zero while not differing from one another.
+* A marginal mean cannot answer either, because averaging at the mean of the
+  covariate collapses the thing being asked about. But a slope is the same
+  `L %*% beta` with a different `L`, so `ilm_trends()` returns the class
+  `ilm_emmeans()` does and `ilm_contrast()` differences the rows without
+  knowing the difference.
+* Against `emmeans::emtrends`: slopes to 3e-07 and standard errors to 7e-09 on
+  a fixed-effects fit; on a REML mixed fit slopes to 5.8e-10 with Satterthwaite
+  df matching to three decimals. Contrasts between slopes match
+  `emmeans::contrast` exactly.
+
+## ANOVA, specified by naming columns
+
+* `ilm_aov_ez()`. Name the participant, the outcome, and which factors vary
+  between or within participants. No formula with an error term, no reshaping.
+* The omnibus table is computed **classically** rather than read off the mixed
+  model, and that is the whole reason it exists: `ilm_model()` reports a Wald
+  chi-square, because once random effects are integrated out there is no exact
+  residual degrees of freedom to divide by. An F, a mean squared error, a
+  generalized eta squared and a Greenhouse-Geisser correction do not fall out
+  of that fit.
+* Against **afex** across five designs -- between only, within only, between by
+  within, with a GG correction, and with a covariate -- F agrees to 1.4e-12,
+  generalized eta squared to 1.7e-14, p to 9.5e-14, and the fractional
+  corrected degrees of freedom to 4.4e-16. Mauchly's W, its p-value and the GG
+  epsilon match `car`'s arithmetic.
+* Two things had to be right and neither announced itself. The univariate F is
+  a ratio of TRACES, and a trace is basis-free only in an orthonormal basis;
+  `contr.sum` columns are neither unit-length nor mutually orthogonal, so both
+  traces are taken in the `(P'P)^-1` metric. Without it every
+  within-participant F is wrong while every between-participant one stays
+  right -- the pattern that looks like a modelling disagreement rather than a
+  bug. And generalized eta squared needs every stratum's error in its
+  denominator including the participant stratum, which in a purely
+  within-participants design never reaches the table; without putting it back,
+  every `ges` came out more than twice too large and each value looked
+  plausible.
+* Beyond afex, each check names a remedy that exists here. Sphericity fails ->
+  an unstructured mixed model does not assume it. Participants have missing
+  cells -> they are dropped, counted, and the mixed model uses them. A
+  covariate varies within participant -> refused, because one coefficient for a
+  time-varying covariate blends how participants who score higher on average
+  differ with what happens when a participant scores higher than usual, and
+  those can have opposite signs.
+* Interactions are followed up with **simple effects in both directions**
+  rather than every cell pair: all nine cells of a 3-by-3 give thirty-six
+  differences, most of which move both factors at once. Where the interaction
+  is with a covariate the follow-up is `ilm_trends()`.
+
+## The studies, re-run in full
+
+* All five standing studies re-run at this version alongside the new imputation
+  ablation, at the parameters used at 0.0.2.9000 so the two are comparable.
+  Every cell that existed then reproduces it.
+* Coverage grew from 23 cells to **32**. Everything added since 0.0.2.9000 had
+  agreement against an outside implementation and no coverage of its own, and
+  those are different claims: agreement says the point estimate is right,
+  coverage says the interval is. The new cells hold -- beta 0.949,
+  zero-inflated beta 0.951, hurdle Poisson 0.949, zero-inflated Poisson mixed
+  0.950, ordered logit 0.946 fixed and 0.953 mixed, 2SLS 0.946.
+* Two do not sit at nominal and both are recorded. `mediate` **over**-covers at
+  0.967 with a standard-error ratio of 1.107: the ACME interval is a percentile
+  interval from simulation draws and runs about 11% wider than the sampling
+  variability of the estimate. `svy_strat` covers at 0.939 with a ratio of
+  0.956, about two Monte Carlo standard errors below nominal -- small, but in
+  the anti-conservative direction.
+
 ## What the imputation ablation says
 
 * Five methods across six designs, scored on reconstruction AND on coverage of

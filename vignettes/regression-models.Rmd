@@ -132,14 +132,60 @@ the terms that do not contain it. They agree when there are no interactions. Wal
 tests are the default because they need no refitting; a likelihood-ratio version
 is available with `test = "LRT"` and is more reliable for very strong effects.
 
-For small samples, neither is ideal -- both rely on large-sample approximations,
-and unlike linear mixed models there is no Kenward-Roger correction available
-here. `ilm_pb_lrt()` replaces the assumed reference distribution with a
-simulated one:
+For small samples neither is ideal, because both rely on large-sample
+approximations. What to do about it depends on the family.
+
+For a **gaussian** mixed model, `ilm_denom_df()` supplies a finite denominator
+degrees of freedom -- Satterthwaite by default, Kenward-Roger where it applies
+-- which turns the chi-square into an F:
+
+```{r ddf, eval = FALSE}
+ilm_denom_df(fit_gaussian, L)                       # for one contrast
+```
+
+Satterthwaite works for every structure this package fits. Kenward-Roger is
+only defined where the marginal covariance is linear in the variance
+components -- random intercepts and slopes with a single residual variance --
+and says so rather than returning a number it cannot stand behind.
+
+For **any other family**, including the multinomial here, neither approximation
+is derived and neither is offered. `ilm_pb_lrt()` replaces the assumed
+reference distribution with a simulated one instead, which needs no such
+derivation:
 
 ```{r pb, eval = FALSE}
 ilm_pb_lrt(fit, "x1", B = 200, ncores = 4)
 ```
+
+## Maximum likelihood, and when to switch to REML
+
+Variance components estimated by maximum likelihood are biased downward,
+because ML does not account for the degrees of freedom spent on the fixed
+effects. With many clusters that hardly matters; with few it carries through
+into standard errors and degrees of freedom.
+
+`reml = TRUE` corrects it:
+
+```{r reml, eval = FALSE}
+ilm_model(y ~ x1 + grp + (1 | id), data = d, family = "gaussian",
+          reml = TRUE)
+```
+
+The default is maximum likelihood, and the reason is the order you work in. A
+restricted likelihood is the likelihood of contrasts orthogonal to the design
+matrix, so changing the fixed effects changes which data it is the likelihood
+of. Two REML fits with different fixed effects are not comparable, and their
+difference is not a likelihood ratio.
+
+So: **settle the mean structure under the default, then refit with
+`reml = TRUE` for the estimates you report.** Once set, `ilm_anova(test =
+"LRT")` and `ilm_pb_lrt()` refuse rather than quietly comparing things that
+are not comparable, and so does `ilm_robust()` -- a sandwich needs
+per-observation scores, and integrating the coefficients out leaves none.
+
+`ilm_dag_model()` and `ilm_aov_ez()` default to REML, because in both the
+fixed effects were fixed before any data were seen: by the graph in one case
+and by the design in the other.
 
 ## Predictions
 

@@ -78,7 +78,8 @@ is the shape of the whole package.
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
-| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_ame()`, `ilm_robust()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
 | **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` |
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
 | **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
@@ -125,6 +126,7 @@ holds the scripts, the retained runs, and a generated findings log per study:
 | Study | Against | Reports |
 |---|---|---|
 | `coverage` | 32 model configurations | interval coverage per family, structure and design |
+| _(validated against)_ | `afex`, `lmerTest`, `pbkrtest`, `emmeans` | ANOVA tables, degrees of freedom, marginal slopes |
 | `power` | closed form where one exists | 13 designs |
 | `bench` | `lme4`, `glmmTMB`, `nlme`, `survreg` | agreement and timing |
 | `mclogit` | `mclogit::mblogit` | the table above |
@@ -163,11 +165,55 @@ parameters::model_parameters(fit)
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power, scenario projection |
+| `anova` | factorial and repeated-measures ANOVA, for a psychology audience |
 
 ```r
 vignette("workflow", package = "illume")
 ```
 
+## Standing on other people's shoulders
+
+Almost nothing here is new mathematics. What `illume` mostly does is put
+existing methods behind one object with one vocabulary, and it can only do that
+because other people wrote the hard parts first and wrote them in the open.
+Three different debts are worth separating, because the third is the one that
+usually goes unsaid.
+
+**Without these there would be no package.** `RTMB` and `TMB` are the engine:
+every model here is an automatic-differentiation tape and a Laplace
+approximation, and the reason the multinomial mixed model is feasible at all is
+that Kristensen, Nielsen, Berg, Skaug and Bell made writing one a matter of
+declaring which parameters to integrate out. `Matrix` carries the sparse
+algebra underneath it. `collapse` does the grouped operations fast enough that
+the exploratory half is usable on real data. `tinyplot` draws every plot.
+`mgcv` supplies the smooth basis construction, and Simon Wood's mixed-model
+representation of a penalised smooth is what lets one engine fit both.
+
+**Without these it could not be trusted.** Every validity claim in this package
+is a comparison against an independent implementation, and each of those is
+someone else's careful work being used as a measuring stick: `lme4` and
+`glmmTMB` for mixed models, `emmeans` for marginal means and slopes, `afex` and
+`car` for ANOVA tables and sphericity, `lmerTest` and `pbkrtest` for degrees of
+freedom, `survey` for design-based inference, `sandwich` for robust covariance,
+`ordinal`, `pscl`, `mice`, `nlme`, `survival`, `nnet`, `mclogit` and `brms` for
+their respective families and methods. Every real defect this package has ever
+had was found by one of those comparisons and by nothing else, which is a debt
+of a fairly literal kind.
+
+**And some of it was read straight out of their source.** The
+Greenhouse-Geisser, Huynh-Feldt and Mauchly arithmetic in `ilm_aov_ez()` was
+taken from `car`, because there are several non-equivalent forms in print and
+the one that matters is the one people compare against. The generalized eta
+squared formula came from `afex` for the same reason. The way REML is obtained
+-- by adding the fixed effects to the block that gets integrated out -- was
+taken from `glmmTMB`, and so was the guard that a sandwich cannot be computed
+from a REML fit. The parametric bootstrap follows Halekoh and Højsgaard. The
+multiple-imputation-by-PCA route follows Josse and Husson; the chained-equations
+default is the approach `mice` established; the profiling workflow is a
+lighter-weight rebuild of `FactoMineR`'s `HCPC()` and `catdes()`.
+
+Where a method has a name attached to it in the documentation, that is
+deliberate. It should be possible to find out whose idea any part of this was.
 ## References
 
 Kristensen, Nielsen, Berg, Skaug and Bell (2016). TMB: Automatic

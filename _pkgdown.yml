@@ -24,6 +24,7 @@ articles:
   - regression-models
   - causal-models
   - effect-size-and-power
+  - anova
 - title: Exploration
   navbar: Exploration
   contents:
@@ -85,6 +86,11 @@ reference:
   - ilm_rqr_test
   - ilm_scores
   - ilm_variogram
+- title: "ANOVA"
+  desc: >
+    Factorial and repeated-measures designs, specified by naming columns rather than by writing a formula with an error term.
+  contents:
+  - ilm_aov_ez
 - title: "Inference and interpretation"
   desc: >
     What the model says, on a scale someone can read.
@@ -95,6 +101,7 @@ reference:
   - ilm_boot_diff
   - ilm_coef_table
   - ilm_contrast
+  - ilm_denom_df
   - ilm_effects
   - ilm_emmeans
   - ilm_interpret
@@ -103,6 +110,7 @@ reference:
   - ilm_rp_lrt
   - ilm_scenario
   - ilm_translate
+  - ilm_trends
   - ilm_vcov_cluster
   - ilm_zi_coef
   - ilm_zi_prob

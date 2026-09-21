@@ -31,9 +31,13 @@ grp <- list(
        "Each check reports whether an assumption is consistent with the data, and names a remedy that exists in this package when it is not.",
        function(x) grepl("^ilm_(check_|appraise|rqr|binned|calibration|consistency|variogram|re_mahalanobis|scores|gauss_check)", x)),
 
+  list("ANOVA",
+       "Factorial and repeated-measures designs, specified by naming columns rather than by writing a formula with an error term.",
+       function(x) grepl("^ilm_aov", x)),
+
   list("Inference and interpretation",
        "What the model says, on a scale someone can read.",
-       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|ame|robust|vcov_cluster|pb_lrt|rp_lrt|boot_|coef_table|se_fixef|zi_|scenario|interpret|translate)", x)),
+       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|trends|ame|robust|vcov_cluster|denom_df|pb_lrt|rp_lrt|boot_|coef_table|se_fixef|zi_|scenario|interpret|translate)", x)),
 
   list("Design and power",
        "Before the data exist.",
@@ -125,6 +129,7 @@ head <- c(
   "  - regression-models",
   "  - causal-models",
   "  - effect-size-and-power",
+  "  - anova",
   "- title: Exploration",
   "  navbar: Exploration",
   "  contents:",

@@ -1,0 +1,379 @@
+---
+title: "ANOVA: factorial and repeated measures"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ANOVA: factorial and repeated measures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+library(illume)
+```
+
+If you have run an ANOVA in SPSS, or used `afex` in R, this will look familiar.
+You describe the design by saying what each column *is* -- who the participant
+is, what was measured, what varied between people and what varied within them
+-- and you get back the table you were expecting, with the sphericity
+correction and the effect size already in it.
+
+```{r}
+library(illume)
+```
+
+## The design we will use
+
+Thirty-six people, randomised to one of three doses, tested three times. Dose
+varies **between** participants (each person has one dose). Session varies
+**within** participants (each person is measured at all three). `baseline` is a
+score taken once, before anything happened.
+
+```{r}
+head(d, 4)
+#>   id session    dose   recall baseline
+#> 1  1     pre placebo 51.48496      113
+#> 2  2     pre placebo 49.92847      111
+#> 3  3     pre placebo 49.19631      126
+#> 4  4     pre placebo 50.27987      102
+```
+
+One row per person per session. This is "long" format, and it is the format you
+want -- nothing needs reshaping into columns.
+
+## The analysis
+
+```{r}
+a <- ilm_aov_ez(id = "id", dv = "recall", data = d,
+                between = "dose", within = "session")
+a
+```
+
+```
+Analysis of Variance
+  recall ~ dose (between) + session (within)
+  36 participants
+
+       Effect    df   MSE      F   ges       p
+         dose 2, 33 6.227 10.591 0.298 0.00028 ***
+      session 2, 66 1.604 62.484 0.392 < 1e-04 ***
+ dose:session 4, 66 1.604 15.641 0.244 < 1e-04 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Sphericity (Mauchly):
+       Effect     W     p    GG HF
+      session 0.998 0.972 0.998  1
+ dose:session 0.998 0.972 0.998  1
+```
+
+That is the whole thing. No `Error()` term, no `aov()`, no reshaping.
+
+### Reading it across
+
+**`df`** is two numbers: how many ways the effect can vary, then how much
+information is left to estimate the noise. `2, 33` for dose means three dose
+groups (two differences between them) tested against 33 participants' worth of
+residual.
+
+Notice that `session` is tested on **66** and `dose` on **33**. They are
+different because they are different comparisons. A within-participant effect
+gets to use each person as their own control, so it has more information behind
+it -- which is exactly why repeated-measures designs are efficient.
+
+**`MSE`** is the noise those F tests are dividing by. It is smaller for the
+within-participant effects (1.604 against 6.227) for the same reason.
+
+**`F`** is signal over noise. **`p`** is how often you would see an F that large
+if nothing were going on.
+
+**`ges`** is the effect size, and it is worth a section of its own.
+
+## Why `ges` and not eta squared
+
+You have probably met three effect sizes for ANOVA and been told to report one:
+
+* **eta squared** is this effect's variance over *all* the variance. It shrinks
+  whenever you add anything else to the design, so the same effect looks smaller
+  in a bigger study.
+* **partial eta squared** is this effect's variance over itself plus its own
+  error. It does not shrink -- but it *inflates* in repeated-measures designs,
+  because the between-participant variation has been removed from its
+  denominator. A within-participant effect and a between-participant effect
+  reported this way are not on the same scale, and neither is comparable to a
+  between-participants study of the same thing.
+* **generalized eta squared (`ges`)** puts the variability back into the
+  denominator that a different design would have had. The result is comparable
+  across designs, which is what you need if your number is going into a
+  meta-analysis or a power calculation for someone else's study.
+
+`ges` is the default here for the same reason it is the default in `afex`.
+Olejnik and Algina (2003) is the source; Bakeman (2005) is the readable version.
+
+One thing `ges` needs from you. Its denominator should include variables that
+were **measured** rather than **manipulated** -- age, baseline score, anything
+you recorded but did not assign. Name those in `observed`:
+
+```{r}
+ilm_aov_ez("id", "recall", d, between = "dose", within = "session",
+           observed = "dose")     # if dose had been self-selected, not assigned
+```
+
+Covariates are measured by definition, so they are added for you.
+
+## Sphericity, and what to do about it
+
+The F test for a within-participant effect assumes **sphericity**: that the
+differences between every pair of sessions are equally variable. With only two
+levels there is one difference and nothing to violate. With three or more, it
+can fail -- and when it does, the test says "significant" more often than it
+should.
+
+`ilm_aov_ez()` runs Mauchly's test and reports it, along with the two standard
+corrections:
+
+```
+Sphericity (Mauchly):
+       Effect     W     p    GG HF
+      session 0.998 0.972 0.998  1
+ dose:session 0.998 0.972 0.998  1
+```
+
+`W` near 1 and a large `p` mean sphericity is fine here. `GG` and `HF` are
+**epsilon** values: how far from spherical things are, where 1 is perfectly
+spherical. They shrink the degrees of freedom, which makes the test more
+conservative.
+
+By default the correction is applied only when Mauchly's test rejects. You can
+force it:
+
+```{r}
+ilm_aov_ez("id", "recall", d, between = "dose", within = "session",
+           correction = "GG")     # or "HF", or "none"
+```
+
+### The thing nobody tells you about corrections
+
+A correction is a patch on a test whose assumption has failed. There is another
+option: use a model that never assumed sphericity in the first place.
+
+```{r}
+ilm_model(recall ~ dose * session + (1 | id), data = d,
+          re_struct = "us", family = "gaussian")
+```
+
+`re_struct = "us"` leaves the covariance between sessions completely free, so
+there is nothing to correct. If sphericity fails badly, `ilm_aov_ez()` will say
+so and point you here. It is not always the right move -- it costs parameters,
+and with few participants that matters -- but it is the honest alternative to
+adjusting a broken test.
+
+## Following up a significant effect
+
+An F test with three or more levels tells you the means are not all the same. It
+does not tell you which ones differ, and that is usually the finding.
+
+`ilm_aov_ez()` does this for you, for significant effects where there is
+something to compare. (A two-level factor is skipped: its F test *is* the
+comparison.)
+
+For a **main effect**, it is the pairwise comparisons. For an **interaction**,
+it is something more useful.
+
+### Interactions get simple effects, not every cell
+
+A 3 × 3 interaction has nine cells and thirty-six possible pairs. Most of those
+pairs change both factors at once, and answer nothing you asked.
+
+What takes an interaction apart is the **simple effect**: hold one factor still,
+compare the other. In both directions, because they are different questions.
+
+```{r}
+a$posthoc[["dose:session"]]
+```
+
+```
+  ~ dose within each session ~
+    [session = pre]
+       contrast estimate    se  lower upper  p_adj
+  low - placebo  -0.6298 0.724 -2.330 1.071 0.6625
+ high - placebo  -0.3525 0.724 -2.053 1.348 0.8810
+     high - low   0.2773 0.724 -1.423 1.978 0.9220
+
+    [session = mid]
+       contrast estimate    se   lower upper   p_adj
+  low - placebo   0.5744 0.724 -1.1268 2.276 0.71235
+ high - placebo   2.6469 0.724  0.9457 4.348 0.00045
+     high - low   2.0725 0.724  0.3714 3.774 0.01115
+
+    [session = post]
+       contrast estimate    se   lower upper   p_adj
+  low - placebo    1.598 0.724 -0.1028 3.299 0.07065
+ high - placebo    5.382 0.724  3.6810 7.083 0.00000
+     high - low    3.784 0.724  2.0828 5.485 0.00000
+```
+
+Read down the sessions and the finding writes itself: at **pre** the groups are
+indistinguishable, which is what randomisation should give you; by **mid** the
+high dose has separated from placebo; by **post** the separation is large and
+the doses are ordered. That is a dose-response emerging over time, and it is
+what the interaction was pointing at.
+
+The other direction -- how each dose group changes across sessions -- is in the
+same object, below.
+
+### "Significant in one group but not the other" is not an interaction
+
+This is the most common mistake in this part of a paper. If the drug group
+improves significantly and the placebo group does not, that is **two separate
+tests**, and it does not establish that the groups differ from each other. The
+difference between a significant result and a non-significant one is not itself
+significant.
+
+The test you need is the one comparing the groups -- the `~ dose within each
+session ~` half above, or the interaction F itself. Both are printed, and they
+are printed together so that the comparison is in front of you.
+
+## When your predictor is continuous
+
+Sometimes time is not three sessions but a number -- week 0, 2, 6, 12 -- and you
+want to know whether the *slope* differs by group. ANOVA cannot do that: it
+needs levels. This is what `ilm_trends()` is for.
+
+```{r}
+f <- ilm_model(recall ~ dose * week + (1 | id), data = d,
+               family = "gaussian", reml = TRUE)
+ilm_trends(f, "dose", var = "week")
+```
+
+```
+Estimated marginal slopes of `week` within dose
+  averaged with equal weights; t tests on satterthwaite df
+    dose estimate     se      df statistic p.value   lower  upper
+ placebo   0.3398 0.2534 69.0000    1.3409  0.1844 -0.1658 0.8454
+     low   1.4538 0.2534 69.0001    5.7366  0.0000  0.9482 1.9594
+    high   3.2071 0.2534 69.0001   12.6547  0.0000  2.7015 3.7127
+
+  p-values above test each slope against ZERO.
+```
+
+That answers "is anything happening in this arm?". For "do the arms differ from
+each other?", which is the different question, pass it on:
+
+```{r}
+ilm_contrast(ilm_trends(f, "dose", var = "week"))
+```
+
+```
+       contrast estimate     se  lower upper  p_adj
+  low - placebo    1.114 0.3584 0.2715 1.956 0.0045
+ high - placebo    2.867 0.3584 2.0248 3.710 0.0000
+     high - low    1.753 0.3584 0.9108 2.596 0.0000
+```
+
+Both are reported because both get asked, and they can disagree in either
+direction.
+
+## Covariates
+
+A covariate is a numeric variable you want to adjust for. Add it by name:
+
+```{r}
+ilm_aov_ez("id", "recall", d, between = "dose", within = "session",
+           covariate = "baseline")
+```
+
+```
+           effect num_df den_df    F_value         ges      p_value
+             dose      2     32 11.1525017 0.307451575 2.113305e-04
+         baseline      1     32  1.1591189 0.023070248 2.896984e-01
+          session      2     64  1.2036463 0.012441974 3.067993e-01
+     dose:session      4     64 15.0581990 0.239678082 1.000167e-08
+ baseline:session      2     64  0.4850469 0.005077051 6.179131e-01
+```
+
+### Your covariate has to be one number per person
+
+`baseline` was measured once, so each participant has one value. That is what a
+classical ANCOVA can use.
+
+If your covariate was measured *at every session* -- daily stress, sleep the
+night before, session-specific dose -- `ilm_aov_ez()` will stop and tell you so.
+This is not fussiness. A time-varying covariate carries two effects at once:
+
+* how people who are **generally** more stressed differ from people who are not;
+* what happens when a person is **more stressed than usual for them**.
+
+Those can be different sizes, and they can point in opposite directions. A
+single coefficient gives you a blend of the two that answers neither question,
+and the classical ANOVA has nowhere to put the distinction. The mixed model
+does, by splitting the covariate into a person-average and a deviation from it.
+
+## When people are missing a session
+
+Classical repeated-measures ANOVA cannot use a participant who missed one
+session. Not "handles it badly" -- cannot use them at all, because every
+within-participant comparison needs all their cells. They get dropped.
+
+`ilm_aov_ez()` tells you when that happens:
+
+```
+ilm_aov_ez: 35 participants, 3 within-participant cell(s)
+  1 participant(s) dropped for incomplete cells -- classical repeated measures
+  cannot use a participant missing an occasion. engine = "mixed" keeps them.
+```
+
+If you lost one person out of thirty-six, that is a footnote. If you lost
+fifteen, the analysis is being done on a self-selected subset -- the people who
+came back -- and that is a different study from the one you ran. A mixed model
+uses everyone's available data:
+
+```{r}
+ilm_aov_ez("id", "recall", d, between = "dose", within = "session",
+           engine = "mixed")
+```
+
+That translates your specification into the right model formula, which you can
+see and check:
+
+```{r}
+a$formula
+#> recall ~ dose * session + (1 | id)
+```
+
+## Coming from afex or SPSS
+
+| You know | Here |
+|---|---|
+| `aov_ez(id, dv, data, between, within)` | `ilm_aov_ez(id, dv, data, between, within)` |
+| `anova_table = list(es = "ges")` | reported by default |
+| `correction = "GG"` | `correction = "GG"` |
+| `observed = "age"` | `observed = "age"`; covariates are automatic |
+| `emmeans(fit, ~ a)` then `pairs()` | done for you; or `ilm_emmeans()` + `ilm_contrast()` |
+| `emtrends()` | `ilm_trends()` |
+| SPSS "Tests of Within-Subjects Effects" | the same table, with `ges` instead of partial eta squared |
+
+The numbers agree with `afex` to machine precision -- F to twelve decimal
+places, `ges` to fourteen, and the Greenhouse-Geisser fractional degrees of
+freedom to sixteen. If you have an existing analysis, you can check it.
+
+## What this does not do
+
+It does not decide anything for you. It will tell you that sphericity failed,
+that eleven participants were dropped, or that your covariate varies within
+person -- and in each case name what to do instead. Whether the classical
+analysis is still the right one for your question is yours to judge, and the
+notes at the bottom of the output are there so that it is judged rather than
+missed.
+
+## See also
+
+`?ilm_aov_ez`, `?ilm_trends`, `?ilm_emmeans`, `?ilm_contrast`,
+`vignette("regression-models")` for the general modelling engine underneath,
+and `vignette("effect-size-and-power")` for planning the next study.
+
+Olejnik, S. and Algina, J. (2003). Generalized eta and omega squared
+statistics. *Psychological Methods* 8, 434-447.
+
+Bakeman, R. (2005). Recommended effect size statistics for repeated measures
+designs. *Behavior Research Methods* 37, 379-384.

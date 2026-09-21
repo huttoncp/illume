@@ -79,7 +79,8 @@ is the shape of the whole package.
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random effects, smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
-| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_ame()`, `ilm_robust()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns, with generalized eta squared and sphericity corrections |
 | **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` |
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
 | **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
@@ -161,6 +162,32 @@ pointer for each.
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power, scenario projection |
+| `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
+
+## Standing on other people's shoulders
+
+Almost nothing here is new mathematics. What this package mostly does is put
+existing methods behind one object with one vocabulary, and it can only do that
+because other people wrote the hard parts first and wrote them in the open.
+
+`RTMB` and `TMB` are the engine -- every model here is an
+automatic-differentiation tape and a Laplace approximation, and the multinomial
+mixed model is feasible at all only because Kristensen and colleagues made
+writing one a matter of declaring what to integrate out. `Matrix` carries the
+sparse algebra, `collapse` makes the exploratory half fast enough to use,
+`tinyplot` draws everything, and `mgcv` supplies the smooth bases.
+
+Every validity claim in this package is a comparison against somebody else's
+independent implementation -- `lme4`, `glmmTMB`, `emmeans`, `afex`, `car`,
+`lmerTest`, `pbkrtest`, `survey`, `sandwich`, `ordinal`, `pscl`, `mice`,
+`nlme`, `survival`, `mclogit`, `brms`. Every real defect this package has had
+was found that way and by nothing else.
+
+And some of it was read straight out of their source: the sphericity arithmetic
+from `car`, the generalized eta squared formula from `afex`, the way REML is
+obtained from `glmmTMB`. Where a method has a name attached to it in these
+pages, that is deliberate -- it should be possible to find out whose idea any
+part of this was. The README has the longer version.
 
 ## References
 
