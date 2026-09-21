@@ -462,15 +462,25 @@ ilm_boot_diff.data.frame <- function(x, y = NULL, group = NULL, stat = "mean",
     bonferroni = pmin(1, m * pv),
     none       = pv)
 
-  data.frame(stat = if (is.function(stat)) "custom" else stat,
+  ## The proportion of replicates on each side of zero. Not a p-value and not
+  ## a posterior probability -- it is a description of where the bootstrap
+  ## distribution sits, which is what ilm_plot_boot_diff() draws.
+  p_sup <- vapply(seq_len(m), function(k) mean(D[, k] > 0), 1)
+
+  out <- data.frame(stat = if (is.function(stat)) "custom" else stat,
              group = gname, from = lv[pr$i], to = lv[pr$j],
              observed = dh, lower = lo, upper = up,
              conf = conf, R = R, ci_type = if (adjust == "max_t") "max_t" else ci_type,
              adjust = adjust, n_comparisons = m,
              n_from = unname(ng[pr$i]), n_to = unname(ng[pr$j]),
-             p_value = pv, p_adj = padj,
+             p_value = pv, p_adj = padj, p_superiority = round(p_sup, 4),
              excludes_zero = is.finite(lo) & (lo > 0 | up < 0),
              stringsAsFactors = FALSE, row.names = NULL)
+  ## the replicate differences themselves, one column per comparison, so the
+  ## distribution behind a row can be drawn rather than only summarised
+  colnames(D) <- paste(lv[pr$i], lv[pr$j], sep = " -> ")
+  attr(out, "draws") <- D
+  out
 }
 
 ## ---- missingness -----------------------------------------------------------

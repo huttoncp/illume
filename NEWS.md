@@ -1,3 +1,65 @@
+# illume 0.0.5.9000
+
+The rest of the exploration layer: unusual values, and named plots.
+
+## Flagging unusual values
+
+* `ilm_outliers()` scores every value by how far it sits from the centre and
+  flags those past a threshold, by Tukey fence (`"iqr"`), modified z-score
+  (`"mad"`) or ordinary z-score. `ilm_outliers_all()` runs it over every numeric
+  column, optionally within groups, and returns the row each flagged value came
+  from.
+* Grouping is not a detail. A value can be ordinary for its own group and
+  extreme against the pooled distribution, so flagging without `by` on grouped
+  data largely rediscovers the groups.
+* The documentation says what a flag is **not**. It is not a verdict that a
+  value is wrong: a flagged value may be a recording error, a member of another
+  population, or an ordinary draw from a heavy tail. Dropping flagged rows
+  because they are flagged changes the estimand; if the tail is real the remedy
+  is a model that expects it.
+
+## Named plots
+
+* `ilm_plot_histogram()`, `ilm_plot_density()`, `ilm_plot_box()`,
+  `ilm_plot_violin()`, `ilm_plot_scatter()`, `ilm_plot_bar()`,
+  `ilm_plot_line()` and `ilm_plot_stat_error()`. `ilm_plot()` picks a geometry
+  for you; these are the same drawing done by naming the plot you want.
+* `ilm_plot_var()` and `ilm_plot_var_all()` choose from the column types;
+  `ilm_plot_var_pairs()` plots every pair, handling mixed numeric and
+  categorical columns rather than only numeric ones; `ilm_plot_c()` composes
+  several plots into one figure.
+* `ilm_plot_na_all()` and `ilm_plot_na()` show missingness across columns and
+  across groups. `ilm_plot_missing()` now draws through the first of these, so
+  there is one implementation.
+* Everything is on tinyplot. That was the last base-graphics plot in the
+  package, and columns are named as strings throughout, the way the rest of
+  illume takes them.
+
+## Bootstrap differences can be seen, not just summarised
+
+* `ilm_boot_diff()` keeps the replicate differences, labelled by comparison,
+  and reports `p_superiority` -- the share of replicates above zero.
+* `ilm_plot_boot_diff()` draws them for any comparison in the result, with zero
+  and the interval marked. The interval says where the difference is; this says
+  what the resampling produced, which is whether it is symmetric, skewed, or
+  piled against a boundary.
+
+## Findings behind those changes
+
+* **The Tukey fence is drawn from HINGES, not from quantiles, and the
+  difference is visible.** `ilm_outliers(method = "iqr")` claimed to reproduce
+  the rule a boxplot's whiskers use, and did not: built on `quantile()`'s
+  type-7 default it put the upper fence for `mtcars$wt` at 5.153 where
+  `fivenum()`'s hinges put it at 5.311, so a value of 5.25 was flagged while
+  sitting inside the whisker it was supposed to match. It now uses the hinges
+  and agrees with `grDevices::boxplot.stats()` exactly, which a test pins
+  across four data sets.
+* **A numeric grouping column made tinyplot warn on every call.** Handing it
+  one for a discrete geometry makes it attempt a continuous legend, fail, and
+  revert with a warning. The grouped geometries now take `by` as a factor,
+  which is what a grouping variable is; scatter and line still accept a
+  continuous one, where it means something.
+
 # illume 0.0.4.9000
 
 Missing data, and the profiling set that reads its patterns.

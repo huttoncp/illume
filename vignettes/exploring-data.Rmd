@@ -326,6 +326,75 @@ than `"normal"` and `"basic"`. When the skew is severe and the groups are
 small, no interval shape rescues a bootstrapped *mean* -- reach for
 `stat = "median"` instead, which stays nominal where the mean does not.
 
+## Unusual values
+
+```{r outliers}
+head(ilm_outliers_all(mtcars), 5)
+```
+
+Three rules, in decreasing order of robustness. `"iqr"` is the Tukey fence and
+reproduces exactly what a boxplot's whiskers draw — it uses Tukey's hinges, not
+`quantile()`'s default, which matters on small samples and is pinned to
+`grDevices::boxplot.stats()` by a test. `"mad"` measures from the median in
+median absolute deviations. `"zscore"` measures from the mean in standard
+deviations, and is the weakest of the three for a reason worth seeing:
+
+```{r outliers2}
+z <- c(rnorm(30), 100)
+c(mad = max(ilm_outliers(z, "mad")$score),
+  zscore = max(ilm_outliers(z, "zscore")$score))
+```
+
+One large value inflates the standard deviation enough to hide itself. The
+median and the MAD are not dragged around by the values being detected.
+
+Grouping changes the answer, and usually should:
+
+```{r outliers3}
+nrow(ilm_outliers_all(mtcars))
+nrow(ilm_outliers_all(mtcars, by = "cyl"))
+```
+
+A value can be perfectly ordinary for its own group and extreme against the
+pooled distribution, so flagging without `by` on grouped data partly just
+rediscovers the groups.
+
+**A flag is not a verdict.** It says a value is far from the others by some
+rule — which may mean a typo, a different population, or an ordinary draw from
+a heavy tail, and the third is common. Dropping flagged rows because they are
+flagged changes what you are estimating. If the tail is real, the fix is a model
+that expects it: a different family, or `ilm_model(dispformula = )`.
+
+## Naming the plot you want
+
+`ilm_plot()` chooses a geometry from the data. When you would rather say which
+one, each has its own function — `ilm_plot_histogram()`, `ilm_plot_density()`,
+`ilm_plot_box()`, `ilm_plot_violin()`, `ilm_plot_scatter()`, `ilm_plot_bar()`,
+`ilm_plot_line()`, `ilm_plot_stat_error()` — and they all take column names as
+strings, like everything else here.
+
+```{r namedplots, fig.height = 3.2}
+ilm_plot_c(
+  ilm_plot_histogram(mtcars, "mpg"),
+  ilm_plot_box(mtcars, "mpg", x = "cyl"),
+  nrow = 1
+)
+```
+
+`ilm_plot_var_pairs()` handles every pair at once, mixed column types included,
+and `ilm_plot_var_all()` draws one panel per column.
+
+The bootstrap difference from earlier can be seen rather than only summarised:
+
+```{r bootplot, fig.height = 3.6}
+b <- ilm_boot_diff(d, "score", "grp", R = 500, seed = 1)
+ilm_plot_boot_diff(b, row = 1)
+```
+
+The interval says where the difference is. This says what the resampling
+produced — whether it is symmetric, skewed, or piled against a boundary, which
+the two endpoints cannot show.
+
 ## Profiling: what shape is this data set?
 
 `ilm_describe_all()` tells you about columns one at a time. `ilm_profile()`

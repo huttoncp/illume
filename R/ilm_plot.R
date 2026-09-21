@@ -451,12 +451,11 @@ ilm_plot_all <- function(data, by = NULL, class = "all", max_panels = 12L,
 ilm_plot_missing <- function(data, ...) {
   if (!is.data.frame(data)) stop("`data` must be a data frame", call. = FALSE)
   p <- vapply(data, function(v) mean(is.na(v)), 1)
-  if (all(p == 0)) { message("ilm_plot_missing: no missing values"); return(invisible(p)) }
-  p <- sort(p, decreasing = TRUE)
-  op <- graphics::par(mar = c(4, max(8, max(nchar(names(p))) * 0.6), 3, 2))
-  on.exit(graphics::par(op), add = TRUE)
-  graphics::barplot(rev(p), horiz = TRUE, las = 1, xlim = c(0, max(p) * 1.1),
-                    xlab = "proportion missing", main = "Missing values by variable",
-                    col = grDevices::hcl.colors(length(p), "YlOrRd", rev = TRUE), ...)
-  invisible(p)
+  if (all(p == 0)) {
+    message("ilm_plot_missing: no missing values"); return(invisible(p))
+  }
+  ## drawn by ilm_plot_na_all() so there is one implementation and one
+  ## backend: this was the last base-graphics plot in the package
+  ilm_plot_na_all(data, ...)
+  invisible(sort(p, decreasing = TRUE))
 }
