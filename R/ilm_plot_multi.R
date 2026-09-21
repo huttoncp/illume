@@ -243,7 +243,18 @@ ilm_plot_var_pairs <- function(data, cols = NULL, by = NULL, ...) {
     stop("at least 2 columns are needed to plot pairs of them; ",
          length(target), " given", call. = FALSE)
   bv <- if (length(g)) interaction(data[g], drop = TRUE, sep = " / ") else NULL
-  tinyplot::tinypairs(data[target], by = bv, ...)
+  ## tinypairs() arrived in tinyplot 0.7.0 and is the only part of this package
+  ## that needs it -- everything else works from 0.6.1. Say so, and name what
+  ## to do instead, rather than failing on a missing object.
+  pairs_fn <- tryCatch(getExportedValue("tinyplot", "tinypairs"),
+                       error = function(e) NULL)
+  if (is.null(pairs_fn))
+    stop("a pairs plot needs tinyplot >= 0.7.0, which supplies tinypairs(); ",
+         "this is tinyplot ", utils::packageVersion("tinyplot"),
+         ". Either update tinyplot, or use ilm_plot_scatter() one pair at a ",
+         "time, or ilm_plot_var_all() for each column on its own.",
+         call. = FALSE)
+  pairs_fn(data[target], by = bv, ...)
   invisible(NULL)
 }
 

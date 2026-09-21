@@ -247,6 +247,46 @@ defect here.
   a nominal 0.95). At 40 replicates the Monte Carlo error is 0.034, so the
   table separates acceptable from broken rather than ranking 0.90 against 0.95.
 
+## Dependency minimums, measured rather than assumed
+
+* Every `Imports:` entry that needed a floor now has one, and each was
+  established by test rather than by reading a changelog: `RTMB (>= 1.7)`,
+  `TMB (>= 1.9.7)`, `collapse (>= 2.0.2)`, `tinyplot (>= 0.6.1)`. Previously
+  there were none at all, so a resolver was free to pick a version that would
+  fail somewhere unhelpful.
+* **RTMB 1.7 was built and every family fitted against it**: gaussian, gaussian
+  mixed, binomial, Poisson mixed, negative binomial, beta, ordinal,
+  zero-inflated and multinomial mixed, plus `summary()`, `ilm_anova()`,
+  `predict()`, `ilm_rqr()` and `ilm_emmeans()`. Fourteen of fourteen.
+* The AD objective touches eight RTMB symbols -- `AD`, `ADREPORT`, `diag`,
+  `getAll`, `logspace_add`, `logspace_sub`, `matrix`, `solve` -- and all eight
+  are in 1.7. Six other RTMB exports illume uses are newer than 1.7
+  (`findInterval`, `order`, `pchisq`, `pnbinom`, `qchisq`, `sort`), but every
+  one of those is called on ordinary numerics, where base and stats answer.
+* Two RTMB changelog entries looked like they might bite and do not. The 1.8
+  `dgamma()` rate fix does not reach the only `dgamma()` here, which is
+  `stats::dgamma()` on a plain vector. The 1.9 addition of `log.p` and
+  `lower.tail` to `pnorm()` is unused, because the censored and lognormal
+  likelihoods write `pnorm(mu - y)` rather than `1 - pnorm(y - mu)` -- a choice
+  made for tail precision that happens to keep the API two versions older.
+* `collapse`'s floor is `fmatch`, absent at 1.9.6 and present from 2.0.2.
+  `Matrix` needs no floor: only `solve()` and `chol()` are used.
+
+## Plotting no longer requires the newest tinyplot
+
+* `tinytheme_list()` arrived in tinyplot 0.7.0 and was being used to enumerate
+  valid theme names for an error message -- which meant `theme =` was refused
+  outright on older tinyplot, although `tinytheme()` and the `theme` argument
+  have both been there since 0.6.x. The shape of `theme` is now always checked,
+  the names are enumerated when the helper exists, and otherwise tinyplot is
+  left to object. Themes work again on 0.6.1.
+* `ilm_plot_var_pairs()` genuinely needs `tinypairs()`, which is 0.7.0-only. It
+  now says so and names `ilm_plot_scatter()` and `ilm_plot_var_all()` as the
+  alternatives, rather than failing with "not an exported object".
+* Measured on tinyplot 0.6.1: twelve of thirteen plotting paths work, the
+  thirteenth being the pairs plot reporting its own requirement. On 0.7.0 the
+  suite is unchanged.
+
 ## Documentation
 
 * Nine vignettes. `workflow` is new and is the map: eleven stages from a power

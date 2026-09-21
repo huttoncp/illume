@@ -258,11 +258,18 @@ ilm_plot <- function(data, x, y = NULL, by = NULL, geom = "auto",
     colour <- color
   }
   if (!is.null(theme)) {
-    ok <- unlist(tinyplot::tinytheme_list(), use.names = FALSE)
-    if (length(theme) != 1L || !theme %in% ok)
-      stop("unknown `theme`: ", paste(sQuote(theme), collapse = ", "),
-           ". Options are ", paste(sQuote(ok), collapse = ", "), ".",
-           call. = FALSE)
+    if (length(theme) != 1L || !is.character(theme))
+      stop("`theme` must be a single theme name, not ", length(theme), " ",
+           class(theme)[1], " value(s)", call. = FALSE)
+    ## tinytheme_list() arrived in tinyplot 0.7.0. Older tinyplot still accepts
+    ## `theme` and still has tinytheme(); it just cannot enumerate the names.
+    ## Validate against the list where there is one and let tinyplot object
+    ## where there is not, rather than refusing a theme that would have worked.
+    ok <- tryCatch(unlist(getExportedValue("tinyplot", "tinytheme_list")(),
+                          use.names = FALSE), error = function(e) NULL)
+    if (!is.null(ok) && !theme %in% ok)
+      stop("unknown `theme`: ", sQuote(theme), ". Options are ",
+           paste(sQuote(ok), collapse = ", "), ".", call. = FALSE)
   }
   if (!is.null(alpha) && (!is.numeric(alpha) || length(alpha) != 1L ||
                           alpha < 0 || alpha > 1))

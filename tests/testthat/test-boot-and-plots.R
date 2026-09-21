@@ -260,6 +260,11 @@ test_that("plot arguments are validated with the options named", {
   expect_error(ilm_plot(d, "nope"), "not found")
   expect_error(ilm_plot(d, "grp", geom = "histogram"), "needs `x` to be numeric")
   expect_error(ilm_plot(d, "score", theme = "ggplot"), "unknown `theme`")
+  ## The shape of `theme` is checked before the name is looked up, because the
+  ## lookup needs tinyplot >= 0.7.0 and is skipped on older versions -- so on
+  ## those the shape check is the only one left standing.
+  expect_error(ilm_plot(d, "score", theme = c("clean", "bw")), "single theme name")
+  expect_error(ilm_plot(d, "score", theme = 1), "single theme name")
   expect_error(ilm_plot(d, "score", alpha = 3), "between 0")
   expect_error(ilm_plot(d, "score", size = -1), "positive")
   expect_error(ilm_plot(d, "score", colour = "red", color = "blue"), "use one")
