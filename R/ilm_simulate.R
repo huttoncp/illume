@@ -133,9 +133,18 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
       P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
       out[, s] <- apply(P, 1, function(pr) sample.int(J, 1L, prob = pr))
     } else {
-      out[, s] <- ilm_censor_apply(fit$censor, if (!is.null(rp_off))
-        ilm_rp_sim(fit, off = rp_off)
-        else as.numeric(fam$sim(eta, wts, dsp, logsig = lsig_sim)))
+      yy <- if (!is.null(rp_off)) ilm_rp_sim(fit, off = rp_off)
+            else as.numeric(fam$sim(eta, wts, dsp, logsig = lsig_sim))
+      ## A zero part is not a post-hoc thinning of an ordinary count draw
+      ## under a hurdle: the positives come from a distribution that cannot
+      ## produce a zero, so they are redrawn rather than filtered.
+      if (!is.null(fit$Zzi)) {
+        mu <- as.numeric(fam$linkinv(eta[, 1]))
+        dv <- if (!is.null(lsig_sim)) exp(lsig_sim) else
+              if (length(dsp)) rep(exp(dsp[1]), length(mu)) else rep(1, length(mu))
+        yy <- ilm_zi_rng(fit, mu, dv, ilm_zi_p(fit), yy)
+      }
+      out[, s] <- ilm_censor_apply(fit$censor, yy)
     }
   }
   out

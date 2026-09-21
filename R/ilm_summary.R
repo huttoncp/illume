@@ -212,6 +212,29 @@ Dispersion model: ", deparse(o$disp_formula), "
   ct <- ilm_coef_table(o)
   stats::printCoefmat(as.matrix(ct), digits = digits, signif.stars = TRUE,
                       has.Pvalue = TRUE, P.values = TRUE)
+  ## A zero part is half the model and invisible in the table above, since
+  ## those coefficients belong to the count. Printing it here, with what the
+  ## probability actually refers to, is the difference between a reader seeing
+  ## a zero-inflated fit and seeing an ordinary count model.
+  if (!is.null(o$zi_gamma)) {
+    hurdle <- identical(o$zi_type, "hurdle")
+    cat(sprintf("\nZero part (%s): %s\n",
+                if (hurdle) "hurdle" else "zero-inflated",
+                deparse(o$zi_formula)))
+    zt <- ilm_zi_coef(o)
+    zm <- as.matrix(zt[, c("estimate", "se", "z", "p")])
+    dimnames(zm) <- list(zt$term,
+                         c("Estimate", "Std. Error", "z value", "Pr(>|z|)"))
+    stats::printCoefmat(zm, digits = digits, signif.stars = TRUE,
+                        has.Pvalue = TRUE, P.values = TRUE)
+    pz <- ilm_zi_p(o)
+    cat(sprintf(" on the logit scale; fitted P(excess zero) %.3f to %.3f, median %.3f\n",
+                min(pz), max(pz), stats::median(pz)))
+    cat(if (hurdle)
+      " every zero comes from this part; the count above cannot produce one\n"
+      else
+      " these are STRUCTURAL zeros only -- the count above produces zeros too\n")
+  }
   ## only meaningful when there is more than one category dimension
   if (fam == "multinomial") {
     cat("---\n")
@@ -246,8 +269,14 @@ Dispersion model: ", deparse(o$disp_formula), "
 #' @return `x`, invisibly.
 #' @export
 print.ilm_model <- function(x, ...) {
-  cat(sprintf("ilm_model fit: %d categories, %d obs, %d fixed + %d covariance parameters%s\n",
+  cat(sprintf("ilm_model fit: %d categories, %d obs, %d fixed + %d covariance parameters%s%s\n",
               x$J, nrow(x$X), ncol(x$X) * x$C, x$n_covpar,
+              ## a zero part is not among the fixed effects counted above, and
+              ## a one-line print that does not mention it reads as an
+              ## ordinary count model
+              if (is.null(x$zi_gamma)) "" else
+                sprintf(" + %d %s", length(x$zi_gamma),
+                        if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               if (x$ok) "" else "  [CHECKS FAILED]"))
   cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
   invisible(x)

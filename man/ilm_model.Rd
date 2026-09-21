@@ -22,7 +22,9 @@ ilm_model_formula(
   censor = NULL,
   dispformula = NULL,
   rp_df = 3L,
-  rp_knots = NULL
+  rp_knots = NULL,
+  ziformula = NULL,
+  zi_type = c("inflated", "hurdle")
 )
 }
 \arguments{
@@ -74,6 +76,21 @@ default and allows two interior knots.}
 
 \item{rp_knots}{Knot positions on the log-time scale, given directly in
 place of \code{rp_df}.}
+
+\item{ziformula}{Optional one-sided formula for the zero part of a count
+model, on the logit scale: \code{~ 1} for a constant excess-zero probability,
+\code{~ x} for one that depends on a predictor. This is the remedy for what
+\code{\link[=ilm_check_zeros]{ilm_check_zeros()}} diagnoses. Fixed effects only -- a random effect in
+the zero part is not supported, and a \code{|} here is an error rather than
+something quietly dropped.}
+
+\item{zi_type}{\code{"inflated"} or \code{"hurdle"}, and they are different models.
+\code{"inflated"} is a mixture: some rows are structural zeros and the rest
+come from a count that may itself be zero, so a zero in the data could
+have come from either. \code{"hurdle"} is two processes: whether the response
+clears zero, and how far past it goes, the latter fitted to a count that
+cannot be zero. Choose by what the zeros mean, not by fit -- a structural
+zero is a unit that was never at risk. See \code{\link[=ilm_zi_coef]{ilm_zi_coef()}}.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in

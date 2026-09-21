@@ -70,7 +70,21 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
     ## An accelerated failure time family supplies its own distribution
     ## function, so this does not need a third switch over families to keep in
     ## step with the two the likelihood already has.
-    u <- if (!is.null(object$family$cdf))
+    ## A zero part changes the distribution the residual is taken against,
+    ## and nothing about the result would look wrong if this were skipped --
+    ## the residuals stay in [0, 1] and simply stop being uniform under a
+    ## correct model. It comes before the family switch for that reason.
+    u <- if (!is.null(object$Zzi)) {
+      ## the COUNT part's mean: ilm_fitted() has already folded the zeros into
+      ## the response scale, so this comes from the linear predictor instead
+      muc <- as.numeric(object$family$linkinv(
+        ilm_eta_hat(object, conditional)[, 1]))
+      pz <- ilm_zi_p(object)
+      lo <- ilm_zi_cdf(object, y - 1, muc, pz)
+      hi <- ilm_zi_cdf(object, y, muc, pz)
+      lo + stats::runif(N) * (hi - lo)
+    }
+    else if (!is.null(object$family$cdf))
       object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),
                         if (length(disp)) unname(disp) else 1)
     else switch(fam,
@@ -171,6 +185,21 @@ ilm_sim_cond <- function(object, B, seed = 1L) {
   }
   lsig <- if (!is.null(object$Zd) || isTRUE(object$disp_mu))
     log(ilm_disp_vec(object)) else NULL
+  ## A zero part has to be simulated too. Every diagnostic that builds its
+  ## reference here -- the dispersion check, the zero check, the residual
+  ## envelopes -- would otherwise compare a zero-inflated fit against draws
+  ## from the count part alone, and report the inflation it was told about as
+  ## a failure of the model that accounts for it.
+  if (!is.null(object$Zzi)) {
+    mu <- as.numeric(fam$linkinv(eta[, 1]))
+    dv <- ilm_zi_disp(object, N)
+    pz <- ilm_zi_p(object)
+    return(vapply(seq_len(B), function(b)
+      ilm_censor_apply(object$censor,
+        ilm_zi_rng(object, mu, dv, pz,
+                   as.numeric(fam$sim(eta, w, disp, logsig = lsig)))),
+      numeric(N)))
+  }
   vapply(seq_len(B), function(b)
     ilm_censor_apply(object$censor,
                      as.numeric(fam$sim(eta, w, disp, logsig = lsig))),

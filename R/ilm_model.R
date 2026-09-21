@@ -86,6 +86,19 @@
 #'   that changes with a covariate, `~ mu` for a power of the fitted mean.
 #'   `mu` is a reserved name. This is the remedy for what
 #'   [ilm_check_variance()] diagnoses.
+#' @param ziformula Optional one-sided formula for the zero part of a count
+#'   model, on the logit scale: `~ 1` for a constant excess-zero probability,
+#'   `~ x` for one that depends on a predictor. This is the remedy for what
+#'   [ilm_check_zeros()] diagnoses. Fixed effects only -- a random effect in
+#'   the zero part is not supported, and a `|` here is an error rather than
+#'   something quietly dropped.
+#' @param zi_type `"inflated"` or `"hurdle"`, and they are different models.
+#'   `"inflated"` is a mixture: some rows are structural zeros and the rest
+#'   come from a count that may itself be zero, so a zero in the data could
+#'   have come from either. `"hurdle"` is two processes: whether the response
+#'   clears zero, and how far past it goes, the latter fitted to a count that
+#'   cannot be zero. Choose by what the zeros mean, not by fit -- a structural
+#'   zero is a unit that was never at risk. See [ilm_zi_coef()].
 #' @param weights Optional **frequency** weights: the number of replicate
 #'   observations each row stands for. Evaluated inside `data`. See [ilm_fit()]
 #'   for when this is valid, and why survey weights are not.
@@ -172,7 +185,9 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
                          weights = NULL, contrasts = NULL, verbose = TRUE,
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
                          censor = NULL, dispformula = NULL,
-                         rp_df = 3L, rp_knots = NULL) {
+                         rp_df = 3L, rp_knots = NULL, ziformula = NULL,
+                         zi_type = c("inflated", "hurdle")) {
+  zi_type <- match.arg(zi_type)
   fam <- if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
@@ -238,6 +253,27 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
            " not in the data. `mu` is the one reserved name, meaning the ",
            "fitted mean.", call. = FALSE)
     rhs <- unique(c(rhs, dvars))
+  }
+  zvars <- character(0)
+  if (!is.null(ziformula)) {
+    if (!inherits(ziformula, "formula") || length(ziformula) != 2L)
+      stop("`ziformula` must be a one-sided formula, such as ~ 1 or ~ group.",
+           call. = FALSE)
+    if (any(grepl("|", as.character(ziformula), fixed = TRUE)))
+      stop("`ziformula` takes fixed effects only. A random effect in the zero ",
+           "part would need its own latent vector integrated out alongside the ",
+           "count part's, which this fit does not do -- rather than drop the ",
+           "bar and fit something you did not ask for, it stops here.",
+           call. = FALSE)
+    zvars <- all.vars(ziformula)
+    miss <- setdiff(zvars, names(data))
+    if (length(miss))
+      stop("`ziformula` refers to ", paste(miss, collapse = ", "),
+           ", which ", if (length(miss) > 1L) "are" else "is",
+           " not in the data.", call. = FALSE)
+    ## the zero part shares the model frame, so its rows are dropped by the
+    ## same na.action and the two designs cannot come out of step
+    rhs <- unique(c(rhs, zvars))
   }
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
@@ -370,6 +406,11 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
     Zd <- stats::model.matrix(f2, mf)
     attr(Zd, "formula") <- dispformula
   }
+  Zzi <- NULL
+  if (!is.null(ziformula)) {
+    Zzi <- ilm_zi_design(ziformula, mf, NULL)
+    attr(Zzi, "formula") <- ziformula
+  }
   ## A flexible parametric baseline is a spline in log time, and log time is
   ## the response, so the basis is DATA: its columns simply join the model
   ## matrix. The spline coefficients are then part of beta, and the standard
@@ -403,6 +444,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   }
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
+                 Zzi = Zzi, zi_type = zi_type,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
                   restarts = restarts, joint = joint)
 

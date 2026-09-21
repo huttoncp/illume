@@ -263,17 +263,27 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## multinomial has C dimensions that the softmax maps onto J probabilities.
   multinom <- object$C > 1L
   linkinv <- if (!is.null(object$family)) object$family$linkinv else identity
+  ## A zero part makes the response scale something other than the inverse
+  ## link of the linear predictor: that is the mean of the COUNT process, and
+  ## the mean of the RESPONSE has to carry the zeros too. The design is built
+  ## for the prediction rows, since the probability depends on their own
+  ## covariates rather than on the ones the model was fitted to.
+  Zp <- if (!is.null(object$Zzi))
+    ilm_zi_design(object$zi_formula,
+                  if (is.null(newdata)) object$model else newdata,
+                  colnames(object$Zzi)) else NULL
+  zi_adj <- function(mu) if (is.null(Zp)) mu else ilm_zi_mean(object, mu, Zp)
   point <- function(beta, bvec = NULL) {
     eta <- ilm_eta(object, nd, beta, bvec)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
     if (!marginal || !length(gk))
       return(if (multinom) ilm_softmax_J(eta, Tc) else
-               matrix(linkinv(eta[, 1]), ncol = 1L))
+               matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
     P <- matrix(0, nrow(eta), if (multinom) object$J else 1L)
     for (m in seq_len(ndraw)) {
       sh <- Reduce(`+`, lapply(draws, function(d) d[m, ]))
       P <- P + if (multinom) ilm_softmax_J(sweep(eta, 2L, sh, `+`), Tc)
-               else matrix(linkinv(eta[, 1] + sh[1]), ncol = 1L)
+               else matrix(zi_adj(linkinv(eta[, 1] + sh[1])), ncol = 1L)
     }
     P / ndraw
   }

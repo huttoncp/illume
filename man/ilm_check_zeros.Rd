@@ -20,9 +20,16 @@ Invisibly, a list with the observed and expected zero counts, a
 p-value and a \code{status}.
 }
 \description{
-illume deliberately does not fit hurdle or zero-inflated models, so the
-useful thing this can do is tell you when you need one, and name a package
-that fits them.
+More zeros than a count model expects is the one misspecification that
+cannot be read off a residual plot, because a zero is a perfectly ordinary
+value of a count. This simulates from the fit and asks how often it produces
+as many zeros as were seen.
+}
+\details{
+The remedy is \link[=ilm_model]{ilm_model(ziformula = )}, which adds a second
+linear predictor for the probability of an excess zero. Whether that should
+be a mixture (\code{zi_type = "inflated"}) or two processes (\code{"hurdle"}) is a
+question about what the zeros mean rather than one this check can answer.
 }
 \examples{
 set.seed(1)

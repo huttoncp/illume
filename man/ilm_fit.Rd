@@ -20,7 +20,9 @@ ilm_fit(
   censor = NULL,
   Zd = NULL,
   disp_mu = FALSE,
-  rp = NULL
+  rp = NULL,
+  Zzi = NULL,
+  zi_type = c("inflated", "hurdle")
 )
 }
 \arguments{

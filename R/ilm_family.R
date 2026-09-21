@@ -185,20 +185,43 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
                       prob = 1 / (1 + exp(-eta[, 1]))) / pmax(1, round(w))),
 
     poisson = list(
-      name = "poisson", link = "log", n_disp = 0L,
+      name = "poisson", link = "log", n_disp = 0L, zi_ok = TRUE,
       disp_names = character(0), C_of = function(J) 1L,
       nll = function(eta, y, w, disp, ...) {
         -sum(w * dpois(y, exp(eta[, 1]), log = TRUE))
+      },
+      ## Per row rather than summed, which is what a zero-inflated or hurdle
+      ## likelihood needs: it has to weigh the density at the observed count
+      ## against the density at zero, one row at a time.
+      logden = function(eta, y, disp, logsig = NULL)
+        dpois(y, exp(eta[, 1]), log = TRUE),
+      p0 = function(mu, disp) exp(-mu),
+      pcdf = function(q, mu, disp) stats::ppois(q, mu),
+      ## zero-truncated draw by inverse CDF -- exact, and unlike rejection
+      ## sampling it does not slow to a crawl when the mean is near zero
+      rtrunc = function(n, mu, disp) {
+        f0 <- exp(-mu)
+        stats::qpois(f0 + stats::runif(n) * (1 - f0), mu)
       },
       linkinv = function(e) exp(e),
       sim = function(eta, w, disp, ...) stats::rpois(nrow(eta), exp(eta[, 1]))),
 
     nbinom = list(
-      name = "nbinom", link = "log", n_disp = 1L,
+      name = "nbinom", link = "log", n_disp = 1L, zi_ok = TRUE,
       disp_names = "log_k", C_of = function(J) 1L,
       nll = function(eta, y, w, disp, logsig = NULL, ...) {
         mu <- exp(eta[, 1]); k <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
         -sum(w * dnbinom2(y, mu = mu, var = mu + mu * mu / k, log = TRUE))
+      },
+      logden = function(eta, y, disp, logsig = NULL) {
+        mu <- exp(eta[, 1]); k <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
+        dnbinom2(y, mu = mu, var = mu + mu * mu / k, log = TRUE)
+      },
+      p0 = function(mu, disp) stats::dnbinom(0, size = disp, mu = mu),
+      pcdf = function(q, mu, disp) stats::pnbinom(q, size = disp, mu = mu),
+      rtrunc = function(n, mu, disp) {
+        f0 <- stats::dnbinom(0, size = disp, mu = mu)
+        stats::qnbinom(f0 + stats::runif(n) * (1 - f0), size = disp, mu = mu)
       },
       linkinv = function(e) exp(e),
       sim = function(eta, w, disp, logsig = NULL)

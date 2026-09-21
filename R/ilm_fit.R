@@ -1081,7 +1081,8 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
-                     rp = NULL) {
+                     rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle")) {
+  zi_type <- match.arg(zi_type)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Censoring: derive the codes from THIS response, so a simulated replicate
   ## is censored by the same rule the data were rather than inheriting the
@@ -1110,6 +1111,20 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
            call. = FALSE)
     if (!is.null(Zd) && nrow(Zd) != nrow(X))
       stop("the dispersion design has ", nrow(Zd), " rows but the model ",
+           "matrix has ", nrow(X), call. = FALSE)
+  }
+  ## A zero part needs a response for which a zero is a distinct event that the
+  ## distribution already gives a probability to, so that "more zeros than
+  ## this" is a statement with content. That is counts.
+  has_zi <- !is.null(Zzi)
+  if (has_zi) {
+    if (!isTRUE(fam$zi_ok))
+      stop("`ziformula` applies to counts (poisson, nbinom), not to the ",
+           fam$name, " family: a zero there is an ordinary value of a ",
+           "continuous response and carries no separate probability to ",
+           "inflate.", call. = FALSE)
+    if (nrow(Zzi) != nrow(X))
+      stop("the zero-part design has ", nrow(Zzi), " rows but the model ",
            "matrix has ", nrow(X), call. = FALSE)
   }
   ## An accelerated failure time model works on log(t), so a non-positive time
@@ -1218,6 +1233,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     if (fam$n_disp > 1L)
       pnames <- c(pnames, fam$disp_names[-1L])
   }
+  if (has_zi) pnames <- c(pnames, paste0("zi:", colnames(Zzi)))
   if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C), "ar:rho_raw")
 
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
@@ -1229,6 +1245,15 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
              has_rp = !is.null(rp),
              Zdisp = if (is.null(Zd)) matrix(0, nrow(X), 0L) else Zd,
              has_dm = has_dm, disp_mu = isTRUE(disp_mu),
+             Zzi = if (is.null(Zzi)) matrix(0, nrow(X), 0L) else Zzi,
+             has_zi = has_zi, zi_hurdle = identical(zi_type, "hurdle"),
+             ## split once, outside the likelihood: the zero rows and the
+             ## positive rows take different terms, and indexing them keeps the
+             ## hurdle's truncation factor from ever being evaluated on a row
+             ## where it is undefined
+             i_zero = if (has_zi) which(as.numeric(yobs) == 0) else integer(0),
+             i_pos  = if (has_zi) which(as.numeric(yobs) >  0) else integer(0),
+             yzero  = if (has_zi) rep(0, nrow(X)) else numeric(0),
              grp = lapply(re, `[[`, "group"), Zl = lapply(re, `[[`, "Z"),
              kind = vapply(re, `[[`, "", "kind"), bas = lapply(re, `[[`, "basis"),
              b_idx = lapply(seq_len(K), function(k) (boff[k] + 1L):boff[k + 1L]),
@@ -1257,6 +1282,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   }
 
   fam_nll <- fam$nll                    # captured in the closure, not via dl
+  fam_logden <- fam$logden
   fam_linkinv <- fam$linkinv
   f <- function(pars) {
     getAll(pars, dl)
@@ -1364,6 +1390,30 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       dsp <- if (n_disp > 1L) c(0, logdisp) else numeric(0)
     }
     etad <- if (has_rp) as.vector(Drp %*% beta[, 1]) else NULL
+    if (has_zi) {
+      ## Second linear predictor, for the logit of the excess-zero
+      ## probability. Everything below is on the log scale through
+      ## logspace_add and logspace_sub, which compute log(exp(a) + exp(b)) and
+      ## log(exp(a) - exp(b)) without forming either exponential -- the
+      ## mixture weights and the truncation factor both underflow otherwise.
+      lpz <- as.vector(Zzi %*% gzi)
+      l1p <- logspace_add(0 * lpz, lpz)        # log(1 + exp(lpz))
+      lden  <- fam_logden(eta, yobs,  dsp, logsig = lsig)
+      lden0 <- fam_logden(eta, yzero, dsp, logsig = lsig)
+      if (zi_hurdle) {
+        ## a zero is a zero and nothing else, and a positive count comes from a
+        ## distribution that cannot produce one
+        nll <- nll - sum(wrow[i_zero] * (lpz[i_zero] - l1p[i_zero]))
+        nll <- nll - sum(wrow[i_pos] *
+          (lden[i_pos] - logspace_sub(0 * lden0[i_pos], lden0[i_pos]) -
+             l1p[i_pos]))
+      } else {
+        ## a zero has two possible origins and the likelihood adds them
+        nll <- nll - sum(wrow[i_zero] *
+          (logspace_add(lpz[i_zero], lden0[i_zero]) - l1p[i_zero]))
+        nll <- nll - sum(wrow[i_pos] * (lden[i_pos] - l1p[i_pos]))
+      }
+    } else
     nll <- nll + fam_nll(eta, yobs, wrow, dsp, Tct = Tct, cens = cens,
                          logsig = lsig, etad = etad)
     sd_ <- sdv; ADREPORT(sd_)
@@ -1427,6 +1477,42 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                 "the term is not well behaved near the crossing. Model the ",
                 "spread on a covariate instead, or shift the response so the ",
                 "mean stays on one side of zero.", call. = FALSE)
+    }
+  }
+  if (has_zi) {
+    pars$gzi <- rep(0, ncol(Zzi))
+    ## Start the zero part where the data already say it is. For a hurdle with
+    ## a constant probability the observed proportion of zeros IS the maximum
+    ## likelihood estimate of that probability, so this starts at the answer.
+    ## For a mixture it is an upper bound -- some of those zeros came from the
+    ## count part -- so start at half of it rather than above the truth.
+    if ("(Intercept)" %in% colnames(Zzi)) {
+      p0 <- mean(as.numeric(yobs) == 0, na.rm = TRUE)
+      if (!identical(zi_type, "hurdle")) p0 <- p0 / 2
+      p0 <- min(max(p0, 0.01), 0.95)
+      pars$gzi[match("(Intercept)", colnames(Zzi))] <- log(p0 / (1 - p0))
+    }
+    ## and start the count part from the ordinary fit, for the same reason the
+    ## dispersion model does: from beta = 0 every fitted mean is 1, and with a
+    ## zero part free to explain the zeros the two can trade against each other
+    ## into a flat region of the surface
+    bz <- try(suppressWarnings(
+      ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
+              weights = weights, family = fam, verbose = FALSE,
+              restarts = 1L, censor = censor, Zd = Zd,
+              disp_mu = disp_mu)), silent = TRUE)
+    if (!inherits(bz, "try-error")) {
+      bp <- bz$opt$par; bn <- names(bp)
+      pars$beta <- matrix(bp[bn == "beta"], p, C)
+      if (sum(tl) > 0L && sum(bn == "theta") == sum(tl))
+        pars$theta <- unname(bp[bn == "theta"])
+      if (!is.null(pars$logdisp) && sum(bn == "logdisp") == length(pars$logdisp))
+        pars$logdisp <- unname(bp[bn == "logdisp"])
+      if (!is.null(pars$gamma) && sum(bn == "gamma") == length(pars$gamma))
+        pars$gamma <- unname(bp[bn == "gamma"])
+      br <- bz$sdr$par.random
+      if (!is.null(br) && sum(bl) > 0L && sum(names(br) == "bvec") == sum(bl))
+        pars$bvec <- unname(br[names(br) == "bvec"])
     }
   }
   rnd <- if (sum(bl) > 0L) "bvec" else character(0)
@@ -1549,6 +1635,15 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                                    pnames[substr(pnames, 1L, 5L) == "disp:"])
                    else NULL,
                  Zd = Zd, disp_mu = isTRUE(disp_mu), rp = rp,
+                 Zzi = Zzi, zi_type = if (has_zi) zi_type else NULL,
+                 zi_formula = if (has_zi) attr(Zzi, "formula") else NULL,
+                 zi_gamma = if (has_zi)
+                   stats::setNames(unname(pe[pn == "gzi"]), colnames(Zzi))
+                   else NULL,
+                 zi_se = if (has_zi) {
+                   ss <- sqrt(pmax(diag(as.matrix(sdr$cov.fixed)), 0))
+                   stats::setNames(unname(ss[pn == "gzi"]), colnames(Zzi))
+                 } else NULL,
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
                  beta = matrix(pe[pn == "beta"], p, C),
                  ## rho is the correlation ONE TIME UNIT apart under both
@@ -1615,7 +1710,8 @@ ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
           ylevels = object$ylevels, weights = object$weights,
           family = object$family, verbose = verbose, restarts = restarts,
           censor = object$censor, Zd = Zd, disp_mu = isTRUE(object$disp_mu),
-          rp = rp)
+          rp = rp, Zzi = object$Zzi,
+          zi_type = if (is.null(object$zi_type)) "inflated" else object$zi_type)
 }
 
 #' Fitted dispersion, one value per observation
