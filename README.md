@@ -118,12 +118,13 @@ trade; for a coefficient you intend to interpret it is not.
 
 ## How it is validated
 
-Every claim in the documentation is a measurement. The `studies/` directory
+Every claim in the documentation is a measurement. The [`studies/`](https://github.com/craig-hutton/illume/tree/main/studies)
+directory of this repository (not shipped with the installed package)
 holds the scripts, the retained runs, and a generated findings log per study:
 
 | Study | Against | Reports |
 |---|---|---|
-| `coverage` | 23 model configurations | interval coverage per family and structure |
+| `coverage` | 32 model configurations | interval coverage per family, structure and design |
 | `power` | closed form where one exists | 13 designs |
 | `bench` | `lme4`, `glmmTMB`, `nlme`, `survreg` | agreement and timing |
 | `mclogit` | `mclogit::mblogit` | the table above |
@@ -185,3 +186,13 @@ section 5.4.
 ## License
 
 MIT. See `LICENSE`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Two things get asked of anything new:
+that it adds no hard dependency, and that any diagnostic names a remedy which
+exists in this package.
+
+Please note that this project is released with a
+[Contributor Code of Conduct](CODE_OF_CONDUCT.md). By contributing, you agree
+to abide by its terms.

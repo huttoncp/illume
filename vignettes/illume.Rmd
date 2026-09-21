@@ -123,7 +123,9 @@ The last row is the honest caveat: mclogit's **RMSE is lower**, because
 shrinkage buys a variance reduction that more than pays for the bias. If the
 goal is prediction that is a defensible trade. If the goal is a coefficient
 with an interval you intend to interpret, it is not, and coverage is the
-measure that says so. `studies/findings/mclogit.md` has the full table.
+measure that says so. The full table is in `studies/findings/mclogit.md` in the
+source repository, which is not shipped with the installed package:
+<https://github.com/craig-hutton/illume/blob/main/studies/findings/mclogit.md>.
 
 ## Working with other packages
 

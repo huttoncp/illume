@@ -1,0 +1,238 @@
+url: https://craig-hutton.github.io/illume/
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#2a6f97"
+
+home:
+  title: Exploration and frequentist inference in one toolkit
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+
+articles:
+- title: Start here
+  navbar: ~
+  contents:
+  - illume
+  - workflow
+- title: Modelling
+  navbar: Modelling
+  contents:
+  - regression-models
+  - causal-models
+  - effect-size-and-power
+- title: Exploration
+  navbar: Exploration
+  contents:
+  - exploring-data
+  - profiling
+  - anomaly-detection
+  - missing-data
+
+reference:
+- title: "Fitting models"
+  desc: >
+    One engine, every family. The formula is lme4's and the object that comes back is the same whatever was fitted.
+  contents:
+  - ilm_ar1
+  - ilm_car1
+  - ilm_censor
+  - ilm_cyclic
+  - ilm_family
+  - ilm_fit
+  - ilm_fourier
+  - ilm_model
+  - ilm_squeeze
+  - ilm_surv
+  - ilm_thresholds
+- title: "Other designs"
+  desc: >
+    Identification strategies and sampling designs that are not a single regression.
+  contents:
+  - ilm_design
+  - ilm_did
+  - ilm_iv
+  - ilm_iv_ar
+  - ilm_mediate
+  - ilm_mediate_sens
+  - ilm_rdd
+  - ilm_svy_coef
+  - ilm_svy_vcov
+- title: "Diagnostics"
+  desc: >
+    Each check reports whether an assumption is consistent with the data, and names a remedy that exists in this package when it is not.
+  contents:
+  - ilm_appraise
+  - ilm_binned_residuals
+  - ilm_calibration
+  - ilm_check_ar
+  - ilm_check_collinearity
+  - ilm_check_covariate
+  - ilm_check_dispersion
+  - ilm_check_missing
+  - ilm_check_omitted
+  - ilm_check_predictive
+  - ilm_check_proportional
+  - ilm_check_variance
+  - ilm_check_zeros
+  - ilm_consistency
+  - ilm_gauss_check
+  - ilm_re_mahalanobis
+  - ilm_rqr
+  - ilm_rqr_test
+  - ilm_scores
+  - ilm_variogram
+- title: "Inference and interpretation"
+  desc: >
+    What the model says, on a scale someone can read.
+  contents:
+  - ilm_ame
+  - ilm_anova
+  - ilm_boot_ci
+  - ilm_boot_diff
+  - ilm_coef_table
+  - ilm_contrast
+  - ilm_effects
+  - ilm_emmeans
+  - ilm_interpret
+  - ilm_pb_lrt
+  - ilm_robust
+  - ilm_rp_lrt
+  - ilm_scenario
+  - ilm_translate
+  - ilm_vcov_cluster
+  - ilm_zi_coef
+  - ilm_zi_prob
+- title: "Design and power"
+  desc: >
+    Before the data exist.
+  contents:
+  - ilm_power
+  - ilm_power_n
+  - plot.ilm_power
+- title: "Describing data"
+  desc: >
+    Descriptive statistics, counts, and the things that are wrong with a data frame before any model sees it.
+  contents:
+  - ilm_copies
+  - ilm_counts
+  - ilm_counts_all
+  - ilm_counts_tb
+  - ilm_counts_tb_all
+  - ilm_describe
+  - ilm_describe_all
+  - ilm_dupes
+  - ilm_frame_issues
+  - ilm_recode_errors
+  - ilm_recode_errors_vec
+  - ilm_wash_df
+- title: "Outliers and anomalies"
+  desc: >
+    A value extreme for its own column, against a row implausible as a combination.
+  contents:
+  - ilm_anomaly
+  - ilm_outliers
+  - ilm_outliers_all
+- title: "Structure: reduce, cluster, profile"
+  desc: >
+    The few directions a set of correlated columns shares, the groups in that space, and what distinguishes them.
+  contents:
+  - ilm_cluster
+  - ilm_cluster_na
+  - ilm_glrm
+  - ilm_profile
+  - ilm_profile_na
+  - ilm_reduce
+  - ilm_reduce_na
+- title: "Missing data"
+  desc: >
+    Diagnosing it, filling it in honestly, and pooling across the imputations.
+  contents:
+  - ilm_describe_na
+  - ilm_describe_na_all
+  - ilm_impute
+  - ilm_mi_pool
+  - ilm_plot_na
+  - ilm_plot_na_all
+- title: "Causal models"
+  desc: >
+    A DAG, what it implies, and what it licenses you to say.
+  contents:
+  - ilm_adjust_sets
+  - ilm_dag
+  - ilm_dag_implied
+  - ilm_dag_model
+  - ilm_dag_test
+  - ilm_dsep
+- title: "Plots"
+  desc: >
+    Built on tinyplot, named for what they show.
+  contents:
+  - ilm_geom_spec
+  - ilm_pick_geom
+  - ilm_plot
+  - ilm_plot_acf
+  - ilm_plot_all
+  - ilm_plot_bar
+  - ilm_plot_boot_diff
+  - ilm_plot_box
+  - ilm_plot_c
+  - ilm_plot_cluster
+  - ilm_plot_cluster_gap
+  - ilm_plot_density
+  - ilm_plot_did
+  - ilm_plot_histogram
+  - ilm_plot_line
+  - ilm_plot_missing
+  - ilm_plot_model
+  - ilm_plot_profile
+  - ilm_plot_rdd
+  - ilm_plot_reduce
+  - ilm_plot_reduce_contrib
+  - ilm_plot_reduce_scree
+  - ilm_plot_scatter
+  - ilm_plot_stat_error
+  - ilm_plot_survival
+  - ilm_plot_var
+  - ilm_plot_var_all
+  - ilm_plot_var_pairs
+  - ilm_plot_variogram
+  - ilm_plot_violin
+- title: "Simulation"
+  desc: >
+    Data with a known structure, and draws from a fitted model.
+  contents:
+  - ilm_fitted
+  - ilm_sim
+  - ilm_simulate
+  - ilm_survival
+- title: "Working with other packages"
+  desc: >
+    Registration shims and the methods that let the wider ecosystem dispatch on an illume fit.
+  contents:
+  - AIC.ilm_model
+  - Anova.ilm_model
+  - check_model.ilm_model
+  - coef.ilm_model
+  - fixef.ilm_model
+  - get_coef.ilm_model
+  - ilm_register_insight
+  - ilm_register_marginaleffects
+  - logLik.ilm_model
+  - model_performance.ilm_model
+  - plot.ilm_model
+  - predict.ilm_model
+  - print.ilm_model
+  - summary.ilm_model
+  - terms.ilm_model
+- title: "Shared parameters and print methods"
+  desc: >
+    Documentation shared across functions, and methods you call by printing rather than by name.
+  contents:
+  - ilm_progress_arg
+  - ilm_selection
+  - print.ilm_censor
+  - print.ilm_cor
