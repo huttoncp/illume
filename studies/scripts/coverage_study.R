@@ -126,7 +126,43 @@ cells <- list(
        N = 600),
   ## A random slope as well as an intercept, which no earlier cell had.
   list(name = "gauss_slope", kind = "slope", family = "gaussian", re = TRUE,
-       ncl = 40, per = 15, sd_re = 0.6, sd_sl = 0.4)
+       ncl = 40, per = 15, sd_re = 0.6, sd_sl = 0.4),
+
+  ## ---- added at 0.0.7.9000 -------------------------------------------------
+  ## Everything above predates the families and designs added between
+  ## 0.0.3.9000 and 0.0.7.9000, which until now had agreement against an
+  ## outside implementation but no coverage of their own.
+
+  ## A zero part, both ways round. The mixture and the hurdle are different
+  ## models rather than two fits of one, so both are cells.
+  list(name = "zip_mm",      kind = "zi", family = "poisson", re = TRUE,
+       zi_type = "inflated", ncl = 40, per = 15, sd_re = 0.5, pz = 0.30),
+  list(name = "hurdle_pois", kind = "zi", family = "poisson", re = FALSE,
+       zi_type = "hurdle",   N = 600, pz = 0.35),
+
+  ## Ordered outcomes. coef() carries no intercept here -- the thresholds take
+  ## its place -- so the generator names the coefficients it checks.
+  list(name = "ord_fixed",   kind = "ord", family = "ordinal", re = FALSE,
+       N = 600, cuts = c(-0.8, 0.6)),
+  list(name = "ord_mm",      kind = "ord", family = "ordinal", re = TRUE,
+       ncl = 40, per = 15, sd_re = 0.5, cuts = c(-0.8, 0.6)),
+
+  ## A response on (0, 1), parameterised by a mean and a PRECISION.
+  list(name = "beta_fixed",  kind = "beta", family = "beta", re = FALSE,
+       N = 600, phi = 8),
+  ## The same with a point mass at zero, which for a continuous density can
+  ## only be a hurdle: a beta has no probability of producing a zero.
+  list(name = "zibeta",      kind = "beta", family = "beta", re = FALSE,
+       N = 600, phi = 8, pz = 0.25),
+
+  ## Designs that are not a plain ilm_model() call. Each reports coverage of
+  ## the one coefficient it exists to estimate.
+  list(name = "iv_2sls",     kind = "iv",  family = "gaussian", re = FALSE,
+       N = 800, pi_z = 0.8, endog = 0.7, b_x = 0.5, b_w = 0.3),
+  list(name = "svy_strat",   kind = "svy", family = "gaussian", re = FALSE,
+       nst = 6, ncl = 8, per = 10, b_x = 0.5, w_shape = 2),
+  list(name = "mediate",     kind = "med", family = "gaussian", re = FALSE,
+       N = 600, a = 0.6, b_m = 0.5, c_dir = 0.3)
 )
 names(cells) <- vapply(cells, function(z) z$name, "")
 if (!is.null(ONLY)) cells <- cells[ONLY]
@@ -285,6 +321,114 @@ gen_extra <- function(cell, seed) {
     attr(dd, "truth") <- setNames(b[-1L], c("x1", "grpb", "grpc"))
     return(dd)
   }
+  ## ---- added at 0.0.7.9000 -------------------------------------------------
+
+  ## A zero part. The COUNT coefficients are the ones coef() returns and the
+  ## ones checked; the zero process is a nuisance that has to be recovered for
+  ## the count part to be right.
+  if (cell$kind == "zi") {
+    if (isTRUE(cell$re)) {
+      N <- cell$ncl * cell$per
+      dd <- data.frame(g = factor(rep(seq_len(cell$ncl), each = cell$per)))
+      dd <- cbind(dd, covars(N))
+      u <- rnorm(cell$ncl, 0, cell$sd_re)
+      eta <- as.numeric(model.matrix(~ x1 + grp, dd) %*% Bt) +
+             u[as.integer(dd$g)]
+    } else {
+      N <- cell$N; dd <- covars(N)
+      eta <- as.numeric(model.matrix(~ x1 + grp, dd) %*% Bt)
+    }
+    lam <- exp(pmin(eta, 5))
+    if (identical(cell$zi_type, "hurdle")) {
+      ## every zero comes from the zero process, so the positives are drawn
+      ## from a count that CANNOT be zero
+      pos <- qpois(runif(N, dpois(0, lam), 1), lam)
+      dd$y <- ifelse(rbinom(N, 1L, cell$pz) == 1L, 0L, pmax(pos, 1L))
+    } else {
+      ## a mixture: a zero may have come from either process
+      dd$y <- rpois(N, lam) * rbinom(N, 1L, 1 - cell$pz)
+    }
+    return(dd)
+  }
+
+  ## Ordered outcome. The intercept is not a coefficient here -- the
+  ## thresholds take its place -- so eta carries no intercept and the checked
+  ## coefficients are named.
+  if (cell$kind == "ord") {
+    if (isTRUE(cell$re)) {
+      N <- cell$ncl * cell$per
+      dd <- data.frame(g = factor(rep(seq_len(cell$ncl), each = cell$per)))
+      dd <- cbind(dd, covars(N))
+      u <- rnorm(cell$ncl, 0, cell$sd_re)
+      eta <- as.numeric(model.matrix(~ x1 + grp, dd)[, -1L, drop = FALSE] %*%
+                        Bt[-1L, , drop = FALSE]) + u[as.integer(dd$g)]
+    } else {
+      N <- cell$N; dd <- covars(N)
+      eta <- as.numeric(model.matrix(~ x1 + grp, dd)[, -1L, drop = FALSE] %*%
+                        Bt[-1L, , drop = FALSE])
+    }
+    ## cumulative logit: P(Y <= k) = plogis(cut_k - eta)
+    P <- plogis(outer(-eta, cell$cuts, "+"))
+    u2 <- runif(N)
+    k <- 1L + rowSums(u2 > P)
+    labs <- paste0("k", seq_len(length(cell$cuts) + 1L))
+    dd$y <- factor(labs[k], levels = labs, ordered = TRUE)
+    attr(dd, "truth") <- setNames(b[-1L], c("x1", "grpb", "grpc"))
+    return(dd)
+  }
+
+  ## A response on (0, 1), optionally with a point mass at zero. For a
+  ## continuous density that mass can only be a hurdle.
+  if (cell$kind == "beta") {
+    N <- cell$N; dd <- covars(N)
+    mu <- plogis(as.numeric(model.matrix(~ x1 + grp, dd) %*% Bt))
+    y <- rbeta(N, mu * cell$phi, (1 - mu) * cell$phi)
+    if (!is.null(cell$pz)) y[rbinom(N, 1L, cell$pz) == 1L] <- 0
+    dd$y <- y
+    return(dd)
+  }
+
+  ## Instrumental variables. x is confounded with the outcome through u; z
+  ## moves x and enters the outcome only through it.
+  if (cell$kind == "iv") {
+    N <- cell$N
+    dd <- data.frame(z = rnorm(N), w = rnorm(N))
+    uu <- rnorm(N)
+    dd$x <- cell$pi_z * dd$z + cell$endog * uu + rnorm(N)
+    dd$y <- cell$b_x * dd$x + cell$b_w * dd$w + uu + rnorm(N)
+    attr(dd, "truth") <- setNames(c(0, cell$b_x, cell$b_w),
+                                  c("(Intercept)", "x", "w"))
+    return(dd)
+  }
+
+  ## A stratified, clustered, unequally weighted sample. The cluster effect is
+  ## what makes the design-based standard error necessary rather than tidy.
+  if (cell$kind == "svy") {
+    nst <- cell$nst; ncl <- cell$ncl; per <- cell$per
+    N <- nst * ncl * per
+    dd <- data.frame(
+      st = factor(rep(seq_len(nst), each = ncl * per)),
+      id = factor(rep(seq_len(nst * ncl), each = per)),
+      x1 = rnorm(N))
+    u <- rnorm(nst * ncl, 0, 0.6)
+    dd$y <- cell$b_x * dd$x1 + u[as.integer(dd$id)] + rnorm(N)
+    ## weights vary within and between strata, so sum(w) is far from N
+    dd$w <- exp(rnorm(N, 0, 0.4)) * as.integer(dd$st)^(1 / cell$w_shape)
+    attr(dd, "truth") <- setNames(cell$b_x, "x1")
+    return(dd)
+  }
+
+  ## Mediation. With no interaction and linear models the true ACME is the
+  ## product a * b, which is what the counterfactual estimand reduces to here.
+  if (cell$kind == "med") {
+    N <- cell$N
+    dd <- data.frame(t = rbinom(N, 1L, 0.5))
+    dd$m <- cell$a * dd$t + rnorm(N)
+    dd$y <- cell$c_dir * dd$t + cell$b_m * dd$m + rnorm(N)
+    attr(dd, "truth") <- setNames(cell$a * cell$b_m, "ACME")
+    return(dd)
+  }
+
   stop("unknown cell kind: ", cell$kind)
 }
 
@@ -358,10 +502,73 @@ gen_glm <- function(cell, seed) {
   dd
 }
 
+## ---- replicates for the designs that are not an ilm_model() call -----------
+## Added at 0.0.7.9000. Each returns the same shape as run_rep(), and may
+## return `lo`/`hi` directly when the interval it is testing is not b +/- c*s.
+run_rep_special <- function(cell, dd, kind) {
+  fail <- function(m) list(ok = FALSE, err = m, b = NULL, s = NULL)
+  z2 <- qnorm(1 - (1 - LEVEL) / 2)
+  want <- names(attr(dd, "truth"))
+
+  if (kind == "iv") {
+    f <- tryCatch(suppressWarnings(illume::ilm_iv(y ~ x + w | z + w, data = dd)),
+                  error = function(e) conditionMessage(e))
+    if (is.character(f)) return(fail(f))
+    b <- coef(f); s <- suppressWarnings(sqrt(diag(vcov(f))))
+    ix <- match(want, names(b))
+    if (anyNA(ix)) return(fail("checked coefficients not in the fit"))
+    b <- b[ix]; s <- s[ix]
+    return(list(ok = all(is.finite(s)) && all(s > 0), err = NA_character_,
+                b = unname(b), s = unname(s), crit = z2, nm = want))
+  }
+
+  if (kind == "svy") {
+    r <- tryCatch(suppressWarnings({
+      des <- illume::ilm_design(dd, weights = ~ w, strata = ~ st, ids = ~ id)
+      f <- illume::ilm_model(y ~ x1, data = dd, family = "gaussian",
+                             design = des, verbose = FALSE)
+      as.data.frame(illume::ilm_svy_coef(f, level = LEVEL))
+    }), error = function(e) conditionMessage(e))
+    if (is.character(r)) return(fail(r))
+    ix <- match(want, r$term)
+    if (anyNA(ix)) return(fail("checked coefficients not in the fit"))
+    r <- r[ix, , drop = FALSE]
+    ok <- all(is.finite(r$se)) && all(r$se > 0) && all(is.finite(r$lower))
+    return(list(ok = ok, err = NA_character_, b = r$estimate, s = r$se,
+                crit = qt(1 - (1 - LEVEL) / 2, r$df[1]), nm = want,
+                lo = r$lower, hi = r$upper))
+  }
+
+  if (kind == "med") {
+    r <- tryCatch(suppressWarnings({
+      mm <- illume::ilm_model(m ~ t, data = dd, family = "gaussian",
+                              verbose = FALSE)
+      my <- illume::ilm_model(y ~ t + m, data = dd, family = "gaussian",
+                              verbose = FALSE)
+      as.data.frame(illume::ilm_mediate(mm, my, treat = "t", mediator = "m",
+                                        sims = 1000L, level = LEVEL,
+                                        progress = FALSE))
+    }), error = function(e) conditionMessage(e))
+    if (is.character(r)) return(fail(r))
+    row <- r[r$effect == "ACME (control)", , drop = FALSE]
+    if (!nrow(row)) return(fail("no ACME row in the mediation result"))
+    ## The reported interval is a PERCENTILE interval from the simulation
+    ## draws, not b +/- c*s, so it is carried through as itself. The se below
+    ## is the width implied by it, recorded only so the se_ratio column means
+    ## something; it is not what the interval was built from.
+    ok <- is.finite(row$lower[1]) && is.finite(row$upper[1])
+    return(list(ok = ok, err = NA_character_, b = row$estimate[1],
+                s = (row$upper[1] - row$lower[1]) / (2 * z2), crit = z2,
+                nm = "ACME", lo = row$lower[1], hi = row$upper[1]))
+  }
+  fail(paste("unknown special kind:", kind))
+}
+
 ## ---- one replicate ---------------------------------------------------------
 run_rep <- function(i, cell) {
   dd <- gen(cell, seed = 10000L + i)
   kind <- if (is.null(cell$kind)) "glm" else cell$kind
+  if (kind %in% c("iv", "svy", "med")) return(run_rep_special(cell, dd, kind))
   ## the formula each kind needs; everything else is shared
   fm <- switch(kind,
     smooth = y ~ x1 + grp + t2(z),
@@ -372,6 +579,12 @@ run_rep <- function(i, cell) {
                verbose = FALSE)
   if (kind == "disp") args$dispformula <- ~ s
   if (kind == "rp")   args$rp_df <- cell$rp_df
+  if (kind == "zi") { args$ziformula <- ~ 1; args$zi_type <- cell$zi_type }
+  ## a point mass at zero on a CONTINUOUS response can only be a hurdle: a
+  ## beta density has no probability of producing a zero for a mixture to mix
+  if (kind == "beta" && !is.null(cell$pz)) {
+    args$ziformula <- ~ 1; args$zi_type <- "hurdle"
+  }
   f <- tryCatch(suppressWarnings(do.call(illume::ilm_model, args)),
        error = function(e) structure(list(msg = conditionMessage(e)),
                                      class = "failed"))
@@ -412,7 +625,8 @@ cl <- makePSOCKcluster(NCORE)
 on.exit(stopCluster(cl), add = TRUE)
 invisible(clusterEvalQ(cl, suppressPackageStartupMessages(library(illume))))
 clusterExport(cl, c("gen", "gen_glm", "gen_extra", "covars", "truth_of",
-                    "run_rep", "LEVEL"), envir = environment())
+                    "run_rep", "run_rep_special", "LEVEL"),
+              envir = environment())
 
 for (cell in cells) {
   t0 <- Sys.time()
@@ -426,17 +640,37 @@ for (cell in cells) {
   tv  <- if (is.null(tv0)) as.vector(truth_of(cell)) else unname(tv0)
   okv <- vapply(res, function(z) isTRUE(z$ok), TRUE)
   nb  <- length(tv)
-  B <- t(vapply(res, function(z)
-         if (is.null(z$b)) rep(NA_real_, nb) else z$b[seq_len(nb)], numeric(nb)))
-  S <- t(vapply(res, function(z)
-         if (is.null(z$s)) rep(NA_real_, nb) else z$s[seq_len(nb)], numeric(nb)))
+  ## One row per replicate, nb columns. Built explicitly rather than by
+  ## t(vapply(...)): with a single checked coefficient vapply returns a plain
+  ## vector and t() makes it 1 x NREP, which is the transpose of what is
+  ## wanted. No cell had one coefficient until the IV, survey and mediation
+  ## cells arrived, so this went unnoticed.
+  as_mat <- function(f) matrix(unlist(lapply(res, f)), nrow = length(res),
+                               ncol = nb, byrow = TRUE)
+  B <- as_mat(function(z)
+         if (is.null(z$b)) rep(NA_real_, nb) else z$b[seq_len(nb)])
+  S <- as_mat(function(z)
+         if (is.null(z$s)) rep(NA_real_, nb) else z$s[seq_len(nb)])
   cr <- vapply(res, function(z) if (is.null(z$crit)) NA_real_ else z$crit, 1)
   nm <- res[[which(!vapply(res, function(z) is.null(z$nm), TRUE))[1]]]$nm
   nm <- if (is.null(nm)) paste0("b", seq_len(nb)) else nm[seq_len(nb)]
 
   keep <- okv & stats::complete.cases(B) & stats::complete.cases(S)
   Bk <- B[keep, , drop = FALSE]; Sk <- S[keep, , drop = FALSE]; ck <- cr[keep]
-  lo <- Bk - ck * Sk; hi <- Bk + ck * Sk
+  ## Most cells report b +/- c*s, and for those the interval is reconstructed
+  ## here. A cell whose interval is NOT of that form -- a percentile interval
+  ## from simulation draws, say -- carries its own limits through instead, so
+  ## that what is scored is the interval the package actually printed.
+  has_lh <- all(vapply(res[keep], function(z) !is.null(z$lo), TRUE))
+  if (has_lh) {
+    kept <- res[keep]
+    as_kept <- function(f) matrix(unlist(lapply(kept, f)), nrow = length(kept),
+                                  ncol = nb, byrow = TRUE)
+    lo <- as_kept(function(z) z$lo[seq_len(nb)])
+    hi <- as_kept(function(z) z$hi[seq_len(nb)])
+  } else {
+    lo <- Bk - ck * Sk; hi <- Bk + ck * Sk
+  }
   cov_i <- sweep(lo, 2, tv, "<=") & sweep(hi, 2, tv, ">=")
 
   out <- data.frame(
@@ -470,6 +704,11 @@ for (cell in cells) {
   } else if (kind == "slope") {
     out$N <- cell$ncl * cell$per
     out$n_latent <- cell$ncl * 2L
+  } else if (kind == "svy") {
+    ## the cluster effects are in the data-generating process but are NOT
+    ## fitted -- the design absorbs them -- so there is no latent budget here
+    out$N <- cell$nst * cell$ncl * cell$per
+    out$n_latent <- 0L
   } else if (isTRUE(cell$re)) {
     out$N <- cell$ncl * cell$per
     out$n_latent <- cell$ncl * Cc
