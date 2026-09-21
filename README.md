@@ -256,6 +256,18 @@ multiple-imputation-by-PCA route follows Josse and Husson; the chained-equations
 default is the approach `mice` established; the profiling workflow is a
 lighter-weight rebuild of `FactoMineR`'s `HCPC()` and `catdes()`.
 
+**And one predecessor.** The exploratory half of this package is a direct
+descendant of [`elucidate`](https://github.com/bcgov/elucidate), written by the
+same author for the BC Public Service. The lineage is visible in the function
+names: `describe()`, `describe_all()`, `counts()`, `counts_tb()`, `dupes()`,
+`copies()`, `wash_df()`, `recode_errors()`, `translate()` and the whole
+`plot_*()` family became `ilm_describe()`, `ilm_counts()`, `ilm_dupes()` and
+the rest, with the same idea behind them -- that the routine work before a
+model should be one call with a consistent interface, rather than six lines of
+`sapply()` reassembled from memory every time. `illume` reimplements that on a
+different backend and extends it, but the design is elucidate's and it would be
+poor form to pretend otherwise.
+
 Where a method has a name attached to it in the documentation, that is
 deliberate. It should be possible to find out whose idea any part of this was.
 ## References

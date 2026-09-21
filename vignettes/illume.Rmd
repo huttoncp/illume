@@ -208,6 +208,13 @@ independent implementation -- `lme4`, `glmmTMB`, `emmeans`, `afex`, `car`,
 `nlme`, `survival`, `mclogit`, `brms`. Every real defect this package has had
 was found that way and by nothing else.
 
+The exploratory half is a direct descendant of
+[`elucidate`](https://github.com/bcgov/elucidate), by the same author:
+`describe()`, `counts()`, `dupes()`, `wash_df()` and the `plot_*()` family are
+where `ilm_describe()`, `ilm_counts()`, `ilm_dupes()` and the rest came from,
+along with the idea that the routine work before a model should be one call
+with a consistent interface.
+
 And some of it was read straight out of their source: the sphericity arithmetic
 from `car`, the generalized eta squared formula from `afex`, the way REML is
 obtained from `glmmTMB`. Where a method has a name attached to it in these
