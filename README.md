@@ -265,8 +265,10 @@ names: `describe()`, `describe_all()`, `counts()`, `counts_tb()`, `dupes()`,
 the rest, with the same idea behind them -- that the routine work before a
 model should be one call with a consistent interface, rather than six lines of
 `sapply()` reassembled from memory every time. `illume` reimplements that on a
-different backend and extends it, but the design is elucidate's and it would be
-poor form to pretend otherwise.
+different backend and extends it -- elucidate is built on `data.table`, `dplyr`
+and `ggplot2`, this on `collapse` and `tinyplot`, and the two share an
+interface rather than an implementation -- but the design is elucidate's and it
+would be poor form to pretend otherwise.
 
 Where a method has a name attached to it in the documentation, that is
 deliberate. It should be possible to find out whose idea any part of this was.
