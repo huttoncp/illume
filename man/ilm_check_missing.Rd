@@ -17,8 +17,11 @@ ilm_check_missing(
 \arguments{
 \item{data}{A data frame.}
 
-\item{y}{Optional outcome column. Naming it is what separates "complete
-cases are fine" from "complete cases are biased", so it is worth naming.}
+\item{y}{Optional outcome column, named as a string. Naming it is what
+separates "complete cases are fine" from "complete cases are biased", so
+it is worth naming. A formula is also accepted and is usually the clearer
+way to write it: \code{outcome ~ x + z} sets the outcome and takes the
+right-hand side as \code{covariates}.}
 
 \item{covariates}{Variables to hold fixed when asking whether missingness
 depends on the outcome. Default is every other column; pass the model's

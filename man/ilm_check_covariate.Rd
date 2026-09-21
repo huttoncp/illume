@@ -18,8 +18,10 @@ ilm_check_covariate(
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{x}{A variable, of the same length as the data. Numeric variables are
-binned; factors are used as-is.}
+\item{x}{A variable with one value per row of the data the model was fitted
+to. Rows the fit dropped for missing values are removed automatically, so
+the column can be passed straight from the original data frame. Numeric
+variables are binned; factors are used as-is.}
 
 \item{name}{Character label for printing.}
 

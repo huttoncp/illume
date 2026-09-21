@@ -279,3 +279,28 @@ test_that("progress is silent by default and controllable", {
   expect_output(local({ b <- ilm_progress(10, progress = TRUE)
                         b$tick(5); b$done() }))
 })
+
+## --- the signature three vignettes assumed -----------------------------------
+## `y ~ x + z` reads as exactly what this function asks, and three vignettes
+## reached for it independently while the signature took a column name. Rather
+## than correct three call sites, the function now takes both.
+
+test_that("a formula and the string form give the same answer", {
+  set.seed(2)
+  d <- data.frame(x = rnorm(200), z = rnorm(200))
+  d$y <- 0.4 * d$x + rnorm(200)
+  d$y[d$x > 1] <- NA
+  a <- ilm_check_missing(d, y ~ x + z, verbose = FALSE)
+  b <- ilm_check_missing(d, y = "y", covariates = c("x", "z"), verbose = FALSE)
+  expect_equal(a, b)
+})
+
+test_that("a malformed formula is refused with the shape it wanted", {
+  set.seed(2)
+  d <- data.frame(x = rnorm(50), z = rnorm(50))
+  d$y <- rnorm(50); d$y[1:5] <- NA
+  expect_error(ilm_check_missing(d, ~ x + z, verbose = FALSE), "needs a response")
+  expect_error(ilm_check_missing(d, y + z ~ x, verbose = FALSE), "one outcome")
+  expect_error(ilm_check_missing(d, y = 42, verbose = FALSE), "single string")
+  expect_error(ilm_check_missing(d, y ~ nope, verbose = FALSE), "not in `data`")
+})

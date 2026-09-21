@@ -132,8 +132,11 @@ ilm_miss_outcome_test <- function(data, v, y, covars) {
 #' @param covariates Variables to hold fixed when asking whether missingness
 #'   depends on the outcome. Default is every other column; pass the model's
 #'   predictors when they are a subset.
-#' @param y Optional outcome column. Naming it is what separates "complete
-#'   cases are fine" from "complete cases are biased", so it is worth naming.
+#' @param y Optional outcome column, named as a string. Naming it is what
+#'   separates "complete cases are fine" from "complete cases are biased", so
+#'   it is worth naming. A formula is also accepted and is usually the clearer
+#'   way to write it: `outcome ~ x + z` sets the outcome and takes the
+#'   right-hand side as `covariates`.
 #' @param min_effect Smallest association worth reporting, as a correlation or
 #'   Cramer's V. With several thousand rows an association of 0.02 is
 #'   significant and means nothing.
@@ -153,8 +156,37 @@ ilm_check_missing <- function(data, y = NULL, covariates = NULL,
                               adjust = "holm", verbose = TRUE) {
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
+  ## `y ~ x + z` says exactly what this function asks -- does missingness in the
+  ## outcome depend on those predictors -- and three separate vignettes reached
+  ## for it independently, which is a fair indication of what the call looks
+  ## like to someone who has not read the signature. So take it: the response
+  ## becomes `y`, the right-hand side becomes `covariates`.
+  if (inherits(y, "formula")) {
+    fo <- y
+    if (length(fo) != 3L)
+      stop("a formula here needs a response: `outcome ~ predictors`, not `",
+           deparse(fo), "`", call. = FALSE)
+    yv <- all.vars(fo[[2L]])
+    if (length(yv) != 1L)
+      stop("a formula here names one outcome on the left; `", deparse(fo),
+           "` names ", length(yv), call. = FALSE)
+    y <- yv
+    rhs <- all.vars(fo[[3L]])
+    if (is.null(covariates) && length(rhs)) covariates <- rhs
+  }
+  if (!is.null(y) && (!is.character(y) || length(y) != 1L))
+    stop("`y` is the NAME of a column, so a single string -- or a formula ",
+         "like `outcome ~ predictors`. It is ",
+         if (is.character(y)) paste(length(y), "strings") else class(y)[1],
+         ".", call. = FALSE)
   if (!is.null(y) && !y %in% names(data))
     stop("`y` (", y, ") is not a column of `data`", call. = FALSE)
+  if (!is.null(covariates)) {
+    cmiss <- setdiff(covariates, names(data))
+    if (length(cmiss))
+      stop("covariate(s) not in `data`: ", paste(cmiss, collapse = ", "),
+           call. = FALSE)
+  }
   say <- function(...) if (verbose) message(...)
   n <- nrow(data)
 

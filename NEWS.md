@@ -217,6 +217,34 @@ defect here.
   replicates is 0.74 to 0.86, and the **convergence rate**, because power
   conditional on convergence is not power.
 
+## Two defects, found from outside
+
+* **`ilm_check_covariate()` and `ilm_check_omitted()` failed on any missing
+  data.** The fit drops rows through `na.omit`, so its residuals are shorter
+  than the data frame a covariate is passed from, and both died with
+  `arguments must have same length` -- an error that names no remedy and does
+  not say which two lengths disagreed. They now align the variable to the rows
+  the fit kept, which the fit already records. This mattered more than a
+  crash: the package's own documentation argues that targeted covariate checks
+  are the only residual checks with real power here (z = 4.04 against z = 0.24
+  for a broad one), and they were unreachable for anyone whose data had a gap
+  in it.
+* **Three vignettes called `ilm_check_missing(d, y ~ x + z)` while the
+  signature took a column name.** Every chunk was `eval = FALSE`, so nothing
+  caught it. Rather than correct three call sites, the function now takes a
+  formula as well: `outcome ~ predictors` says exactly what it asks, and three
+  vignettes reaching for it independently is reasonable evidence about what
+  the call looks like to someone who has not read the signature.
+
+Both were found by calling illume from outside it, while building a separate
+package against it. Neither was found by this package's own test suite, which
+is the same story every defect here has had.
+
+The regression test for the first one checks that automatic alignment gives
+the **same answer** as subsetting by hand, not merely that it stops erroring:
+a wrong alignment also runs cleanly, and dropping the last rows rather than
+the right ones turns z = 23.5 into z = 0.41.
+
 ## Finite degrees of freedom for a mixed model
 
 * `ilm_denom_df()` adds Satterthwaite and Kenward-Roger. A Wald statistic

@@ -92,3 +92,85 @@ test_that("one-vs-rest Pearson residuals have the right shape", {
   expect_equal(dim(R), c(nrow(fit$X), fit$J))
   expect_true(all(is.finite(R)))
 })
+
+## --- missing data and the row alignment it forces ---------------------------
+##
+## A fit drops rows with missing values, so its residuals are shorter than the
+## data frame a covariate is passed from. Both of these used to fail with
+## "arguments must have same length", which names no remedy and does not say
+## which two lengths disagreed. Found by calling illume from outside it -- not
+## by this suite, which is the usual story.
+
+na_fit <- function(seed = 4, n = 400, n_na = 9) {
+  set.seed(seed)
+  d <- data.frame(x = rnorm(n), z = rnorm(n), w = rnorm(n))
+  d$y <- 0.5 * d$x + 1.2 * d$w + rnorm(n, 0, 0.6)
+  d$fac <- factor(sample(c("p", "q", "r"), n, TRUE))
+  d$x[seq(3, by = 7, length.out = n_na)] <- NA
+  list(d = d, fit = ilm_model(y ~ x, data = d, family = "gaussian",
+                              verbose = FALSE))
+}
+
+test_that("a covariate check works when the fit dropped rows", {
+  z <- na_fit()
+  expect_s3_class(z$fit, "ilm_model")
+  expect_lt(nrow(z$fit$model), nrow(z$d))          # rows really were dropped
+  expect_silent(r <- ilm_check_covariate(z$fit, z$d$w, name = "w", B = 20L,
+                                         verbose = FALSE))
+  expect_true(r$status %in% c("OK", "WARN", "FAIL"))
+})
+
+test_that("aligning automatically gives the SAME answer as subsetting by hand", {
+  ## The point of the test: a wrong alignment also runs without erroring, so
+  ## "it no longer crashes" is not evidence. Dropping the last k rows instead
+  ## of the right k gives z = 0.41 where the truth is z = 23.5.
+  z <- na_fit()
+  om <- as.integer(attr(z$fit$model, "na.action"))
+  auto <- ilm_check_covariate(z$fit, z$d$w, name = "w", B = 40L, seed = 7L,
+                              verbose = FALSE)
+  hand <- ilm_check_covariate(z$fit, z$d$w[-om], name = "w", B = 40L, seed = 7L,
+                              verbose = FALSE)
+  expect_equal(auto$observed, hand$observed)
+  expect_equal(auto$z, hand$z)
+  wrong <- ilm_check_covariate(z$fit,
+             z$d$w[seq_len(nrow(z$d) - length(om))],
+             name = "w", B = 40L, seed = 7L, verbose = FALSE)
+  expect_false(isTRUE(all.equal(auto$observed, wrong$observed)))
+})
+
+test_that("the check keeps its power when rows have been dropped", {
+  z <- na_fit()
+  hit <- ilm_check_covariate(z$fit, z$d$w, name = "w", B = 40L, seed = 7L,
+                             verbose = FALSE)
+  nul <- ilm_check_covariate(z$fit, z$d$z, name = "z", B = 40L, seed = 7L,
+                             verbose = FALSE)
+  expect_identical(hit$status, "FAIL")             # w really is omitted
+  expect_gt(abs(hit$z), 5)
+  expect_identical(nul$status, "OK")               # z really is not
+})
+
+test_that("ilm_check_omitted takes a frame longer than the model frame", {
+  z <- na_fit()
+  expect_silent(o <- ilm_check_omitted(z$fit, z$d[c("w", "z", "fac")],
+                                       B = 20L, verbose = FALSE))
+  expect_named(o, c("w", "z", "fac"))
+  expect_identical(o$w$status, "FAIL")
+})
+
+test_that("a covariate with missing values of its own is handled", {
+  ## it is a variable the model did NOT use, so nothing has filtered it
+  z <- na_fit()
+  z$d$wna <- z$d$w
+  z$d$wna[c(1, 2, 5, 400)] <- NA
+  expect_silent(r <- ilm_check_covariate(z$fit, z$d$wna, name = "wna",
+                                         B = 20L, verbose = FALSE))
+  expect_true(r$status %in% c("OK", "WARN", "FAIL"))
+})
+
+test_that("a length that matches nothing is refused, with the remedy named", {
+  z <- na_fit()
+  expect_error(ilm_check_covariate(z$fit, rnorm(13), name = "junk",
+                                   verbose = FALSE), "13 value")
+  expect_error(ilm_check_covariate(z$fit, rnorm(13), name = "junk",
+                                   verbose = FALSE), "same data frame")
+})

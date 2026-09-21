@@ -599,6 +599,45 @@ check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 ## the same pair of models.  So residual checks must be POINTED AT SPECIFIC
 ## COVARIATES, including ones the model does not contain.
 
+#' Line a supplied variable up with the rows the fit actually used
+#'
+#' A fit drops rows with missing values, so its residuals are shorter than the
+#' data frame the variable came from. Handing the full-length column to a
+#' residual test then fails with "arguments must have same length", which names
+#' no remedy and does not say which two lengths disagreed.
+#'
+#' The fit already records what it dropped -- `na.action` on the model frame --
+#' so the alignment can simply be done. A variable that is already the right
+#' length is passed through, which is what happens when someone has subset it
+#' themselves.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @param x A vector or data frame to align.
+#' @param name Label for the error message.
+#' @return `x`, restricted to the rows the fit kept.
+#' @keywords internal
+#' @noRd
+ilm_align_rows <- function(object, x, name = "x") {
+  mf <- object$model
+  if (is.null(mf)) return(x)               # no model frame: nothing to align to
+  n_used <- nrow(mf)
+  nx <- if (is.data.frame(x) || is.matrix(x)) nrow(x) else length(x)
+  if (identical(nx, n_used)) return(x)     # already aligned
+
+  om <- attr(mf, "na.action")
+  n_orig <- n_used + length(om)
+  if (!identical(nx, n_orig))
+    stop("`", name, "` has ", nx, " value(s), but the fit used ", n_used,
+         " row(s)", if (length(om)) paste0(" of ", n_orig, " (", length(om),
+         " dropped for missing values)") else "",
+         ". Pass the column from the same data frame the model was fitted to ",
+         "and it is lined up for you; a variable built separately has to have ",
+         "one value per row of that data frame.", call. = FALSE)
+
+  keep <- -as.integer(om)
+  if (is.data.frame(x) || is.matrix(x)) x[keep, , drop = FALSE] else x[keep]
+}
+
 #' Test whether residuals shift across a variable
 #'
 #' Asks whether residuals are systematically higher or lower at some values of a
@@ -612,8 +651,10 @@ check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 #' deal. See [ilm_rqr_test()] for why.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param x A variable, of the same length as the data. Numeric variables are
-#'   binned; factors are used as-is.
+#' @param x A variable with one value per row of the data the model was fitted
+#'   to. Rows the fit dropped for missing values are removed automatically, so
+#'   the column can be passed straight from the original data frame. Numeric
+#'   variables are binned; factors are used as-is.
 #' @param name Character label for printing.
 #' @param nbin Integer. Bins for a numeric variable.
 #' @param B Integer. Simulated datasets.
@@ -626,11 +667,19 @@ check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 ilm_check_covariate <- function(object, x, name = NULL, nbin = 5L, B = 30L,
                                  ncores = 1L, seed = 1L, verbose = TRUE) {
   if (is.null(name)) name <- deparse(substitute(x))
-  xv <- if (is.numeric(x) && length(unique(x)) > nbin)
-    cut(x, stats::quantile(x, seq(0, 1, length.out = nbin + 1L)), include.lowest = TRUE)
+  ## the residuals come from the rows the fit kept, so the variable has to as
+  ## well -- otherwise tapply() below fails on a length mismatch
+  x <- ilm_align_rows(object, x, name)
+  xv <- if (is.numeric(x) && length(unique(x[!is.na(x)])) > nbin)
+    cut(x, stats::quantile(x, seq(0, 1, length.out = nbin + 1L), na.rm = TRUE),
+        include.lowest = TRUE)
   else factor(x)
   gv <- as.integer(xv)
-  if (length(unique(gv)) < 2L) {
+  ## A variable can carry missing values of its own even after alignment -- it
+  ## is a variable the model did NOT use, so nothing has filtered it. tapply()
+  ## drops those rows from the grouping, so what matters is how many levels
+  ## survive that, not how many labels exist.
+  if (length(unique(gv[!is.na(gv)])) < 2L) {
     if (verbose) cat(sprintf("%-18s INCONCLUSIVE (only one level)\n", name))
     return(invisible(list(status = "INCONCLUSIVE", term = name)))
   }
@@ -684,6 +733,12 @@ ilm_check_covariate <- function(object, x, name = NULL, nbin = 5L, B = 30L,
 #' @export
 ilm_check_omitted <- function(object, data, vars = NULL, B = 30L, ncores = 1L,
                                seed = 1L, verbose = TRUE) {
+  if (!is.data.frame(data))
+    stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
+  ## Align once, here, rather than letting each column fail separately: the fit
+  ## drops rows with missing values, so a frame straight from the user is
+  ## longer than the residuals every one of these tests is built on.
+  data <- ilm_align_rows(object, data, "data")
   used <- all.vars(object$formula)
   cand <- if (is.null(vars)) setdiff(names(data), used) else vars
   cand <- cand[vapply(cand, function(v) {
