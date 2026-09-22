@@ -110,7 +110,7 @@ head <- c(
   "    primary: \"#2a6f97\"",
   "",
   "home:",
-  "  title: Exploration and frequentist inference in one toolkit",
+  "  title: A Unified Engine for Exploration and Frequentist Inference",
   "",
   "navbar:",
   "  structure:",
