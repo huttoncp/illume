@@ -391,9 +391,22 @@ ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest
   cal <- sim(rvar, 3L); pb$tick(3L)
   mo <- stats::median(obs$score); mc <- stats::median(cal)
   if (is.finite(mc) && mc > 0) rvar <- rvar * (mo / mc)
-  null <- numeric(0)
-  for (b in seq_len(B)) { null <- c(null, sim(rvar, 1L)); pb$tick(3L + b) }
+  ## Kept per simulated dataset rather than pooled, because the plot needs
+  ## to know what score to EXPECT at each rank, not just the pooled null.
+  nullm <- matrix(NA_real_, n, B)
+  for (b in seq_len(B)) { nullm[, b] <- sim(rvar, 1L); pb$tick(3L + b) }
   pb$done()
+  null <- as.vector(nullm)
+
+  ## Each null dataset sorted descending is the score curve you would see at
+  ## each rank if nothing were anomalous; the spread across datasets is a
+  ## pointwise envelope. Three quantiles of it cost n x 3 to store instead
+  ## of n x B, and are what ilm_plot_anomaly() draws the reference band from.
+  srt <- apply(nullm, 2L, sort, decreasing = TRUE)
+  if (!is.matrix(srt)) srt <- matrix(srt, n, B)
+  nullq <- t(apply(srt, 1L, stats::quantile, probs = c(0.025, 0.5, 0.975),
+                   names = FALSE, na.rm = TRUE))
+  colnames(nullq) <- c("lo", "mid", "hi")
 
   pv <- (1 + vapply(obs$score, function(s) sum(null >= s), 0L)) /
     (length(null) + 1)
@@ -407,6 +420,7 @@ ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest
   structure(out, class = c("ilm_anomaly", "data.frame"), rank = k,
             data = .keep,
             method = "reconstruction", calibrated = TRUE,
+            null_curve = nullq,
             residual = obs$residual, columns = num, trim = trim,
             n_null = length(null), alpha = alpha, dropped = drop)
 }
