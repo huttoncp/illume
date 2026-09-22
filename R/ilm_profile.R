@@ -148,9 +148,19 @@ ilm_profile_summary_lines <- function(characterization, cluster_res) {
 #' @param vtest_threshold Smallest `|vtest|` for a dimension to count toward a
 #'   cluster's description.
 #' @param top_n_vars How many top-loading variables to name per dimension.
+#' @param var_contrib Run [ilm_var_contrib()] on the result and report it.
+#'   Nothing in this pipeline selects variables, and an irrelevant one is not
+#'   neutral: on three known clusters with two informative columns, adding two
+#'   pure-noise factors took recovery from 0.301 to 0.006. So the check runs
+#'   here rather than waiting to be asked for, and a clustering that turns out
+#'   to be one variable's levels under another name raises a warning -- the
+#'   cluster descriptions would otherwise be read at face value, and they
+#'   would all be true and all about that variable. Costs roughly 70% on top
+#'   of the clustering at 500 rows and five columns.
+#' @param var_contrib_B Permutations for that check.
 #' @return An object of class `"ilm_profile"`: `reduce`, `cluster`,
-#'   `characterization` (one row per dimension that characterises a cluster)
-#'   and `summary`, one sentence per cluster.
+#'   `characterization` (one row per dimension that characterises a cluster),
+#'   `var_contrib` (or `NULL`) and `summary`, one sentence per cluster.
 #' @seealso [ilm_reduce()], [ilm_cluster()], [ilm_plot_profile()],
 #'   [ilm_profile_na()].
 #' @examples
@@ -159,14 +169,44 @@ ilm_profile_summary_lines <- function(characterization, cluster_res) {
 #' @export
 ilm_profile <- function(data, cols = NULL, ndim = 5,
                         method = c("pcamix", "glrm"), ...,
-                        vtest_threshold = 1.96, top_n_vars = 2) {
+                        vtest_threshold = 1.96, top_n_vars = 2,
+                        var_contrib = TRUE, var_contrib_B = 199L) {
   rr <- ilm_reduce(data, cols = cols, ndim = ndim, method = method)
   cr <- ilm_cluster(rr, ...)
   ch <- ilm_characterize_clusters(rr, cr, vtest_threshold, top_n_vars,
                                   ilm_label_var_direction)
-  structure(list(reduce = rr, cluster = cr, characterization = ch,
-                 summary = ilm_profile_summary_lines(ch, cr)),
-            class = "ilm_profile")
+  ## Run the variable check HERE rather than leaving it for the user to find.
+  ## Nothing in this pipeline selects variables, and an irrelevant one is not
+  ## neutral: on three known clusters with two informative columns, adding two
+  ## pure-noise factors took recovery from 0.301 to 0.006. A diagnostic in a
+  ## function nobody calls produces exactly the analyses this package exists
+  ## to prevent, so it goes in the path and its verdict is printed.
+  ##
+  ## It is cheap -- eta squared and Cramer's V on permuted labels, no models
+  ## refitted -- so it costs a fraction of the clustering it follows.
+  vc <- if (isFALSE(var_contrib)) NULL else {
+    rows <- cr$ind_cluster$row_id
+    dsub <- if (!is.null(rows) && length(rows) == nrow(cr$ind_cluster) &&
+                max(rows) <= nrow(data)) data[rows, , drop = FALSE] else data
+    tryCatch(ilm_var_contrib(structure(list(cluster = cr), class = "ilm_profile"),
+                             dsub, B = var_contrib_B),
+             error = function(e) NULL)
+  }
+  out <- structure(list(reduce = rr, cluster = cr, characterization = ch,
+                        var_contrib = vc,
+                        summary = ilm_profile_summary_lines(ch, cr)),
+                   class = "ilm_profile")
+  ## The dominance case is a warning rather than a line of output: a clustering
+  ## that is one variable's levels under another name will otherwise have its
+  ## cluster descriptions read at face value, and they will all be true and all
+  ## be about that one variable.
+  if (!is.null(vc) && !is.null(attr(vc, "dominated_by")))
+    warning("this clustering is a re-labelling of `", attr(vc, "dominated_by"),
+            "`: it separates the clusters almost perfectly while nothing else ",
+            "does. If that is not the grouping you were looking for, exclude ",
+            "it with cols =. See the variable contribution table in the ",
+            "printed output.", call. = FALSE)
+  out
 }
 
 #' Profile which values are missing, and for whom
@@ -214,5 +254,29 @@ print.ilm_profile <- function(x, ...) {
   print(x$cluster)
   cat("\n  what each cluster is\n")
   for (s in x$summary) cat(ilm_wrap(s, 76L, "    "), "\n\n")
+  ## The cluster descriptions above are always true OF THE CLUSTERS FOUND.
+  ## Whether those clusters are worth describing is a separate question, and
+  ## this is where it gets answered rather than left to a function the reader
+  ## would have to know to call.
+  if (!is.null(x$var_contrib)) {
+    v <- x$var_contrib
+    dom <- attr(v, "dominated_by")
+    dead <- v$variable[v$verdict == "no better than chance"]
+    if (!is.null(dom)) {
+      cat("  ! this clustering is a re-labelling of `", dom, "`: it separates\n",
+          "    the clusters almost perfectly while nothing else does, so the\n",
+          "    descriptions above are all about that one variable. Exclude it\n",
+          "    with cols = if it is not the grouping you wanted.\n", sep = "")
+    } else if (length(dead)) {
+      cat("  ! ", paste(dead, collapse = ", "), " separate",
+          if (length(dead) == 1L) "s" else "",
+          " the clusters no better than a\n",
+          "    shuffled label does, and nothing here selects variables, so ",
+          if (length(dead) == 1L) "it is" else "they are", "\n",
+          "    still contributing distance. Refit with cols = to drop ",
+          if (length(dead) == 1L) "it." else "them.", "\n", sep = "")
+    }
+    cat("    ilm_var_contrib() for the full table.\n")
+  }
   invisible(x)
 }

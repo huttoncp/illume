@@ -161,3 +161,40 @@ test_that("mismatched row counts are refused rather than silently misaligned", {
   p <- suppressMessages(suppressWarnings(ilm_profile(d, k = 2)))
   expect_error(ilm_var_contrib(p, d[1:100, ], B = 9), "labels and `data` has")
 })
+
+test_that("ilm_profile() runs the variable check itself", {
+  ## The point of moving it into the path: a diagnostic nobody calls is a
+  ## complaint. On the case that scored 0.006 the front door now says so by
+  ## itself, without the user knowing ilm_var_contrib() exists.
+  skip_if_not_installed("PCAmixdata")
+  set.seed(11); n <- 300
+  d <- data.frame(n1 = rnorm(n), n2 = rnorm(n), n3 = rnorm(n),
+                  f1 = factor(rep(c("a", "b", "c"), length.out = n)))
+  expect_warning(p <- ilm_profile(d, k = 3), "re-labelling of `f1`")
+  expect_s3_class(p$var_contrib, "ilm_var_contrib")
+  out <- utils::capture.output(print(p))
+  expect_true(any(grepl("re-labelling of `f1`", out)))
+  expect_true(any(grepl("ilm_var_contrib()", out, fixed = TRUE)))
+})
+
+test_that("the variable check can be switched off", {
+  skip_if_not_installed("PCAmixdata")
+  set.seed(11); n <- 200
+  d <- data.frame(n1 = rnorm(n), n2 = rnorm(n), n3 = rnorm(n),
+                  f1 = factor(rep(c("a", "b", "c"), length.out = n)))
+  p <- suppressWarnings(suppressMessages(
+    ilm_profile(d, k = 3, var_contrib = FALSE)))
+  expect_null(p$var_contrib)
+  ## and with it off there is no warning to suppress
+  expect_silent(suppressMessages(ilm_profile(d, k = 3, var_contrib = FALSE)))
+})
+
+test_that("a clean clustering gets no complaint", {
+  skip_if_not_installed("PCAmixdata")
+  set.seed(21); n <- 300; g <- sample(1:3, n, TRUE)
+  d <- data.frame(n1 = rnorm(n, 2.4 * (g - 2)), n2 = rnorm(n, 2.4 * (g == 3)))
+  p <- suppressMessages(ilm_profile(d, k = 3))
+  expect_null(attr(p$var_contrib, "dominated_by"))
+  out <- utils::capture.output(print(p))
+  expect_false(any(grepl("re-labelling", out)))
+})

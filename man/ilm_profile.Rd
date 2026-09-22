@@ -11,7 +11,9 @@ ilm_profile(
   method = c("pcamix", "glrm"),
   ...,
   vtest_threshold = 1.96,
-  top_n_vars = 2
+  top_n_vars = 2,
+  var_contrib = TRUE,
+  var_contrib_B = 199L
 )
 }
 \arguments{
@@ -37,11 +39,23 @@ the same model -- see \code{\link[=ilm_glrm]{ilm_glrm()}} for when it is worth t
 cluster's description.}
 
 \item{top_n_vars}{How many top-loading variables to name per dimension.}
+
+\item{var_contrib}{Run \code{\link[=ilm_var_contrib]{ilm_var_contrib()}} on the result and report it.
+Nothing in this pipeline selects variables, and an irrelevant one is not
+neutral: on three known clusters with two informative columns, adding two
+pure-noise factors took recovery from 0.301 to 0.006. So the check runs
+here rather than waiting to be asked for, and a clustering that turns out
+to be one variable's levels under another name raises a warning -- the
+cluster descriptions would otherwise be read at face value, and they
+would all be true and all about that variable. Costs roughly 70\% on top
+of the clustering at 500 rows and five columns.}
+
+\item{var_contrib_B}{Permutations for that check.}
 }
 \value{
 An object of class \code{"ilm_profile"}: \code{reduce}, \code{cluster},
-\code{characterization} (one row per dimension that characterises a cluster)
-and \code{summary}, one sentence per cluster.
+\code{characterization} (one row per dimension that characterises a cluster),
+\code{var_contrib} (or \code{NULL}) and \code{summary}, one sentence per cluster.
 }
 \description{
 Runs \code{\link[=ilm_reduce]{ilm_reduce()}}, then \code{\link[=ilm_cluster]{ilm_cluster()}} on the dimensions it produces,

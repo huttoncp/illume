@@ -394,6 +394,21 @@ variables, so one it used separates the clusters it helped make whether or not
 it means anything. A pure-noise column scored 0.441 against 0.576 for a real
 one. The documentation says this rather than implying otherwise.
 
+**`ilm_profile()` runs it, rather than leaving it for the user to find.** A
+diagnostic in a function nobody calls produces exactly the analyses this
+package exists to prevent, so the check is in the path: the result is stored
+on the object, the verdict is printed under the cluster descriptions, and the
+dominance case additionally **warns**, because otherwise the cluster
+descriptions get read at face value and they are all true and all about one
+variable. `var_contrib = FALSE` turns it off and `var_contrib_B` tunes it; it
+costs about 70% on top of the clustering at 500 rows and five columns, which
+is the price of the check being run rather than merely available.
+
+On thirty columns with two informative ones, the two rank first at 0.45 and
+0.40 with everything else at 0.13 or below. The verdicts are less useful there
+than the ranking -- a noise column the clustering happened to split on still
+beats a shuffled label -- which is why the output says to read the ranking.
+
 ## Parameters that were set and then ignored
 
 Same source, same method, one round later.
