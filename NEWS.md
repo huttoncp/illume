@@ -753,6 +753,31 @@ failing call was `ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend =
   0.956, about two Monte Carlo standard errors below nominal -- small, but in
   the anti-conservative direction.
 
+## Where illume loses to mclogit
+
+* A second comparison against `mclogit::mblogit()`, this time on data that
+  misbehaves: unbalanced clusters with many singletons, a 3.6% outcome
+  category, a variance component at the boundary, non-Gaussian random
+  effects, and all four together. 400 replications per regime.
+  `studies/findings/messy.md`, and the new **Benchmarking and validation**
+  vignette.
+* illume's intervals cover better in all six regimes, and the gap widens
+  where theory says PQL should struggle -- 0.931 against 0.853 with a sparse
+  category, 0.945 against 0.894 with everything combined. illume is 6 to 13
+  times faster throughout.
+* **Three results go the other way and are recorded rather than smoothed.**
+  illume *inflates* coefficients when a category is sparse (attenuation 1.46),
+  and its mean absolute bias there is worse than mclogit's, 0.394 against
+  0.271; the intervals are wide enough to cover anyway, but the point estimate
+  should not be read at face value. illume converged on **63.3%** of
+  replications when the true random-effect sd was 0.05, against mclogit's
+  100%, so its coverage in that cell describes only those 63.3%. And
+  mclogit's RMSE is lower in four of the six regimes.
+* The two methods fail differently rather than one dominating. PQL always
+  converges, shrinks, and does not say so. The Laplace approximation means
+  what its intervals claim and declines more often. Declining loudly is the
+  intent, but it is still a cost.
+
 ## What the imputation ablation says
 
 * Five methods across six designs, scored on reconstruction AND on coverage of
