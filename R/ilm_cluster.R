@@ -164,34 +164,80 @@ ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B,
 #' cl <- ilm_cluster(ilm_reduce(mtcars), k_max = 5, B = 25, seed = 1)
 #' cl
 #' @export
+## What the missing values are about to cost, said before they cost it.
+##
+## FAMD has no way to place a row with a gap in it, so every one of them is
+## dropped -- and the drop is silent, sized by the COMBINATION of columns
+## rather than by the worst one. Twelve per cent missing spread over three
+## columns removes about a third of the data, which nobody predicts from
+## "12% missing". So the complete-case rate is reported, not the column
+## percentages alone, and the two remedies that exist in the package are
+## named: impute, or drop the columns that are doing the damage.
+#' @keywords internal
+#' @noRd
+ilm_cluster_na_note <- function(data, fn) {
+  if (!is.data.frame(data) || !nrow(data)) return(invisible(NULL))
+  na_col <- vapply(data, function(v) mean(is.na(v)), 0)
+  if (!any(na_col > 0)) return(invisible(NULL))
+  cc <- mean(stats::complete.cases(data))
+  if (cc == 1) return(invisible(NULL))
+  hit <- sort(na_col[na_col > 0], decreasing = TRUE)
+  top <- utils::head(hit, 5L)
+  ## the columns whose removal would recover the most rows: a column with a
+  ## high rate is only worth dropping if its gaps are not shared with others
+  gain <- vapply(names(hit), function(v)
+    mean(stats::complete.cases(data[setdiff(names(data), v)])) - cc, 0)
+  best <- names(which.max(gain))
+  message(fn, "(): ", sum(na_col > 0), " of ", ncol(data),
+          " column(s) have missing values (",
+          paste(sprintf("%s %.0f%%", names(top), 100 * top), collapse = ", "),
+          if (length(hit) > 5L) ", ..." else "",
+          "), and only ", sprintf("%.0f%%", 100 * cc),
+          " of rows are complete -- the rest cannot be placed and will be ",
+          "dropped. ilm_impute() keeps them",
+          if (max(gain) > 0.01)
+            paste0("; dropping '", best, "' alone would take the complete rows to ",
+                   sprintf("%.0f%%", 100 * (cc + max(gain)))) else "",
+          ". ilm_describe_na_all() shows the whole picture.")
+  invisible(NULL)
+}
+
 ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
                         dist_method = "euclidean", hclust_method = "ward.D2",
                         nstart = 25, B = 100, gap_method = "firstSEmax",
                         small_cluster_frac = 0.05, ambiguous_threshold = 0.1,
                         seed = NULL, progress = NULL) {
   method <- match.arg(method)
+  reduced <- NULL
+  ## Raw mixed data is the ordinary way to arrive here, not a mistake. A
+  ## k-means centroid is not defined on a factor, so the columns have to be put
+  ## on a common numeric footing first -- which ilm_reduce() does by FAMD. It
+  ## used to be the caller's job to know that. Measured against the
+  ## alternatives on data with known clusters, FAMD then k-means ties the best
+  ## of them on well-behaved data and is the only one that holds up when the
+  ## variables are correlated within a cluster, which real ones usually are.
+  if (!inherits(x, "ilm_reduce") && is.data.frame(x) &&
+      !all(vapply(x, is.numeric, TRUE))) {
+    ilm_cluster_na_note(x, "ilm_cluster")
+    reduced <- ilm_reduce(x)
+    message("ilm_cluster(): the data has non-numeric columns, so it was ",
+            "reduced to ", ncol(reduced$ind_coord) - 1L, " ", reduced$method,
+            " coordinates first. ilm_profile() does this and describes the ",
+            "clusters in one call.")
+    x <- reduced
+  }
   coords <- if (inherits(x, "ilm_reduce"))
     as.matrix(x$ind_coord[, setdiff(names(x$ind_coord), "row_id"), drop = FALSE])
   else if (is.matrix(x) || is.data.frame(x)) as.matrix(as.data.frame(x))
   else stop("`x` must be an ilm_reduce() result or a numeric matrix or data ",
             "frame of coordinates; it is ", class(x)[1], call. = FALSE)
   if (!is.numeric(coords)) {
-    ## This clusters COORDINATES: a k-means centroid and a euclidean distance
-    ## are not defined on a factor. The remedy exists in the package, so it is
-    ## named rather than left as the caller's problem -- ilm_reduce() puts
-    ## mixed columns on a common numeric footing by FAMD and its result is
-    ## exactly what this takes. Arriving here with raw mixed data is the
-    ## ordinary way to reach the function, not a mistake worth a bare refusal.
-    bad <- if (is.data.frame(x))
-      names(x)[!vapply(x, is.numeric, TRUE)] else character(0)
-    stop("the coordinates to cluster must be numeric",
-         if (length(bad))
-           paste0(", and these are not: ",
-                  paste(utils::head(bad, 8), collapse = ", "),
-                  if (length(bad) > 8L) ", ..." else ""),
-         ". Reduce mixed columns to coordinates first -- ",
-         "ilm_cluster(ilm_reduce(data)) -- which handles numeric and ",
-         "categorical columns together by FAMD.", call. = FALSE)
+    ## a matrix, where the routing above cannot apply: it has one type and
+    ## that type is not numeric
+    stop("the coordinates to cluster must be numeric, and this matrix is ",
+         typeof(coords), ". Pass a data frame instead, and mixed columns will ",
+         "be reduced to coordinates by ilm_reduce() on the way through.",
+         call. = FALSE)
   }
   n <- nrow(coords)
   if (!is.null(seed)) set.seed(seed)
@@ -207,6 +253,19 @@ ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
     k_max <- max(1L, min(k_max, n - 1L, nrow(unique(coords))))
     gap <- cluster::clusGap(coords, FUNcluster = FUNcluster, K.max = k_max, B = B)
     k <- cluster::maxSE(gap$Tab[, "gap"], gap$Tab[, "SE.sim"], method = gap_method)
+    ## A chosen k sitting on the edge of the search is not a choice, it is a
+    ## search that ran out of room -- the curve was still climbing. Measured on
+    ## mixed data this is not hypothetical: every k-selector tried over-shot,
+    ## and an average-silhouette search on the same data peaked at exactly the
+    ## number of level combinations rather than at the number of clusters.
+    if (k >= k_max && k_max > 1L)
+      warning("k was chosen as ", k, ", which is the largest value searched. ",
+              "The curve had not turned, so this is where the search stopped ",
+              "rather than where the evidence pointed. Raise `k_max`, or set ",
+              "`k` from what the design says. On mixed data a selector can ",
+              "also lock onto the number of category combinations rather ",
+              "than the number of clusters; plot(x) shows the gap curve.",
+              call. = FALSE)
   }
 
   cluster_assign <- FUNcluster(coords, k)$cluster
