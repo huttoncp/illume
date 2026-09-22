@@ -88,18 +88,22 @@ ilm_plot_density <- function(data, x, by = NULL, ...) {
 #' @param x Optional categorical column to split by.
 #' @param by Optional grouping column.
 #' @param ... Passed to [tinyplot::tinyplot()].
+#' @param pch Plotting character. Takes a NAME as well as a number:
+#'   `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+#'   spaces, underscores and hyphens are ignored. A single character is
+#'   drawn literally, so `pch = "x"` is still the letter x.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_outliers()], [ilm_plot_violin()].
 #' @examples
 #' ilm_plot_box(mtcars, "mpg", x = "cyl")
 #' @export
-ilm_plot_box <- function(data, y, x = NULL, by = NULL, ...) {
+ilm_plot_box <- function(data, y, x = NULL, by = NULL, ..., pch = NULL) {
   ilm_plot_frame_check(data)
   xv <- ilm_col_vec(data, x, "x")
   tinyplot::tinyplot(x = if (is.null(xv)) "" else xv,
                      y = ilm_col_vec(data, y, "y", TRUE),
-                     by = ilm_col_vec(data, by, "by", discrete = TRUE), type = "boxplot",
-                     ylab = y, ...)
+                     by = ilm_col_vec(data, by, "by", discrete = TRUE),
+                     type = "boxplot", ylab = y, pch = ilm_pch(pch), ...)
   invisible(NULL)
 }
 
@@ -111,13 +115,13 @@ ilm_plot_box <- function(data, y, x = NULL, by = NULL, ...) {
 #' @examples
 #' ilm_plot_violin(mtcars, "mpg", x = "cyl")
 #' @export
-ilm_plot_violin <- function(data, y, x = NULL, by = NULL, ...) {
+ilm_plot_violin <- function(data, y, x = NULL, by = NULL, ..., pch = NULL) {
   ilm_plot_frame_check(data)
   xv <- ilm_col_vec(data, x, "x")
   tinyplot::tinyplot(x = if (is.null(xv)) "" else xv,
                      y = ilm_col_vec(data, y, "y", TRUE),
-                     by = ilm_col_vec(data, by, "by", discrete = TRUE), type = "violin",
-                     ylab = y, ...)
+                     by = ilm_col_vec(data, by, "by", discrete = TRUE),
+                     type = "violin", ylab = y, pch = ilm_pch(pch), ...)
   invisible(NULL)
 }
 
@@ -130,20 +134,25 @@ ilm_plot_violin <- function(data, y, x = NULL, by = NULL, ...) {
 #'   description of the two columns shown and nothing more -- it holds nothing
 #'   else fixed, so it is not the effect [ilm_model()] would estimate.
 #' @param ... Passed to [tinyplot::tinyplot()].
+#' @param pch Plotting character. Takes a NAME as well as a number:
+#'   `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+#'   spaces, underscores and hyphens are ignored. A single character is
+#'   drawn literally, so `pch = "x"` is still the letter x.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_plot_var_pairs()] for every pair at once.
 #' @examples
 #' ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend = "lm")
 #' @export
 ilm_plot_scatter <- function(data, y, x, by = NULL,
-                             trend = c("none", "lm", "loess"), ...) {
+                             trend = c("none", "lm", "loess"), ...,
+                             pch = NULL) {
   trend <- match.arg(trend)
   ilm_plot_frame_check(data)
   tinyplot::tinyplot(x = ilm_col_vec(data, x, "x", TRUE),
                      y = ilm_col_vec(data, y, "y", TRUE),
                      by = ilm_col_vec(data, by, "by"),
                      type = if (trend == "none") "points" else trend,
-                     xlab = x, ylab = y, ...)
+                     xlab = x, ylab = y, pch = ilm_pch(pch), ...)
   invisible(NULL)
 }
 
@@ -172,18 +181,22 @@ ilm_plot_bar <- function(data, x, by = NULL, ...) {
 #' @param y,x Column names; `x` is usually a date or a sequence.
 #' @param by Optional grouping column.
 #' @param ... Passed to [tinyplot::tinyplot()].
+#' @param pch Plotting character. Takes a NAME as well as a number:
+#'   `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+#'   spaces, underscores and hyphens are ignored. A single character is
+#'   drawn literally, so `pch = "x"` is still the letter x.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_plot_acf()] for what a line plot of residuals cannot show.
 #' @examples
 #' d <- data.frame(t = 1:40, v = cumsum(rnorm(40)))
 #' ilm_plot_line(d, "v", "t")
 #' @export
-ilm_plot_line <- function(data, y, x, by = NULL, ...) {
+ilm_plot_line <- function(data, y, x, by = NULL, ..., pch = NULL) {
   ilm_plot_frame_check(data)
   tinyplot::tinyplot(x = ilm_col_vec(data, x, "x", TRUE),
                      y = ilm_col_vec(data, y, "y", TRUE),
                      by = ilm_col_vec(data, by, "by"), type = "lines",
-                     xlab = x, ylab = y, ...)
+                     xlab = x, ylab = y, pch = ilm_pch(pch), ...)
   invisible(NULL)
 }
 
@@ -207,13 +220,18 @@ ilm_plot_line <- function(data, y, x, by = NULL, ...) {
 #' @param stat `"mean"` with its standard error, or `"median"` with the
 #'   quartiles.
 #' @param ... Passed to [tinyplot::tinyplot()].
+#' @param pch Plotting character. Takes a NAME as well as a number:
+#'   `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+#'   spaces, underscores and hyphens are ignored. A single character is
+#'   drawn literally, so `pch = "x"` is still the letter x.
 #' @return `NULL`, invisibly.
 #' @seealso [ilm_boot_diff()] for the comparison this plot invites.
 #' @examples
 #' ilm_plot_stat_error(mtcars, "mpg", "cyl")
 #' @export
 ilm_plot_stat_error <- function(data, y, x, by = NULL,
-                                stat = c("mean", "median"), ...) {
+                                stat = c("mean", "median"), ...,
+                                pch = NULL) {
   stat <- match.arg(stat)
   ilm_plot_frame_check(data)
   yv <- ilm_col_vec(data, y, "y", TRUE)
@@ -239,6 +257,6 @@ ilm_plot_stat_error <- function(data, y, x, by = NULL,
     stop("no non-missing values to summarise", call. = FALSE)
   tinyplot::tinyplot(x = s$x, y = s$center, ymin = s$lo, ymax = s$hi,
                      by = if (is.null(bv)) NULL else s$by, type = "pointrange",
-                     xlab = x, ylab = paste(stat, y), ...)
+                     xlab = x, ylab = paste(stat, y), pch = ilm_pch(pch), ...)
   invisible(NULL)
 }

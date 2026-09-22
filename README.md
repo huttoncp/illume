@@ -30,7 +30,7 @@ most of what this package is.
 
 ```r
 # install.packages("remotes")
-remotes::install_github("craig-hutton/illume")
+remotes::install_github("huttoncp/illume")
 ```
 
 R >= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.
@@ -119,7 +119,7 @@ trade; for a coefficient you intend to interpret it is not.
 
 ## How it is validated
 
-Every claim in the documentation is a measurement. The [`studies/`](https://github.com/craig-hutton/illume/tree/main/studies)
+Every claim in the documentation is a measurement. The [`studies/`](https://github.com/huttoncp/illume/tree/main/studies)
 directory of this repository (not shipped with the installed package)
 holds the scripts, the retained runs, and a generated findings log per study:
 
@@ -209,7 +209,7 @@ anyone checked them. Every validity claim here is a comparison against an
 independent implementation that somebody else wrote -- `lme4`, `glmmTMB`,
 `emmeans`, `afex`, `car`, `lmerTest`, `survey`, `sandwich`, `mice` and the rest
 -- and the scripts, the retained runs and the generated findings are in
-[`studies/`](https://github.com/craig-hutton/illume/tree/main/studies) for
+[`studies/`](https://github.com/huttoncp/illume/tree/main/studies) for
 anyone who wants to re-run them. Every real defect this package has had was
 found that way. None was found by reading the code, and none by the test suite.
 

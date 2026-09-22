@@ -241,13 +241,32 @@ ilm_power_draw <- function(object, d, beta) {
   ## the random effects are redrawn for each simulated study, since a new
   ## study means new clusters rather than the ones that were observed
   if (length(object$re)) {
+    ## a smooth's penalised block is shaped like a random effect but it is mean
+    ## structure, not a population to draw a new sample of
+    gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
     for (k in seq_along(object$re)) {
       nm <- names(object$re)[k]
-      if (!nm %in% names(d)) next
+      if (!k %in% gk || !nm %in% names(d)) next
       gg <- factor(d[[nm]])
-      S <- object$Sigma[[k]]
-      u <- stats::rnorm(nlevels(gg), 0, sqrt(max(S[1L, 1L], 0)))
-      eta <- eta + u[as.integer(gg)]
+      ## A random SLOPE is not a random intercept. Drawing the intercept
+      ## variance alone and adding it as a per-group shift gave simulated
+      ## subjects whose individual trajectories varied no more than residual
+      ## noise allows -- a slope SD of 0.50 where the fit said 1.14 -- which
+      ## understates how far subjects depart from the average trajectory and
+      ## so OVERSTATES power for anything interacting with the within-subject
+      ## variable. That is the design this function is most often pointed at.
+      ##
+      ## The factorisation is shared with predict(marginal = TRUE), so the two
+      ## cannot drift; see ilm_re_factors(). The difference is only WHOSE
+      ## effect is drawn -- here one per simulated group, there one population
+      ## draw applied to every row and averaged over.
+      f  <- ilm_re_factors(object, k)
+      Zb <- ilm_re_design(object, k, d, f$d)
+      if (is.null(Zb)) { f$A <- matrix(1, 1L, 1L); Zb <- matrix(1, nrow(d), 1L) }
+      ng <- nlevels(gg)
+      U <- matrix(stats::rnorm(ng * nrow(f$A)), ng, nrow(f$A)) %*% t(f$A) *
+        f$B[1L, 1L]
+      eta <- eta + rowSums(Zb * U[as.integer(gg), , drop = FALSE])
     }
   }
   fam <- object$family
@@ -278,7 +297,9 @@ ilm_power_draw <- function(object, d, beta) {
 #' @param object An [ilm_power()] result.
 #' @param target Power to reach.
 #' @return A data frame with one row per effect size: the interpolated `n`, and
-#'   the `n_lower`/`n_upper` implied by the Monte Carlo interval.
+#'   the `n_lower`/`n_upper` implied by the Monte Carlo interval. For a result
+#'   from [ilm_power_design()] it also carries `n_unit`, the same figure in
+#'   participants rather than rows.
 #' @seealso [ilm_power()].
 #' @export
 ilm_power_n <- function(object, target = 0.8) {
@@ -294,11 +315,21 @@ ilm_power_n <- function(object, target = 0.8) {
     if (all(y < target) || all(y > target)) return(NA_real_)
     stats::approx(y, x, xout = target, ties = "ordered")$y
   }
-  do.call(rbind, lapply(split(d, d$effect), function(z)
+  out <- do.call(rbind, lapply(split(d, d$effect), function(z)
     data.frame(effect = z$effect[1L], n = cross(z$n, z$power),
                n_lower = cross(z$n, z$mc_upper),
                n_upper = cross(z$n, z$mc_lower),
                row.names = NULL)))
+  ## An ilm_power_design() curve is reported in PARTICIPANTS and this is in
+  ## rows, so the two numbers differ by the rows per participant. Returning
+  ## only the rows invites "we need 330 people" for a study of 165.
+  rpu <- attr(object, "rows_per_unit")
+  if (!is.null(rpu) && rpu > 1L) {
+    out$n_unit <- out$n / rpu
+    out$n_unit_lower <- out$n_lower / rpu
+    out$n_unit_upper <- out$n_upper / rpu
+  }
+  out
 }
 
 #' @export

@@ -117,6 +117,75 @@ ilm_eta <- function(object, nd, beta = NULL, bvec = NULL) {
   eta
 }
 
+## ---- drawing a random effect the way the model actually stores one ---------
+##
+## WHY THIS EXISTS: a random effect is not one number per group. For a term
+## with `dk` within-group dimensions -- `(1 + time | id)` has two -- and `C`
+## linear-predictor dimensions, one group's effect is a `dk x C` MATRIX, and
+## the objective gives it row covariance `Sigma_d` and column covariance
+## `Sigma`. That is a matrix normal, so
+##
+##     U = A %*% Z %*% B      Z iid N(0, 1), A A' = Sigma_d, B' B = Sigma
+##
+## and the contribution at a row is `z_row %*% U`, where `z_row` is that row's
+## value of the bar's left-hand side.
+##
+## Treating the whole thing as a per-group SHIFT -- drawing `Sigma` alone and
+## adding it to every row -- is right if and only if `dk == 1`. With a random
+## slope it drops the slope variance entirely, and it also makes the shift
+## constant across rows when the true spread GROWS with distance from where
+## the slope is centred. Both matter: the marginal mean of a nonlinear link
+## depends on how much is being integrated over.
+##
+## When `dk == 1` these functions reproduce the old draw exactly, including
+## the random number stream, so nothing that was already right moves.
+
+## The two factors, for term k.
+#' @keywords internal
+#' @noRd
+ilm_re_factors <- function(object, k) {
+  d  <- if (is.null(object$dk)) 1L else object$dk[k]
+  Sd <- if (d > 1L) object$Sigma_d[[names(object$re)[k]]] else NULL
+  ## ilm_msqrt() rather than a Cholesky: an intercept-slope correlation can
+  ## reach +/-1, where the matrix is singular and chol() stops
+  A <- if (is.null(Sd)) matrix(1, 1L, 1L) else ilm_msqrt(Sd)
+  B <- if (identical(object$re_struct[[k]]$type, "rr"))
+    t(object$Lambda[[k]]) else ilm_msqrt(object$Sigma[[k]])
+  list(A = A, B = B, d = if (is.null(Sd)) 1L else nrow(Sd))
+}
+
+## The bar's left-hand side, evaluated on whatever rows are being predicted.
+## `object$re[[k]]$Z` is the design for the rows the model was FITTED to, so
+## new data needs the bar evaluated again. Smooth bases are prepended to the
+## random-effect list while `bars` holds only the bars, so the index into
+## `bars` is the position among the NON-basis terms.
+#' @keywords internal
+#' @noRd
+ilm_re_design <- function(object, k, data, d) {
+  if (d == 1L) return(matrix(1, nrow(data), 1L))
+  gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
+  j <- match(k, gk)
+  b <- if (is.na(j)) NULL else object$bars[[j]]
+  if (is.null(b)) return(NULL)
+  Z <- tryCatch(
+    stats::model.matrix(stats::as.formula(paste("~", deparse(b[[2L]]))), data),
+    error = function(e) NULL)
+  if (is.null(Z) || ncol(Z) != d) NULL else Z
+}
+
+## `ndraw` draws of one group's effect, as a list of dk x C matrices.
+##
+## The normals come from one column-major block of the same shape the old code
+## used, so when dk == 1 the stream is identical and every number that was
+## already correct stays exactly where it was.
+#' @keywords internal
+#' @noRd
+ilm_re_draws <- function(A, B, ndraw, C) {
+  d <- nrow(A)
+  Z <- matrix(stats::rnorm(ndraw * d * C), ndraw, d * C)
+  lapply(seq_len(ndraw), function(m) A %*% matrix(Z[m, ], d, C) %*% B)
+}
+
 #' Convert linear predictors to category probabilities
 #'
 #' Applies the softmax (multinomial logistic) transform so each row gives
@@ -181,6 +250,18 @@ ilm_joint_draws <- function(object, nsim, seed) {
 #' toward being more even across categories. Which you want depends on the
 #' question -- "what do I expect for an average subject?" or "what proportion of
 #' the population falls in each category?"
+#'
+#' Under an **identity link** the two coincide exactly, because the random
+#' effects have mean zero and nothing nonlinear stands between. `marginal` is
+#' then answered in closed form rather than by simulation, so the result does
+#' not depend on `ndraw` and carries no Monte Carlo noise.
+#'
+#' A **random slope** is averaged over as a slope. The amount being integrated
+#' over then depends on the row -- it grows with distance from wherever the
+#' slope is centred -- so the marginal and conditional curves separate by more
+#' at the ends of the range than in the middle. Averaging such a term as if it
+#' were an intercept understates that, and the error grows with the slope
+#' variance and with distance from centre.
 #'
 #' @section Uncertainty:
 #' Standard errors and intervals come from simulation rather than a formula,
@@ -251,13 +332,36 @@ predict.ilm_model <- function(object, newdata = NULL,
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
 
   gk <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
+  ## Under an identity link the average over the random effects IS the
+  ## conditional value: E[eta + z'u] = eta, because the random effects have
+  ## mean zero and nothing nonlinear stands between. Simulating it instead
+  ## returns a noisy estimate of a number already known exactly -- with 200
+  ## draws and a random slope that noise reached 0.14 on the response scale.
+  ## A zero part scales the mean by a constant, so it stays exact too.
+  if (marginal && !isTRUE(object$ordinal) && object$C == 1L &&
+      !is.null(object$family) && identical(object$family$link, "identity"))
+    marginal <- FALSE
   draws <- NULL
   if (marginal && length(gk)) {                    # fixed RE draws: common random numbers
     set.seed(seed)
+    pdat <- if (is.null(newdata)) object$model else newdata
     draws <- lapply(gk, function(k) {
-      w <- object$wk[k]; Z <- matrix(rnorm(ndraw * w), ndraw, w)
-      if (identical(object$re_struct[[k]]$type, "rr")) Z %*% t(object$Lambda[[k]])
-      else Z %*% ilm_msqrt(object$Sigma[[k]])
+      f  <- ilm_re_factors(object, k)
+      Zb <- ilm_re_design(object, k, pdat, f$d)
+      if (is.null(Zb)) {
+        ## the bar varies over something the prediction rows do not carry, so
+        ## the only honest option left is the intercept part -- said out loud,
+        ## because a marginal average over less than the whole term is a
+        ## different quantity from the one that was asked for
+        warning("the random-effect term '", names(object$re)[k], "' varies ",
+                "within a group over a column the prediction data does not ",
+                "have, so the marginal average integrates its intercept ",
+                "only. Supply that column to average over the whole term.",
+                call. = FALSE)
+        f$A <- matrix(1, 1L, 1L)
+        Zb  <- matrix(1, nrow(pdat), 1L)
+      }
+      list(Zb = Zb, U = ilm_re_draws(f$A, f$B, ndraw, object$C))
     })
   }
   ## A univariate family has one linear predictor and its own inverse link; the
@@ -277,6 +381,16 @@ predict.ilm_model <- function(object, newdata = NULL,
                   if (is.null(newdata)) object$model else newdata,
                   colnames(object$Zzi)) else NULL
   zi_adj <- function(mu) if (is.null(Zp)) mu else ilm_zi_mean(object, mu, Zp)
+  ## The shift for draw m, as an n x C matrix rather than one C-vector added to
+  ## every row. With a random slope the amount being integrated over depends on
+  ## the row -- it grows with distance from where the slope is centred -- and a
+  ## constant shift cannot represent that. With a random intercept alone `Zb`
+  ## is a column of ones and this is the constant shift it always was.
+  shift <- function(m, n, C) {
+    S <- matrix(0, n, C)
+    for (q in seq_along(draws)) S <- S + draws[[q]]$Zb %*% draws[[q]]$U[[m]]
+    S
+  }
   point <- function(beta, bvec = NULL) {
     eta <- ilm_eta(object, nd, beta, bvec)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
@@ -285,8 +399,8 @@ predict.ilm_model <- function(object, newdata = NULL,
         return(ilm_ord_probs(eta[, 1], object$zeta, object$family$pfun))
       P <- matrix(0, nrow(eta), object$J)
       for (m in seq_len(ndraw)) {
-        sh <- Reduce(`+`, lapply(draws, function(d) d[m, ]))
-        P <- P + ilm_ord_probs(eta[, 1] + sh[1], object$zeta,
+        sh <- shift(m, nrow(eta), ncol(eta))
+        P <- P + ilm_ord_probs(eta[, 1] + sh[, 1], object$zeta,
                                object$family$pfun)
       }
       return(P / ndraw)
@@ -296,9 +410,9 @@ predict.ilm_model <- function(object, newdata = NULL,
                matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
     P <- matrix(0, nrow(eta), if (multinom) object$J else 1L)
     for (m in seq_len(ndraw)) {
-      sh <- Reduce(`+`, lapply(draws, function(d) d[m, ]))
-      P <- P + if (multinom) ilm_softmax_J(sweep(eta, 2L, sh, `+`), Tc)
-               else matrix(zi_adj(linkinv(eta[, 1] + sh[1])), ncol = 1L)
+      sh <- shift(m, nrow(eta), ncol(eta))
+      P <- P + if (multinom) ilm_softmax_J(eta + sh, Tc)
+               else matrix(zi_adj(linkinv(eta[, 1] + sh[, 1])), ncol = 1L)
     }
     P / ndraw
   }

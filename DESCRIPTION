@@ -82,5 +82,5 @@ Suggests:
     lmerTest
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-URL: https://github.com/craig-hutton/illume
-BugReports: https://github.com/craig-hutton/illume/issues
+URL: https://github.com/huttoncp/illume
+BugReports: https://github.com/huttoncp/illume/issues

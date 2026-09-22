@@ -94,8 +94,8 @@ Wood, S. N. (2017). \emph{Generalized Additive Models: An Introduction with R},
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/craig-hutton/illume}
-  \item Report bugs at \url{https://github.com/craig-hutton/illume/issues}
+  \item \url{https://github.com/huttoncp/illume}
+  \item Report bugs at \url{https://github.com/huttoncp/illume/issues}
 }
 
 }

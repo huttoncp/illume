@@ -21,7 +21,8 @@ ilm_plot(
   max_levels = 20L,
   verdict = TRUE,
   main = NULL,
-  ...
+  ...,
+  pch = NULL
 )
 }
 \arguments{
@@ -60,6 +61,11 @@ it instead.}
 \item{main}{Plot title.}
 
 \item{...}{Passed to \code{\link[tinyplot:tinyplot]{tinyplot::tinyplot()}}.}
+
+\item{pch}{Plotting character. Takes a NAME as well as a number:
+\code{"filled circle"} is 16, and every code from 0 to 25 has one. Case,
+spaces, underscores and hyphens are ignored. A single character is
+drawn literally, so \code{pch = "x"} is still the letter x.}
 }
 \value{
 Invisibly, a list with the geom used, the reason, and the note shown.

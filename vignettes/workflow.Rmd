@@ -48,7 +48,26 @@ around the power estimate, because 0.80 from 200 replicates is really 0.74 to
 anything, and dividing only by the ones that worked gives power conditional on
 convergence, which is a different and more flattering quantity.
 
-See `?ilm_power` and the *Effect size and power* vignette.
+With no pilot to fit, `ilm_power_design()` takes the assumptions instead --
+the design, the expected cell means, the residual SD and the ICC -- and
+`ilm_scaffold()` returns the assumed model on its own, so what it implies can
+be checked before a sample size is quoted from it.
+
+```{r}
+d <- list(arm = c("control", "treatment"), time = c("pre", "post"))
+pw <- ilm_power_design(change ~ arm * time + (1 | id), design = d,
+                       within = "time", n_unit = c(60, 120, 240, 400),
+                       cells = c(control.pre = 20, control.post = 21,
+                                 treatment.pre = 20, treatment.post = 25),
+                       sd = 6, icc = 0.5, term = "arm:time", sims = 300)
+ilm_power_n(pw, target = 0.8)
+#>  effect   n  n_lower n_upper n_unit n_unit_lower n_unit_upper
+#>       4 330 292.5298 365.872    165     146.2649      182.936
+```
+
+`n_unit` is participants and `n` is rows: 165 people measured twice.
+
+See `?ilm_power`, `?ilm_scaffold` and the *Effect size and power* vignette.
 
 ---
 
@@ -282,4 +301,4 @@ ilm_interpret(fit)
 | *Anomaly detection* | `ilm_anomaly()` against `ilm_outliers()` |
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
-| *Effect size and power* | `ilm_effects()`, `ilm_power()`, `ilm_scenario()` |
+| *Effect size and power* | `ilm_effects()`, `ilm_power()`, `ilm_power_design()`, `ilm_scaffold()`, `ilm_scenario()` |

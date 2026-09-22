@@ -13,7 +13,9 @@ ilm_power_n(object, target = 0.8)
 }
 \value{
 A data frame with one row per effect size: the interpolated \code{n}, and
-the \code{n_lower}/\code{n_upper} implied by the Monte Carlo interval.
+the \code{n_lower}/\code{n_upper} implied by the Monte Carlo interval. For a result
+from \code{\link[=ilm_power_design]{ilm_power_design()}} it also carries \code{n_unit}, the same figure in
+participants rather than rows.
 }
 \description{
 Interpolates the simulated curve, and reports the range the Monte Carlo

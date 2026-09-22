@@ -4,7 +4,15 @@
 \alias{ilm_plot_scatter}
 \title{Scatter plot}
 \usage{
-ilm_plot_scatter(data, y, x, by = NULL, trend = c("none", "lm", "loess"), ...)
+ilm_plot_scatter(
+  data,
+  y,
+  x,
+  by = NULL,
+  trend = c("none", "lm", "loess"),
+  ...,
+  pch = NULL
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -18,6 +26,11 @@ description of the two columns shown and nothing more -- it holds nothing
 else fixed, so it is not the effect \code{\link[=ilm_model]{ilm_model()}} would estimate.}
 
 \item{...}{Passed to \code{\link[tinyplot:tinyplot]{tinyplot::tinyplot()}}.}
+
+\item{pch}{Plotting character. Takes a NAME as well as a number:
+\code{"filled circle"} is 16, and every code from 0 to 25 has one. Case,
+spaces, underscores and hyphens are ignored. A single character is
+drawn literally, so \code{pch = "x"} is still the letter x.}
 }
 \value{
 \code{NULL}, invisibly.

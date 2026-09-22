@@ -103,7 +103,7 @@ if (length(left)) {
 }
 
 head <- c(
-  "url: https://craig-hutton.github.io/illume/",
+  "url: https://huttoncp.github.io/illume/",
   "template:",
   "  bootstrap: 5",
   "  bslib:",

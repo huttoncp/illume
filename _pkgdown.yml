@@ -1,4 +1,4 @@
-url: https://craig-hutton.github.io/illume/
+url: https://huttoncp.github.io/illume/
 template:
   bootstrap: 5
   bslib:
@@ -118,6 +118,8 @@ reference:
   desc: >
     Before the data exist.
   contents:
+  - ilm_scaffold
+  - ilm_power_design
   - ilm_power
   - ilm_power_n
   - plot.ilm_power

@@ -1,13 +1,15 @@
 # illume 0.0.7.9000
 
 Ten features, each validated against an outside implementation where one
-exists. The package now covers the path from a sample-size calculation to a
-scenario a stakeholder can act on.
+exists, and then a second round that arrived as defect reports from a separate
+project built against the package. It now covers the path from a sample-size
+calculation -- with or without a pilot to base one on -- to a scenario a
+stakeholder can act on.
 
 Every one of them produced at least one real bug, and none of those came from
-the test suite. They came from comparing against something outside or from
-widening a simulation, which remains the only thing that has ever found a
-defect here.
+the test suite. They came from comparing against something outside, from
+widening a simulation, or from someone calling illume from outside it, which
+remain the only things that have ever found a defect here.
 
 ## Estimated marginal means and contrasts
 
@@ -284,6 +286,115 @@ to the right thing". Nine of them fail against the previous code.
   spline -- is refused with its coefficients listed and `ilm_anova()` named,
   because a power curve follows one effect size at a time and choosing a
   column silently would report power for a comparison nobody asked for.
+
+## Planning a study that has not been run
+
+`ilm_scaffold()` builds a design grid from a study specification, attaches the
+parameters you assume, and returns an ordinary `"ilm_model"`. Everything
+downstream then works unchanged, which is the point: the assumptions can be
+interrogated before anything is built on them. `ilm_power_design()` is the
+same thing plus a power curve, in one call.
+
+* Assumptions go in **either** as coefficients on the link scale, or as
+  expected **cell means on the response scale** -- "controls average 12, the
+  treated group averages 14.5" -- which is the form most people actually hold
+  one in. illume solves back to coefficients.
+* A least-squares solve always returns something, so cell means that the
+  formula cannot produce would otherwise give a scaffold for a different study
+  than the one being planned. Crossed means under an additive formula stop,
+  name the cell that is off and by how much, and name `arm * time` as the
+  remedy.
+* `n_unit` counts participants when the formula has a grouping bar and rows
+  when it does not, so the number given is the number that goes in a protocol.
+  A between-unit variable is allocated to UNITS and repeated down their rows;
+  allocating it to rows would put a participant in both arms.
+* `icc` is accepted in place of `re_sd`, since an intraclass correlation is
+  what a repeated-measures literature reports.
+* Against the closed form for a two-sample **t** test: 0.858/0.995/1.000
+  simulated against 0.872/0.993/1.000 predicted at 100/200/300 participants.
+  Against a treatment-by-time mixed model hand-rolled in plain R and fitted
+  with **lme4/lmerTest**, at 40/80/140 participants: 0.284/0.452/0.654 against
+  0.242/0.440/0.632. All within Monte Carlo error, but all three lean the same
+  way, which is what a **z** reference against a Satterthwaite **t** does.
+* `ilm_emmeans()` on a scaffold returns the cell means that were assumed, to
+  1e-6 -- the solve goes one way and that comes back the other, so the check
+  does not share an error with the thing it checks.
+* The print method says the parameters were assumed, not estimated, and that
+  the standard errors are one realisation of the design rather than a property
+  of the assumptions. An `"ilm_model"` that was never fitted to anything is
+  exactly the sort of object that gets mistaken for a result.
+
+## A random slope was being averaged as a random intercept
+
+In both places it could be. Found while building the above, since a
+treatment-by-time design is what that is mostly for.
+
+* **`ilm_power()` drew only the intercept variance.** The draw took
+  `Sigma[[k]][1, 1]` and added it as a per-group shift, so a fit with
+  `(1 + time | id)` produced simulated participants whose individual
+  trajectories varied no more than residual noise allows: a per-subject slope
+  SD of 0.50 where the fit said 1.14 and the generating value was 1.20. Every
+  simulated participant moved in near-parallel, which understates how much
+  they differ and so **overstates** power for anything interacting with the
+  within-subject variable -- 0.450 against 0.333 on the test case, a third too
+  high.
+* The scale of a term lives in `Sigma` and its shape in `Sigma_d`, so the
+  covariance of a group's whole random-effect vector is their product. The
+  draw now uses it, with the bar re-evaluated on the simulated study's own
+  rows. Drawn data now has a slope SD of 1.248 against the real data's 1.250.
+* **`predict(marginal = TRUE)` made the same simplification, and is fixed too.**
+  It drew `Sigma` alone and added it to every row, which drops the slope
+  variance and also holds the shift constant across rows when the spread being
+  integrated over grows with distance from where the slope is centred. On a
+  logistic model with a fitted slope SD of 0.81 the population-averaged
+  probability at the far end of the range came back as 0.703 where the correct
+  average is 0.618.
+* The draw is now the matrix normal the objective actually specifies: one
+  group's effect is a `dk x C` matrix with row covariance `Sigma_d` and column
+  covariance `Sigma`, so `U = A Z B` with `AA' = Sigma_d` and `B'B = Sigma`,
+  and the contribution at a row is `z_row %*% U`. `ilm_power()` and
+  `predict()` now read that factorisation from one place, having already gone
+  out of step once.
+* When `dk == 1` this is the previous draw exactly, down to the random number
+  stream, so nothing that was already right moved.
+* Checked against a brute-force average over 400,000 draws computed
+  independently, at every point of the prediction grid, for a random intercept
+  and for a random slope.
+* **Under an identity link the average is now exact rather than simulated.**
+  `E[eta + z'u] = eta`, so there was a closed form all along and simulating it
+  returned a noisy estimate of a number already known -- 0.14 on the response
+  scale with 200 draws and a random slope. The result no longer depends on
+  `ndraw`.
+* A bar that varies over a column the prediction data does not carry now
+  warns and says it integrated the intercept only. Averaging over part of a
+  term is a different quantity from averaging over the term.
+
+## Plotting characters by name
+
+* `pch = "filled circle"` works wherever `pch = 16` did. Base R's `pch` is 26
+  integers nobody remembers, nothing in the argument says which is which, and
+  the difference between 16, 19, 20 and 21 is not guessable -- so a plot gets
+  whichever code the author recalled and a reader comparing two plots cannot
+  tell whether a difference in the markers was meant.
+* Names are also checkable in a way numbers are not: `pch = 26` is accepted by
+  `graphics` and quietly draws nothing, while a name that is not in the table
+  stops and lists the ones that are. All 26 codes have a name, most have
+  aliases, and case, spaces, underscores, hyphens and dots are all ignored.
+* A single character is left alone, because base R draws it literally --
+  translating `pch = "x"` would silently turn the plot into crosses.
+* `pch` is now a documented argument of `ilm_plot()`, `ilm_plot_scatter()`,
+  `ilm_plot_line()`, `ilm_plot_stat_error()`, `ilm_plot_box()` and
+  `ilm_plot_violin()` rather than something to be discovered inside `...`. It
+  sits after `...`, so no existing positional call can be matched to it.
+
+The obvious implementation -- route every call through one `do.call()` funnel
+so the translation lives in a single place -- **is wrong here, and passed the
+whole test suite before `R CMD check` caught it.** `do.call()` puts the
+evaluated arguments into the call, and tinyplot deparses its arguments to
+title a legend, so a numeric `by` column arrived as a deparsed 32-element
+vector and the legend width computation threw `invalid graphics state`. The
+failing call was `ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend =
+"lm")` -- an example that had been in the package, working, for months.
 
 ## Finite degrees of freedom for a mixed model
 

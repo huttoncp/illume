@@ -4,7 +4,15 @@
 \alias{ilm_plot_stat_error}
 \title{Group means or medians with an error bar}
 \usage{
-ilm_plot_stat_error(data, y, x, by = NULL, stat = c("mean", "median"), ...)
+ilm_plot_stat_error(
+  data,
+  y,
+  x,
+  by = NULL,
+  stat = c("mean", "median"),
+  ...,
+  pch = NULL
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -19,6 +27,11 @@ ilm_plot_stat_error(data, y, x, by = NULL, stat = c("mean", "median"), ...)
 quartiles.}
 
 \item{...}{Passed to \code{\link[tinyplot:tinyplot]{tinyplot::tinyplot()}}.}
+
+\item{pch}{Plotting character. Takes a NAME as well as a number:
+\code{"filled circle"} is 16, and every code from 0 to 25 has one. Case,
+spaces, underscores and hyphens are ignored. A single character is
+drawn literally, so \code{pch = "x"} is still the letter x.}
 }
 \value{
 \code{NULL}, invisibly.

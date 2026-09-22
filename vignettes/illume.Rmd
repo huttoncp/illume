@@ -85,7 +85,7 @@ is the shape of the whole package.
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
 | **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
-| **Design and decision** | `ilm_power()`, `ilm_scenario()`, `ilm_interpret()` |
+| **Design and decision** | `ilm_power()`, `ilm_scaffold()`, `ilm_power_design()`, `ilm_scenario()`, `ilm_interpret()` |
 
 ## The multinomial claim, stated carefully
 
@@ -126,7 +126,7 @@ goal is prediction that is a defensible trade. If the goal is a coefficient
 with an interval you intend to interpret, it is not, and coverage is the
 measure that says so. The full table is in `studies/findings/mclogit.md` in the
 source repository, which is not shipped with the installed package:
-<https://github.com/craig-hutton/illume/blob/main/studies/findings/mclogit.md>.
+<https://github.com/huttoncp/illume/blob/main/studies/findings/mclogit.md>.
 
 ## Working with other packages
 
