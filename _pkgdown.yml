@@ -111,6 +111,8 @@ reference:
   - ilm_scenario
   - ilm_translate
   - ilm_trends
+  - ilm_moderation
+  - ilm_plot_moderation
   - ilm_vcov_cluster
   - ilm_zi_coef
   - ilm_zi_prob

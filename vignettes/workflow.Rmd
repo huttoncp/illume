@@ -302,3 +302,4 @@ ilm_interpret(fit)
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | `ilm_effects()`, `ilm_power()`, `ilm_power_design()`, `ilm_scaffold()`, `ilm_scenario()` |
+| *Moderation* | `ilm_moderation()`, `ilm_plot_moderation()` |

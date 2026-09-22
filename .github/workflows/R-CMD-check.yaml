@@ -50,6 +50,25 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      # The macOS BINARY of TMB is linked against an OpenMP runtime with
+      # `-undefined dynamic_lookup`, so the loader expects libomp to be in the
+      # process already. CRAN's build and check machines have it; a GitHub
+      # runner installing that binary does not, and TMB.so then fails to load
+      # with "symbol not found in flat namespace '___kmpc_for_static_fini'"
+      # before any illume code runs at all.
+      #
+      # Building TMB and RTMB from source links them against this runner's own
+      # toolchain instead. It also settles the separate requirement that TMB be
+      # compiled against the same Matrix it runs with -- see
+      # TMB::checkMatrixPackageVersion().
+      - name: macOS - build TMB and RTMB against this runner's toolchain
+        if: runner.os == 'macOS'
+        run: |
+          brew install libomp || true
+          Rscript -e 'install.packages(c("TMB", "RTMB"), type = "source", repos = "https://cloud.r-project.org")'
+          Rscript -e 'library(RTMB); cat("RTMB", as.character(packageVersion("RTMB")), "loads\n")'
+        shell: bash
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true

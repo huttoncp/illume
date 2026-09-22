@@ -79,7 +79,7 @@ is the shape of the whole package.
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random effects, smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
-| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_moderation()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
 | **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns, with generalized eta squared and sphericity corrections |
 | **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` |
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
@@ -161,7 +161,8 @@ pointer for each.
 | `anomaly-detection` | rows that are implausible as combinations |
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
-| `effect-size-and-power` | effect sizes, power, scenario projection |
+| `effect-size-and-power` | effect sizes, power with or without a pilot, scenario projection |
+| `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
 
 ## How this package was built

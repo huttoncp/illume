@@ -291,6 +291,65 @@ when tibble's namespace is loaded, so without it `[` falls through to
 `[.data.frame`, which drops correctly and the bug vanishes. The first version
 of the test did it by hand and passed against the broken code.
 
+## Does the effect hold for everyone?
+
+`ilm_moderation()` searches a set of candidate moderators for evidence that the
+effect of a treatment varies, and charges for the search.
+
+* **Trying several moderators and reporting the strongest is a search, and the
+  p-value from a search is not the p-value from a test.** With six candidates
+  and no moderation present at all, that procedure rejected **29.3%** of the
+  time at a nominal 5%. Every adjustment brings it back: Holm, BH and
+  Bonferroni all landed at 0.027.
+* **The test is the JOINT test of the interaction block**, from `ilm_anova()`,
+  with its degrees of freedom reported. A single interaction coefficient tests
+  moderation only when the moderator has 1 df -- on a four-level factor the
+  three coefficients gave p = 0.62, 0.0018 and 0.00002 for the same variable.
+* `x` must be named and has no default. `x:m` is the same term whichever of
+  the two is called the moderator; only the interpretation distinguishes them.
+  An `ilm_dag_model()` is the exception, since the graph has named the
+  exposure already.
+* **An interaction already in the model is excluded from the search**, because
+  it was specified a priori and owes no multiplicity penalty. Charging it one
+  would make a pre-registered hypothesis weaker for having been tested beside
+  exploratory ones. `ilm_anova()` is named as where it belongs.
+* `adjust` passes straight to `stats::p.adjust()`, so every method it supports
+  is available; Holm is the default because it controls the family-wise rate
+  and dominates Bonferroni.
+* Each candidate is refit **through the fit's own call**, so family,
+  `ziformula`, `dispformula`, `ar`, weights, contrasts and `reml` all survive.
+  Rebuilding the formula by hand drops every one of them silently -- a
+  zero-inflated model would be tested without its zero part and nothing would
+  say so. Candidates are tested on equal footing: each refit starts from the
+  user's model minus any *other* candidate's interaction.
+* `split = TRUE` picks the moderator on half the data and tests it on the
+  other half, needing no adjustment. It is better calibrated -- 0.053 against
+  Holm's conservative 0.027 -- and costs about half the power (0.320 against
+  0.547 for a numeric moderator, 0.200 against 0.380 for a three-level
+  factor). **The gap widens with degrees of freedom**, 1.71x to 1.90x, so
+  splitting is weakest precisely in the three-level-factor case experimental
+  work is full of. It is genuinely required only when the hypotheses cannot be
+  counted, as in an open-ended tree search; this searches a named set.
+
+`ilm_plot_moderation()` draws one: cell means for a categorical exposure, and
+the **slope** of a continuous one within each level of the moderator, from
+`ilm_trends()` -- so the picture and the p-value are the same estimator on the
+same fit. It is deliberately not `ilm_plot_model()`'s effect plot, which holds
+the other predictors at typical values; pinning the moderator is exactly what
+would hide the moderation.
+
+A 0/1 treatment stored as a **number** is categorical in meaning and numeric in
+type, so `ilm_emmeans()` would hold it at its mean and draw one curve where two
+are wanted. Its values are named explicitly.
+
+One bug worth recording because the tests missed it: the plot builds its call
+with `do.call()`, and tinyplot deparses its arguments to title a legend, so a
+`by` factor arrives as a deparsed vector and the width computation throws
+`invalid graphics state`. Whether it fires depends on how long the level NAMES
+are -- a test using `"a"`/`"b"`/`"c"` passed while `"north"`/`"central"`/
+`"south"` did not. Fixed by titling the legend explicitly, and the test now
+uses realistic labels. This is the second time this exact mechanism has bitten.
+
 ## Mixed data, measured rather than assumed
 
 `ilm_cluster()` and `ilm_anomaly()` both refused to use categorical columns.

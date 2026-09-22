@@ -180,6 +180,75 @@ read off them would be one coin flip. That is what `ilm_power_design()` is for.
 None of this makes an assumption true. It makes the assumption explicit, and
 separates "we need 165 participants" from the four numbers that claim implies.
 
+### `sd` is the residual standard deviation
+
+Worth stating plainly, because every other package that takes a design
+specification means something different by the word. `sd` is the **residual**
+scale, and the random effects sit on top of it, so with `icc` the outcome's own
+spread is `sd / sqrt(1 - icc)`. The example above — `sd = 6, icc = 0.5` — is
+data whose standard deviation is 8.49, not 6.
+
+`Superpower` and `faux` both take the **total** standard deviation, and so does
+a paper you might read one off. Converting is:
+
+```
+  sd_illume = sd_total * sqrt(1 - icc)
+```
+
+The scaffold prints both so the two cannot be quietly confused:
+
+```{r}
+#>   residual sd : 4.243
+#>   id sd       : 4.243
+#>   total sd    : 6   <- the outcome's own spread; `sd` above is the residual
+```
+
+With a random slope the total varies by row — the spread depends on where you
+are in the design — and it says that instead of printing a number true at one
+point only.
+
+### What it was checked against
+
+Simulated power is only as good as the simulation, so this was compared with
+three outside implementations on designs each could express.
+
+**`power.t.test`**, two-sample, effect 2.5 on sd 4:
+
+```
+  participants     100      200      300
+  illume         0.858    0.995    1.000
+  closed form    0.872    0.993    1.000
+```
+
+**`Superpower::ANOVA_exact()`** and **`simr::makeLmer()`** on a 2 (arm,
+between) × 2 (time, within) design with an ICC of 0.5. `simr` is the closest
+existing thing to a scaffold — it builds a model from `fixef`, `VarCorr` and
+`sigma` with nothing fitted — so it is the fairest comparison available:
+
+```
+  n per arm   Superpower (exact)   simr (z)   simr (Satterthwaite)   illume
+     20             0.538            0.557           0.512           0.588
+     40             0.838            0.840           0.830           0.812
+```
+
+**`faux`**, which generates the data a completely different way, on a random
+slope design. Per-subject moments from 8,000 simulated participants:
+
+```
+                intercept sd   slope sd   correlation
+  target            2.000        1.200       -0.400
+  faux              2.157        1.270       -0.432
+  illume            2.156        1.273       -0.446
+```
+
+Two things worth taking from that. The agreement with `faux` to three decimals
+is the strongest evidence that random slopes are simulated correctly — they
+were not, until recently, and an independent generator is what settled it. And
+illume sits a little above Superpower's exact calculation at the smaller sizes;
+so does `simr` with a z reference (0.557), and the difference between a z and a
+Satterthwaite reference is about 0.015 on this design. Expect gaps of that size
+when comparing against G\*Power or Superpower, in either direction.
+
 ## After: how large the effect
 
 `ilm_effects()` reports each coefficient on the scale its family puts it on.
