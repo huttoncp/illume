@@ -247,6 +247,18 @@ the **same answer** as subsetting by hand, not merely that it stops erroring:
 a wrong alignment also runs cleanly, and dropping the last rows rather than
 the right ones turns z = 23.5 into z = 0.41.
 
+* **`ilm_check_ar()` and `ilm_variogram()` had the same defect and did not get
+  the same fix.** They take `time` and `group` straight from the data frame
+  while the fit kept only the complete rows, so every call on data with a gap
+  in it stopped. On a 320-row example with 21 missing outcomes both were
+  unusable. They now align the same way, and `ilm_plot_acf()` picks it up too
+  by going through `ilm_ar_envelope()`.
+* The alignment is attempted and falls back to the column as given, rather
+  than letting `ilm_align_rows()` raise. A length that matches neither the
+  data nor the fit therefore still produces the original message, which two
+  existing tests pin deliberately -- fixing one error by replacing another
+  one's wording is not a fix.
+
 ## Parameters that were set and then ignored
 
 Same source, same method, one round later.
