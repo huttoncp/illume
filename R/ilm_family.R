@@ -444,3 +444,122 @@ ilm_check_response <- function(y, family, has_zero_part = FALSE) {
          "with weights giving the number of trials", call. = FALSE)
   invisible(TRUE)
 }
+
+## ---- family = "auto" ----------------------------------------------------------
+##
+## Which family a response needs, read off the response itself. Shared by
+## ilm_model(family = "auto") and the narrated workflows (ilm_dag_model(),
+## ilm_did(), ilm_rdd()), which had their own rougher version: it sent an
+## ORDERED factor to the multinomial, a two-valued number coded other than 0/1
+## to the binomial (which then refused it), and proportions to the gaussian.
+##
+## Conservative in the way the DAG workflow always was. What it cannot place,
+## it asks about rather than guesses, because a wrong likelihood is not a
+## small error. Where a guess has a well-known competitor -- counts that may be
+## overdispersed, whole numbers that may be ratings, categories that may have
+## an order -- the hint names the family to switch to.
+##
+## Whole numbers are the hard case. A count and a measurement recorded to the
+## nearest unit look the same, so the rule is where they reach: a count
+## reaches down to 0 or 1 (events, visits, offspring, errors), while a blood
+## pressure, a height or an IQ stays far above it. Whole numbers that never
+## come near zero are read as a measurement. The range goes into the message
+## either way, so a misreading is visible at a glance.
+#' @keywords internal
+#' @noRd
+ilm_guess_family <- function(y, name = "the response", zero_part = FALSE,
+                             censor = NULL, weighted = FALSE) {
+  nm <- sprintf("`%s`", name)
+  ask <- function(why)
+    stop("cannot tell which family ", nm, " needs, and will not guess: ", why,
+         " Pass `family` to choose one; ?ilm_family lists them.", call. = FALSE)
+  out <- function(family, why, hint = "")
+    list(family = family, why = why, hint = hint)
+  if (!is.null(censor)) {
+    ## ilm_surv() carries each subject's censoring time; a floor or a ceiling
+    ## from ilm_censor() does not
+    if (!is.null(attr(censor, "ctime")))
+      ask(paste("it is a follow-up time with right censoring, and which",
+                "survival family fits is a modelling decision the data cannot",
+                "settle. family = \"rp\" is the flexible proportional-hazards",
+                "choice; \"weibull\", \"lognormal\" and \"loglogistic\" are the",
+                "parametric ones."))
+    return(out("gaussian",
+               "a censored response, and the gaussian has the censored (Tobit) form"))
+  }
+  if (is.matrix(y) && ncol(y) > 1L) ask("it has more than one column.")
+  if (inherits(y, c("Date", "POSIXt", "difftime")))
+    ask("it is a date, a time or a duration.")
+  if (is.logical(y)) return(out("binomial", "TRUE and FALSE"))
+  if (is.factor(y) || is.character(y)) {
+    lv <- if (is.factor(y)) levels(droplevels(y)) else unique(stats::na.omit(y))
+    k <- length(lv)
+    if (k < 2L) ask("it takes a single value.")
+    if (k == 2L) return(out("binomial", "two categories"))
+    if (is.ordered(y))
+      return(out("ordinal", sprintf("an ordered factor with %d levels", k),
+                 "Use family = \"multinomial\" if the order should not constrain the model."))
+    return(out("multinomial", sprintf("%d unordered categories", k),
+               paste("If the categories have a natural order, make the response",
+                     "an ordered factor for family = \"ordinal\".")))
+  }
+  if (!is.numeric(y)) ask(sprintf("it is of class %s.", class(y)[1]))
+  u <- sort(unique(y[is.finite(y)]))
+  if (length(u) < 2L) ask("it takes a single value.")
+  lo <- u[1]; hi <- u[length(u)]
+  whole <- all(abs(u - round(u)) < 1e-8)
+  rng <- if (whole) sprintf("%s to %s", format(lo), format(hi)) else
+    sprintf("%s to %s", format(signif(lo, 3)), format(signif(hi, 3)))
+  if (length(u) == 2L) {
+    if (lo == 0 && hi == 1) return(out("binomial", "0/1 values"))
+    ask(sprintf(paste("it takes two values, %s and %s: a binary outcome coded",
+                      "as something other than 0/1. Recode it as 0/1, or as a",
+                      "factor, for the binomial family."),
+                format(lo), format(hi)))
+  }
+  if (whole && lo >= 0 && (lo <= 1 || zero_part))
+    return(out("poisson", sprintf("whole numbers from %s, a count", rng),
+               paste("If the counts are more spread out than a Poisson allows",
+                     "(ilm_check_dispersion() tests it), use family = \"nbinom\";",
+                     "if they are ratings rather than counts, an ordered factor",
+                     "with family = \"ordinal\".")))
+  if (whole && lo > 1)
+    return(out("gaussian",
+               sprintf("whole numbers from %s, which never come near zero and so read as a measurement rather than a count", rng),
+               "If they are counts, use family = \"poisson\" or \"nbinom\"."))
+  if (lo >= 0 && hi <= 1) {
+    if (weighted)
+      ask(paste("it looks like proportions, and the model has weights. If the",
+                "weights are numbers of trials, the proportions are successes",
+                "out of them: family = \"binomial\". If they are proportions",
+                "measured on a continuous scale, family = \"beta\"."))
+    if (lo > 0 && hi < 1)
+      return(out("beta", "proportions strictly between 0 and 1",
+                 "Use family = \"gaussian\" if these are not proportions."))
+    if (zero_part && hi < 1)
+      return(out("beta", "proportions below 1, with a zero part for the zeros"))
+    ask(paste("it looks like proportions, with values at exactly 0 or 1, which",
+              "the beta family cannot take. If they are successes out of a",
+              "number of trials, use family = \"binomial\" with the trials as",
+              "weights; otherwise see ?ilm_family and ilm_squeeze()."))
+  }
+  out("gaussian", sprintf("%s values from %s",
+                          if (whole) "whole-number" else "continuous", rng))
+}
+
+## The family step of the narrated workflows -- ilm_dag_model(), ilm_did(),
+## ilm_rdd() -- through the same guesser as ilm_model(), so the four cannot
+## disagree about what a response needs. Returns the family name, and whether
+## it was inferred.
+#' @keywords internal
+#' @noRd
+ilm_workflow_family <- function(family, v, nm, say) {
+  if (!is.null(family) && !identical(family, "auto")) {
+    say("  family \"", family, "\" as supplied")
+    return(list(family = family, inferred = FALSE))
+  }
+  g <- ilm_guess_family(v, nm)
+  say("  `", nm, "`: ", g$why, " -> family \"", g$family, "\"")
+  if (nzchar(g$hint)) say("    ", g$hint)
+  list(family = g$family, inferred = TRUE)
+}

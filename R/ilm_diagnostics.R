@@ -412,9 +412,9 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
                           stat = function(u) mean(u), verbose = TRUE) {
   obs <- stat(ilm_rqr(object, TRUE, seed))
   ys <- ilm_sim_cond(object, B, seed + 1L)
-  X <- object$X; J <- object$J; rl <- ilm_re_list_of(object); rs <- object$re_struct
-  arr <- object$ar; yl <- object$ylevels; asg <- object$assign; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights; cnsr <- object$censor; zdd <- object$Zd; dmu <- isTRUE(object$disp_mu); rpp <- object$rp
+  ## the same model, every part of it -- see ilm_refit_stub()
+  stub <- ilm_refit_stub(object)
+  asg <- object$assign; tl <- object$term_labels
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   ## `stat` may close over data the workers do not have (e.g. a covariate the
@@ -428,9 +428,7 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
     if (length(have)) try(parallel::clusterExport(cl, have, envir = src), silent = TRUE)
   }
   one <- function(b) {
-    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl,
-                      weights = wt, censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp, family = fm,
-                      verbose = FALSE, restarts = 1L), silent = TRUE)
+    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = 1L), silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
     f$assign <- asg; f$term_labels <- tl
     stat(ilm_rqr(f, TRUE, seed = seed + 1000L + b))

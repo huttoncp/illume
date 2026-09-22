@@ -122,7 +122,8 @@ ilm_did_binary <- function(v, nm) {
 #' @param covariates Further columns for the mean structure. These must be
 #'   things the treatment cannot have affected; a covariate the treatment
 #'   changes is a mediator and adjusting for it removes part of the effect.
-#' @param family Response distribution; inferred from `y` when `NULL`.
+#' @param family Response distribution; inferred from `y` when `NULL`, by
+#'   the same rules as `ilm_model(family = "auto")`, and said.
 #' @param ar Add AR(1) within unit on top of the random intercept.
 #' @param allow_staggered Report a pooled estimate even when adoption is
 #'   staggered. Off by default, and see the section above.
@@ -229,11 +230,7 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
 
   ## ---- family --------------------------------------------------------------
   say("[2/5] response")
-  fam <- if (is.null(family)) {
-    f <- ilm_dag_family_guess(d[[y]], y)
-    say("  `", y, "` looks ", ilm_var_kind(d[[y]]), " -> family \"", f, "\"")
-    f
-  } else { say("  family \"", family, "\" as supplied"); family }
+  fam <- ilm_workflow_family(family, d[[y]], y, say)$family
 
   ## ---- the difference in differences fit -----------------------------------
   say("[3/5] estimate")
@@ -248,9 +245,11 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
   ## period effects absorb whatever moved everyone at once; the unit random
   ## intercept absorbs the level differences the treated and control groups
   ## carry, which is what makes this a difference of differences
+  ## the user's column names become formula text, so they are quoted; the
+  ## names this function made itself are syntactic already
   rhs <- c(".treated", if (nper > 2L) "factor(.time_num)" else ".post",
-           ".treat", covariates, paste0("(1 | ", unit, ")"))
-  form <- stats::reformulate(rhs, response = y)
+           ".treat", ilm_bq(covariates), paste0("(1 | ", ilm_bq(unit), ")"))
+  form <- stats::reformulate(rhs, response = as.name(y))
   environment(form) <- environment()
   fit <- ilm_model(form, data = d, family = fam, ar = arspec,
                    verbose = FALSE, ...)
@@ -271,8 +270,9 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
   if (npre >= 2L) {
     pre <- d[d$.time_num < tt0, , drop = FALSE]
     pf <- stats::reformulate(c(".treated", ".time_num", ".treated:.time_num",
-                               covariates, paste0("(1 | ", unit, ")")),
-                             response = y)
+                               ilm_bq(covariates),
+                               paste0("(1 | ", ilm_bq(unit), ")")),
+                             response = as.name(y))
     environment(pf) <- environment()
     pfit <- tryCatch(suppressWarnings(
               ilm_model(pf, data = pre, family = fam, verbose = FALSE, ...)),
@@ -326,8 +326,9 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
     ref <- if (-1 %in% rl) -1 else if (length(neg)) max(neg) else min(rl)
     dd$.relf <- stats::relevel(factor(dd$.rel), ref = as.character(ref))
     ef <- stats::reformulate(c("factor(.time_num)", ".treated",
-                               ".treated:.relf", covariates,
-                               paste0("(1 | ", unit, ")")), response = y)
+                               ".treated:.relf", ilm_bq(covariates),
+                               paste0("(1 | ", ilm_bq(unit), ")")),
+                             response = as.name(y))
     environment(ef) <- environment()
     efit <- tryCatch(suppressWarnings(
               ilm_model(ef, data = dd, family = fam, verbose = FALSE, ...)),

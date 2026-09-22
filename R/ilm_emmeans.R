@@ -187,6 +187,18 @@ ilm_emmeans <- function(object, specs, at = NULL,
          "link of a marginal latent mean is not a category probability. Use ",
          "type = \"link\" for the latent scale, or predict() for the ",
          "category probabilities themselves.", call. = FALSE)
+  ## Said up front and plainly. A multinomial fit has one coefficient per
+  ## predictor PER CATEGORY, so the grid's model matrix never lines up with
+  ## coef(), and the check below used to report that as "a smooth or a matrix
+  ## column" -- on every multinomial fit there has ever been.
+  if (identical(object$family$name, "multinomial"))
+    stop("ilm_emmeans() does not yet average a multinomial fit: each ",
+         "category has its own linear predictor, and a marginal mean is a ",
+         "set of category probabilities rather than one number. For those ",
+         "probabilities at chosen predictor values, use predict(object, ",
+         "newdata = , type = \"response\") over a grid of them; for the ",
+         "average change in each category's probability as a predictor ",
+         "moves, use ilm_ame().", call. = FALSE)
   mf <- object$model
   specs <- as.character(specs)
   miss <- setdiff(specs, names(mf))

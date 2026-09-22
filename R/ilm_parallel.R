@@ -95,20 +95,20 @@ ilm_lapply <- function(cl, X, FUN, ...) {
 #' @keywords internal
 #' @noRd
 ilm_refit_many <- function(fit, ys, ncores = 1L, restarts = 2L, verbose = FALSE) {
-  ## Pull out plain R objects only.  fit$obj holds external pointers into TMB
-  ## and must never be serialised to a worker.
-  X <- fit$X; J <- fit$J; rl <- ilm_re_list_of(fit)
-  rs <- fit$re_struct; arr <- fit$ar; yl <- fit$ylevels
-  fm <- fit$family; wt <- fit$weights; cnsr <- fit$censor; zdd <- fit$Zd; dmu <- isTRUE(fit$disp_mu); rpp <- fit$rp
+  ## Plain R objects only -- fit$obj holds external pointers into TMB and must
+  ## never be serialised to a worker -- and ALL of them: this list used to be
+  ## written out here by hand, without the zero part, so a consistency check
+  ## of a zero-inflated fit refitted a model that had none. ilm_refit_stub()
+  ## is the one place that knows what the same model means.
+  stub <- ilm_refit_stub(fit)
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   if (verbose)
     cat(sprintf("refitting %d replicates on %d core(s)\n", ncol(ys),
                 if (is.null(cl)) 1L else length(cl)))
   one <- function(b) {
-    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl,
-                      weights = wt, censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp, family = fm,
-                      verbose = FALSE, restarts = restarts), silent = TRUE)
+    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = restarts),
+             silent = TRUE)
     if (inherits(f, "try-error")) return(NULL)
     if (f$opt$convergence != 0 || !isTRUE(f$sdr$pdHess)) return(NULL)
     ilm_summarise_fit(f)          # small named numeric; the fit itself stays put

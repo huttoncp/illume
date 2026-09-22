@@ -226,10 +226,9 @@ ilm_refit_stat <- function(object, statfun, dims, B, ncores, seed,
                            exports = NULL, where = parent.frame(),
                            progress = NULL) {
   ys <- ilm_sim_cond(object, B, seed + 1L)
-  X <- object$X; J <- object$J; rl <- ilm_re_list_of(object)
-  rs <- object$re_struct; arstr <- object$ar; yl <- object$ylevels
+  ## the same model, every part of it -- see ilm_refit_stub()
+  stub <- ilm_refit_stub(object)
   asg <- object$assign; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights; cnsr <- object$censor; zdd <- object$Zd; dmu <- isTRUE(object$disp_mu); rpp <- object$rp
   n <- prod(dims)
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
@@ -238,9 +237,7 @@ ilm_refit_stat <- function(object, statfun, dims, B, ncores, seed,
   one <- function(b) {
     ## A replicate that fails to fit is dropped and reduces n_ok, so the
     ## optimiser's complaints about it are noise the user cannot act on.
-    f <- suppressWarnings(try(ilm_fit(X, ys[, b], J, rl, rs, arstr, ylevels = yl,
-                                      weights = wt, censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp, family = fm,
-                                      verbose = FALSE, restarts = 1L),
+    f <- suppressWarnings(try(ilm_refit_like(stub, y = ys[, b], restarts = 1L),
                               silent = TRUE))
     if (inherits(f, "try-error") || f$opt$convergence != 0)
       return(rep(NA_real_, n))

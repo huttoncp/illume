@@ -18,6 +18,7 @@ articles:
   contents:
   - illume
   - workflow
+  - benchmarking
 - title: Modelling
   navbar: Modelling
   contents:
@@ -25,6 +26,7 @@ articles:
   - causal-models
   - effect-size-and-power
   - anova
+  - moderation
 - title: Exploration
   navbar: Exploration
   contents:
@@ -105,14 +107,14 @@ reference:
   - ilm_effects
   - ilm_emmeans
   - ilm_interpret
+  - ilm_moderation
   - ilm_pb_lrt
+  - ilm_plot_moderation
   - ilm_robust
   - ilm_rp_lrt
   - ilm_scenario
   - ilm_translate
   - ilm_trends
-  - ilm_moderation
-  - ilm_plot_moderation
   - ilm_vcov_cluster
   - ilm_zi_coef
   - ilm_zi_prob
@@ -146,6 +148,8 @@ reference:
     A value extreme for its own column, against a row implausible as a combination.
   contents:
   - ilm_anomaly
+  - ilm_anomalous
+  - ilm_plot_anomaly
   - ilm_outliers
   - ilm_outliers_all
 - title: "Structure: profile, cluster, reduce"

@@ -150,10 +150,10 @@ test_that("the workflow refuses what it cannot do", {
   ## but a response it genuinely cannot place asks rather than guessing
   dc <- d; dc$y <- 1
   expect_error(ilm_dag_model(g_conf(), dc, verbose = FALSE),
-               "cannot tell what")
+               "cannot tell which family")
   dt <- d; dt$y <- as.Date("2024-01-01") + seq_len(nrow(d))
   expect_error(ilm_dag_model(g_conf(), dt, verbose = FALSE),
-               "cannot tell what")
+               "cannot tell which family")
 })
 
 test_that("dag_test runs inside the workflow and can be switched off", {

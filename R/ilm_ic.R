@@ -26,7 +26,8 @@
 #' @keywords internal
 #' @noRd
 ilm_ic_warn <- function(object) {
-  if (!isTRUE(object$sdr$pdHess))
+  ## at a boundary the optimum is the maximum, so the likelihood is fine
+  if (!ilm_fixed_usable(object))
     warning("fit has a non-positive-definite Hessian; AIC/BIC are computed from ",
             "an unreliable optimum. See object$checks.", call. = FALSE)
 }
@@ -228,6 +229,12 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' Accuracy is also returned, though it ignores how confident the predictions
 #' were and is the least informative of the three.
 #'
+#' Defined for a multinomial fit, and for a binomial one with a 0/1 response,
+#' whose single fitted probability is scored as the two categories it
+#' implies. Other families have no category probabilities to score; compare
+#' those fits with `AIC()` or [ilm_anova()], and check their predictions with
+#' [ilm_check_predictive()].
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param conditional Logical, as in [ilm_fitted()].
 #' @return A named numeric vector: `log_score`, `brier`, `accuracy`.
@@ -240,9 +247,28 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' probability. *Monthly Weather Review*, 78(1), 1--3.
 #' @export
 ilm_scores <- function(object, conditional = TRUE) {
-  P <- ilm_fitted(object, conditional); y <- object$y; N <- nrow(P)
+  ## A score compares a predicted PROBABILITY for each category with the one
+  ## observed, so it needs a categorical outcome. Anything else used to reach
+  ## the indexing below with a continuous response and die on "subscript out
+  ## of bounds" -- which is how model_performance() failed on every gaussian,
+  ## count and survival fit.
+  fam <- object$family$name
+  y <- object$y
+  bin <- identical(fam, "binomial")
+  if (!(identical(fam, "multinomial") || bin) ||
+      (bin && !all(y %in% c(0, 1))))
+    stop("the scoring rules compare predicted category probabilities with ",
+         "the category observed, so they need a categorical outcome: a ",
+         "multinomial fit, or a binomial one with a 0/1 response. For a ",
+         fam, " fit, compare models with AIC() or ilm_anova(), and check ",
+         "what the model predicts with ilm_check_predictive().",
+         call. = FALSE)
+  P <- ilm_fitted(object, conditional)
+  ## a binary fit returns the probability of the second level only
+  if (bin) { P <- cbind(1 - P[, 1], P[, 1]); y <- y + 1 }
+  N <- nrow(P)
   py <- P[cbind(seq_len(N), y)]
-  Y <- matrix(0, N, object$J); Y[cbind(seq_len(N), y)] <- 1
+  Y <- matrix(0, N, ncol(P)); Y[cbind(seq_len(N), y)] <- 1
   c(log_score = mean(-log(pmax(py, .Machine$double.eps))),
     brier = mean(rowSums((P - Y)^2)),
     accuracy = mean(max.col(P, ties.method = "first") == y))
@@ -260,15 +286,25 @@ ilm_scores <- function(object, conditional = TRUE) {
 #' @keywords internal
 #' @noRd
 ilm_null_ll <- function(object, restarts = 1L) {
-  keep <- !is.na(object$assign) & object$assign == 0
+  ## A restricted likelihood belongs to contrasts orthogonal to the fixed
+  ## design, so the intercept-only model's is the likelihood of different data
+  ## and a ratio of the two means nothing.
+  if (isTRUE(object$reml)) return(NA_real_)
+  ## The intercept, and a flexible survival baseline's spline columns, which
+  ## ARE the baseline rather than predictors -- without them the null model
+  ## has no hazard at all.
+  keep <- (!is.na(object$assign) & object$assign == 0) |
+    seq_along(object$assign) %in% object$rp$cols
   if (!any(keep)) return(NA_real_)
   gi <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
   if (!length(gi)) return(NA_real_)
-  rl <- ilm_re_list_of(object)[gi]
-  f <- try(ilm_fit(object$X[, keep, drop = FALSE], object$y, object$J, rl,
-                    object$re_struct[gi], object$ar, ylevels = object$ylevels,
-                    weights = object$weights, family = object$family,
-                    verbose = FALSE, restarts = restarts), silent = TRUE)
+  ## Otherwise the same model, every part of it: a null model without the
+  ## censoring, the dispersion model or the zero part is a different
+  ## likelihood, and an R-squared built from the two compares unlike things.
+  stub <- ilm_refit_stub(object)
+  stub$re <- object$re[gi]; stub$re_struct <- object$re_struct[gi]
+  f <- try(ilm_refit_like(stub, X = object$X[, keep, drop = FALSE],
+                          keep = keep, restarts = restarts), silent = TRUE)
   if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
   -f$opt$objective
 }
@@ -310,7 +346,11 @@ ilm_null_ll <- function(object, restarts = 1L) {
 #' @export
 model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = TRUE) {
   ll <- logLik(model); df <- attr(ll, "df"); n <- attr(ll, "nobs")
-  sc <- ilm_scores(model, conditional = TRUE)
+  ## the scoring rules exist for a categorical outcome only; elsewhere they
+  ## are NA, with a note, rather than an error from deep inside
+  sc <- tryCatch(ilm_scores(model, conditional = TRUE),
+                 error = function(e) c(log_score = NA_real_, brier = NA_real_,
+                                       accuracy = NA_real_))
   ll0 <- ilm_null_ll(model)
   out <- data.frame(
     AIC = AIC(model),
@@ -323,11 +363,16 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
     Log_score = unname(sc["log_score"]),
     Brier = unname(sc["brier"]),
     Accuracy = unname(sc["accuracy"]))
-  if (verbose && !isTRUE(model$sdr$pdHess))
+  if (verbose && !ilm_fixed_usable(model))
     message("Fit did not pass all checks; these indices describe an unreliable optimum.")
-  attr(out, "r2_note") <-
-    "R2_McFadden is relative to an intercept-only model with the same grouping random effects. Nakagawa R2 and ICC are omitted: a nominal multinomial has no distribution-specific residual variance to define them."
-  attr(out, "score_note") <-
+  attr(out, "r2_note") <- paste0(
+    "R2_McFadden is relative to an intercept-only model with the same grouping random effects. Nakagawa R2 and ICC are omitted: a nominal multinomial has no distribution-specific residual variance to define them.",
+    if (isTRUE(model$reml)) " It is NA for this REML fit: restricted likelihoods of models with different fixed effects are not comparable. Refit with reml = FALSE for it." else "")
+  attr(out, "score_note") <- if (all(is.na(sc)))
+    paste0("Log_score, Brier and Accuracy score predicted category ",
+           "probabilities, so they are NA for this ", model$family$name,
+           " fit.")
+  else
     "Log_score and Brier are IN-SAMPLE and conditional on the fitted random effects, so both are optimistic."
   class(out) <- c("performance_model", "data.frame")
   out

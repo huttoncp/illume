@@ -345,7 +345,7 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
         tr <- cur[-mi, c(v, rhs), drop = FALSE]
         tr <- tr[stats::complete.cases(tr), , drop = FALSE]
         if (nrow(tr) < 10L) next
-        form <- stats::reformulate(rhs, response = v)
+        form <- stats::reformulate(ilm_bq(rhs), response = as.name(v))
         environment(form) <- environment()
         fit <- tryCatch(suppressWarnings(
                  ilm_model(form, data = tr, family = fams[[v]],
@@ -496,7 +496,10 @@ print.ilm_mids <- function(x, ...) {
 #'
 #' @param object An [ilm_impute()] result, or a list of fitted models.
 #' @param formula Model formula, when `object` holds data sets.
-#' @param ... Passed to [ilm_model()].
+#' @param ... Passed to [ilm_model()]. Without a `family` there, it is
+#'   inferred from the first imputation, as `family = "auto"` does, and then
+#'   held for the rest, so every imputation is fitted with the same likelihood.
+#'   An imputation that fails to fit is left out with a warning.
 #' @return An object of class `"ilm_pooled"`: a coefficient table with
 #'   `estimate`, `se`, `df`, `lower`, `upper`, `p_value`, plus `fmi` (the
 #'   fraction of information lost to missingness) per coefficient.
@@ -513,18 +516,50 @@ print.ilm_mids <- function(x, ...) {
 #' ilm_mi_pool(imp, y ~ x + z, family = "gaussian")
 #' @export
 ilm_mi_pool <- function(object, formula = NULL, ...) {
+  errs <- character()
   fits <- if (inherits(object, "ilm_mids")) {
     if (is.null(formula))
       stop("`formula` is needed to fit a model to the imputations",
            call. = FALSE)
-    lapply(object$imputations, function(d)
-      tryCatch(suppressWarnings(ilm_model(formula, data = d, verbose = FALSE, ...)),
-               error = function(e) NULL))
+    ## Without a `family`, it is inferred ONCE, from the first imputation that
+    ## fits, and then held. Every completed data set answers the same question,
+    ## and guessing afresh on each could pool coefficients from different
+    ## likelihoods: an imputed count that happens to come out all 0s and 1s
+    ## would send that one imputation to the binomial.
+    fam <- if ("family" %in% names(match.call(expand.dots = FALSE)$...))
+      NULL else "auto"
+    out <- vector("list", length(object$imputations))
+    for (i in seq_along(out)) {
+      out[[i]] <- tryCatch(suppressWarnings(
+        if (is.null(fam))
+          ilm_model(formula, data = object$imputations[[i]],
+                    verbose = FALSE, ...)
+        else
+          ilm_model(formula, data = object$imputations[[i]], family = fam,
+                    verbose = FALSE, ...)),
+        error = function(e) { errs[i] <<- conditionMessage(e); NULL })
+      if (identical(fam, "auto") && !is.null(out[[i]]))
+        fam <- out[[i]]$family$name
+    }
+    out
   } else if (is.list(object)) object else
     stop("`object` must be an ilm_impute() result or a list of fits",
          call. = FALSE)
+  ## An imputation that fails to fit is not a random one to lose -- it is
+  ## the draw that made the model hardest to fit -- so dropping it is said,
+  ## not done quietly.
+  errs <- errs[!is.na(errs)]
   fits <- Filter(Negate(is.null), fits)
-  if (!length(fits)) stop("no imputation could be fitted", call. = FALSE)
+  if (!length(fits))
+    stop("no imputation could be fitted",
+         if (length(errs)) paste0("; the first error was: ", errs[1]),
+         call. = FALSE)
+  if (length(errs))
+    warning(length(errs), " of ", length(errs) + length(fits),
+            " imputations could not be fitted and are left out of the ",
+            "pooling, which is then over the imputations that fitted -- not ",
+            "a random subset of them. The first error was: ", errs[1],
+            call. = FALSE)
   m <- length(fits)
   if (m < 2L) {
     warning("pooling ", m, " fit: the between-imputation variance cannot be ",

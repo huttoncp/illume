@@ -140,10 +140,15 @@ test_that("marginal means work on the latent scale and refuse the response one",
   expect_equal(cc$estimate[cc$contrast == "c - a"], unname(coef(f)["gc"]),
                tolerance = 1e-6)
   expect_error(ilm_emmeans(f, "g", type = "response"), "no response scale")
-  ## and an average marginal effect still works
+  ## and an average marginal effect still works -- one per category, since
+  ## an ordered outcome has a probability for each. It used to report only
+  ## the last column, unlabelled.
   a <- ilm_ame(f, "x")
-  expect_equal(nrow(a), 1L)
-  expect_true(a$estimate > 0)
+  expect_equal(nrow(a), 3L)
+  expect_equal(a$category, c("lo", "mid", "hi"))
+  expect_equal(sum(a$estimate), 0, tolerance = 1e-8)   # probabilities sum to 1
+  expect_true(a$estimate[a$category == "hi"] > 0)
+  expect_true(a$estimate[a$category == "lo"] < 0)
 })
 
 test_that("an ordinal family refuses what it cannot model", {

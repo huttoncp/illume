@@ -552,7 +552,8 @@ ilm_var_kind <- function(v) {
 ilm_ci_fit <- function(y, kind, rhs, d) {
   fam <- switch(kind, continuous = stats::gaussian(),
                 binary = stats::binomial(), count = stats::poisson())
-  f <- stats::reformulate(if (length(rhs)) rhs else "1", response = y)
+  f <- stats::reformulate(if (length(rhs)) ilm_bq(rhs) else "1",
+                          response = as.name(y))
   suppressWarnings(stats::glm(f, data = d, family = fam))
 }
 
@@ -672,7 +673,8 @@ ilm_dag_test <- function(g, data, min_effect = 0.1, alpha = 0.05,
       rb <- if (kp %in% c("continuous", "binary", "count"))
               stats::residuals(ilm_ci_fit(pred, kp, z, d), type = "pearson")
             else {
-              mm <- stats::model.matrix(stats::reformulate(pred, response = NULL),
+              mm <- stats::model.matrix(stats::reformulate(ilm_bq(pred),
+                                                           response = NULL),
                                         d)[, -1, drop = FALSE]
               if (!length(z)) mm[, 1] else
                 stats::residuals(stats::lm(mm[, 1] ~ ., data = d[z]))

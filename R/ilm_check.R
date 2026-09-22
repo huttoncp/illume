@@ -473,17 +473,15 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
 
   obs <- ilm_var_stats(object, by_vec, seed)
   ys <- ilm_sim_cond(object, B, seed + 1L)
-  X <- object$X; J <- object$J; rl <- ilm_re_list_of(object)
-  rs <- object$re_struct; arr <- object$ar; yl <- object$ylevels
+  ## the same model, every part of it -- see ilm_refit_stub()
+  stub <- ilm_refit_stub(object)
   asg <- object$assign; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights; cnsr <- object$censor; zdd <- object$Zd; dmu <- isTRUE(object$disp_mu); rpp <- object$rp
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   if (!is.null(cl)) try(parallel::clusterExport(cl, "by_vec", envir = environment()),
                         silent = TRUE)
   one <- function(b) {
-    f <- try(ilm_fit(X, ys[, b], J, rl, rs, arr, ylevels = yl, weights = wt, censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp,
-                      family = fm, verbose = FALSE, restarts = 1L), silent = TRUE)
+    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = 1L), silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0)
       return(c(trend = NA_real_, ratio = NA_real_))
     f$assign <- asg; f$term_labels <- tl

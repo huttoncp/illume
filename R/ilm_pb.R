@@ -70,7 +70,8 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
   if (is.null(object$assign))
     stop("ilm_pb_lrt() needs a model fitted through the formula interface")
   ilm_stop_reml_lrt(object, "ilm_pb_lrt()")
-  j <- if (is.numeric(term)) as.integer(term) else which(object$term_labels == term)
+  j <- if (is.numeric(term)) as.integer(term) else
+    which(object$term_labels == ilm_as_label(term, object$term_labels))
   if (!length(j) || is.na(j)) stop("term '", term, "' not found")
   lab <- object$term_labels[j]
   df <- sum(!is.na(object$assign) & object$assign == j) * object$C
@@ -85,21 +86,22 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
   ys <- ilm_simulate(f0, B, seed)
 
   keep <- is.na(object$assign) | object$assign != j
-  X1 <- object$X; X0 <- object$X[, keep, drop = FALSE]
-  J <- object$J; rl <- ilm_re_list_of(object); rs <- object$re_struct
-  arr <- object$ar; yl <- object$ylevels
-  fm <- object$family; wt <- object$weights
+  X0 <- object$X[, keep, drop = FALSE]
+  ## Both refits are the SAME model as the observed ones, every part of it.
+  ## They used to pass only the family and weights, so for a censored model,
+  ## a dispersion model, a flexible survival baseline or a zero part the
+  ## bootstrap reference came from a different model than the observed
+  ## statistic it was compared with -- which was built through
+  ## ilm_refit_like() and had all of them.
+  stub <- ilm_refit_stub(object)
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   one <- function(b) {
     yb <- ys[, b]
-    a <- try(ilm_fit(X1, yb, J, rl, rs, arr, ylevels = yl, weights = wt,
-                      family = fm, verbose = FALSE,
-                      restarts = restarts), silent = TRUE)
+    a <- try(ilm_refit_like(stub, y = yb, restarts = restarts), silent = TRUE)
     if (inherits(a, "try-error") || a$opt$convergence != 0) return(NA_real_)
-    z <- try(ilm_fit(X0, yb, J, rl, rs, arr, ylevels = yl, weights = wt,
-                      family = fm, verbose = FALSE,
-                      restarts = restarts), silent = TRUE)
+    z <- try(ilm_refit_like(stub, X = X0, y = yb, keep = keep,
+                            restarts = restarts), silent = TRUE)
     if (inherits(z, "try-error") || z$opt$convergence != 0) return(NA_real_)
     2 * ((-a$opt$objective) - (-z$opt$objective))
   }

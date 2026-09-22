@@ -142,7 +142,7 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   bars  <- lme4::findbars(formula)
   fform <- lme4::nobars(formula)
   resp  <- all.vars(formula)[1L]
-  group <- if (length(bars)) deparse(bars[[1L]][[3L]]) else NULL
+  group <- if (length(bars)) ilm_mf_name(bars[[1L]][[3L]]) else NULL
   ## a variable a bar varies over is within-unit whether or not it was named
   slope_vars <- unlist(lapply(bars, function(b) all.vars(b[[2L]])))
   within <- union(as.character(within), intersect(slope_vars, names(design)))
@@ -446,13 +446,13 @@ ilm_scaffold_resd <- function(re_sd, re_cor, icc, sdv, bars, group) {
          "and how much units differ from each other is what decides power in ",
          "a design with repeated measures.", call. = FALSE)
   if (!is.list(re_sd)) re_sd <- as.list(re_sd)
-  gv <- vapply(bars, function(b) deparse(b[[3L]]), "")
+  gv <- vapply(bars, function(b) ilm_mf_name(b[[3L]]), "")
   out <- vector("list", length(bars)); names(out) <- gv
   for (j in seq_along(bars)) {
     nm <- gv[j]
     d <- length(all.vars(bars[[j]][[2L]])) +
-      as.integer(attr(stats::terms(stats::as.formula(
-        paste("~", deparse(bars[[j]][[2L]])))), "intercept"))
+      as.integer(attr(stats::terms(ilm_one_sided(bars[[j]][[2L]])),
+                      "intercept"))
     s <- re_sd[[nm]]
     if (is.null(s))
       stop("`re_sd` has nothing for the grouping factor '", nm, "'. It ",

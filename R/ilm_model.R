@@ -69,7 +69,21 @@
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
 #'   "poisson", "nbinom", "beta", "multinomial", or one of the ordinal
-#'   families. See [ilm_family()].
+#'   families. See [ilm_family()]. The default, `"auto"` (or `NULL`), reads
+#'   the family off the response and says which it chose and why: a factor
+#'   with 2 levels, a logical or a 0/1 variable is binomial; an unordered
+#'   factor with 3 or more levels is multinomial and an ordered one ordinal;
+#'   whole numbers that reach down to 0 or 1 are a count, and poisson; whole
+#'   numbers that never come near zero, such as a blood pressure, are read
+#'   as a measurement, and gaussian; values strictly between 0 and 1 are
+#'   beta; anything else numeric is gaussian, as is a response censored at a
+#'   floor or a ceiling. Where the response cannot settle it -- a proportion
+#'   that touches 0 or 1 or comes with weights, a numeric variable with two
+#'   values other than 0 and 1, a survival time, a date -- the fit stops and
+#'   asks rather than guessing. The choice is a starting point, not a
+#'   verdict: counts are often overdispersed (`"nbinom"`), and ratings on a
+#'   short scale are often better read as ordinal. The chosen family is
+#'   written into `fit$call`, so a refit uses it rather than guessing again.
 #' @param data A data frame.
 #' @param re_struct Optional named list of category covariance structures, named
 #'   by grouping variable. See [ilm_fit()].
@@ -213,7 +227,7 @@ ilm_model <- function(formula, ...) {
 #' @return An object of class `"ilm_model"`.
 #' @rdname ilm_model
 #' @export
-ilm_model_formula <- function(formula, data, family = "gaussian",
+ilm_model_formula <- function(formula, data, family = "auto",
                          re_struct = NULL, ar = NULL,
                          weights = NULL, contrasts = NULL, verbose = TRUE,
                          restarts = 3L, joint = NULL, na.action = stats::na.omit,
@@ -233,7 +247,10 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
            "design already carries them, and they mean different things.",
            call. = FALSE)
   }
-  fam <- if (is.list(family)) family else ilm_family(family)
+  ## "auto" is resolved once the response is in hand, below: the family is
+  ## read off the response as the model will see it, after na.action
+  auto <- is.null(family) || identical(family, "auto")
+  fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
   if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
   if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
@@ -250,11 +267,12 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   bars  <- lme4::findbars(formula)
   fform <- lme4::nobars(formula)
   environment(fform) <- fenv
-  gp    <- mgcv::interpret.gam(fform)
+  ## Not mgcv::interpret.gam() directly: it rebuilds formulas from text and
+  ## fails outright on a column name that needs backticks. See ilm_names.R.
+  gp    <- ilm_interpret_gam(fform)
   environment(gp$pf) <- fenv
   if (!is.null(gp$fake.formula)) environment(gp$fake.formula) <- fenv
   smsp  <- gp$smooth.spec
-  respn <- deparse(formula[[2]])
 
   ## one model frame for every part, so NA handling is consistent across
   ## fixed effects, smooths and grouping factors
@@ -274,8 +292,12 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## `(1 | continent/country)` becomes `(1 | country:continent)` plus
   ## `(1 | continent)` -- and deparsing that yields "country:continent", which
   ## is not a column, so neither constituent ever reached the model frame.
+  ##
+  ## Every name in `rhs` becomes formula TEXT for reformulate(), so each one
+  ## is quoted on the way in: all.vars() hands names back bare, and a column
+  ## called `site id` would otherwise be parsed as two symbols.
   bar_terms <- unlist(lapply(bars, function(b)
-    c(deparse(b[[2]]), all.vars(b[[3]]))))
+    c(ilm_term_text(b[[2]]), ilm_bq(all.vars(b[[3]])))))
   ## Checked HERE, before model.frame() gets it. Those variables now go into
   ## the frame, so a missing one would otherwise surface as R's bare "object
   ## 'nope' not found" from inside eval(predvars) -- which does not say it was
@@ -290,16 +312,23 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
            " not a column of `data`. The bars name ",
            paste(sQuote(gvars), collapse = ", "), ".", call. = FALSE)
   }
-  sm_terms  <- unlist(lapply(smsp, `[[`, "term"))
+  ## A smooth's `by` variable is data the basis needs as much as its `term`
+  ## is. Only the term used to be carried into the model frame, so a numeric
+  ## `by` that appeared nowhere else in the formula never reached it and
+  ## mgcv could not find it.
+  sm_terms  <- ilm_bq(unlist(lapply(smsp, function(s)
+    c(s$term, if (!is.null(s$by) && !identical(s$by, "NA")) s$by))))
   rhs <- unique(c(attr(stats::terms(gp$pf), "term.labels"), sm_terms, bar_terms))
   rhs <- setdiff(rhs, c("1", "0", "-1"))
   ## Carry weights through the MODEL FRAME rather than evaluating them
   ## separately: that keeps them aligned when na.action drops rows, which a
   ## separate eval() would silently get wrong.  form_all is used only to build
   ## the frame -- X comes from gp$pf -- so the extra variable is harmless.
+  ## Two spellings of the one expression: quoted to go INTO the formula, and
+  ## as model.frame() names the column, to be found in it afterwards.
   wexpr <- cl$weights
-  wnm <- if (is.null(wexpr)) NULL else deparse(wexpr)
-  if (!is.null(wnm)) rhs <- c(rhs, wnm)
+  wnm <- if (is.null(wexpr)) NULL else ilm_mf_name(wexpr)
+  if (!is.null(wnm)) rhs <- c(rhs, ilm_term_text(wexpr))
   ## The dispersion model's variables have to be in the same model frame as
   ## everything else, or na.action will drop different rows from each and the
   ## two designs will not line up.
@@ -317,7 +346,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
            ", which ", if (length(miss) > 1L) "are" else "is",
            " not in the data. `mu` is the one reserved name, meaning the ",
            "fitted mean.", call. = FALSE)
-    rhs <- unique(c(rhs, dvars))
+    rhs <- unique(c(rhs, ilm_bq(dvars)))
   }
   zvars <- character(0)
   if (!is.null(ziformula)) {
@@ -338,7 +367,7 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
            " not in the data.", call. = FALSE)
     ## the zero part shares the model frame, so its rows are dropped by the
     ## same na.action and the two designs cannot come out of step
-    rhs <- unique(c(rhs, zvars))
+    rhs <- unique(c(rhs, ilm_bq(zvars)))
   }
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
@@ -368,6 +397,25 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   }
 
   yraw <- stats::model.response(mf); N <- nrow(mf)
+  ## family = "auto": chosen from the response, and SAID, because a likelihood
+  ## chosen silently is exactly the kind of decision this package does not
+  ## make behind the user's back. The choice is written into the stored call,
+  ## so everything that refits through the call -- moderation searches, power
+  ## by simulation -- refits the same family rather than guessing afresh on
+  ## simulated data, where a low-rate count can come out all 0s and 1s.
+  fam_why <- NULL
+  if (auto) {
+    g <- ilm_guess_family(yraw, ilm_mf_name(formula[[2]]),
+                          zero_part = !is.null(ziformula), censor = censor,
+                          weighted = !is.null(wnm))
+    fam <- ilm_family(g$family)
+    fam_why <- g$why
+    message(sprintf("ilm_model(): family = \"%s\", inferred from `%s`: %s.",
+                    g$family, ilm_mf_name(formula[[2]]), g$why),
+            if (nzchar(g$hint)) paste0(" ", g$hint) else "",
+            " Pass `family` to choose another.")
+    cl$family <- g$family
+  }
   if (isTRUE(fam$ordinal)) {
     ## An ordered factor already carries the ordering. A plain factor is taken
     ## in its level order, which is alphabetical unless someone set it, and
@@ -494,7 +542,9 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
 
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
-    gvar <- deparse(b[[3]])
+    ## the grouping side as model.frame() names a column: a lone name bare,
+    ## so `site id` is found under "site id"
+    gvar <- ilm_mf_name(b[[3]])
     ## EVALUATE the grouping side rather than looking it up by name. A nested
     ## bar's group is an interaction that exists only as an expression --
     ## `country:continent` from `(1 | continent/country)` -- so a lookup finds
@@ -510,7 +560,10 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
     ## level, including the ones that never occur; unused levels would each
     ## claim a random effect that no row informs
     g <- droplevels(as.factor(g))
-    Z <- stats::model.matrix(stats::as.formula(paste("~", deparse(b[[2]]))), mf)
+    ## Built from the expression, not from pasted text: a lone backticked
+    ## name deparses bare and no longer parses, and the text round trip also
+    ## put the formula in THIS frame, where the caller's variables are not.
+    Z <- stats::model.matrix(ilm_one_sided(b[[2]], fenv), mf)
     nm <- gvar; k <- 1L
     while (nm %in% names(re_list)) { k <- k + 1L; nm <- paste0(gvar, ".", k) }
     re_list[[nm]] <- list(group = g, Z = Z)
@@ -598,6 +651,8 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
   fit$design    <- design
   fit$call      <- cl
+  ## why the family was chosen, when it was chosen rather than given
+  fit$family_inferred <- fam_why
   fit$formula   <- formula
   fit$fixed_formula <- gp$pf
   fit$terms     <- mt

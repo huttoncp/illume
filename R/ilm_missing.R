@@ -75,8 +75,9 @@ ilm_miss_outcome_test <- function(data, v, y, covars) {
     else nlevels(droplevels(factor(z))) > 1L &&
          nlevels(droplevels(factor(z))) <= 20L
   }, TRUE)]
-  f0 <- stats::reformulate(if (length(covars)) covars else "1", response = ".r")
-  f1 <- stats::reformulate(c(covars, y), response = ".r")
+  f0 <- stats::reformulate(if (length(covars)) ilm_bq(covars) else "1",
+                           response = ".r")
+  f1 <- stats::reformulate(ilm_bq(c(covars, y)), response = ".r")
   g0 <- tryCatch(suppressWarnings(stats::glm(f0, data = d,
                    family = stats::binomial())), error = function(e) NULL)
   g1 <- tryCatch(suppressWarnings(stats::glm(f1, data = d,
@@ -91,7 +92,9 @@ ilm_miss_outcome_test <- function(data, v, y, covars) {
   eff <- tryCatch({
     ra <- stats::residuals(g0, type = "pearson")
     rb <- if (!length(covars)) d[[y]] else
-      stats::residuals(stats::lm(stats::reformulate(covars, response = y), data = d))
+      stats::residuals(stats::lm(stats::reformulate(ilm_bq(covars),
+                                                    response = as.name(y)),
+                                 data = d))
     abs(unname(stats::cor(ra, rb, use = "complete.obs")))
   }, error = function(e) NA_real_)
   list(effect = eff, p_value = pv)

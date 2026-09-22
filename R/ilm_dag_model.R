@@ -16,20 +16,6 @@
 ## across them is a sensitivity analysis that costs nothing but compute.
 ## ---------------------------------------------------------------------------
 
-## The family a response of this kind needs. Conservative: anything it cannot
-## place asks rather than guesses, because a wrong family is not a small error.
-#' @keywords internal
-#' @noRd
-ilm_dag_family_guess <- function(v, nm) {
-  k <- ilm_var_kind(v)
-  switch(k,
-    continuous = "gaussian", binary = "binomial",
-    count = "poisson", nominal = "multinomial",
-    stop("cannot tell what distribution `", nm, "` should have (it looks ",
-         if (k == "constant") "constant" else k,
-         "). Pass `family` explicitly.", call. = FALSE))
-}
-
 ## Columns that look like a grouping factor: repeated values, enough distinct
 ## levels to estimate a variance, and not so many that every row is its own
 ## group.
@@ -146,8 +132,9 @@ ilm_dag_remediate <- function(fit, form, data, family, verbose, ...) {
 #' @param dag An [ilm_dag()], or anything [ilm_dag()] accepts.
 #' @param data A data frame.
 #' @param exposure,outcome Variable names; taken from the graph if declared.
-#' @param family Response distribution. Inferred from the outcome when `NULL`,
-#'   and the inference is stated rather than assumed.
+#' @param family Response distribution. Inferred from the outcome when `NULL`
+#'   (or `"auto"`), by the same rules as `ilm_model(family = "auto")`, and the
+#'   inference is stated rather than assumed.
 #' @param cluster Grouping variable(s) for random intercepts. `NULL` looks for
 #'   them among variables the graph does not mention; `character(0)` fits none.
 #' @param auto_error Adjust the error structure when a diagnostic asks.
@@ -246,15 +233,9 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
 
   ## ---- 4. response and error structure -------------------------------------
   say("[4/6] response and error structure")
-  fam <- if (is.null(family)) {
-    f <- ilm_dag_family_guess(data[[y]], y)
-    say("  `", y, "` looks ", ilm_var_kind(data[[y]]), " -> family \"", f, "\"")
-    steps <- c(steps, paste0("family inferred as ", f))
-    f
-  } else {
-    say("  family \"", family, "\" as supplied")
-    family
-  }
+  wf <- ilm_workflow_family(family, data[[y]], y, say)
+  fam <- wf$family
+  if (wf$inferred) steps <- c(steps, paste0("family inferred as ", fam))
 
   re <- character()
   if (is.null(cluster)) {
@@ -288,8 +269,9 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
   rows <- vector("list", length(sets))
   for (i in seq_along(sets)) {
     z <- sets[[i]]
-    rhs <- c(x, z, if (length(re)) sprintf("(1 | %s)", re))
-    form <- stats::reformulate(rhs, response = y)
+    ## column names become formula text, so each is quoted (see ilm_names.R)
+    rhs <- c(ilm_bq(c(x, z)), if (length(re)) sprintf("(1 | %s)", ilm_bq(re)))
+    form <- stats::reformulate(rhs, response = as.name(y))
     environment(form) <- environment()
     say("  set ", i, " of ", length(sets), ": ",
         paste(deparse(form), collapse = " "))
@@ -358,7 +340,7 @@ ilm_term_cols <- function(fit, term) {
   tryCatch({
     mm <- stats::model.matrix(fit)
     tl <- attr(stats::terms(fit), "term.labels")
-    j <- match(term, tl)
+    j <- match(ilm_as_label(term, tl), tl)
     if (is.na(j)) integer() else which(attr(mm, "assign") == j)
   }, error = function(e) which(names(stats::coef(fit)) == term))
 }

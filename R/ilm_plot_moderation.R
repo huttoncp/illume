@@ -157,7 +157,8 @@ ilm_plot_mod_resolve <- function(x, moderator, exposure, data) {
     stop("this model has no interaction to draw. Fit one, or pass an ",
          "ilm_moderation() result.", call. = FALSE)
   if (is.null(exposure) || is.null(moderator)) {
-    p <- strsplit(it[1], ":", fixed = TRUE)[[1]]
+    ## plain names, because they are looked up in the model frame next
+    p <- ilm_unbq(strsplit(it[1], ":", fixed = TRUE)[[1]])
     if (is.null(exposure)) exposure <- p[1]
     if (is.null(moderator)) moderator <- setdiff(p, exposure)[1]
     message("ilm_plot_moderation(): drawing `", exposure, "` by `", moderator,

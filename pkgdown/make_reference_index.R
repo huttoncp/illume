@@ -15,7 +15,12 @@ topic <- ifelse(is.na(nm), topic, nm)
 topic <- setdiff(topic, "illume-package")
 
 ## ---- groups, in the order they should appear -------------------------------
-## Each entry: title, a one-line description, and a predicate over topic names.
+## Each entry: title, a one-line description, a predicate over topic names,
+## and optionally the topics to list first, in that order -- the front door
+## of a group before its parts. Whatever else matches follows alphabetically.
+##
+## Edit THIS file, not _pkgdown.yml: the yml is regenerated from it, and a
+## hand edit there is lost the next time an export is added.
 grp <- list(
   list("Fitting models",
        "One engine, every family. The formula is lme4's and the object that comes back is the same whatever was fitted.",
@@ -37,11 +42,14 @@ grp <- list(
 
   list("Inference and interpretation",
        "What the model says, on a scale someone can read.",
-       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|trends|ame|robust|vcov_cluster|denom_df|pb_lrt|rp_lrt|boot_|coef_table|se_fixef|zi_|scenario|interpret|translate)", x)),
+       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|trends|ame|robust|vcov_cluster|denom_df|pb_lrt|rp_lrt|boot_|coef_table|se_fixef|zi_|scenario|interpret|translate|moderation)", x) ||
+                   x == "ilm_plot_moderation"),
 
   list("Design and power",
        "Before the data exist.",
-       function(x) grepl("^ilm_power|^plot[.]ilm_power$", x)),
+       function(x) grepl("^ilm_power|^plot[.]ilm_power$|^ilm_scaffold$", x),
+       c("ilm_scaffold", "ilm_power_design", "ilm_power", "ilm_power_n",
+         "plot.ilm_power")),
 
   list("Describing data",
        "Descriptive statistics, counts, and the things that are wrong with a data frame before any model sees it.",
@@ -50,11 +58,14 @@ grp <- list(
 
   list("Outliers and anomalies",
        "A value extreme for its own column, against a row implausible as a combination.",
-       function(x) grepl("^ilm_(outliers|anomaly)", x)),
+       function(x) grepl("^ilm_(outliers|anomal)", x) || x == "ilm_plot_anomaly",
+       c("ilm_anomaly", "ilm_anomalous", "ilm_plot_anomaly")),
 
-  list("Structure: reduce, cluster, profile",
-       "The few directions a set of correlated columns shares, the groups in that space, and what distinguishes them.",
-       function(x) grepl("^ilm_(reduce|cluster|profile|glrm)", x)),
+  list("Structure: profile, cluster, reduce",
+       "ilm_profile() is the front door: it reduces, clusters and describes the groups in one call, and handles mixed columns. The other two are the same pipeline taken a step at a time, for when you want the coordinates or the partition on their own.",
+       function(x) grepl("^ilm_(reduce|cluster|profile|glrm|var_contrib)", x),
+       c("ilm_profile", "ilm_var_contrib", "ilm_cluster", "ilm_reduce",
+         "ilm_glrm", "ilm_profile_na", "ilm_cluster_na", "ilm_reduce_na")),
 
   list("Missing data",
        "Diagnosing it, filling it in honestly, and pooling across the imputations.",
@@ -83,6 +94,7 @@ for (g in grp) {
   hit <- Filter(function(x) isTRUE(tryCatch(g[[3]](x), error = function(e) FALSE)),
                 setdiff(topic, assigned))
   hit <- sort(hit)
+  if (length(g) >= 4L) hit <- c(intersect(g[[4]], hit), setdiff(hit, g[[4]]))
   if (!length(hit)) next
   assigned <- c(assigned, hit)
   lines <- c(lines,
@@ -123,6 +135,7 @@ head <- c(
   "  contents:",
   "  - illume",
   "  - workflow",
+  "  - benchmarking",
   "- title: Modelling",
   "  navbar: Modelling",
   "  contents:",
@@ -130,6 +143,7 @@ head <- c(
   "  - causal-models",
   "  - effect-size-and-power",
   "  - anova",
+  "  - moderation",
   "- title: Exploration",
   "  navbar: Exploration",
   "  contents:",

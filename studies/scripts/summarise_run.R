@@ -213,6 +213,116 @@ summarise_study <- function(dir, study) {
       "coverage disagree, and only coverage is what an analysis needs. A",
       "method can reconstruct hidden cells as well as the best one and still",
       "cover at half the nominal rate.")
+
+  } else if (study == "messy") {
+    ## Every sentence below is computed from the csv, the ones that go against
+    ## illume included, so a re-run at a later version says what THAT run
+    ## found. The first version of this file was written by hand, and got the
+    ## range of mclogit's RMSE advantage wrong (8 to 13% where it was 3 to
+    ## 14%) -- which is the reason findings are generated.
+    d <- read_all(dir, "^messy_compare.csv$"); if (is.null(d)) return(NULL)
+    rg <- unique(d$regime)
+    first <- function(x, col) x[[col]][1]
+    s <- do.call(rbind, lapply(rg, function(r) {
+      x <- d[d$regime == r, ]
+      data.frame(regime = r,
+                 cover_illume = mean(x$cover_illume),
+                 cover_mclogit = mean(x$cover_mclogit),
+                 atten_illume = first(x, "att_illume"),
+                 atten_mclogit = first(x, "att_mclogit"),
+                 bias_illume = mean(abs(x$bias_illume)),
+                 bias_mclogit = mean(abs(x$bias_mclogit)),
+                 rmse_illume = mean(x$rmse_illume),
+                 rmse_mclogit = mean(x$rmse_mclogit),
+                 conv_illume = first(x, "conv_illume"),
+                 conv_mclogit = first(x, "conv_mclogit"),
+                 stringsAsFactors = FALSE)
+    }))
+    v <- do.call(rbind, lapply(rg, function(r) {
+      x <- d[d$regime == r, ]
+      data.frame(regime = r, true_re_sd = first(x, "sd_re"),
+                 re_sd_illume = first(x, "resd_illume"),
+                 re_sd_mclogit = first(x, "resd_mclogit"),
+                 secs_illume = first(x, "t_illume"),
+                 secs_mclogit = first(x, "t_mclogit"),
+                 stringsAsFactors = FALSE)
+    }))
+    share <- vapply(rg, function(r) first(d[d$regime == r, ], "rare_share"), 0)
+    nrep <- max(d$nrep)
+    mcse <- sqrt(0.95 * 0.05 / nrep)
+    lst <- function(i, a, b, dg = 3)
+      paste0(s$regime[i], " (", num(s[[a]][i], dg), " against ",
+             num(s[[b]][i], dg), ")", collapse = ", ")
+
+    gap <- s$cover_illume - s$cover_mclogit
+    better <- which(gap > 0)
+    top <- utils::head(order(-gap), 2L)
+    shrink <- which(s$atten_mclogit < 0.95)
+    speed <- v$secs_mclogit / v$secs_illume
+    inflate <- which(s$atten_illume > 1.1)
+    worse_bias <- which(s$bias_illume > s$bias_mclogit)
+    less_conv <- which(s$conv_illume < s$conv_mclogit)
+    rm_lower <- which(s$rmse_mclogit < s$rmse_illume)
+    rel <- (s$rmse_illume - s$rmse_mclogit) / s$rmse_mclogit
+    edge <- which(v$true_re_sd < 0.2)
+
+    c(paste0("illume (Laplace) against mclogit::mblogit (PQL) on data that ",
+             "misbehave, ", nrep, " replications per regime."),
+      paste0("Nominal coverage 0.95; Monte Carlo error about ", num(mcse),
+             ". Attenuation is the least-squares slope of estimate on truth:"),
+      "1 means none, below 1 is shrinkage and above 1 is inflation.",
+      "", md_table(s), "",
+      "Variance-component recovery, and median seconds per fit:",
+      "", md_table(v), "",
+      paste0("Realised rarest-category share: ",
+             paste(paste0(rg, " ", num(share)), collapse = ", "), "."),
+      "",
+      "### What holds",
+      "",
+      paste0("illume's intervals cover better than mclogit's in ",
+             length(better), " of ", length(rg), " regimes; the widest gaps ",
+             "are ", lst(top, "cover_illume", "cover_mclogit"), "."),
+      paste0("mclogit shrinks fixed effects (attenuation below 0.95) in ",
+             length(shrink), " of ", length(rg), " regimes",
+             if (length(shrink)) paste0(", from ", num(min(s$atten_mclogit[shrink])),
+                                        " to ", num(max(s$atten_mclogit[shrink])))
+             else "", "."),
+      paste0("illume is ", round(min(speed)), " to ", round(max(speed)),
+             " times faster, by median seconds per fit."),
+      "",
+      "### Findings that go AGAINST illume, and must travel with the rest",
+      "",
+      if (length(inflate))
+        paste0("- illume INFLATES coefficients (attenuation above 1.1) in ",
+               lst(inflate, "atten_illume", "atten_mclogit"), ".")
+      else "- illume inflates coefficients in no regime.",
+      if (length(worse_bias))
+        paste0("- illume's mean absolute bias is higher than mclogit's in ",
+               lst(worse_bias, "bias_illume", "bias_mclogit"), ".")
+      else "- illume's mean absolute bias is no higher than mclogit's anywhere.",
+      if (length(less_conv))
+        paste0("- illume's fits were usable less often than mclogit's in ",
+               lst(less_conv, "conv_illume", "conv_mclogit"),
+               "; its coverage there is CONDITIONAL on the usable fits.")
+      else "- illume's fits were usable as often as mclogit's everywhere.",
+      if (length(edge))
+        paste0("- With a true random-effect SD of ",
+               paste(num(v$true_re_sd[edge], 2), collapse = ", "),
+               " neither method recovers it: illume reports ",
+               paste(num(v$re_sd_illume[edge]), collapse = ", "),
+               " and mclogit ", paste(num(v$re_sd_mclogit[edge]), collapse = ", "), "."),
+      if (length(rm_lower))
+        paste0("- mclogit's RMSE is LOWER in ", length(rm_lower), " of ",
+               length(rg), " regimes (", paste(s$regime[rm_lower], collapse = ", "),
+               "), by ", round(100 * min(rel[rm_lower])), " to ",
+               round(100 * max(rel[rm_lower])), "%.")
+      else "- mclogit's RMSE is lower in no regime.",
+      "",
+      "CAVEAT that must travel with this result: the two methods fail",
+      "differently rather than one dominating. PQL converges, shrinks, and does",
+      "not say so. The Laplace approximation's intervals mean what they claim,",
+      "and it declines to answer more often -- loudly, which is the intent, but",
+      "a table conditional on the fits that were usable hides that cost.")
   } else NULL
 }
 
@@ -231,8 +341,13 @@ write_findings <- function(studies, study, version) {
     message("  no summarisable output in ", dir); return(invisible(FALSE))
   }
   ri <- run_info(studies, version)
-  stamp <- if (!is.null(ri) && !is.null(ri$Date))
-    paste0("Run on ", ri$Date, if (!is.null(ri$R)) paste0(", R ", ri$R) else "", ".")
+  ## a study run on a different day from the rest of its set carries its own
+  ## date as `Date.<study>` in the same RUNINFO
+  when <- if (is.null(ri)) NULL else
+    if (!is.null(ri[[paste0("Date.", study)]])) ri[[paste0("Date.", study)]]
+    else ri$Date
+  stamp <- if (!is.null(when))
+    paste0("Run on ", when, if (!is.null(ri$R)) paste0(", R ", ri$R) else "", ".")
   else NULL
   body <- c(stamp, if (!is.null(stamp)) "", body)
   fp <- file.path(studies, "findings", paste0(study, ".md"))

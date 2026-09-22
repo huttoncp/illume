@@ -25,6 +25,7 @@ nested_data <- function(n = 600, seed = 1) {
 test_that("a nested bar fits at all", {
   d <- nested_data()
   expect_silent(f <- ilm_model(y ~ x + (1 | sch / cls), data = d,
+                               family = "gaussian",
                                verbose = FALSE))
   expect_s3_class(f, "ilm_model")
   ## two terms: the nesting expands to the inner interaction and the outer
@@ -75,6 +76,7 @@ test_that("three levels of nesting work", {
   d$x <- rnorm(n)
   d$y <- 0.4 * d$x + rnorm(nlevels(d$sch), 0, .6)[as.integer(d$sch)] + rnorm(n)
   expect_silent(f <- ilm_model(y ~ x + (1 | region / sch / cls), data = d,
+                               family = "gaussian",
                                verbose = FALSE))
   expect_identical(length(f$re), 3L)
 })

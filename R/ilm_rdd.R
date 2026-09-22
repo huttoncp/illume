@@ -65,7 +65,8 @@ ilm_rdd_fit1 <- function(d, y, run, cutoff, h, kernel, covariates, poly,
   trend <- if (poly == 1L) c(".r", ".above:.r")
            else c(sprintf("I(.r^%d)", seq_len(poly)),
                   sprintf(".above:I(.r^%d)", seq_len(poly)))
-  form <- stats::reformulate(c(".above", trend, covariates), response = y)
+  form <- stats::reformulate(c(".above", trend, ilm_bq(covariates)),
+                             response = as.name(y))
   environment(form) <- environment()
   fit <- tryCatch(suppressWarnings(
            ilm_model(form, data = dd, family = family, weights = dd$.w,
@@ -209,7 +210,8 @@ ilm_rdd_jump <- function(fit) {
 #' @param kernel `"triangular"` (default), `"uniform"` or `"epanechnikov"`.
 #' @param poly Polynomial order on each side; 1 is local linear.
 #' @param covariates Further columns for the mean structure.
-#' @param family Response distribution; inferred from `y` when `NULL`.
+#' @param family Response distribution; inferred from `y` when `NULL`, by
+#'   the same rules as `ilm_model(family = "auto")`, and said.
 #' @param bw_range Multipliers of `h` for the sensitivity sweep.
 #' @param placebo Placebo cutoffs, as quantiles of the running variable either
 #'   side of the real cutoff. `NULL` picks a few.
@@ -285,11 +287,7 @@ ilm_rdd <- function(data, y, running, cutoff = 0, treatment = NULL, h = NULL,
 
   ## ---- family and bandwidth ------------------------------------------------
   say("[2/6] response and bandwidth")
-  fam <- if (is.null(family)) {
-    f <- ilm_dag_family_guess(d[[y]], y)
-    say("  `", y, "` looks ", ilm_var_kind(d[[y]]), " -> family \"", f, "\"")
-    f
-  } else { say("  family \"", family, "\" as supplied"); family }
+  fam <- ilm_workflow_family(family, d[[y]], y, say)$family
   hh <- if (is.null(h)) {
     hb <- ilm_rdd_bw(r, d[[y]], cutoff)
     say(sprintf("  bandwidth %.4g (rule of thumb -- a starting point, not an optimum;",

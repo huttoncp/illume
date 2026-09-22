@@ -27,6 +27,9 @@
 #' @keywords internal
 #' @noRd
 ilm_smooth_design <- function(sob, newdata) {
+  ## a smooth of a column that needs backticks was built on a stand-in name,
+  ## and has to be evaluated on one too
+  newdata <- ilm_add_standins(newdata, sob$name_map)
   X0 <- mgcv::PredictMat(sob$sm, newdata)
   D  <- sob$re$trans.D
   M  <- X0 %*% sob$re$trans.U %*% diag(D, length(D))
@@ -167,8 +170,13 @@ ilm_re_design <- function(object, k, data, d) {
   j <- match(k, gk)
   b <- if (is.na(j)) NULL else object$bars[[j]]
   if (is.null(b)) return(NULL)
+  ## from the expression, not pasted text: a lone backticked slope variable
+  ## deparses bare, fails to parse, and the tryCatch below used to turn that
+  ## into a quiet NULL -- a random slope dropped from the draws without a word
+  env <- environment(object$formula)
+  if (is.null(env)) env <- parent.frame()
   Z <- tryCatch(
-    stats::model.matrix(stats::as.formula(paste("~", deparse(b[[2L]]))), data),
+    stats::model.matrix(ilm_one_sided(b[[2L]], env), data),
     error = function(e) NULL)
   if (is.null(Z) || ncol(Z) != d) NULL else Z
 }

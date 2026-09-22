@@ -69,7 +69,10 @@ ilm_evidence <- function(p) {
 #' @param terms Which predictors. Default is every fixed-effect term.
 #' @param eps Relative step for the numerical derivatives.
 #' @return A data frame with `term`, `level`, `estimate`, `se`, `lower`,
-#'   `upper`, and `kind` (`"slope"` or `"contrast"`).
+#'   `upper`, and `kind` (`"slope"` or `"contrast"`). For an outcome with
+#'   categories -- multinomial or ordinal -- there is also a `category` column
+#'   and one row per category: the effect on the probability of each. Those
+#'   rows sum to zero for every term, because the probabilities sum to one.
 #' @seealso [ilm_interpret()], and the `marginaleffects` package, which does
 #'   this and a great deal more once [ilm_register_marginaleffects()] is called.
 #' @examples
@@ -89,15 +92,36 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
          "be computed", call. = FALSE)
   tl <- attr(stats::terms(object), "term.labels")
   ## only terms that are a bare variable: a marginal effect for `poly(x, 3)` or
-  ## an interaction is a different question and is not answered by pretending
-  vars <- intersect(tl, names(mf))
-  if (!is.null(terms)) vars <- intersect(vars, terms)
+  ## an interaction is a different question and is not answered by pretending.
+  ## Compared as PLAIN names: a label keeps the backticks a column name does
+  ## not have, so `x 1` used to match nothing and quietly got no effect.
+  vars <- ilm_unbq(tl)[ilm_unbq(tl) %in% names(mf)]
+  if (!is.null(terms)) vars <- intersect(vars, ilm_unbq(terms))
   if (!length(vars)) return(NULL)
 
+  ## An outcome with categories -- multinomial or ordinal -- has a probability
+  ## for each one, and so an effect on each one; they sum to zero, because the
+  ## probabilities sum to one. This used to take the LAST column of those
+  ## probabilities and report it as THE effect, with nothing to say which
+  ## category it was, and ilm_interpret() then quoted that one number beside
+  ## every category's coefficient.
+  p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
+                                        type = "response"))
+  cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   mu <- function(dd) {
     p <- suppressWarnings(stats::predict(object, newdata = dd,
                                          type = "response"))
-    if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
+    if (!is.null(cats)) as.matrix(p)
+    else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
+  }
+  avg <- function(z) if (is.null(cats)) mean(z) else unname(colMeans(z))
+  mk <- function(v, lev, kind, val) {
+    if (is.null(cats))
+      data.frame(term = v, level = lev, kind = kind, value = val,
+                 stringsAsFactors = FALSE)
+    else
+      data.frame(term = v, level = lev, category = cats, kind = kind,
+                 value = val, stringsAsFactors = FALSE)
   }
   ## one number per (term, level), as a function of the parameter vector
   eff_of <- function(obj) {
@@ -111,10 +135,8 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
         h <- eps * max(stats::sd(x, na.rm = TRUE), 1e-8)
         d1 <- mf; d1[[v]] <- x + h
         d0 <- mf; d0[[v]] <- x - h
-        out[[length(out) + 1L]] <- data.frame(
-          term = v, level = NA_character_, kind = "slope",
-          value = mean((mu(d1) - mu(d0)) / (2 * h)),
-          stringsAsFactors = FALSE)
+        out[[length(out) + 1L]] <- mk(v, NA_character_, "slope",
+                                      avg((mu(d1) - mu(d0)) / (2 * h)))
       } else {
         f <- factor(x); lv <- levels(f)
         if (length(lv) < 2L) next
@@ -122,9 +144,7 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
         m0 <- mu(d0)
         for (l in lv[-1]) {
           d1 <- mf; d1[[v]] <- factor(l, levels = lv)
-          out[[length(out) + 1L]] <- data.frame(
-            term = v, level = l, kind = "contrast",
-            value = mean(mu(d1) - m0), stringsAsFactors = FALSE)
+          out[[length(out) + 1L]] <- mk(v, l, "contrast", avg(mu(d1) - m0))
         }
       }
     }
@@ -158,10 +178,14 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
   }
   crit <- if (isTRUE(object$exact_df)) stats::qt(0.975, object$resid_df)
           else stats::qnorm(0.975)
-  data.frame(term = base$term, level = base$level, kind = base$kind,
-             estimate = base$value, se = se,
-             lower = base$value - crit * se, upper = base$value + crit * se,
-             stringsAsFactors = FALSE, row.names = NULL)
+  out <- data.frame(term = base$term, level = base$level, kind = base$kind,
+                    estimate = base$value, se = se,
+                    lower = base$value - crit * se, upper = base$value + crit * se,
+                    stringsAsFactors = FALSE, row.names = NULL)
+  if (!is.null(cats))
+    out <- cbind(out[1:2], category = base$category, out[-(1:2)],
+                 stringsAsFactors = FALSE)
+  out
 }
 
 ## ---- the interpreter -------------------------------------------------------
@@ -268,28 +292,52 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   am <- if (isTRUE(ame)) tryCatch(ilm_ame(object), error = function(e) NULL) else NULL
 
   respname <- deparse(object$formula[[2]])
+  ## A multinomial fit has one coefficient per predictor PER CATEGORY -- the
+  ## first C categories; the last is minus their sum -- laid out category by
+  ## category. This loop used to walk the design columns only, so it
+  ## described the first category's coefficients and never the others, and
+  ## quoted one category's marginal effect beside all of them.
+  multi <- identical(fam, "multinomial")
+  pX <- ncol(object$X)
+  cats <- if (multi) object$ylevels[seq_len(object$C)] else NA_character_
+  xn <- colnames(object$X)
   lines <- character()
   for (v in fixed) {
     k <- ilm_term_cols(object, v)
     if (!length(k)) next
-    xv <- if (!is.null(object$model) && v %in% names(object$model))
-            object$model[[v]] else NULL
+    ## the label keeps its backticks; the model frame knows the plain name
+    vn <- ilm_unbq(v)
+    xv <- if (!is.null(object$model) && vn %in% names(object$model))
+            object$model[[vn]] else NULL
     is_fac <- !is.null(xv) && !is.numeric(xv)
-    for (i in k) {
-      nm <- rownames(ct)[i]
-      est <- ct[i, 1]; se <- ct[i, 2]; p <- ct[i, 4]
+    for (cc in seq_along(cats)) for (i in k) {
+      ii <- if (multi) (cc - 1L) * pX + i else i
+      nm <- rownames(ct)[ii]
+      est <- ct[ii, 1]; se <- ct[ii, 2]; p <- ct[ii, 4]
       lo <- est - crit * se; hi <- est + crit * se
       ev <- ilm_evidence(p)
-      ## the level this coefficient stands for, when the term is a factor
-      lvl <- if (is_fac) sub(paste0("^", v), "", nm) else NA_character_
+      ## the level this coefficient stands for, when the term is a factor --
+      ## read off the DESIGN column, since a multinomial coefficient's own
+      ## name starts with its category
+      lvl <- if (is_fac) {
+        x1 <- xn[i]
+        if (startsWith(x1, v)) substring(x1, nchar(v) + 1L) else x1
+      } else NA_character_
       subj <- if (is_fac && nzchar(lvl)) sprintf("being %s rather than %s", lvl,
                     levels(factor(xv))[1])
-              else sprintf("a higher %s", v)
-      s <- sprintf("%s: %s that %s %s a %s value of %s (estimate %s, 95%% interval %s to %s, p = %s).",
-                   nm, ev, subj, link_word,
-                   if (est >= 0) "higher" else "lower", respname,
-                   ilm_fmt(est, digits), ilm_fmt(lo, digits),
-                   ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
+              else sprintf("a higher %s", vn)
+      s <- if (multi)
+        sprintf("%s: %s that %s %s %s odds of %s, relative to the average of the categories (estimate %s, 95%% interval %s to %s, p = %s).",
+                nm, ev, subj, link_word,
+                if (est >= 0) "higher" else "lower", sQuote(cats[cc], FALSE),
+                ilm_fmt(est, digits), ilm_fmt(lo, digits),
+                ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
+      else
+        sprintf("%s: %s that %s %s a %s value of %s (estimate %s, 95%% interval %s to %s, p = %s).",
+                nm, ev, subj, link_word,
+                if (est >= 0) "higher" else "lower", respname,
+                ilm_fmt(est, digits), ilm_fmt(lo, digits),
+                ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
       ## and what it means where the response lives
       if (!is.null(sw$ratio) && fam %in% c("binomial", "poisson", "nbinom"))
         s <- paste(s, sprintf("On the %s scale that is %s.", sw$ratio,
@@ -297,12 +345,24 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
       if (!is.null(am)) {
         ## match on the term AND the level, not on a name prefix: a vectorised
         ## grepl here silently used only the first level and dropped the rest
-        j <- if (is_fac) which(am$term == v & !is.na(am$level) & am$level == lvl)
-             else which(am$term == v & is.na(am$level))
+        j <- if (is_fac) which(am$term == vn & !is.na(am$level) & am$level == lvl)
+             else which(am$term == vn & is.na(am$level))
+        ## and on the category: its own for a multinomial coefficient; for an
+        ## ordinal one, which shifts every category at once, the highest,
+        ## named as such
+        catj <- NULL
+        if (!is.null(am$category)) {
+          catj <- if (multi) cats[cc] else utils::tail(unique(am$category), 1L)
+          j <- j[am$category[j] == catj]
+        }
         if (length(j) == 1L && is.finite(am$estimate[j])) {
-          sc <- if (fam %in% c("binomial", "multinomial")) 100 else 1
+          sc <- if (fam %in% c("binomial", "multinomial") || !is.null(catj))
+            100 else 1
           s <- paste(s, sprintf(
-            "In the units of the response: %s %s%s on average (%s to %s).",
+            "%s: %s %s%s on average (%s to %s).",
+            if (is.null(catj)) "In the units of the response"
+            else sprintf("In the probability of %s%s", sQuote(catj, FALSE),
+                         if (multi) "" else ", the highest category"),
             if (am$estimate[j] >= 0) "an increase of" else "a decrease of",
             ilm_fmt(abs(am$estimate[j]) * sc, digits),
             if (sc == 100) " percentage points" else "",

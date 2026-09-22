@@ -33,10 +33,21 @@ ilm_n_fixed <- function(object) ncol(object$X) * object$C
 #' @return `NULL`, invisibly; called for the warning.
 #' @keywords internal
 #' @noRd
-ilm_warn_hess <- function(object) {
-  if (!isTRUE(object$sdr$pdHess))
-    warning("Hessian is not positive definite: this covariance matrix is unusable ",
-            "for inference. See fit$checks.", call. = FALSE)
+ilm_warn_hess <- function(object, full = FALSE) {
+  if (isTRUE(object$sdr$pdHess)) return(invisible())
+  ## A term held at its boundary leaves the fixed effects usable, so asking for
+  ## them is not an error worth a warning; asking for the covariance
+  ## parameters too is, because the held ones carry no uncertainty.
+  if (length(object$hessian_held)) {
+    if (full)
+      warning("the covariance of ", paste(object$hessian_held, collapse = ", "),
+              " is held at its estimate (it sits at a boundary), so its rows ",
+              "here carry no uncertainty. The fixed effects are unaffected; ",
+              "see fit$checks.", call. = FALSE)
+    return(invisible())
+  }
+  warning("Hessian is not positive definite: this covariance matrix is unusable ",
+          "for inference. See fit$checks.", call. = FALSE)
 }
 
 #' Coefficients and their covariance matrix
@@ -95,9 +106,13 @@ coef.ilm_model <- function(object, full = FALSE, ...) {
 #' @rdname coef.ilm_model
 #' @export
 vcov.ilm_model <- function(object, full = FALSE, ...) {
-  ilm_warn_hess(object)
+  ilm_warn_hess(object, full = isTRUE(full))
   V <- object$sdr$cov.fixed
   if (is.null(V)) return(NULL)
+  ## A term held at its boundary is known, for everything computed from this
+  ## matrix: zero uncertainty, which is what holding it means, rather than the
+  ## NA that records it in the fit and would poison a delta method downstream.
+  if (length(object$hessian_held)) V[!is.finite(V)] <- 0
   ## Maximum likelihood divides the residual sum of squares by n; an ordinary
   ## linear model divides by n - p.  Rescaling by n / (n - p) makes the
   ## covariance, and therefore the standard errors, agree exactly with lm().

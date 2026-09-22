@@ -11,6 +11,189 @@ the test suite. They came from comparing against something outside, from
 widening a simulation, or from someone calling illume from outside it, which
 remain the only things that have ever found a defect here.
 
+## The family is read off the response
+
+* `ilm_model()` defaulted to `family = "gaussian"`, so leaving the family off
+  a model of a three-category outcome stopped with "gaussian family needs a
+  numeric response", and leaving it off a count fitted a straight line to it
+  without comment. The default is now `"auto"`: the family is read off the
+  response, and the fit says which it chose and on what evidence --
+  ``family = "poisson", inferred from `visits`: whole numbers from 0 to 14, a
+  count`` -- and names the usual competitor, `"nbinom"` for counts and
+  `"ordinal"` for categories with an order. The choice is written into
+  `fit$call`, so anything that refits through the call keeps it instead of
+  guessing again on simulated data, and `print()` and `summary()` mark the
+  family as inferred.
+* Whole numbers are the hard case, because a count and a measurement recorded
+  to the nearest unit look alike. Whole numbers that reach down to 0 or 1 are
+  read as a count; ones that never come near zero, such as a blood pressure,
+  as a measurement. The range is in the message either way, so a misreading
+  shows at a glance.
+* What the response cannot settle is asked about, not guessed: a proportion
+  that touches 0 or 1 or comes with weights, a two-valued variable coded other
+  than 0/1, a survival time -- which survival family is a modelling decision --
+  and a date.
+* `ilm_dag_model()`, `ilm_did()` and `ilm_rdd()` infer through the same rules.
+  Their own guesser sent an ordered factor to the multinomial, proportions to
+  the gaussian, and a variable coded 1/2 to the binomial, which then refused
+  it.
+* `ilm_mi_pool()` infers the family once, on the first imputation, and holds
+  it, so every imputation is fitted with the same likelihood. An imputation
+  that fails to fit is now reported; it used to be dropped without a word, and
+  the draw that made the model hardest to fit is not a random one to lose.
+
+## A variance at its boundary no longer takes the fixed effects with it
+
+* When a random-effect variance sits at zero, or a correlation at +/-1, the
+  likelihood is flat in that direction and the Hessian over every parameter is
+  singular however well the fixed effects are determined. The whole fit used to
+  be graded FAIL, standard errors and all. Now the covariance of that term is
+  held at its estimate and the rest of the Hessian inverted -- what lme4 falls
+  back to for a GLMM -- and the fit says, in `summary()` and `print()`, what can
+  be trusted: the fixed effects, their standard errors and tests, yes; that
+  covariance, no. The check reads BOUNDARY, not FAIL.
+* Measured on the messy-data regime with a true random-effect SD of 0.05, on
+  the study's own 400 seeds: fits with usable fixed effects rose from **63.3%
+  to 97.5%**. The 128 newly usable ones cover at **0.944**, and their standard
+  errors are 1.011 times those of the same model without the random term,
+  which is what a variance of zero says they should be. In the combined regime
+  the share rose from 91.0% to 99.0%, and the 30 fits recovered there cover at
+  **0.908** -- a little under nominal, and recorded rather than smoothed. The
+  clean, unbalanced and heavy-tailed regimes are unchanged.
+* The study's own tables still report what was measured at the time; the next
+  run of `messy_compare.R` will count fits the new way.
+* glmmTMB recovers some of these by recomputing the Hessian more accurately
+  before giving up, and illume now does the same without its dependency. On
+  these regimes that alone recovered **no** fit: every failure was a genuine
+  boundary, which glmmTMB lets through only because its threshold is machine
+  epsilon, reporting a standard error in the billions for the variance.
+* At a boundary nlminb stops with "false" or "singular convergence" as a log
+  standard deviation drifts towards minus infinity. The boundary term is now
+  held where it got to and the rest allowed to finish, as a variance
+  constrained at zero would in lme4.
+* A covariance fitted at a correlation of -1, with a positive definite Hessian
+  and standard errors within 4% of the model without the term, used to be
+  graded FAIL with "the standard errors above are not usable" beneath them.
+  It is a BOUNDARY now too.
+* Fixed effects that are not identified are not rescued. Aliased columns passed
+  a `chol()` test on a finite-difference Hessian, whose noise makes a singular
+  matrix slightly positive; the test is now scale-free and the fit stays FAIL.
+
+## Refits are the same model
+
+* Eight places refit a model -- a reduced model for a test, a bootstrap
+  replicate, a simulation envelope, a consistency check, the null model behind
+  an R-squared -- and seven of them wrote out their own list of what "the same
+  model" means. Every one of those lists had gone out of date, and none carried
+  the **zero part** of a zero-inflated or hurdle model, so
+  `ilm_anova(test = "LRT")` compared it
+  against a model without one: a predictor with no effect came out at
+  chi-square **68.8, p < 2e-16**, where the right answer was 0.02. Type II
+  tests of a term inside an interaction, `ilm_consistency()` and the
+  simulation-based checks were affected the same way, and `ilm_pb_lrt()`'s
+  bootstrap refits also lacked censoring, a dispersion model and a flexible
+  survival baseline.
+* All of them are now built from one list, next to the one function that reads
+  it, and a test refits every kind of model on its own response and requires
+  its own likelihood back.
+* Refits of a REML fit are REML too. They were maximum likelihood, so a Type
+  III recode or a consistency check quietly used a different estimator.
+* McFadden's R-squared is NA for a REML fit, with a note: restricted
+  likelihoods of models with different fixed effects are not comparable.
+  `model_performance()` also failed outright on every fit whose outcome is not
+  a set of categories, on "subscript out of bounds" inside the scoring rules;
+  those scores are now NA there, and a 0/1 binomial fit is scored as the two
+  categories it is.
+
+## The flagship model, category by category
+
+* `ilm_ame()` on a multinomial or ordinal fit took the LAST column of the
+  predicted probabilities and reported it as the effect, unlabelled. It now
+  gives one row per category, in a `category` column. They sum to zero, and
+  the slopes agree with `marginaleffects::avg_slopes()` on
+  `nnet::multinom()` to 1e-3, the level at which the two fits agree.
+* `ilm_interpret()` described only the first category's coefficients of a
+  multinomial fit, and quoted that last-category effect beside each. It now
+  describes every category, in the language of a categorical outcome, each
+  with its own effect in percentage points.
+* `ilm_emmeans()` failed on every multinomial fit with an error blaming "a
+  smooth or a matrix column". It now says it does not yet average a
+  multinomial fit, and names `predict()` and `ilm_ame()` for what it would
+  have given.
+
+## Column names that need backticks
+
+* ``ilm_model(`my y` ~ `x 1` + (1 | `site id`))`` failed with "unexpected
+  symbol". Names turned into text and parsed back lose their backticks --
+  in the formula front end, in mgcv, in the prediction code and in half a
+  dozen functions that take column names as strings. Each place now quotes a
+  name when it becomes code and not when it is looked up. mgcv cannot take
+  such a name at all, so a smooth of one is built on a stand-in and evaluated
+  through the same map.
+* Checked against the only oracle that matters here, the same data under
+  ordinary names: identical likelihoods, coefficients and standard errors for
+  random intercepts and slopes, nested terms, smooths, a dispersion model, a
+  zero part and weights, and identical results from `ilm_iv()`, `ilm_did()`,
+  `ilm_rdd()`, `ilm_aov_ez()`, `ilm_impute()`, `ilm_check_missing()`,
+  `ilm_moderation()`, `ilm_pb_lrt()` and `ilm_power()`.
+* Functions that take a term by name take it the way a person writes it,
+  `"x 1"`, as well as the way R does.
+* Two defects found on the way, both independent of names. A smooth's `by`
+  variable never reached the model frame unless it appeared elsewhere in the
+  formula, and mgcv stopped with "Can't find by variable"; `s(x, by = z)` now
+  matches `mgcv::gam()`. And a random slope's design on new data was built
+  from text in a `tryCatch()`, so a failure dropped the slope from the draws
+  without a word.
+
+## Seeing an anomaly scan
+
+* `ilm_plot_anomaly()`: `"scores"`, the default, plots every row's score
+  against its rank beside the band the scan simulated. It is the one view that
+  tells five genuine outliers from the top 5% of a smooth continuum.
+  `"drivers"` counts which column drives the flags, `"map"` places the rows on
+  the first two dimensions of `ilm_reduce()`, and `"row"` shows one row's
+  z-scores beside its residuals.
+* The band **restarts at the line**. Setting the flagged rows aside moves every
+  other row up that many ranks, so against the band as simulated a clean
+  remainder sits above it for a long stretch: over 60 scans, 0.69 of the ranks
+  after the line with 2% planted anomalies, against 0.82 to 1.00 for noise that
+  really has heavy tails.
+* The verdict is a reading, not a test, and its rates are in the help page:
+  planted anomalies were said to stand clear in 89 and 97 scans of 100 and
+  never to run on; t-tailed noise was said to run on in half to two thirds of
+  the scans that flagged anything. Nothing is read off the band when nothing is
+  flagged -- in data with no anomalies the top twenty scores sat half above it
+  in 21 scans of 100.
+* An isolation forest gets no band and no row view, and says why.
+
+## Smaller fixes
+
+* `summary()` called a REML fit "maximum likelihood" and a Poisson or
+  multinomial mixed model a "linear mixed model". `print()` called a gaussian
+  fit "2 categories", and never showed `[CHECKS FAILED]` for an ordinal one.
+* `ilm_moderation()` refitted with `all.vars(formula)[1]` as the response, so
+  `log(y) ~ ...` was refitted on `y`.
+* `ilm_aov_ez()` matched an `observed` factor as a regular expression.
+* Asking for censoring on a family without a censored form said only the
+  gaussian had one; the survival families have one too, and it says so.
+* The pkgdown reference index is generated, and hand edits to `_pkgdown.yml`
+  had drifted from the generator; they are in the generator now.
+  `ilm_anomalous()` is indexed, and the `benchmarking` and `moderation`
+  articles are listed, without which a pkgdown build stops.
+* The benchmarking vignette said 1000 replications where the agreement study
+  ran 160 (1000 was each dataset's size), gave mclogit's RMSE advantage as 8 to
+  13% where it is 3 to 14%, and its reproduction commands passed the wrong
+  arguments to two scripts. The messy-data findings are now generated by
+  `summarise_run.R` like every other study's, and its run lives in
+  `studies/runs/0.0.7.9000/` with the rest.
+
+## iml_*(), for the transposition
+
+* Every exported `ilm_*()` also answers to `iml_*()`, an easy transposition to
+  type. Each alias is the function itself rather than a wrapper, so arguments,
+  defaults, autocompletion and help pages are the same, and a test fails when
+  a new export has none.
+
 ## Estimated marginal means and contrasts
 
 * `ilm_emmeans()` and `ilm_contrast()`. Marginal means are exact linear
@@ -850,11 +1033,17 @@ failing call was `ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend =
 
 ## Documentation
 
-* Nine vignettes. `workflow` is new and is the map: eleven stages from a power
-  calculation through to reporting, with scenario projection at stage 10. The
-  introduction is now an orientation rather than a tutorial, and the modelling
-  material it used to carry has become `regression-models`. Also new:
-  `profiling`, `anomaly-detection`, `missing-data`, `effect-size-and-power`.
+* Twelve vignettes. `workflow` is new and is the map: eleven stages from a
+  power calculation through to reporting, with scenario projection at stage 10.
+  The introduction is now an orientation rather than a tutorial, and the
+  modelling material it used to carry has become `regression-models`. Also
+  new: `profiling`, `anomaly-detection`, `missing-data`,
+  `effect-size-and-power`, `anova`, `moderation`, and `benchmarking`, which is
+  the evidence -- what was measured, against what, and where illume comes off
+  worse.
+* `regression-models` now opens with why the multinomial mixed model is fitted
+  the way it is, against `mclogit` and `brms`, with the results that go against
+  illume beside the ones that do not.
 
 # illume 0.0.6.9000
 

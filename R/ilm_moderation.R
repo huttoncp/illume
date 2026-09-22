@@ -130,6 +130,11 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
     x <- object$exposure
     message("ilm_moderation(): taking the exposure from the DAG: '", x, "'.")
   }
+  ## Two spellings of every name from here on. Internally a term is its LABEL,
+  ## as R writes it -- `x 1` with its backticks -- because that is what goes
+  ## into a formula and what ilm_anova() names its rows by. What comes back to
+  ## the user, and what ilm_plot_moderation() looks up in the model frame, is
+  ## the plain name, x 1.
   tl <- fit$term_labels
   main <- tl[!grepl(":", tl)]
   if (is.null(x))
@@ -137,10 +142,11 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
          "might be moderated. There is no default: `x:m` is the same term ",
          "whichever of the two you call the moderator, so only you know which ",
          "is which. This model's fixed effects are: ",
-         paste(main, collapse = ", "), ".", call. = FALSE)
+         paste(ilm_unbq(main), collapse = ", "), ".", call. = FALSE)
+  x <- ilm_as_label(x, main)
   if (!x %in% main)
     stop("`x` (", x, ") is not a fixed effect of this model. It has: ",
-         paste(main, collapse = ", "), ".", call. = FALSE)
+         paste(ilm_unbq(main), collapse = ", "), ".", call. = FALSE)
 
   ## ---- which candidates ----------------------------------------------------
   dat <- if (is.null(data)) fit$model else data
@@ -148,16 +154,19 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
   if (is.null(moderators)) {
     moderators <- setdiff(main, c(x, apriori))
   } else {
-    moderators <- as.character(moderators)
-    bad <- setdiff(moderators, names(dat))
+    ## named as the data knows them, or as R writes them; checked in the
+    ## first form and carried on in the second
+    plain <- ilm_unbq(as.character(moderators))
+    bad <- setdiff(plain, names(dat))
     if (length(bad))
       stop("moderator(s) not found: ", paste(bad, collapse = ", "),
            ". The model frame has: ", paste(names(dat), collapse = ", "),
            ". Pass `data =` for a moderator that is not in the model.",
            call. = FALSE)
+    moderators <- ilm_bq(plain)
     if (x %in% moderators) {
       moderators <- setdiff(moderators, x)
-      message("ilm_moderation(): `x` cannot moderate itself; '", x,
+      message("ilm_moderation(): `x` cannot moderate itself; '", ilm_unbq(x),
               "' dropped from the candidates.")
     }
     hit <- intersect(moderators, apriori)
@@ -168,7 +177,8 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
   ## moderator weaker for having been tested beside exploratory ones.
   if (length(apriori))
     message("ilm_moderation(): ",
-            paste(sprintf("`%s:%s`", x, apriori), collapse = ", "),
+            paste(sprintf("`%s:%s`", ilm_unbq(x), ilm_unbq(apriori)),
+                  collapse = ", "),
             if (length(apriori) == 1L) " is" else " are",
             " already in the model, so ",
             if (length(apriori) == 1L) "it was" else "they were",
@@ -179,10 +189,10 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
             " with ilm_anova().")
   if (!length(moderators))
     stop("no candidate moderators left to test. The model's other fixed ",
-         "effects are ", paste(setdiff(main, x), collapse = ", "),
+         "effects are ", paste(ilm_unbq(setdiff(main, x)), collapse = ", "),
          if (length(apriori))
-           paste0(", and ", paste(apriori, collapse = ", "),
-                  " already interact with `", x, "`") else "",
+           paste0(", and ", paste(ilm_unbq(apriori), collapse = ", "),
+                  " already interact with `", ilm_unbq(x), "`") else "",
          ".", call. = FALSE)
 
   ## ---- test each candidate -------------------------------------------------
@@ -209,17 +219,19 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
     ho <- ilm_mod_one(fit, x, pick, dat[-idx, , drop = FALSE], apriori,
                       keep = TRUE)
     pb$done()
-    out <- data.frame(moderator = pick, df = ho$df, statistic = ho$statistic,
+    out <- data.frame(moderator = ilm_unbq(pick), df = ho$df,
+                      statistic = ho$statistic,
                       p = ho$p, p_adj = ho$p, row.names = NULL,
                       stringsAsFactors = FALSE)
     return(structure(out, class = c("ilm_moderation", "data.frame"),
-                     x = x, adjust = "none (honest split)", split = TRUE,
+                     x = ilm_unbq(x), adjust = "none (honest split)", split = TRUE,
                      n_split = c(length(idx), nrow(dat) - length(idx)),
-                     apriori = apriori, fits = list(ho$fit), formulas = ho$formula,
+                     apriori = ilm_unbq(apriori), fits = list(ho$fit),
+                     formulas = ho$formula,
                      n_candidates = length(moderators)))
   }
   pb$done()
-  out <- data.frame(moderator = moderators, df = dfv, statistic = stat,
+  out <- data.frame(moderator = ilm_unbq(moderators), df = dfv, statistic = stat,
                     p = pv, p_adj = stats::p.adjust(pv, adjust),
                     row.names = NULL, stringsAsFactors = FALSE)
   o <- order(out$p_adj, out$p)
@@ -227,7 +239,8 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
   res <- res[o]
   keep <- seq_len(min(as.integer(n_keep), length(res)))
   structure(out, class = c("ilm_moderation", "data.frame"),
-            x = x, adjust = adjust, split = FALSE, apriori = apriori,
+            x = ilm_unbq(x), adjust = adjust, split = FALSE,
+            apriori = ilm_unbq(apriori),
             fits = lapply(res[keep], `[[`, "fit"),
             formulas = vapply(res, function(z) z$formula, ""),
             n_candidates = length(moderators))
@@ -262,10 +275,14 @@ ilm_mod_one <- function(fit, x, m, dat, apriori, keep = FALSE) {
                             function(p) x %in% p, TRUE)]
   base <- setdiff(tl, c(drop_it, m, x))
   rhs <- c(paste0(x, " * ", m), base)
-  resp <- all.vars(fit$formula)[1L]
-  ## random-effect bars and smooths are carried across verbatim
+  ## The response as it was WRITTEN, not its first variable: all.vars() would
+  ## turn log(y) into y and refit the moderation models on a different
+  ## outcome, and would drop the backticks from `my y`.
+  resp <- ilm_term_text(fit$formula[[2L]])
+  ## random-effect bars and smooths are carried across verbatim, each on one
+  ## line with its backticks -- a bare deparse() splits a long bar in two
   bars <- if (length(fit$bars))
-    vapply(fit$bars, function(b) paste0("(", deparse(b), ")"), "") else
+    vapply(fit$bars, function(b) paste0("(", ilm_term_text(b), ")"), "") else
       character(0)
   f <- stats::as.formula(paste(resp, "~", paste(c(rhs, bars), collapse = " + ")),
                          env = environment(fit$formula))

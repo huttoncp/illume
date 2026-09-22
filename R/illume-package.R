@@ -44,6 +44,11 @@
 #' table of checks (see `fit$checks`), each with a status, a plain-language
 #' reason, and a suggested remedy. [summary.ilm_model()] prints them.
 #'
+#' @section Two spellings:
+#' Every exported function whose name starts `ilm_` also answers to `iml_`, an
+#' easy transposition to type: `iml_model()` is [ilm_model()] itself, not a
+#' wrapper, and opens the same help page.
+#'
 #' @section Main entry points:
 #' \describe{
 #'   \item{[ilm_model()]}{fit a model from a formula, for any family}

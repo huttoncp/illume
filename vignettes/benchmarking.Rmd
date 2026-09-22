@@ -45,9 +45,9 @@ Where another package fits the same model, the two should agree to numerical
 tolerance. This is the strongest available check: a bug that survives it has
 to be a bug the reference implementation shares.
 
-1000 replications per task, R 4.4.3, illume 0.0.7.9000. `max_diff` is the
-largest absolute coefficient difference against any reference fitting the same
-model.
+160 replications per task, each on a simulated dataset of 1,000 observations;
+R 4.4.3, illume 0.0.7.9000. `max_diff` is the largest absolute coefficient
+difference against any reference fitting the same model.
 
 | task | illume (s) | lme4 (s) | glmmTMB (s) | nnet (s) | max_diff |
 |---|---|---|---|---|---|
@@ -209,6 +209,8 @@ slope of estimate on truth: 1 means none.
 
 ### The textbook regimes
 
+500 replications per regime.
+
 | regime | clusters | per cluster | coverage illume | coverage mclogit | attenuation illume | attenuation mclogit |
 |---|---|---|---|---|---|---|
 | large | 40 | 25 | 0.953 | 0.949 | 1.005 | 0.960 |
@@ -278,8 +280,18 @@ those 63.3%. Neither method recovers the variance -- illume's median estimate
 is 0.099, twice the truth; mclogit's is 0.004, driven almost to zero -- but
 only one of them declines to answer.
 
-**mclogit's RMSE is lower in four of six regimes**, by 8 to 13%. illume wins
-on RMSE only in the two sparse-cell regimes, and narrowly.
+That last sentence describes illume as it was when the study ran, when a fit
+counted only with a positive definite Hessian. It has since reported the fixed
+effects when a variance sits at its boundary, holding that variance at its
+estimate as lme4 does. On the same 400 datasets, 97.5% of fits in `flat_re` now
+give fixed effects with usable standard errors, and the 128 that did not
+before cover at 0.944. In the combined regime the share rises from 91.0% to
+99.0%, and the 30 fits recovered there cover at 0.908 -- a little under
+nominal, which is the price of holding a variance fixed where there is least
+to say about it. The other findings in this section are unchanged.
+
+**mclogit's RMSE is lower in four of six regimes**, by 3% (`flat_re`) to 14%.
+illume wins on RMSE only in the two sparse-cell regimes, and narrowly.
 
 The picture is not that one method dominates. The two fail differently. PQL
 is reliable and biased: it always converges, it shrinks, and it does not say
@@ -346,17 +358,18 @@ they are.
 
 ## Reproducing this
 
-The scripts are in `studies/scripts/` in the source repository and each takes
-`nrep`, `ncore` and an output directory:
+The scripts are in `studies/scripts/` in the source repository. Each takes the
+number of replications and an output directory, and those that run in parallel
+take a number of cores between the two:
 
 ```{r, eval = FALSE}
-# from studies/scripts/
-Rscript benchmark_freq.R    1000 10 ../runs/bench
-Rscript coverage_study.R    2000 10 ../runs/coverage
-Rscript power_study.R       2000 10 ../runs/power
-Rscript mclogit_compare.R   2000 10 ../runs/mclogit
-Rscript messy_compare.R      400 10 ../runs/messy
-Rscript brms_compare.R         3  4 ../runs/brms
+# from studies/scripts/, with the replication counts behind the tables above
+Rscript benchmark_freq.R     160    ../runs/0.0.7.9000/bench
+Rscript coverage_study.R    2000 10 ../runs/0.0.7.9000/coverage
+Rscript power_study.R       2000 10 ../runs/0.0.7.9000/power
+Rscript mclogit_compare.R    500 10 ../runs/0.0.7.9000/mclogit
+Rscript messy_compare.R      400 10 ../runs/0.0.7.9000/messy
+Rscript brms_compare.R         3    ../runs/0.0.7.9000/brms
 ```
 
 Raw per-replication output is not committed -- it is several megabytes per

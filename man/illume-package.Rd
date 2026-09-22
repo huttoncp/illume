@@ -58,6 +58,13 @@ table of checks (see \code{fit$checks}), each with a status, a plain-language
 reason, and a suggested remedy. \code{\link[=summary.ilm_model]{summary.ilm_model()}} prints them.
 }
 
+\section{Two spellings}{
+
+Every exported function whose name starts \code{ilm_} also answers to \code{iml_}, an
+easy transposition to type: \code{iml_model()} is \code{\link[=ilm_model]{ilm_model()}} itself, not a
+wrapper, and opens the same help page.
+}
+
 \section{Main entry points}{
 
 \describe{

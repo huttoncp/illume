@@ -300,6 +300,9 @@ ilm_theta_vcov <- function(object) {
   ix <- ilm_par_blocks(object)
   if (!length(ix$theta)) return(NULL)
   A <- cf[ix$theta, ix$theta, drop = FALSE]
+  ## a term held at its boundary is treated as known, which is what holding
+  ## it means: its variance parameters contribute no uncertainty to the df
+  if (length(object$hessian_held)) A[!is.finite(A)] <- 0
   if (!all(is.finite(A))) return(NULL)
   A
 }

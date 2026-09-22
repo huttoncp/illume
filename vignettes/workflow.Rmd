@@ -138,8 +138,7 @@ testable. When it is not, `ilm_impute()` is the remedy.
 ```{r}
 ilm_check_missing(d, y ~ x + z)
 im <- ilm_impute(d, m = 20)                  # chained equations by default
-fits <- lapply(im$imputations, function(z) ilm_model(y ~ x + z, data = z))
-ilm_mi_pool(fits)                            # Rubin's rules
+ilm_mi_pool(im, y ~ x + z)                   # fit each; Rubin's rules
 ```
 
 `method = "glrm"` imputes categorical columns as categories; `method =
@@ -298,7 +297,7 @@ ilm_interpret(fit)
 | *Regression models* | `ilm_model()` in depth, every family, mixed multinomial |
 | *Exploring data* | descriptives, plots, bootstrap intervals |
 | *Profiling* | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
-| *Anomaly detection* | `ilm_anomaly()` against `ilm_outliers()` |
+| *Anomaly detection* | `ilm_anomaly()` against `ilm_outliers()`; `ilm_plot_anomaly()` to see whether the flagged rows stand apart |
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | `ilm_effects()`, `ilm_power()`, `ilm_power_design()`, `ilm_scaffold()`, `ilm_scenario()` |

@@ -103,34 +103,18 @@ ilm_drop_summary <- function(object, drop_terms, restarts = 2L) {
 #' @keywords internal
 #' @noRd
 ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L) {
-  X <- object$X; y <- object$y; J <- object$J; asg <- object$assign
-  rl <- ilm_re_list_of(object); rs <- object$re_struct; arr <- object$ar
-  yl <- object$ylevels; tl <- object$term_labels
-  fm <- object$family; wt <- object$weights; Cc <- object$C
-  ## Everything else that makes the reduced fit the SAME model. The stub below
-  ## is what the refit sees, so a field missing from it is a field the refit
-  ## silently does without: leaving the censoring out gave a reduced likelihood
-  ## computed as if nothing were censored, and the likelihood-ratio test built
-  ## on it rejected at 100% under the null.
-  cnsr <- object$censor; zdd <- object$Zd
-  dmu <- isTRUE(object$disp_mu); rpp <- object$rp
-  ## ilm_drop_summary() calls ilm_re_list_of(), which needs $re; hand over the already
-  ## normalised terms so workers do not re-derive them.
-  rl_re <- object$re
+  ## Everything that makes the reduced fit the SAME model, built by the one
+  ## function that knows the list (see ilm_refit_stub()). A field missing here
+  ## is a field the refit silently does without: leaving the censoring out
+  ## once put the likelihood-ratio test's null rejection rate at 100%, and
+  ## leaving the zero part out made every such test of a zero-inflated model
+  ## compare it against a model without one.
+  stub <- ilm_refit_stub(object)
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
-  one <- function(i) {
-    ## C = J - 1L is wrong for every family but the multinomial, where J is
-    ## NULL and the subtraction yields a zero-length vector.
-    stub <- list(X = X, y = y, J = J, assign = asg, re = rl_re, re_struct = rs,
-                 ar = arr, ylevels = yl, term_labels = tl, C = Cc,
-                 family = fm, weights = wt,
-                 censor = cnsr, Zd = zdd, disp_mu = dmu, rp = rpp)
-    ilm_drop_summary(stub, drop_sets[[i]], restarts)
-  }
+  one <- function(i) ilm_drop_summary(stub, drop_sets[[i]], restarts)
   if (!is.null(cl))
-    parallel::clusterExport(cl, c("rl_re", "cnsr", "zdd", "dmu", "rpp"),
-                            envir = environment())
+    parallel::clusterExport(cl, "stub", envir = environment())
   ilm_lapply(cl, seq_along(drop_sets), one)
 }
 
@@ -319,7 +303,8 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   type3 <- type %in% c("3", "III")
   if (is.null(object$assign))
     stop("no term map: ilm_anova() needs a model fitted through the formula interface")
-  if (test == "Wald" && !isTRUE(object$sdr$pdHess))
+  ## a term held at its boundary leaves the fixed-effect tests usable
+  if (test == "Wald" && !ilm_fixed_usable(object))
     warning("Hessian is not positive definite; these Wald tests are not usable. ",
             "See object$checks.", call. = FALSE)
 

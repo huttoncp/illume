@@ -80,7 +80,7 @@ is the shape of the whole package.
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
 | **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
 | **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
-| **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` |
+| **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
 | **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
@@ -117,6 +117,11 @@ with the result: mclogit's RMSE is *lower*, because shrinkage buys a variance
 reduction that more than pays for the bias. For prediction that is a defensible
 trade; for a coefficient you intend to interpret it is not.
 
+On data that misbehave -- a sparse category, a variance at its boundary,
+lopsided clusters, random effects that are not normal -- the comparison is less
+tidy, and not all of it favours illume. `vignette("benchmarking")` has the whole
+account, the results against illume included.
+
 ## How it is validated
 
 Every claim in the documentation is a measurement. The [`studies/`](https://github.com/huttoncp/illume/tree/main/studies)
@@ -130,8 +135,12 @@ holds the scripts, the retained runs, and a generated findings log per study:
 | `power` | closed form where one exists | 13 designs |
 | `bench` | `lme4`, `glmmTMB`, `nlme`, `survreg` | agreement and timing |
 | `mclogit` | `mclogit::mblogit` | the table above |
+| `messy` | `mclogit::mblogit`, on data that misbehave | coverage, bias, RMSE and convergence in six regimes |
 | `brms` | `brms` | the Bayesian comparison |
 | `imputation` | 5 methods over 6 designs | reconstruction *and* downstream coverage |
+
+`vignette("benchmarking")` collects them, with the results that go against
+illume stated as plainly as the ones that do not.
 
 Individual features are checked against outside implementations rather than
 against expectations: `emmeans`, `pscl`, `ordinal`, `sandwich`, `survey`,
@@ -158,6 +167,7 @@ parameters::model_parameters(fit)
 | Vignette | Covers |
 |---|---|
 | `workflow` | the whole path, eleven stages |
+| `benchmarking` | what was measured, against what, and where illume comes off worse |
 | `regression-models` | `ilm_model()` in depth, every family, mixed multinomial |
 | `exploring-data` | descriptives, plots, bootstrap intervals |
 | `profiling` | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
@@ -165,6 +175,7 @@ parameters::model_parameters(fit)
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power, scenario projection |
+| `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, for a psychology audience |
 
 ```r
@@ -174,7 +185,7 @@ vignette("workflow", package = "illume")
 ## How this package was built
 
 `illume` was developed in collaboration with
-[Claude Opus 5](https://www.anthropic.com), run at maximum reasoning effort,
+[Claude Opus 5.5](https://www.anthropic.com), run at maximum reasoning effort,
 under a human-in-the-loop model. The division of labour was consistent
 throughout and is worth stating plainly rather than leaving to be inferred.
 

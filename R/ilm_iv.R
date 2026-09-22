@@ -58,10 +58,11 @@ ilm_iv_parts <- function(formula) {
          "FULL list of exogenous variables -- the instruments AND any ",
          "covariate that appears on both sides.", call. = FALSE)
   env <- environment(formula)
-  txt <- function(e) paste(deparse(e), collapse = " ")
-  list(main = stats::as.formula(paste(txt(formula[[2L]]), "~", txt(rhs[[2L]])),
-                                env),
-       inst = stats::as.formula(paste("~", txt(rhs[[3L]])), env))
+  ## built from the expressions themselves: a text round trip loses the
+  ## backticks of a lone non-syntactic name, and a response like `my y`
+  ## then no longer parses
+  list(main = stats::as.formula(call("~", formula[[2L]], rhs[[2L]]), env),
+       inst = ilm_one_sided(rhs[[3L]], env))
 }
 
 #' Instrumental-variables regression by two-stage least squares
@@ -131,7 +132,7 @@ ilm_iv <- function(formula, data, weights = NULL, cluster = NULL,
   allv <- unique(c(all.vars(pp$main), all.vars(pp$inst)))
   wexpr <- substitute(weights)
   wnm <- if (is.null(wexpr)) NULL else all.vars(wexpr)
-  full <- stats::reformulate(setdiff(c(allv[-1L], wnm), allv[1L]),
+  full <- stats::reformulate(ilm_bq(setdiff(c(allv[-1L], wnm), allv[1L])),
                              response = as.name(allv[1L]),
                              env = environment(formula))
   mf <- stats::model.frame(full, data, na.action = na.action)

@@ -168,7 +168,7 @@ ilm_aov_within_P <- function(idata, within) {
   if (!length(within))
     return(list(`(Intercept)` = matrix(1, nrow(idata), 1)))
   ctr <- stats::setNames(rep(list("contr.sum"), length(within)), within)
-  fo <- stats::as.formula(paste("~", paste(within, collapse = " * ")))
+  fo <- stats::as.formula(paste("~", paste(ilm_bq(within), collapse = " * ")))
   mm <- stats::model.matrix(fo, idata, contrasts.arg = ctr)
   asg <- attr(mm, "assign")
   labs <- c("(Intercept)", attr(stats::terms(fo), "term.labels"))

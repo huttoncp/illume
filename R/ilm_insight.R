@@ -25,7 +25,8 @@ ilm_ins_formula <- function(x, ...) {
   if (length(re)) {
     bars <- lme4::findbars(f)
     if (length(bars))
-      out$random <- lapply(bars, function(b) stats::as.formula(paste0("~", deparse(b))))
+      out$random <- lapply(bars, function(b)
+        ilm_one_sided(b, environment(f) %||% parent.frame()))
   }
   class(out) <- c("insight_formula", "list")
   out
@@ -33,7 +34,7 @@ ilm_ins_formula <- function(x, ...) {
 
 #' @keywords internal
 #' @noRd
-ilm_ins_response <- function(x, ...) deparse(stats::formula(x)[[2]])
+ilm_ins_response <- function(x, ...) ilm_mf_name(stats::formula(x)[[2]])
 
 #' @keywords internal
 #' @noRd

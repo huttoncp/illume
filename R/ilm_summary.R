@@ -122,17 +122,30 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   ## "mixed" only if something is actually integrated out; a fixed-effects
   ## gaussian model is an ordinary linear model and is fitted exactly
   mixed <- length(o$re) > 0L || !is.null(o$ar)
+  ## the estimator as it was, and the model class as it is: this used to call
+  ## a REML fit "maximum likelihood" and a Poisson or multinomial mixed model
+  ## a "linear mixed model"
+  est <- if (isTRUE(o$reml)) "restricted maximum likelihood (REML)" else
+    "maximum likelihood"
   cat(if (isTRUE(o$exact_df))
-        "Linear model fit by maximum likelihood (exact t and F inference)\n"
+        sprintf("Linear model fit by %s (exact t and F inference)\n", est)
       else if (mixed)
-        "Linear mixed model fit by maximum likelihood (Laplace approximation)\n"
+        sprintf("%s mixed model fit by %s (Laplace approximation)\n",
+                if (identical(fam, "gaussian")) "Linear" else "Generalized linear",
+                est)
       else
-        "Generalized linear model fit by maximum likelihood\n")
+        sprintf("%s model fit by %s\n",
+                if (identical(fam, "gaussian")) "Linear" else "Generalized linear",
+                est))
   if (fam == "multinomial")
     cat(sprintf(" Family: multinomial (%d categories: %s)\n", J,
                 paste(o$ylevels, collapse = ", ")))
   else
     cat(sprintf(" Family: %s (%s link)\n", fam, o$family$link))
+  ## a family chosen by family = "auto" says so, and on what evidence
+  if (!is.null(o$family_inferred))
+    writeLines(paste0("        inferred from the response (", o$family_inferred,
+                      "); set `family` to choose another"))
   ## Which of the two categories the coefficients describe.  A multinomial fit
   ## carries the category in every coefficient name, so the question does not
   ## arise; a binomial fit does not, and with a factor response the direction
@@ -262,14 +275,61 @@ Dispersion model: ", deparse(o$disp_formula), "
   if (!nrow(bad)) cat("all passed.\n")
   else {
     nf <- sum(bad$status == "FAIL"); nw <- sum(bad$status == "WARN")
-    ni <- sum(bad$status %in% c("INCONCLUSIVE", "BOUNDARY"))
-    cat(sprintf("%d FAIL, %d WARN, %d inconclusive\n", nf, nw, ni))
+    nb <- sum(bad$status == "BOUNDARY")
+    ni <- sum(bad$status == "INCONCLUSIVE")
+    cat(sprintf("%d FAIL, %d WARN, %s%d inconclusive\n", nf, nw,
+                if (nb) sprintf("%d BOUNDARY, ", nb) else "", ni))
     for (i in seq_len(min(4L, nrow(bad))))
       cat(sprintf("  [%s] %s: %s\n", bad$status[i], bad$check[i], bad$detail[i]))
     if (nrow(bad) > 4L) cat(sprintf("  ... and %d more; see fit$checks\n", nrow(bad) - 4L))
     if (nf) cat("  >> FAIL means the standard errors above are not usable.\n")
+    else if (nb) {
+      at <- ilm_boundary_at(o)
+      ilm_trust_note(intersect(o$hessian_held, at), at)
+    }
   }
   invisible(x)
+}
+
+## The grouping terms whose covariance sits at a boundary, held or not. A
+## smooth's variance at zero is excluded: that is penalisation doing its job,
+## reported by smooth_shrinkage, and "drop the term" would be the wrong advice.
+#' @keywords internal
+#' @noRd
+ilm_boundary_at <- function(o) {
+  basis <- names(o$re)[vapply(o$re, function(e) identical(e$kind, "basis"), TRUE)]
+  setdiff(union(o$hessian_held, o$boundary_terms), basis)
+}
+
+## What can be trusted in a fit with a covariance at its boundary. Said in
+## words where the numbers are read, because the table above looks exactly
+## like the table of a fit with nothing unusual about it.
+#' @keywords internal
+#' @noRd
+ilm_trust_note <- function(held, boundary = character(0)) {
+  at <- union(held, boundary)
+  if (!length(at)) {
+    cat("  >> BOUNDARY: a smooth is penalised to its unpenalised part, which is\n",
+        "     how penalisation works. The fixed effects above, their standard\n",
+        "     errors and tests are usable.\n", sep = "")
+    return(invisible())
+  }
+  hq <- paste(sprintf("`%s`", at), collapse = ", ")
+  cat("  >> BOUNDARY. What can be trusted:\n",
+      "     - the fixed effects above, their standard errors and tests: yes.\n",
+      if (length(held))
+        paste0("       They are computed with the covariance of ",
+               paste(sprintf("`%s`", held), collapse = ", "),
+               " held at its\n",
+               "       estimate, as lme4 does when the full Hessian fails.\n")
+      else
+        "       The Hessian behind them is positive definite.\n",
+      "     - the covariance of ", hq, ": no. It sits at the edge of its\n",
+      "       range (a variance of zero, or a correlation of +/-1), so its\n",
+      "       estimate says the data cannot resolve it, not what it is. If the\n",
+      "       term is not needed, drop it; if it is, a simpler structure for it\n",
+      "       (re_struct: \"diag\", or \"rr\" with a lower rank) may be supported.\n",
+      sep = "")
 }
 
 #' Compact display of a fitted model
@@ -283,24 +343,40 @@ Dispersion model: ", deparse(o$disp_formula), "
 #' @return `x`, invisibly.
 #' @export
 print.ilm_model <- function(x, ...) {
+  ## a failed fit and a fit with a term held at its boundary look alike from
+  ## the coefficients alone, so the one-liner says which it is
+  at <- ilm_boundary_at(x)
+  flag <- if (!x$ok) "  [CHECKS FAILED]" else
+    if (length(at))
+      sprintf("  [BOUNDARY: %s at a boundary; fixed effects usable]",
+              paste(at, collapse = ", "))
+    else ""
   if (isTRUE(x$ordinal)) {
-    cat(sprintf("ilm_model fit: %d ORDERED categories, %d obs, %d fixed + %d threshold%s\n",
+    ## the flag used to be a sixth argument to a five-placeholder format, so
+    ## a failed ordinal fit never said so
+    cat(sprintf("ilm_model fit: %d ORDERED categories, %d obs, %d fixed + %d threshold%s%s\n",
                 x$J, nrow(x$X), ncol(x$X), length(x$zeta),
-                if (length(x$zeta) == 1L) "" else "s",
-                if (x$ok) "" else "  [CHECKS FAILED]"))
+                if (length(x$zeta) == 1L) "" else "s", flag))
     cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective,
                 suppressWarnings(AIC(x))))
     return(invisible(x))
   }
-  cat(sprintf("ilm_model fit: %d categories, %d obs, %d fixed + %d covariance parameters%s%s\n",
-              x$J, nrow(x$X), ncol(x$X) * x$C, x$n_covpar,
+  fam <- if (is.null(x$family)) "multinomial" else x$family$name
+  ## "categories" only where there are some: every other family's J is a
+  ## placeholder 2, and a gaussian fit used to print as "2 categories"
+  inf <- if (is.null(x$family_inferred)) "" else ", inferred"
+  what <- if (identical(fam, "multinomial"))
+            sprintf("%d categories (multinomial%s)", x$J, inf)
+          else sprintf("%s family%s", fam, if (nzchar(inf)) " (inferred)" else "")
+  cat(sprintf("ilm_model fit: %s, %d obs, %d fixed + %d covariance parameters%s%s\n",
+              what, nrow(x$X), ncol(x$X) * x$C, x$n_covpar,
               ## a zero part is not among the fixed effects counted above, and
               ## a one-line print that does not mention it reads as an
               ## ordinary count model
               if (is.null(x$zi_gamma)) "" else
                 sprintf(" + %d %s", length(x$zi_gamma),
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
-              if (x$ok) "" else "  [CHECKS FAILED]"))
+              flag))
   cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
   invisible(x)
 }

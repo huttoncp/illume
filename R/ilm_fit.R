@@ -489,9 +489,22 @@ ilm_norm_re <- function(re_list, N) lapply(re_list, function(e) {
 #' @keywords internal
 #' @noRd
 ilm_smooth <- function(spec, data) {
+  ## A variable whose name needs backticks is given a syntactic stand-in for
+  ## mgcv, which cannot take one (see ilm_add_standins()). The label keeps the
+  ## name as written, and `name_map` goes with the smooth so that prediction
+  ## can put the same stand-ins onto new data.
+  vars <- ilm_spec_vars(spec)
+  bad <- vars[ilm_bq(vars) != vars]
+  map <- NULL
+  if (length(bad)) {
+    stand <- paste0(".ilm_sm", seq_along(bad), ".")
+    map <- stats::setNames(bad, stand)
+    spec <- ilm_swap_spec(spec, bad, stand, label = FALSE)
+    data <- ilm_add_standins(data, map)
+  }
   sm <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE, scale.penalty = TRUE)[[1]]
   re <- mgcv::smooth2random(sm, "", type = 2)
-  list(Xf = re$Xf, rand = re$rand, sm = sm, re = re)
+  list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
 }
 
 #' Build the table of model checks
@@ -798,7 +811,10 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @keywords internal
 #' @noRd
 ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, kinds = NULL,
-                      pnames = NULL, gap = NULL) {
+                      pnames = NULL, gap = NULL, hess = NULL,
+                      boundary = character(0)) {
+  how <- if (is.null(hess)) "tmb" else hess$how
+  held <- if (is.null(hess)) character(0) else hess$held
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
   ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
   ## nlminb's code 8, "false convergence", means it could not verify a descent
@@ -824,11 +840,30 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (g > 1e-3) "not at a stationary point" else "",
     if (g > 1e-3) "restart from the current estimates, or simplify the random structure" else "")
   pd <- isTRUE(sdr$pdHess)
-  anyNaN <- any(!is.finite(diag(sdr$cov.fixed))) || any(diag(sdr$cov.fixed) <= 0)
+  ## a held term's rows are NA by design, so only the rest is judged
+  cfd <- diag(sdr$cov.fixed)
+  judged <- if (length(held)) is.finite(cfd) else rep(TRUE, length(cfd))
+  anyNaN <- any(!is.finite(cfd[judged])) || any(cfd[judged] <= 0)
   lb <- pre$status[pre$check == "latent_budget"]
+  if (identical(how, "boundary") && !anyNaN) {
+    hq <- paste(sQuote(held, FALSE), collapse = ", ")
+    ck <- ilm_add_check(ck, "hessian", "BOUNDARY",
+      sprintf("not positive definite along the covariance of %s, which is held at its estimate", hq),
+      paste0("the covariance of ", hq, " sits at the edge of its range -- a ",
+             "variance of zero, or a correlation of +/-1 -- so the likelihood ",
+             "is flat in that direction and that covariance has no standard error"),
+      paste0("the fixed effects, their standard errors and tests ARE usable: ",
+             "they are computed with that covariance held at its estimate, as ",
+             "lme4 does when the full Hessian fails. The covariance itself is ",
+             "not. If the term is not needed, drop it: at a variance of zero ",
+             "the fixed effects do not change"))
+  } else
   ck <- ilm_add_check(ck, "hessian",
     if (!pd || anyNaN) "FAIL" else "OK",
-    sprintf("positive definite: %s; non-finite or non-positive variances: %s", pd, anyNaN),
+    sprintf("positive definite: %s%s; non-finite or non-positive variances: %s",
+            pd, if (identical(how, "recomputed") && pd)
+              " (recomputed: the first, coarser Hessian was not)" else "",
+            anyNaN),
     if (!pd || anyNaN) paste0("likelihood is flat in at least one direction (a ridge)",
       if (length(lb) && lb %in% c("WARN", "FAIL")) "; the latent budget check also failed, which is the likely driver" else "") else "",
     if (!pd || anyNaN) "simplify the covariance structure; standard errors are unusable until this is resolved" else "")
@@ -938,11 +973,16 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
         paste0("coarsen the ", if (car) "CAR(1)" else "AR", " time grid or drop the term") else "")
   }
   cf <- sdr$cov.fixed
-  if (!is.null(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
+  pnm <- if (!is.null(pnames) && !is.null(cf) && length(pnames) == ncol(cf)) pnames
+         else make.unique(names(obj$par))
+  ## a term held at its boundary has no covariance to correlate; judge the rest
+  if (!is.null(cf) && length(held)) {
+    ok <- is.finite(diag(cf))
+    cf <- cf[ok, ok, drop = FALSE]; pnm <- pnm[ok]
+  }
+  if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
     cm <- cov2cor(cf); cm[!upper.tri(cm)] <- 0
     mx <- max(abs(cm)); ij <- which(abs(cm) == mx, arr.ind = TRUE)[1, ]
-    pnm <- if (!is.null(pnames) && length(pnames) == ncol(cf)) pnames
-           else make.unique(names(obj$par))
     pair <- sprintf("%s <-> %s", pnm[ij[1]], pnm[ij[2]])
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
@@ -953,8 +993,181 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     ck <- ilm_add_check(ck, "parameter_aliasing", "INCONCLUSIVE",
       "covariance of fixed parameters unavailable", "Hessian not usable", "")
   }
+  ## A covariance at its boundary -- whether it had to be held for the Hessian
+  ## or the Hessian was positive definite anyway -- is not a failure of the
+  ## fit when the fixed effects are usable. The checks that say WHY it is
+  ## there keep their explanation and remedy, but report BOUNDARY rather than
+  ## FAIL, so the verdict agrees with the standard errors above it. Measured:
+  ## a site covariance fitted at a correlation of -1, with a positive definite
+  ## Hessian and standard errors within 4% of the model without the term,
+  ## used to be graded FAIL, with "the standard errors are not usable".
+  at <- union(held, boundary)
+  if (!identical(how, "none") && length(at)) {
+    tags <- c(sprintf("sigma_rank[%s]", at), sprintf("sigma_within[%s]", at),
+              sprintf("smooth_shrinkage[%s]", at),
+              if ("ar" %in% at) "rho_boundary")
+    hit <- ck$check %in% tags & ck$status == "FAIL"
+    ck$status[hit] <- "BOUNDARY"
+  }
   ck
 }
+
+## ---- when the Hessian says no -------------------------------------------------
+##
+## TMB's sdreport() judges the Hessian of the Laplace objective by differencing
+## its gradient ONCE, with a fixed step of 1e-3. That is coarse wherever the
+## curvature is small -- near a variance boundary above all -- and it calls
+## Hessians indefinite that are not. glmmTMB recomputes the Hessian more
+## accurately before giving up (numDeriv::jacobian() in its finalizeTMB()),
+## which is much of why it reports fewer failures on the same data. This is the
+## same idea without the dependency: central differences of the EXACT gradient
+## RTMB already provides, with one Richardson step.
+##
+## When a variance component really does sit at the edge of its range -- an SD
+## of zero, a correlation of +/-1, an AR(1) correlation at its limit -- the
+## likelihood is flat in that direction and no Hessian over EVERY parameter is
+## positive definite, however accurately it is computed. The fixed effects are
+## still identified, though, and their covariance holding that term's
+## covariance at its estimate is well defined: the Hessian with those rows and
+## columns removed. That is what lme4 falls back to for a GLMM whose full
+## Hessian fails, and at a variance of zero it is the covariance of the model
+## without the term -- which is the model the data are describing.
+##
+## Only covariance parameters are ever held, and only whole terms, the ones at
+## the boundary first. If what is left is still singular -- separation,
+## aliased columns, a dispersion that ran off -- nothing is held, and the fit
+## stays a failure. glmmTMB accepts any Hessian whose smallest eigenvalue beats
+## machine epsilon, which lets a boundary variance through with a standard
+## error in the billions; a boundary is treated as one here instead.
+
+## Hessian of `fn` from its exact gradient: central differences at steps s and
+## s/2, combined so the leading error term cancels.
+#' @keywords internal
+#' @noRd
+ilm_hessian <- function(gr, par, h = 1e-4) {
+  n <- length(par); H <- matrix(NA_real_, n, n)
+  for (i in seq_len(n)) {
+    s <- h * max(abs(par[i]), 1)
+    e <- numeric(n); e[i] <- 1
+    d1 <- (gr(par + s * e) - gr(par - s * e)) / (2 * s)
+    d2 <- (gr(par + s / 2 * e) - gr(par - s / 2 * e)) / s
+    H[, i] <- (4 * d2 - d1) / 3
+  }
+  (H + t(H)) / 2
+}
+
+## The covariance parameters, by term, as positions in the optimised vector;
+## which of those terms sit at the boundary; and which positions may never be
+## held -- the fixed effects, the dispersion, thresholds and zero part, which
+## are the model a user reads rather than its variance structure.
+#' @keywords internal
+#' @noRd
+ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn) {
+  it <- which(pn == "theta")
+  blocks <- list(); flagged <- character(0)
+  for (k in seq_along(re)) {
+    nm <- names(re)[k]
+    blocks[[nm]] <- it[(toff[k] + 1L):toff[k + 1L]]
+    S <- Sig[[nm]]; sdv <- sqrt(pmax(diag(S), 0))
+    ev <- sort(eigen(S, symmetric = TRUE, only.values = TRUE)$values,
+               decreasing = TRUE)
+    kk <- if (ty[k] == "rr") seq_len(rk[k]) else seq_along(ev)
+    bad <- any(sdv < 1e-3) ||
+      min(ev[kk]) < 1e-6 * max(ev[1], .Machine$double.eps)
+    if (!bad && dk[k] > 1L && !is.null(Sigd[[nm]])) {
+      Sd <- Sigd[[nm]]; sv <- sqrt(diag(Sd)); R <- Sd / outer(sv, sv)
+      bad <- any(sv[-1] / sv[1] < 1e-3) || max(abs(R[upper.tri(R)])) > 0.999
+    }
+    if (bad) flagged <- c(flagged, nm)
+  }
+  if (!is.null(ar)) {
+    blocks[["ar"]] <- which(pn %in% c("lchol_ar", "rho_raw"))
+    rr <- pe[pn == "rho_raw"]
+    car <- identical(ar$type, "car1")
+    rho <- if (car) exp(-1 / exp(rr)) else tanh(rr)
+    eff <- if (car) rho^stats::median(ar$gap) else rho
+    Sa <- Sig[["ar"]]
+    eva <- eigen(Sa, symmetric = TRUE, only.values = TRUE)$values
+    if (abs(eff) > 0.99 || any(sqrt(pmax(diag(Sa), 0)) < 1e-3) ||
+        min(eva) < 1e-6 * max(eva, .Machine$double.eps))
+      flagged <- c(flagged, "ar")
+  }
+  list(blocks = blocks, flagged = flagged,
+       keep = which(!pn %in% c("theta", "lchol_ar", "rho_raw")))
+}
+
+## The three outcomes: "recomputed" (the accurate Hessian is positive definite
+## and nothing is at a boundary, so the fit is fully usable), "boundary" (the
+## terms in `held` are held at their estimates and everything else is
+## usable), or "none" (still a failure). A fit TMB was already happy with is
+## "tmb". The sdreport comes back redone from the Hessian that was accepted, so
+## everything derived from it -- thresholds, rho, the joint precision REML and
+## smooths need -- is consistent with it.
+#' @keywords internal
+#' @noRd
+ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
+  if (isTRUE(sdr$pdHess)) return(list(sdr = sdr, how = "tmb", held = character(0)))
+  out <- list(sdr = sdr, how = "none", held = character(0))
+  if (!length(opt$par)) return(out)
+  H <- tryCatch(ilm_hessian(function(p) as.numeric(obj$gr(p)), opt$par),
+                error = function(e) NULL)
+  ## those gradient calls moved the tape; put it back at the optimum
+  invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
+  if (is.null(H) || !all(is.finite(H))) return(out)
+  ## Positive definite on a scale-free test, not merely chol()-able. Finite
+  ## differences leave an exactly singular Hessian slightly positive, so an
+  ## aliased pair of columns (x2 = 2 * x1) passed chol() and was "rescued";
+  ## glmmTMB's threshold -- the smallest eigenvalue above machine epsilon --
+  ## lets the same case through. Rescaled to a unit diagonal, differencing
+  ## noise sits near 1e-8 and a genuine dependence at the aliasing check's
+  ## own FAIL line (|correlation| 0.995) sits near 5e-3; 1e-6 separates them.
+  pd <- function(M) {
+    dg <- diag(M)
+    if (!length(dg) || any(!is.finite(dg)) || any(dg <= 0)) return(FALSE)
+    S <- M / sqrt(outer(dg, dg))
+    ev <- tryCatch(eigen(S, symmetric = TRUE, only.values = TRUE)$values,
+                   error = function(e) NA_real_)
+    all(is.finite(ev)) && min(ev) > 1e-6 &&
+      !inherits(try(chol(M), silent = TRUE), "try-error")
+  }
+  redo <- function(Hm) tryCatch(suppressWarnings(
+    sdreport(obj, par.fixed = opt$par, hessian.fixed = Hm,
+             getJointPrecision = joint)), error = function(e) NULL)
+  ## a boundary variance is handled as one whatever the Hessian says: an
+  ## inverse that is merely positive definite gives it a standard error in the
+  ## billions, which is a number rather than information
+  if (!length(cb$flagged) && pd(H)) {
+    s2 <- redo(H)
+    if (!is.null(s2) && isTRUE(s2$pdHess))
+      return(list(sdr = s2, how = "recomputed", held = character(0)))
+  }
+  for (on in unique(Filter(length, list(cb$flagged, names(cb$blocks))))) {
+    d <- unlist(cb$blocks[on], use.names = FALSE)
+    if (!length(d) || any(cb$keep %in% d)) next
+    kp <- setdiff(seq_len(nrow(H)), d)
+    if (!length(kp) || !pd(H[kp, kp, drop = FALSE])) next
+    ## held: its rows and columns cut loose, with a curvature so large that
+    ## no uncertainty is carried through from it
+    Hm <- H; Hm[d, ] <- 0; Hm[, d] <- 0
+    Hm[cbind(d, d)] <- 1e12 * max(1, abs(diag(H)))
+    s2 <- redo(Hm)
+    if (is.null(s2)) next
+    cf <- s2$cov.fixed; cf[d, ] <- NA_real_; cf[, d] <- NA_real_
+    s2$cov.fixed <- cf
+    ## the model's own Hessian was not positive definite, and that stays on
+    ## the record; what is usable is said by `how`
+    s2$pdHess <- FALSE
+    return(list(sdr = s2, how = "boundary", held = on))
+  }
+  out
+}
+
+## Whether the FIXED effects of a fit carry usable standard errors: a positive
+## definite Hessian, or a boundary term held at its estimate.
+#' @keywords internal
+#' @noRd
+ilm_fixed_usable <- function(object)
+  isTRUE(object$sdr$pdHess) || length(object$hessian_held) > 0L
 
 #' Print a table of checks
 #'
@@ -964,7 +1177,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
 #' @keywords internal
 #' @noRd
 ilm_print_checks <- function(ck, title) {
-  sym <- c(OK = "  ok  ", WARN = " WARN ", FAIL = " FAIL ", INCONCLUSIVE = "  ??  ")
+  sym <- c(OK = "  ok  ", WARN = " WARN ", FAIL = " FAIL ", INCONCLUSIVE = "  ??  ",
+           BOUNDARY = "BOUND ")
   cat("\n", title, "\n", strrep("-", 78), "\n", sep = "")
   for (i in seq_len(nrow(ck))) {
     cat(sprintf("[%s] %-24s %s\n", sym[ck$status[i]], ck$check[i], ck$detail[i]))
@@ -1137,7 +1351,8 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     if (!isTRUE(fam$censorable))
       stop("the ", fam$name, " family has no censored form. Censoring needs a ",
            "continuous response whose distribution function can be evaluated; ",
-           "available: gaussian.", call. = FALSE)
+           "available: gaussian, and the survival families weibull, lognormal, ",
+           "loglogistic and rp.", call. = FALSE)
     if (length(censor) != nrow(X))
       stop("`censor` has ", length(censor), " values but the model matrix has ",
            nrow(X), " rows", call. = FALSE)
@@ -1657,15 +1872,81 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   if (n_expected != length(obj$par))
     stop(sprintf("internal: %d parameter names for %d parameters",
                  n_expected, length(obj$par)))
-  opt <- nlminb(obj$par, obj$fn, obj$gr, control = list(iter.max = 3000, eval.max = 3000))
+  ctl <- list(iter.max = 3000, eval.max = 3000)
+  opt <- nlminb(obj$par, obj$fn, obj$gr, control = ctl)
   for (k in seq_len(restarts))
-    opt <- nlminb(opt$par, obj$fn, obj$gr, control = list(iter.max = 3000, eval.max = 3000))
+    opt <- nlminb(opt$par, obj$fn, obj$gr, control = ctl)
+
+  ## the fitted covariance structures, which depend on the estimates alone
+  pn <- names(obj$par)
+  structs <- function(pe) {
+    thv <- pe[pn == "theta"]
+    Lams <- vector("list", K); names(Lams) <- names(re)
+    Sig <- lapply(seq_len(K), function(k) {
+      th <- thv[(toff[k] + 1L):toff[k + 1L]][1:npc[k]]
+      if (ty[k] == "rr") { L <- ilm_mkLam_num(th, C, rk[k]); Lams[[k]] <<- L; L %*% t(L) }
+      else { L <- if (ty[k] == "diag") ilm_mkD_num(th, C) else ilm_mkL_num(th, C); L %*% t(L) }
+    })
+    names(Sig) <- names(re)
+    Sigd <- list()
+    for (k in seq_len(K)) if (dk[k] > 1L) {
+      th <- thv[(toff[k] + 1L):toff[k + 1L]][(npc[k] + 1L):(npc[k] + ilm_npar_d(dk[k], dcor[k]))]
+      Ld <- ilm_mkLd_num(th, dk[k], dcor[k]); Sigd[[names(re)[k]]] <- Ld %*% t(Ld)
+    }
+    if (!is.null(ar)) { La <- ilm_mkL_num(pe[pn == "lchol_ar"], C); Sig[["ar"]] <- La %*% t(La) }
+    list(Sig = Sig, Sigd = Sigd, Lams = Lams)
+  }
+  s <- structs(opt$par)
+  cb <- ilm_cov_blocks(re, s$Sig, s$Sigd, ty, rk, dk, toff, ar, opt$par, pn)
+
+  ## AT A BOUNDARY the optimiser chases a log standard deviation towards minus
+  ## infinity along a ridge the likelihood is flat on, and nlminb stops with
+  ## "false" or "singular convergence" however well everything else is
+  ## determined. On the messy-data regime with a true SD of 0.05 that was 29
+  ## fits in 400, whose intervals covered at 0.957 all the same. lme4 avoids
+  ## it by constraining a variance at zero; the equivalent here is to hold
+  ## the boundary term where it got to -- equal lower and upper bounds, so the
+  ## parameter vector keeps its shape -- and let the rest finish converging.
+  ## The likelihood is flat in the held direction, so nothing of substance
+  ## moves, and nothing is kept unless the objective is at least as good.
+  if (opt$convergence != 0L && length(cb$flagged)) {
+    d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
+    if (length(d) && !any(cb$keep %in% d)) {
+      lo <- rep(-Inf, length(opt$par)); up <- rep(Inf, length(opt$par))
+      lo[d] <- up[d] <- opt$par[d]
+      o2 <- tryCatch(nlminb(opt$par, obj$fn, obj$gr, lower = lo, upper = up,
+                            control = ctl), error = function(e) NULL)
+      if (!is.null(o2) && is.finite(o2$objective) &&
+          o2$objective <= opt$objective + 1e-8) {
+        o2$message <- paste0(o2$message, "; the covariance of ",
+                             paste(cb$flagged, collapse = ", "),
+                             " held at its boundary estimate")
+        opt <- o2
+        s <- structs(opt$par)
+        cb <- ilm_cov_blocks(re, s$Sig, s$Sigd, ty, rk, dk, toff, ar,
+                             opt$par, pn)
+      }
+      ## the tape last evaluated wherever nlminb stopped; put it at the optimum
+      invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
+    }
+  }
+  Sig <- s$Sig; Sigd <- s$Sigd; Lams <- s$Lams
+  pe <- opt$par; thv <- pe[pn == "theta"]
+
   ## joint = TRUE also returns the joint precision over (fixed, random), which
   ## is what lets predict() propagate uncertainty in the PENALISED SMOOTH
   ## coefficients instead of holding them at their conditional modes.
   ## Under REML it is not optional: beta now lives in the random block, so the
   ## only route to its covariance is through the joint precision.
-  sdr <- suppressWarnings(sdreport(obj, getJointPrecision = joint || reml))
+  sdr <- suppressWarnings(sdreport(obj, par.fixed = opt$par,
+                                   getJointPrecision = joint || reml))
+
+  ## When the Hessian says no: recompute it more accurately, and hold a term
+  ## that sits at its boundary rather than lose the fixed effects along with
+  ## it (see ilm_hess_recover()). This has to come before the REML block
+  ## below, which reads the joint precision out of sdr.
+  hess <- ilm_hess_recover(obj, opt, sdr, cb, joint || reml)
+  sdr <- hess$sdr
 
   ## Under REML beta is in the random block, so pull it and its covariance out
   ## of the joint precision. Nothing is reshaped yet: the checks below and the
@@ -1696,24 +1977,10 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   }
   sec <- proc.time()[3] - t0
 
-  pn <- names(obj$par); pe <- opt$par; thv <- pe[pn == "theta"]
-  Lams <- vector("list", K); names(Lams) <- names(re)
-  Sig <- lapply(seq_len(K), function(k) {
-    th <- thv[(toff[k] + 1L):toff[k + 1L]][1:npc[k]]
-    if (ty[k] == "rr") { L <- ilm_mkLam_num(th, C, rk[k]); Lams[[k]] <<- L; L %*% t(L) }
-    else { L <- if (ty[k] == "diag") ilm_mkD_num(th, C) else ilm_mkL_num(th, C); L %*% t(L) }
-  })
-  names(Sig) <- names(re)
-  Sigd <- list()
-  for (k in seq_len(K)) if (dk[k] > 1L) {
-    th <- thv[(toff[k] + 1L):toff[k + 1L]][(npc[k] + 1L):(npc[k] + ilm_npar_d(dk[k], dcor[k]))]
-    Ld <- ilm_mkLd_num(th, dk[k], dcor[k]); Sigd[[names(re)[k]]] <- Ld %*% t(Ld)
-  }
-  if (!is.null(ar)) { La <- ilm_mkL_num(pe[pn == "lchol_ar"], C); Sig[["ar"]] <- La %*% t(La) }
-
   post <- ilm_postcheck(opt, obj, sdr, C, !is.null(ar), pre, Sig, Sigd, re_struct,
                         gap = if (identical(ar$type, "car1")) ar$gap else NULL,
-                    kinds = as.list(vapply(re, `[[`, "", "kind")), pnames = pnames)
+                    kinds = as.list(vapply(re, `[[`, "", "kind")), pnames = pnames,
+                    hess = hess, boundary = cb$flagged)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {
@@ -1722,6 +1989,18 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
         ifelse(dk > 1L, sprintf(" x %dd", dk), ""), tl, bl), collapse = " | "), "\n", sep = "")
     if (any(st == "FAIL"))
       cat(">> MODEL FIT UNRELIABLE:", sum(st == "FAIL"), "check(s) failed. See the 'why' lines above.\n")
+    else if (any(st == "BOUNDARY"))
+      cat(">> fixed effects usable. ",
+          {
+            at <- setdiff(union(hess$held, cb$flagged),
+                          names(re)[vapply(re, `[[`, "", "kind") == "basis"])
+            if (length(at))
+              paste0("The covariance of ", paste(at, collapse = ", "),
+                     " sits at a boundary, so that estimate should not be ",
+                     "interpreted. ")
+            else ""
+          },
+          "See the BOUNDARY lines above.\n", sep = "")
     else if (any(st == "WARN")) cat(">> fit completed with", sum(st == "WARN"), "warning(s).\n")
     else cat(">> all checks passed.\n")
   }
@@ -1772,6 +2051,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
+                 ## how the standard errors were obtained: "tmb" (the first
+                 ## Hessian was fine), "recomputed" (a more accurate one was),
+                 ## "boundary" (the covariance of the terms in hessian_held is
+                 ## held at its estimate) or "none"; see ilm_hess_recover()
+                 hessian_how = hess$how, hessian_held = hess$held,
+                 ## terms whose covariance sits at the edge of its range,
+                 ## held or not; see ilm_cov_blocks()
+                 boundary_terms = cb$flagged,
                  exact_df = exact_df, resid_df = if (exact_df) N - p else NA_integer_,
                  Sigma = Sig, Sigma_d = Sigd, re_struct = re_struct, sec = sec,
                  censor = censor, n_censored = if (is.null(cens)) 0L else sum(cens != 0L),
@@ -1903,13 +2190,36 @@ ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
            call. = FALSE)
   }
   Zd <- object$Zd
+  ## `reml` too: a refit of a REML fit by maximum likelihood is a different
+  ## estimator of the same model, so a Type III recode or a consistency check
+  ## built on one quietly reported ML's variance components for a REML fit
   ilm_fit(X, y, object$J, ilm_re_list_of(object), object$re_struct, object$ar,
           ylevels = object$ylevels, weights = object$weights,
           family = object$family, verbose = verbose, restarts = restarts,
           censor = object$censor, Zd = Zd, disp_mu = isTRUE(object$disp_mu),
           rp = rp, Zzi = object$Zzi,
-          zi_type = if (is.null(object$zi_type)) "inflated" else object$zi_type)
+          zi_type = if (is.null(object$zi_type)) "inflated" else object$zi_type,
+          reml = isTRUE(object$reml))
 }
+
+## Everything ilm_refit_like() reads, as plain R objects and nothing else --
+## fit$obj holds external pointers into TMB and cannot travel to a parallel
+## worker. Both parallel refit paths used to list these fields themselves,
+## and both lists went out of date the same way: first without the censoring,
+## later without the zero part. A zero-inflated model refitted without it is
+## a different model, and the likelihood-ratio test between the two put a
+## predictor with no effect at chi-square 68.8 where the right answer was
+## 0.02. So the stub is built here, next to the one function that reads it.
+#' @keywords internal
+#' @noRd
+ilm_refit_stub <- function(object)
+  list(X = object$X, y = object$y, J = object$J, C = object$C,
+       assign = object$assign, term_labels = object$term_labels,
+       re = object$re, re_struct = object$re_struct, ar = object$ar,
+       ylevels = object$ylevels, family = object$family,
+       weights = object$weights, censor = object$censor, Zd = object$Zd,
+       disp_mu = isTRUE(object$disp_mu), rp = object$rp, Zzi = object$Zzi,
+       zi_type = object$zi_type, reml = isTRUE(object$reml))
 
 #' Fitted dispersion, one value per observation
 #'

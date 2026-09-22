@@ -82,6 +82,7 @@ findings and update that version's NEWS entry in the same commit.
 | `power_study.R` | Is Type I error nominal, and what is the power curve? | 60,000 fits, ~35 min |
 | `benchmark_freq.R` | Does illume agree with lme4 / glmmTMB / nnet, and how fast? | ~1,100 fits |
 | `mclogit_compare.R` | illume (Laplace) vs mclogit (PQL) for multinomial mixed models | 2,000 fits |
+| `messy_compare.R` | The same comparison on data that misbehave: lopsided clusters, a rare category, a variance at its boundary, non-normal random effects | 4,800 fits |
 | `brms_compare.R` | Does illume agree with an independent implementation of the same likelihood? | 3 fits + MCMC |
 
 Write output into `runs/<version>/<study>/`, which is the layout the summariser

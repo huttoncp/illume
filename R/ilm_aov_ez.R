@@ -145,13 +145,15 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
   ## contr.sum throughout, which is what makes these Type III sums of squares
   ## the average over the other factor rather than its effect at whichever
   ## level happens to be first. afex does the same and says so.
+  ## Names are quoted on their way into the formula, so a column called
+  ## `dose group` is one variable and not two symbols; the effect labels are
+  ## turned back into plain names below, where they are matched and printed.
   bterms <- c(between, covariate)
-  bform <- if (length(bterms))
-    stats::as.formula(paste("~", paste(c(paste(between, collapse = " * "),
-                                         covariate)[nzchar(c(paste(between,
-                                         collapse = " * "), covariate))],
-                                       collapse = " + ")))
-  else ~ 1
+  bform <- if (length(bterms)) {
+    parts <- c(if (length(between)) paste(ilm_bq(between), collapse = " * "),
+               ilm_bq(covariate))
+    stats::as.formula(paste("~", paste(parts, collapse = " + ")))
+  } else ~ 1
   ctr <- if (length(between))
     stats::setNames(rep(list("contr.sum"), length(between)), between) else NULL
   X <- stats::model.matrix(bform, m$bdat, contrasts.arg = ctr)
@@ -179,6 +181,8 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
     }
     lab <- if (wl == "(Intercept)") bl else
            if (bl == "(Intercept)") wl else paste0(bl, ":", wl)
+    lab <- paste(ilm_unbq(strsplit(lab, ":", fixed = TRUE)[[1L]]),
+                 collapse = ":")
     idx <- which(basg == bi - 1L)
     if (!length(idx)) next
     s <- ilm_aov_ss(m$Y, X, idx, Ps[[wi]])
@@ -200,9 +204,10 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
   ## SS / (SS + sum of the DISTINCT error sums of squares + the SS of any
   ## measured variable, less its own when it is the effect being sized).
   ## Olejnik and Algina (2003); the form is afex's.
+  ## compared as names, not as a regular expression: a factor called
+  ## `time (h)` is not a pattern, and matching it as one finds nothing
   obs <- vapply(tab$effect, function(e)
-    any(vapply(observed, function(o)
-      grepl(paste0("(^|:)", o, "($|:)"), e), TRUE)), TRUE)
+    any(observed %in% strsplit(e, ":", fixed = TRUE)[[1L]]), TRUE)
   obs_all <- sum(tab$SS * obs)
   err_pool <- sum(unique(c(tab$SSE, ss_intercept)))
   tab$ges <- tab$SS / (tab$SS + err_pool + obs_all - tab$SS * obs)
@@ -277,11 +282,12 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
 #' @keywords internal
 #' @noRd
 ilm_aov_formula <- function(dv, between, within, covariate, id) {
-  fx <- c(between, within)
+  fx <- ilm_bq(c(between, within))
   rhs <- if (length(fx)) paste(fx, collapse = " * ") else "1"
-  if (length(covariate)) rhs <- paste(rhs, "+", paste(covariate, collapse = " + "))
-  rhs <- paste0(rhs, " + (1 | ", id, ")")
-  stats::as.formula(paste(dv, "~", rhs))
+  if (length(covariate))
+    rhs <- paste(rhs, "+", paste(ilm_bq(covariate), collapse = " + "))
+  rhs <- paste0(rhs, " + (1 | ", ilm_bq(id), ")")
+  stats::as.formula(paste(ilm_bq(dv), "~", rhs))
 }
 
 #' Pairwise follow-ups for the effects that earned them
