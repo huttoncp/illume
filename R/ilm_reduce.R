@@ -91,7 +91,15 @@ ilm_reduce <- function(data, cols = NULL, ndim = 5,
   if (!any(is_num) && !any(is_cat))
     stop("no numeric or categorical columns to reduce", call. = FALSE)
 
-  quanti <- if (any(is_num)) sub[is_num] else NULL
+  ## as.data.frame(), not just the subset. `sub[is_num]` on a TIBBLE returns a
+  ## tibble, and PCAmix checks its columns with `is.numeric(X.quanti[, j])` --
+  ## which for a tibble is a one-column tibble rather than a vector, so every
+  ## column looks non-numeric and the whole call dies on "All variables in
+  ## X.quanti must be numeric". Nothing in that message mentions tibbles, and
+  ## a tibble is what anyone gets from readr, dplyr or gapminder, so this hit
+  ## the most ordinary way to arrive at the function. `quali` was already
+  ## coerced on the next line, which is why only the numeric half broke.
+  quanti <- if (any(is_num)) as.data.frame(sub[is_num]) else NULL
   quali <- if (any(is_cat)) as.data.frame(lapply(sub[is_cat], as.factor)) else NULL
   method <- if (!is.null(quanti) && !is.null(quali)) "famd"
             else if (!is.null(quanti)) "pca" else "mca"

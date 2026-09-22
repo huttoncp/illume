@@ -259,6 +259,38 @@ the right ones turns z = 23.5 into z = 0.41.
   existing tests pin deliberately -- fixing one error by replacing another
   one's wording is not a fix.
 
+## A tibble is a data frame and has to behave like one
+
+* **`ilm_reduce()` and `ilm_profile()` failed on any tibble with a numeric
+  column**, which is to say on most real data: on `gapminder::gapminder` they
+  stopped with `All variables in X.quanti must be numeric`. `ilm_reduce()`
+  handed its numeric half straight to `PCAmixdata::PCAmix()`, which checks
+  columns with `is.numeric(X.quanti[, j])` -- and `[` on a tibble does not drop
+  to a vector, so every numeric column looked non-numeric. The categorical
+  half was already coerced, which is why only the numeric one broke.
+* Nothing in that message mentions tibbles, and a tibble is what anyone gets
+  from readr, dplyr or gapminder, so this closed the most ordinary route into
+  the function while looking like a complaint about the data.
+* The mixed-data handling itself was never the problem. `ilm_reduce()` picks
+  PCA, MCA or FAMD by column type and `gapminder` takes the FAMD branch, as
+  intended, once the frame reaches PCAmix in a shape it accepts.
+* The rest of the package was swept for the same fault and is clean:
+  `ilm_model()`, `ilm_aov_ez()`, `ilm_describe_all()`, `ilm_anomaly()`,
+  `ilm_impute()`, `ilm_glrm()`, `ilm_check_missing()` and the plotting
+  functions all give a tibble and a data frame the same answer.
+* **`ilm_cluster()` refused mixed columns without naming the remedy.** It
+  clusters coordinates -- a k-means centroid is not defined on a factor -- so
+  refusing is right, but `the coordinates to cluster must be numeric` left the
+  caller to discover `ilm_reduce()` for themselves, which is not how anything
+  else in the package behaves. It now names the offending columns and the
+  call that fixes it, as `ilm_anomaly()` already did for the same situation.
+
+The regression test builds its tibble with `tibble::as_tibble()`. Setting the
+class by hand does **not** reproduce this: `[.tbl_df` is only dispatched to
+when tibble's namespace is loaded, so without it `[` falls through to
+`[.data.frame`, which drops correctly and the bug vanishes. The first version
+of the test did it by hand and passed against the broken code.
+
 ## Parameters that were set and then ignored
 
 Same source, same method, one round later.

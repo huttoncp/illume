@@ -172,11 +172,27 @@ ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
   method <- match.arg(method)
   coords <- if (inherits(x, "ilm_reduce"))
     as.matrix(x$ind_coord[, setdiff(names(x$ind_coord), "row_id"), drop = FALSE])
-  else if (is.matrix(x) || is.data.frame(x)) as.matrix(x)
+  else if (is.matrix(x) || is.data.frame(x)) as.matrix(as.data.frame(x))
   else stop("`x` must be an ilm_reduce() result or a numeric matrix or data ",
             "frame of coordinates; it is ", class(x)[1], call. = FALSE)
-  if (!is.numeric(coords))
-    stop("the coordinates to cluster must be numeric", call. = FALSE)
+  if (!is.numeric(coords)) {
+    ## This clusters COORDINATES: a k-means centroid and a euclidean distance
+    ## are not defined on a factor. The remedy exists in the package, so it is
+    ## named rather than left as the caller's problem -- ilm_reduce() puts
+    ## mixed columns on a common numeric footing by FAMD and its result is
+    ## exactly what this takes. Arriving here with raw mixed data is the
+    ## ordinary way to reach the function, not a mistake worth a bare refusal.
+    bad <- if (is.data.frame(x))
+      names(x)[!vapply(x, is.numeric, TRUE)] else character(0)
+    stop("the coordinates to cluster must be numeric",
+         if (length(bad))
+           paste0(", and these are not: ",
+                  paste(utils::head(bad, 8), collapse = ", "),
+                  if (length(bad) > 8L) ", ..." else ""),
+         ". Reduce mixed columns to coordinates first -- ",
+         "ilm_cluster(ilm_reduce(data)) -- which handles numeric and ",
+         "categorical columns together by FAMD.", call. = FALSE)
+  }
   n <- nrow(coords)
   if (!is.null(seed)) set.seed(seed)
   FUNcluster <- ilm_cluster_funcluster(method, dist_method, hclust_method, nstart)
