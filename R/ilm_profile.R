@@ -171,6 +171,11 @@ ilm_profile <- function(data, cols = NULL, ndim = 5,
                         method = c("pcamix", "glrm"), ...,
                         vtest_threshold = 1.96, top_n_vars = 2,
                         var_contrib = TRUE, var_contrib_B = 199L) {
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(data, "ilm_anomaly"))
+    data <- ilm_from_anomaly(data, "ilm_profile")
   rr <- ilm_reduce(data, cols = cols, ndim = ndim, method = method)
   cr <- ilm_cluster(rr, ...)
   ch <- ilm_characterize_clusters(rr, cr, vtest_threshold, top_n_vars,

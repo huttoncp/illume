@@ -73,6 +73,11 @@ ilm_require_pcamixdata <- function() {
 ilm_reduce <- function(data, cols = NULL, ndim = 5,
                        method = c("pcamix", "glrm"), ...) {
   method <- match.arg(method)
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(data, "ilm_anomaly"))
+    data <- ilm_from_anomaly(data, "ilm_reduce")
   if (method == "glrm") return(ilm_reduce_glrm(data, cols, ndim, ...))
   ilm_require_pcamixdata()
   if (!is.data.frame(data))
@@ -225,6 +230,11 @@ ilm_build_na_indicator <- function(data, cols) {
 #' r
 #' @export
 ilm_reduce_na <- function(data, cols = NULL, ndim = 5) {
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(data, "ilm_anomaly"))
+    data <- ilm_from_anomaly(data, "ilm_reduce_na")
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
   if (!is.null(cols)) {

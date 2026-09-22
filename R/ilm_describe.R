@@ -518,6 +518,11 @@ ilm_describe <- function(data, y = NULL, by = NULL, digits = 3,
                           dispersion = TRUE, rare_n = 5L,
                           cap = 0.12, min_n = 20L) {
   gauss <- match.arg(gauss)
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(data, "ilm_anomaly"))
+    data <- ilm_from_anomaly(data, "ilm_describe", score = TRUE)
   one <- function(v) {
     if (is.logical(v)) ilm_describe_lgl(v, digits)
     else if (ilm_is_time(v)) ilm_describe_time(v, digits)
@@ -624,6 +629,11 @@ ilm_describe_all <- function(data, by = NULL, digits = 3,
                               dispersion = TRUE, class = "all", rare_n = 5L,
                               cap = 0.12, min_n = 20L) {
   gauss <- match.arg(gauss)
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(data, "ilm_anomaly"))
+    data <- ilm_from_anomaly(data, "ilm_describe_all", score = TRUE)
   bad <- setdiff(class, c("all", ILM_CLASSES))
   if (length(bad))
     stop("unknown `class`: ", paste(sQuote(bad), collapse = ", "),

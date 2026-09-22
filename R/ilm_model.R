@@ -269,7 +269,27 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
          qualified[1], ". mgcv detects smooths by name, so a namespaced call ",
          "is treated as an ordinary predictor.", call. = FALSE)
 
-  bar_terms <- unlist(lapply(bars, function(b) c(deparse(b[[2]]), deparse(b[[3]]))))
+  ## all.vars() on the grouping side, not deparse(). A NESTED bar is expanded
+  ## by lme4::findbars() into a grouping EXPRESSION rather than a name --
+  ## `(1 | continent/country)` becomes `(1 | country:continent)` plus
+  ## `(1 | continent)` -- and deparsing that yields "country:continent", which
+  ## is not a column, so neither constituent ever reached the model frame.
+  bar_terms <- unlist(lapply(bars, function(b)
+    c(deparse(b[[2]]), all.vars(b[[3]]))))
+  ## Checked HERE, before model.frame() gets it. Those variables now go into
+  ## the frame, so a missing one would otherwise surface as R's bare "object
+  ## 'nope' not found" from inside eval(predvars) -- which does not say it was
+  ## a grouping factor, does not name the bar, and does not say what to do.
+  if (is.data.frame(data)) {
+    gvars <- unique(unlist(lapply(bars, function(b) all.vars(b[[3]]))))
+    miss <- setdiff(gvars, names(data))
+    if (length(miss))
+      stop("the grouping factor(s) ", paste(sQuote(miss), collapse = ", "),
+           " could not be built from the data: ",
+           if (length(miss) == 1L) "it is" else "they are",
+           " not a column of `data`. The bars name ",
+           paste(sQuote(gvars), collapse = ", "), ".", call. = FALSE)
+  }
   sm_terms  <- unlist(lapply(smsp, `[[`, "term"))
   rhs <- unique(c(attr(stats::terms(gp$pf), "term.labels"), sm_terms, bar_terms))
   rhs <- setdiff(rhs, c("1", "0", "-1"))
@@ -475,8 +495,21 @@ ilm_model_formula <- function(formula, data, family = "gaussian",
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
     gvar <- deparse(b[[3]])
-    g <- mf[[gvar]]
-    if (is.null(g)) stop("grouping factor '", gvar, "' not found in the data")
+    ## EVALUATE the grouping side rather than looking it up by name. A nested
+    ## bar's group is an interaction that exists only as an expression --
+    ## `country:continent` from `(1 | continent/country)` -- so a lookup finds
+    ## nothing and the model refuses a formula lme4 accepts. Evaluating builds
+    ## the crossed factor, which is what nesting means.
+    g <- if (!is.null(mf[[gvar]])) mf[[gvar]] else
+      tryCatch(eval(b[[3]], mf, environment(formula)), error = function(e) NULL)
+    if (is.null(g))
+      stop("the grouping factor '", gvar, "' could not be built from the ",
+           "data. Its variable(s) -- ", paste(all.vars(b[[3]]), collapse = ", "),
+           " -- must all be columns of `data`.", call. = FALSE)
+    ## an interaction of two factors comes back with every combination as a
+    ## level, including the ones that never occur; unused levels would each
+    ## claim a random effect that no row informs
+    g <- droplevels(as.factor(g))
     Z <- stats::model.matrix(stats::as.formula(paste("~", deparse(b[[2]]))), mf)
     nm <- gvar; k <- 1L
     while (nm %in% names(re_list)) { k <- k + 1L; nm <- paste0(gvar, ".", k) }

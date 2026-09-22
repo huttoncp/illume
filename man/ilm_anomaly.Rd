@@ -14,6 +14,7 @@ ilm_anomaly(
   B = 39L,
   alpha = 0.05,
   seed = 1L,
+  keep_data = TRUE,
   progress = NULL
 )
 }
@@ -55,6 +56,11 @@ rows -- one row in twenty at 0.05 would be 50 rows in a thousand, which is
 a list nobody reads.}
 
 \item{seed}{Random seed.}
+
+\item{keep_data}{Keep the scanned data on the result, so that
+\code{\link[=ilm_anomalous]{ilm_anomalous()}}, \code{\link[=ilm_profile]{ilm_profile()}}, \code{\link[=ilm_cluster]{ilm_cluster()}} and the describe
+functions can take the object directly. Set \code{FALSE} if the frame is
+large and you only want the scores.}
 
 \item{progress}{Show a progress bar; see \link{ilm_progress_arg}.}
 }

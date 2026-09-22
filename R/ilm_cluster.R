@@ -208,6 +208,11 @@ ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
                         small_cluster_frac = 0.05, ambiguous_threshold = 0.1,
                         seed = NULL, progress = NULL) {
   method <- match.arg(method)
+  ## An ilm_anomaly() result is accepted directly: the flagged rows are what
+  ## the user wants to look at next, and rebuilding that subset by hand from
+  ## `row` is both a papercut and a chance to line the wrong rows up.
+  if (inherits(x, "ilm_anomaly"))
+    x <- ilm_from_anomaly(x, "ilm_cluster")
   reduced <- NULL
   ## Raw mixed data is the ordinary way to arrive here, not a mistake. A
   ## k-means centroid is not defined on a factor, so the columns have to be put

@@ -120,7 +120,8 @@ ilm_anom_score <- function(Z, k, trim = 0.25, iter = 3L) {
 ## difference in kind, not a detail, and the print method says so.
 #' @keywords internal
 #' @noRd
-ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
+ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed,
+                                keep_data = NULL) {
   if (!requireNamespace("isotree", quietly = TRUE))
     stop("method = \"iforest\" needs the isotree package. Install it with ",
          'install.packages("isotree"), or use the default ',
@@ -163,6 +164,7 @@ ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
   out <- out[order(-out$score), , drop = FALSE]
   row.names(out) <- NULL
   structure(out, class = c("ilm_anomaly", "data.frame"), method = "iforest",
+            data = keep_data,
             ntrees = as.integer(ntrees), alpha = alpha, columns = sel,
             rank = NA_integer_, trim = NA_real_, n_null = 0L,
             dropped = character(0), calibrated = FALSE)
@@ -271,6 +273,10 @@ ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
 #'   rows -- one row in twenty at 0.05 would be 50 rows in a thousand, which is
 #'   a list nobody reads.
 #' @param seed Random seed.
+#' @param keep_data Keep the scanned data on the result, so that
+#'   [ilm_anomalous()], [ilm_profile()], [ilm_cluster()] and the describe
+#'   functions can take the object directly. Set `FALSE` if the frame is
+#'   large and you only want the scores.
 #' @param progress Show a progress bar; see [ilm_progress_arg].
 #' @return A data frame with one row per observation: `row`, `score`, `p`,
 #'   `p_adj`, `flag`, and `driver`, the column contributing most to the score.
@@ -296,8 +302,15 @@ ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
 #' @export
 ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest"),
                         rank = NULL, trim = 0.25, ntrees = 500L,
-                        B = 39L, alpha = 0.05, seed = 1L, progress = NULL) {
+                        B = 39L, alpha = 0.05, seed = 1L, keep_data = TRUE,
+                        progress = NULL) {
   method <- match.arg(method)
+  ## The scan says WHICH rows are odd; the next question is always whether
+  ## they are alike, and answering it means taking them back to the
+  ## exploration tools. Keeping the frame here is what lets ilm_profile() and
+  ## friends accept this object directly instead of the user reconstructing
+  ## the subset from `row` and risking lining the wrong rows up.
+  .keep <- if (isTRUE(keep_data)) data else NULL
   if (is.matrix(data)) data <- as.data.frame(data)
   if (!is.data.frame(data))
     stop("`data` must be a data frame or matrix, not ", class(data)[1],
@@ -308,7 +321,7 @@ ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest
          "defined by whichever half happened to fit first.", call. = FALSE)
   sel <- ilm_resolve_cols(data, cols)
   if (method == "iforest")
-    return(ilm_anomaly_iforest(data, sel, ntrees, alpha, seed))
+    return(ilm_anomaly_iforest(data, sel, ntrees, alpha, seed, .keep))
   num <- sel[vapply(sel, function(v) is.numeric(data[[v]]), TRUE)]
   drop <- setdiff(sel, num)
   if (length(drop))
@@ -392,6 +405,7 @@ ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest
                     stringsAsFactors = FALSE, row.names = NULL)
   out <- out[order(-out$score), , drop = FALSE]
   structure(out, class = c("ilm_anomaly", "data.frame"), rank = k,
+            data = .keep,
             method = "reconstruction", calibrated = TRUE,
             residual = obs$residual, columns = num, trim = trim,
             n_null = length(null), alpha = alpha, dropped = drop)
