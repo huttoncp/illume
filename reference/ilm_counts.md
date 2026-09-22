@@ -33,9 +33,9 @@ A data frame with `value` and `n`.
 
 ## See also
 
-[`ilm_counts_tb()`](https://craig-hutton.github.io/illume/reference/ilm_counts_tb.md)
+[`ilm_counts_tb()`](https://huttoncp.github.io/illume/reference/ilm_counts_tb.md)
 for both ends at once,
-[`ilm_counts_all()`](https://craig-hutton.github.io/illume/reference/ilm_counts_all.md)
+[`ilm_counts_all()`](https://huttoncp.github.io/illume/reference/ilm_counts_all.md)
 for a whole data frame.
 
 ## Examples

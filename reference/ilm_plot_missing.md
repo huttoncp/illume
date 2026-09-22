@@ -25,7 +25,7 @@ Invisibly, the named vector of proportions.
 
 ## See also
 
-[`ilm_describe_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_na_all.md)
+[`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md)
 for the same information as a table.
 
 ## Examples

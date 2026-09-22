@@ -30,9 +30,9 @@ ilm_dag_model(
 - dag:
 
   An
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md),
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md),
   or anything
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md)
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md)
   accepts.
 
 - data:
@@ -73,7 +73,7 @@ ilm_dag_model(
 
   Estimate the variance components by restricted maximum likelihood.
   Defaults to `TRUE` here, unlike
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md),
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
   because the graph fixed the adjustment set before any data were looked
   at: the fixed effects are not being selected, so the one thing REML
   forbids – comparing likelihoods across different fixed structures –
@@ -84,7 +84,7 @@ ilm_dag_model(
 - ...:
 
   Passed to
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Value
 
@@ -125,9 +125,9 @@ only be said before the modelling, not after.
 
 ## See also
 
-[`ilm_adjust_sets()`](https://craig-hutton.github.io/illume/reference/ilm_adjust_sets.md),
-[`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md),
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+[`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md),
+[`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Examples
 

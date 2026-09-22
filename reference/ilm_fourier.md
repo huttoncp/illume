@@ -58,12 +58,12 @@ Go to a factor when the cycle has a genuine step in it, such as a policy
 that starts in April: measured on a narrow two-month spike, a factor
 beat both smooth bases by more than 140 AIC at matched sample size,
 because no smooth basis can make a step cheaply. See
-[`ilm_cyclic()`](https://craig-hutton.github.io/illume/reference/ilm_cyclic.md)
+[`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
 for the local alternative.
 
 ## See also
 
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md),
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md),
 which names the period when the residuals contain a cycle.
 
 ## Examples

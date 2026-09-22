@@ -58,7 +58,7 @@ ilm_check_variance(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -76,9 +76,9 @@ fitted model rather than against an assumed distribution.
 
 ## See also
 
-[`ilm_rqr_test()`](https://craig-hutton.github.io/illume/reference/ilm_rqr_test.md)
+[`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md)
 for other residual statistics,
-[`ilm_check_dispersion()`](https://craig-hutton.github.io/illume/reference/ilm_check_dispersion.md)
+[`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md)
 when the whole response is over-dispersed rather than unevenly
 dispersed.
 

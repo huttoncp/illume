@@ -52,7 +52,7 @@ null, and a z score and p-value.
 
 The refitting matters: it builds in the fact that in-sample residuals
 are not exactly uniform (see
-[`ilm_rqr()`](https://craig-hutton.github.io/illume/reference/ilm_rqr.md)),
+[`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)),
 so a correctly specified model is not flagged for a discrepancy that
 fitting itself created.
 
@@ -65,8 +65,8 @@ and a misspecified model reproduces its own behaviour faithfully, so the
 misspecification cancels from both sides of the comparison.
 
 A statistic aimed at specific structure does have power. Use
-[`ilm_check_covariate()`](https://craig-hutton.github.io/illume/reference/ilm_check_covariate.md)
+[`ilm_check_covariate()`](https://huttoncp.github.io/illume/reference/ilm_check_covariate.md)
 or
-[`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md)
+[`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md)
 to point the test at particular variables, including ones the model does
 not contain.

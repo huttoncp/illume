@@ -33,7 +33,7 @@ ilm_glrm(
 - cols:
 
   Columns to use; see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - rank:
 
@@ -64,7 +64,7 @@ ilm_glrm(
 
   Optional non-negative row weights. A row counted twice contributes
   twice to the loss, which is how
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   draws a bootstrap replicate without resampling the rows themselves and
   losing the ones it has to reconstruct.
 
@@ -83,7 +83,7 @@ ilm_glrm(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -95,7 +95,7 @@ An object of class `"ilm_glrm"` with `scores` (one row per observation),
 
 On all-numeric data it is not: with quadratic loss everywhere it *is*
 PCA, and
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
 gets there in closed form. It earns its cost when categorical columns
 matter, because FAMD reaches them by one-hot encoding and applying
 squared loss to the indicators, which is a Gaussian approximation to
@@ -106,7 +106,7 @@ something that is not Gaussian, and can reconstruct a category as -0.3.
 A cell that was not observed contributes nothing to the loss, so the fit
 uses whatever is there and the reconstruction fills the rest in. That is
 why the same machinery serves
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md).
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md).
 
 ## References
 
@@ -115,10 +115,10 @@ models. *Foundations and Trends in Machine Learning* 9, 1-118.
 
 ## See also
 
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
 for the closed-form FAMD route and [ilm_reduce(method =
-"glrm")](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
-to use this one inside it.
+"glrm")](https://huttoncp.github.io/illume/reference/ilm_reduce.md) to
+use this one inside it.
 
 ## Examples
 

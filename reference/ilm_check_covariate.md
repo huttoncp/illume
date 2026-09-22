@@ -68,9 +68,9 @@ variables you left out is exactly the useful case, and is the one
 situation where residual testing has real power here. Broad summaries of
 residuals detect almost nothing; a test aimed at specific structure
 detects a great deal. See
-[`ilm_rqr_test()`](https://craig-hutton.github.io/illume/reference/ilm_rqr_test.md)
+[`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md)
 for why.
 
 ## See also
 
-[`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md).
+[`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md).

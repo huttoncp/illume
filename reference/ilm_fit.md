@@ -1,7 +1,7 @@
 # Fit a multinomial mixed model from a design matrix
 
 The computational engine. Most users should call
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 with a formula instead; this is the entry point when you already have a
 design matrix, and it is what the formula interface calls internally.
 
@@ -83,9 +83,9 @@ ilm_fit(
 - family:
 
   Response distribution: a name, or the object returned by
-  [`ilm_family()`](https://craig-hutton.github.io/illume/reference/ilm_family.md).
+  [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md).
   See
-  [`ilm_family()`](https://craig-hutton.github.io/illume/reference/ilm_family.md)
+  [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md)
   for what each one assumes.
 
 - verbose:
@@ -101,15 +101,15 @@ ilm_fit(
 
   Logical. Also compute the joint precision over fixed and random
   parameters. Needed by
-  [`predict.ilm_model()`](https://craig-hutton.github.io/illume/reference/predict.ilm_model.md)
+  [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
   to propagate uncertainty in penalised smooth coefficients;
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   switches it on automatically when the model contains smooths.
 
 - censor:
 
   Optional censoring specification from
-  [`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md),
+  [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md),
   marking observations known only as an interval – at or below a floor,
   at or above a ceiling. Supported for the gaussian family, where it
   gives a Tobit model.
@@ -120,7 +120,7 @@ ilm_fit(
   observation. Its columns become a linear predictor for the logarithm
   of the dispersion, so its intercept replaces the single dispersion
   parameter. Built by
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   from `dispformula`.
 
 - disp_mu:
@@ -132,7 +132,7 @@ ilm_fit(
 
   Internal. The flexible parametric baseline: knots, the derivative
   design and which columns of `X` hold the spline. Built by
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   from `rp_df`.
 
 - Zzi:
@@ -140,7 +140,7 @@ ilm_fit(
   Optional design matrix for the zero part of a count model, one row per
   observation, modelling the logit of an excess-zero probability. Built
   by
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   from `ziformula`.
 
 - zi_type:
@@ -159,7 +159,7 @@ ilm_fit(
   approximation to it. Gaussian responses only; elsewhere the integral
   is still well defined but has none of REML's properties, so it is
   refused. See
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for when to switch it on.
 
 ## Value
@@ -214,7 +214,7 @@ and name a specific rank to try.
 entirely rather than declared with length zero, and for a gaussian
 response the fit reports exact t and F inference instead of the
 large-sample approximations. See
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Fitting method
 
@@ -224,7 +224,7 @@ crossed random effects the integral does not factorise, so its dimension
 is the total number of latent values, often in the thousands. Laplace is
 an approximation, and its accuracy depends on having enough data per
 latent value – see the `latent_budget` entry in `fit$checks`, and
-[`ilm_consistency()`](https://craig-hutton.github.io/illume/reference/ilm_consistency.md)
+[`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
 to test it directly on your own fit.
 
 ## A warning about sampling weights
@@ -257,7 +257,7 @@ survey data. *Journal of the Royal Statistical Society, Series A*,
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 for the formula interface,
-[`summary.ilm_model()`](https://craig-hutton.github.io/illume/reference/summary.ilm_model.md),
-[`ilm_consistency()`](https://craig-hutton.github.io/illume/reference/ilm_consistency.md).
+[`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md),
+[`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md).

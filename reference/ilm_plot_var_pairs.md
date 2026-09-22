@@ -21,7 +21,7 @@ ilm_plot_var_pairs(data, cols = NULL, by = NULL, ...)
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - by:
 
@@ -40,9 +40,9 @@ ilm_plot_var_pairs(data, cols = NULL, by = NULL, ...)
 
 ## See also
 
-[`ilm_plot_scatter()`](https://craig-hutton.github.io/illume/reference/ilm_plot_scatter.md)
+[`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md)
 for one pair,
-[`ilm_check_collinearity()`](https://craig-hutton.github.io/illume/reference/ilm_check_collinearity.md)
+[`ilm_check_collinearity()`](https://huttoncp.github.io/illume/reference/ilm_check_collinearity.md)
 for what a pairs plot cannot show about a fit.
 
 ## Examples

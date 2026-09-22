@@ -33,7 +33,7 @@ ilm_plot_bar(data, x, by = NULL, ...)
 
 ## See also
 
-[`ilm_counts()`](https://craig-hutton.github.io/illume/reference/ilm_counts.md)
+[`ilm_counts()`](https://huttoncp.github.io/illume/reference/ilm_counts.md)
 for the same information as a table.
 
 ## Examples

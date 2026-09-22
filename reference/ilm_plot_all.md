@@ -3,7 +3,7 @@
 Legends are suppressed in this layout: tinyplot reserves legend space by
 altering the device layout, which blanks a multi-panel figure. Plot a
 single variable with
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md)
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
 when you need one.
 
 ## Usage

@@ -92,4 +92,4 @@ package pbkrtest. *Journal of Statistical Software*, 59(9), 1–30.
 
 ## See also
 
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md).
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).

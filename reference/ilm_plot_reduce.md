@@ -16,7 +16,7 @@ ilm_plot_reduce_na(x, dims = c(1, 2), by = NULL, ...)
 - x:
 
   An
-  [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   result.
 
 - dims:
@@ -40,8 +40,8 @@ ilm_plot_reduce_na(x, dims = c(1, 2), by = NULL, ...)
 
 ## See also
 
-[`ilm_plot_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_plot_cluster.md),
-[`ilm_plot_reduce_scree()`](https://craig-hutton.github.io/illume/reference/ilm_plot_reduce_scree.md).
+[`ilm_plot_cluster()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster.md),
+[`ilm_plot_reduce_scree()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_scree.md).
 
 ## Examples
 

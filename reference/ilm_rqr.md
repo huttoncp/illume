@@ -49,7 +49,7 @@ residuals are uniform, as intended. But **in sample** they are not,
 because the random effects were fitted to the same data, which pulls the
 observed log score down. A Kolmogorov-Smirnov test against uniform
 therefore rejects a correctly specified model. Use
-[`ilm_rqr_test()`](https://craig-hutton.github.io/illume/reference/ilm_rqr_test.md),
+[`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md),
 which builds its reference by refitting simulated data and so accounts
 for this automatically.
 
@@ -64,5 +64,5 @@ borrows from.)
 
 ## See also
 
-[`ilm_rqr_test()`](https://craig-hutton.github.io/illume/reference/ilm_rqr_test.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md).
+[`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).

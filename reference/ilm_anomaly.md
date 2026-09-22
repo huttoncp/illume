@@ -2,7 +2,7 @@
 
 Finds observations that are implausible as a **combination** of values,
 even when no single value is extreme.
-[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+[`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
 asks whether a number is far out in its own column; this asks whether a
 row is far from the structure the columns share.
 
@@ -30,7 +30,7 @@ ilm_anomaly(
 - cols:
 
   Columns to use; see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
   Numeric columns only – the reconstruction is a projection, and a
   category has no residual along a direction. Anything else is dropped
   with a note.
@@ -64,7 +64,7 @@ ilm_anomaly(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -81,7 +81,7 @@ them, and the score is what is left over.
 ## How many directions
 
 By parallel analysis, and deliberately not by the cross-validation
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
 uses on the same decomposition, because the two answer different
 questions. Imputation wants the rank that best predicts a missing cell.
 This wants the number of directions that are real shared structure, so
@@ -123,7 +123,7 @@ data legitimately includes their direction. Detection degrades
 accordingly: with anomalies sharing one direction, 0.89 of them were
 found at 5% contamination, 0.67 at 10% and 0.41 at 20%. That is the
 method reaching its limit rather than failing quietly, and
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 is the tool for a second group, since finding one is what it is for.
 
 ## What the score is compared with
@@ -154,11 +154,11 @@ factor analysis. *Psychometrika* 30, 179-185.
 
 ## See also
 
-[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+[`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
 for the one-column-at-a-time question,
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 when the unusual rows turn out to be a group,
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
 which fits the same decomposition to fill values in.
 
 ## Examples

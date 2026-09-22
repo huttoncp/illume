@@ -1,7 +1,7 @@
 # The bootstrap distribution behind a group difference
 
 Draws the replicate differences from one row of an
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 result, with zero and the interval marked. The summary says where the
 difference is; this says what the resampling actually produced – whether
 it is symmetric, skewed, or piled against a boundary, which the interval
@@ -24,14 +24,14 @@ ilm_plot_boot_diff(
 - x:
 
   An
-  [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+  [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   result.
 
 - row:
 
   Which comparison to draw, when the result has several. The default
   draws the first, and having more than one is normal now that
-  [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+  [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   compares every pair.
 
 - type:
@@ -53,7 +53,7 @@ ilm_plot_boot_diff(
 
 ## See also
 
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md).
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md).
 
 ## Examples
 

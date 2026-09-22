@@ -16,7 +16,7 @@ ilm_plot_reduce_scree_na(x, ...)
 - x:
 
   An
-  [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   result.
 
 - ...:
@@ -30,7 +30,7 @@ ilm_plot_reduce_scree_na(x, ...)
 
 ## See also
 
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md).
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md).
 
 ## Examples
 

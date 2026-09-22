@@ -57,7 +57,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/craig-hutton/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -84,14 +84,14 @@
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"craig-hutton/illume"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"huttoncp/illume"</span><span class="op">)</span></span></code></pre></div>
 <p>R &gt;= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.</p>
 </div>
 <div class="section level2">
 <h2 id="a-worked-example-end-to-end">A worked example, end to end<a class="anchor" aria-label="anchor" href="#a-worked-example-end-to-end"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/craig-hutton/illume" class="external-link">illume</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/huttoncp/illume" class="external-link">illume</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ilm_sim.html">ilm_sim</a></span><span class="op">(</span><span class="op">)</span>                       <span class="co"># a grouped dataset with a known structure</span></span>
 <span></span>
@@ -207,7 +207,7 @@
 <div class="section level2">
 <h2 id="how-it-is-validated">How it is validated<a class="anchor" aria-label="anchor" href="#how-it-is-validated"></a>
 </h2>
-<p>Every claim in the documentation is a measurement. The <a href="https://github.com/craig-hutton/illume/tree/main/studies" class="external-link"><code>studies/</code></a> directory of this repository (not shipped with the installed package) holds the scripts, the retained runs, and a generated findings log per study:</p>
+<p>Every claim in the documentation is a measurement. The <a href="https://github.com/huttoncp/illume/tree/main/studies" class="external-link"><code>studies/</code></a> directory of this repository (not shipped with the installed package) holds the scripts, the retained runs, and a generated findings log per study:</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -342,7 +342,7 @@
 <h3 id="why-this-is-disclosed-rather-than-mentioned-quietly">Why this is disclosed rather than mentioned quietly<a class="anchor" aria-label="anchor" href="#why-this-is-disclosed-rather-than-mentioned-quietly"></a>
 </h3>
 <p>Partly because it is true and the provenance of a statistical tool is a reasonable thing for its users to know. Partly because it is increasingly required: the Journal of Open Source Software has mandated an AI usage disclosure since January 2026, and other venues are moving the same way.</p>
-<p>But mostly because the disclosure is less load-bearing than it looks, and saying so is the honest position. The question that matters about a statistical package is not who typed it. It is whether its claims are checkable and whether anyone checked them. Every validity claim here is a comparison against an independent implementation that somebody else wrote – <code>lme4</code>, <code>glmmTMB</code>, <code>emmeans</code>, <code>afex</code>, <code>car</code>, <code>lmerTest</code>, <code>survey</code>, <code>sandwich</code>, <code>mice</code> and the rest – and the scripts, the retained runs and the generated findings are in <a href="https://github.com/craig-hutton/illume/tree/main/studies" class="external-link"><code>studies/</code></a> for anyone who wants to re-run them. Every real defect this package has had was found that way. None was found by reading the code, and none by the test suite.</p>
+<p>But mostly because the disclosure is less load-bearing than it looks, and saying so is the honest position. The question that matters about a statistical package is not who typed it. It is whether its claims are checkable and whether anyone checked them. Every validity claim here is a comparison against an independent implementation that somebody else wrote – <code>lme4</code>, <code>glmmTMB</code>, <code>emmeans</code>, <code>afex</code>, <code>car</code>, <code>lmerTest</code>, <code>survey</code>, <code>sandwich</code>, <code>mice</code> and the rest – and the scripts, the retained runs and the generated findings are in <a href="https://github.com/huttoncp/illume/tree/main/studies" class="external-link"><code>studies/</code></a> for anyone who wants to re-run them. Every real defect this package has had was found that way. None was found by reading the code, and none by the test suite.</p>
 <p>That is the standard the package asks to be judged by, and it is the same standard whoever wrote it. ## Standing on other people’s shoulders</p>
 <p>Almost nothing here is new mathematics. What <code>illume</code> mostly does is put existing methods behind one object with one vocabulary, and it can only do that because other people wrote the hard parts first and wrote them in the open. Three different debts are worth separating, because the third is the one that usually goes unsaid.</p>
 <p><strong>Without these there would be no package.</strong> <code>RTMB</code> and <code>TMB</code> are the engine: every model here is an automatic-differentiation tape and a Laplace approximation, and the reason the multinomial mixed model is feasible at all is that Kristensen, Nielsen, Berg, Skaug and Bell made writing one a matter of declaring which parameters to integrate out. <code>Matrix</code> carries the sparse algebra underneath it. <code>collapse</code> does the grouped operations fast enough that the exploratory half is usable on real data. <code>tinyplot</code> draws every plot. <code>mgcv</code> supplies the smooth basis construction, and Simon Wood’s mixed-model representation of a penalised smooth is what lets one engine fit both.</p>
@@ -371,8 +371,8 @@
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/craig-hutton/illume/" class="external-link">Browse source code</a></li>
-<li><a href="https://github.com/craig-hutton/illume/issues" class="external-link">Report a bug</a></li>
+<li><a href="https://github.com/huttoncp/illume/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/huttoncp/illume/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 

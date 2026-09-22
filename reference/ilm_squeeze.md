@@ -51,7 +51,7 @@ Maximum-likelihood regression with beta-distributed dependent variables.
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 with `family = "beta"`, and `ziformula` for the case where the boundary
 values are a separate process rather than rounding.
 

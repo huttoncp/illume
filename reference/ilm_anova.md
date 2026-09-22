@@ -57,7 +57,7 @@ are `Df`, `Chisq` and `Pr(>Chisq)` in general, or `Df`, `F value` and
 `Pr(>F)` when the model admits exact inference – a gaussian model with
 no random or smooth terms, where the residual variance is estimated
 rather than assumed known (see
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)).
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)).
 A model with no terms to test, such as an intercept-only model, returns
 a table with zero rows rather than an error: "there is nothing to test"
 is an answer, not a failure.
@@ -93,7 +93,7 @@ tests refit a reduced model for each term, which is slower but avoids
 the Hauck-Donner effect, where a Wald statistic can shrink for very
 strong effects. If a term is important to your conclusions, confirm it
 with the LRT; for small samples use
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md)
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
 instead, since both rely on large-sample approximations.
 
 ## References
@@ -107,5 +107,5 @@ in logit analysis. *Journal of the American Statistical Association*,
 
 ## See also
 
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md),
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md).
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md),
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md).

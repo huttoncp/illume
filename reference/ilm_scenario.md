@@ -25,7 +25,7 @@ ilm_scenario(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 - ...:
 
@@ -56,7 +56,7 @@ ilm_scenario(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -99,11 +99,11 @@ Chapman & Hall/CRC.
 
 ## See also
 
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 for the effect of a one-unit change rather than a named scenario,
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 for group means,
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 for whether the adjustment set licenses a causal reading.
 
 ## Examples

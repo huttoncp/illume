@@ -100,7 +100,7 @@ ilm_impute(d, m = 20, method = "glrm")
 A low-rank method assumes there is a low-rank structure to find. When
 there is not, imposing one is worse than filling in column means. The
 ablation study measures it, and
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
 detects it by asking whether a rank-`k` fit predicts held-out cells
 better than the column means do – warning when it does not, and naming
 `method = "fcs"` as the alternative.
@@ -136,7 +136,7 @@ ilm_reduce_na(d)                # structure IN the missingness
 ilm_profile_na(d)               # groups of respondents by what they skipped
 ```
 
-[`ilm_reduce_na()`](https://craig-hutton.github.io/illume/reference/ilm_reduce_na.md)
+[`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
 runs the same dimension reduction on the missingness indicators rather
 than the values. A questionnaire where income and savings go missing
 together, and separately from the health block, has structure in its
@@ -144,11 +144,11 @@ non-response that is worth knowing before deciding what to do about it.
 
 ## See also
 
-[`vignette("workflow")`](https://craig-hutton.github.io/illume/articles/workflow.md)
+[`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
 for where this sits,
-[`?ilm_check_missing`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md),
-[`?ilm_impute`](https://craig-hutton.github.io/illume/reference/ilm_impute.md),
-[`?ilm_mi_pool`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md),
+[`?ilm_check_missing`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md),
+[`?ilm_impute`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+[`?ilm_mi_pool`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md),
 and
-[`?ilm_glrm`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+[`?ilm_glrm`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
 for the low-rank machinery underneath two of the three routes.

@@ -32,7 +32,7 @@ behind to combine, so the drawing has to happen inside the grid.
 
 ## See also
 
-[`ilm_plot_var_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_all.md).
+[`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md).
 
 ## Examples
 

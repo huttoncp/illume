@@ -65,15 +65,15 @@ chi-square.
 Both approximations are derived for LINEAR mixed models. For a
 non-gaussian family the small-sample problem is a different one and
 neither answers it;
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md)
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
 simulates the null rather than approximating its reference, and is the
 remedy there.
 
 ## See also
 
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md),
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md).
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md).
 
 ## Examples
 

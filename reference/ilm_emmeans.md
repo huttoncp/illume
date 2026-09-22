@@ -22,7 +22,7 @@ ilm_emmeans(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 - specs:
 
@@ -79,7 +79,7 @@ marginal means is the model's effect and nothing else. `"cells"` does
 not, because each group gets its own mix. When the averaged-over
 variables are associated with `specs`, a difference of cell-weighted
 means carries that difference in composition as well as the effect, and
-[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
 says so. That is sometimes the quantity you want – it describes the
 groups as they are – but it is not an adjusted comparison.
 
@@ -90,7 +90,7 @@ the linear predictor the thresholds cut up – and not of the categories,
 which have no mean to take. A contrast between two of them is a
 difference in log odds of being in a higher category, constant across
 cuts by the same assumption
-[`ilm_check_proportional()`](https://craig-hutton.github.io/illume/reference/ilm_check_proportional.md)
+[`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
 tests. `type = "response"` is not available, because the inverse link of
 a marginal mean is not a category probability; use
 [`predict()`](https://rdrr.io/r/stats/predict.html) for those.
@@ -104,14 +104,14 @@ endpoints, which keeps the interval's coverage but means the reported
 centre is a median rather than a mean on that scale. For a model with a
 random effect that centre is also conditional on the group rather than
 population-averaged –
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
-is the population-averaged quantity.
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md) is
+the population-averaged quantity.
 
 ## See also
 
-[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
 to compare them,
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 for the average marginal effect of a predictor.
 
 ## Examples

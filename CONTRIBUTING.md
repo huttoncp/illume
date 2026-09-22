@@ -73,7 +73,7 @@ against something somebody else wrote.
 ## Code of conduct
 
 By participating you agree to abide by the [code of
-conduct](https://craig-hutton.github.io/illume/CODE_OF_CONDUCT.md).
+conduct](https://huttoncp.github.io/illume/CODE_OF_CONDUCT.md).
 
 ## Questions
 

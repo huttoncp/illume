@@ -2,7 +2,7 @@
 
 Bundles the weights, clustering and stratification of a complex sample
 so that
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 can fit with them and report a variance that reflects them. The
 arguments mirror
 [`survey::svydesign()`](https://rdrr.io/pkg/survey/man/svydesign.html).
@@ -50,9 +50,9 @@ Wiley.
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 with `design =`, and
-[`ilm_svy_coef()`](https://craig-hutton.github.io/illume/reference/ilm_svy_coef.md).
+[`ilm_svy_coef()`](https://huttoncp.github.io/illume/reference/ilm_svy_coef.md).
 
 ## Examples
 

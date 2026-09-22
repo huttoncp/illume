@@ -16,9 +16,9 @@ ilm_plot_cluster_na(x, dims = c(1, 2), ...)
 - x:
 
   An
-  [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+  [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
   or
-  [`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+  [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
   result.
 
 - dims:
@@ -36,8 +36,8 @@ ilm_plot_cluster_na(x, dims = c(1, 2), ...)
 
 ## See also
 
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
-[`ilm_plot_cluster_gap()`](https://craig-hutton.github.io/illume/reference/ilm_plot_cluster_gap.md).
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md),
+[`ilm_plot_cluster_gap()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster_gap.md).
 
 ## Examples
 

@@ -16,7 +16,7 @@ ilm_dag_implied(g, observed = NULL)
 - g:
 
   An
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md).
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md).
 
 - observed:
 
@@ -37,7 +37,7 @@ already independent with nothing held fixed, the set is empty.
 
 ## See also
 
-[`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md),
+[`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md),
 which tests these against data.
 
 ## Examples

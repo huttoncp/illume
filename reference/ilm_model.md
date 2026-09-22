@@ -5,7 +5,7 @@ fits a mixed-effects model for a nominal categorical outcome with three
 or more unordered categories.
 
 Parses the formula, builds the design matrices and calls
-[`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md).
+[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md).
 Called by `ilm_model()`; documented separately only because
 `ilm_model()` dispatches to it.
 
@@ -55,26 +55,26 @@ ilm_model_formula(
 
   Response distribution: one of "gaussian", "binomial", "poisson",
   "nbinom", "beta", "multinomial", or one of the ordinal families. See
-  [`ilm_family()`](https://craig-hutton.github.io/illume/reference/ilm_family.md).
+  [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md).
 
 - re_struct:
 
   Optional named list of category covariance structures, named by
   grouping variable. See
-  [`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md).
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md).
 
 - ar:
 
   Optional correlation over time, from
-  [`ilm_ar1()`](https://craig-hutton.github.io/illume/reference/ilm_ar1.md)
+  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
   or
-  [`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md).
+  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md).
 
 - weights:
 
   Optional **frequency** weights: the number of replicate observations
   each row stands for. Evaluated inside `data`. See
-  [`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md)
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
   for when this is valid, and why survey weights are not.
 
 - contrasts:
@@ -92,7 +92,7 @@ ilm_model_formula(
   Type III tests of a main effect that is also in an interaction need
   orthogonal coding such as
   [`stats::contr.sum()`](https://rdrr.io/r/stats/contrast.html);
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   checks for that and says so rather than reporting a test that is not
   the one it claims. Note that this is a separate matter from the
   sum-to-zero coding a multinomial fit uses across its outcome
@@ -112,7 +112,7 @@ ilm_model_formula(
   Logical or `NULL`. Compute the joint precision over fixed and random
   parameters. `NULL` (the default) switches it on when the model
   contains smooths, which is when
-  [`predict.ilm_model()`](https://craig-hutton.github.io/illume/reference/predict.ilm_model.md)
+  [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
   needs it.
 
 - na.action:
@@ -123,7 +123,7 @@ ilm_model_formula(
 - censor:
 
   Optional censoring specification from
-  [`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md),
+  [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md),
   for a response with a floor, a ceiling or a detection limit.
 
 - dispformula:
@@ -132,7 +132,7 @@ ilm_model_formula(
   logarithm: `~ group` for a separate spread per level, `~ x` for one
   that changes with a covariate, `~ mu` for a power of the fitted mean.
   `mu` is a reserved name. This is the remedy for what
-  [`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
   diagnoses.
 
 - rp_df:
@@ -152,7 +152,7 @@ ilm_model_formula(
   Optional one-sided formula for the zero part of a count model, on the
   logit scale: `~ 1` for a constant excess-zero probability, `~ x` for
   one that depends on a predictor. This is the remedy for what
-  [`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+  [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
   diagnoses. Fixed effects only – a random effect in the zero part is
   not supported, and a `|` here is an error rather than something
   quietly dropped.
@@ -166,15 +166,15 @@ ilm_model_formula(
   response clears zero, and how far past it goes, the latter fitted to a
   count that cannot be zero. Choose by what the zeros mean, not by fit –
   a structural zero is a unit that was never at risk. See
-  [`ilm_zi_coef()`](https://craig-hutton.github.io/illume/reference/ilm_zi_coef.md).
+  [`ilm_zi_coef()`](https://huttoncp.github.io/illume/reference/ilm_zi_coef.md).
 
 - design:
 
   An
-  [`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md)
+  [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md)
   describing how a complex sample was drawn. Supplying one fits with the
   sampling weights and attaches the design, so
-  [`ilm_svy_coef()`](https://craig-hutton.github.io/illume/reference/ilm_svy_coef.md)
+  [`ilm_svy_coef()`](https://huttoncp.github.io/illume/reference/ilm_svy_coef.md)
   can report a variance that reflects the clustering and stratification.
   Do not also pass `weights`: a sampling weight and a replicate count
   are different things and the design already carries one.
@@ -191,25 +191,25 @@ ilm_model_formula(
   estimates you report – maximum likelihood biases the variance
   components downward, and with few clusters that carries through to
   standard errors and to the degrees of freedom from
-  [`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md).
+  [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md).
   Once set, any likelihood-ratio test refuses rather than quietly
   comparing things that are not comparable, and so does
-  [`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md),
+  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md),
   whose sandwich needs per-observation scores that a restricted
   likelihood does not have. Available for every family, but it delivers
   different amounts depending on the family – see the section below.
-  [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
   defaults to `TRUE`, because there the graph fixed the adjustment set
   before any data were seen.
 
 ## Value
 
 An object of class `"ilm_model"`. Beyond the elements listed in
-[`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md),
-a formula fit also stores `call`, `terms`, `xlev`, `contrasts`, the
-model frame and the smooth objects – everything needed to rebuild a
-reference grid for
-[`predict.ilm_model()`](https://craig-hutton.github.io/illume/reference/predict.ilm_model.md)
+[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md), a
+formula fit also stores `call`, `terms`, `xlev`, `contrasts`, the model
+frame and the smooth objects – everything needed to rebuild a reference
+grid for
+[`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
 and for `emmeans` or `marginaleffects`.
 
 An object of class `"ilm_model"`.
@@ -254,7 +254,7 @@ fixed population value 88% of the time and the sample-specific value
 94.3%; the slopes were unaffected, which is what the centring is for.
 Read the intercept of a model with a smooth as a property of the sample,
 and take conclusions from the slopes and from
-[`ilm_plot_model()`](https://craig-hutton.github.io/illume/reference/ilm_plot_model.md)'s
+[`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md)'s
 effect curves.
 
 ## Simple models get exact inference
@@ -262,7 +262,7 @@ effect curves.
 A gaussian model with no random or smooth terms is an ordinary linear
 model. In that case there is nothing to integrate out, so illume reports
 **exact** t tests on `n - p` degrees of freedom and F tests in
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 rather than the large-sample normal and chi-square approximations it
 must use when random effects are present. Coefficients, standard errors,
 the residual standard deviation and the F tests then agree with
@@ -294,11 +294,11 @@ reason and a suggested remedy for anything that is not `"OK"`.
 
 ## See also
 
-[`summary.ilm_model()`](https://craig-hutton.github.io/illume/reference/summary.ilm_model.md),
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
-[`predict.ilm_model()`](https://craig-hutton.github.io/illume/reference/predict.ilm_model.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md),
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md).
+[`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+[`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md).
 
 ## Examples
 

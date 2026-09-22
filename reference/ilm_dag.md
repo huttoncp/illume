@@ -2,9 +2,9 @@
 
 Holds a directed acyclic graph, which variables are unobserved, and
 which are the exposure and the outcome. This is the object
-[`ilm_adjust_sets()`](https://craig-hutton.github.io/illume/reference/ilm_adjust_sets.md)
+[`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md)
 and
-[`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md)
+[`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md)
 work from.
 
 ## Usage
@@ -49,9 +49,9 @@ rather than two.
 
 ## See also
 
-[`ilm_adjust_sets()`](https://craig-hutton.github.io/illume/reference/ilm_adjust_sets.md)
+[`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md)
 for what the graph licenses,
-[`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md)
+[`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md)
 for whether the data agree with it.
 
 ## Examples

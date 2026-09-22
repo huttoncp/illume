@@ -15,13 +15,13 @@ ilm_svy_vcov(object, design = NULL, lonely = c("adjust", "certainty", "fail"))
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with no random effects.
 
 - design:
 
   An
-  [`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md),
+  [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md),
   or `NULL` to use the one the fit carries.
 
 - lonely:
@@ -43,7 +43,7 @@ observations rather than `n`, so its standard errors are too small by at
 least `sqrt(n / sum(w))` – and by more once the sample is clustered,
 since the design effect is on top of that. On the stratified two-stage
 example in
-[`ilm_svy_coef()`](https://craig-hutton.github.io/illume/reference/ilm_svy_coef.md)
+[`ilm_svy_coef()`](https://huttoncp.github.io/illume/reference/ilm_svy_coef.md)
 the weights alone account for a factor of 5.9 and the observed ratios
 are 7.3 and 16.6.
 
@@ -60,5 +60,5 @@ estimators from complex surveys. *International Statistical Review* 51,
 
 ## See also
 
-[`ilm_svy_coef()`](https://craig-hutton.github.io/illume/reference/ilm_svy_coef.md),
-[`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md).
+[`ilm_svy_coef()`](https://huttoncp.github.io/illume/reference/ilm_svy_coef.md),
+[`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md).

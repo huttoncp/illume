@@ -61,7 +61,7 @@ ilm_boot_ci(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -75,7 +75,7 @@ Bootstrap. Chapman and Hall.
 
 ## See also
 
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 for a difference between two groups.
 
 ## Examples

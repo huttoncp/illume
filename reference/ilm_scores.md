@@ -20,7 +20,7 @@ ilm_scores(object, conditional = TRUE)
 - conditional:
 
   Logical, as in
-  [`ilm_fitted()`](https://craig-hutton.github.io/illume/reference/ilm_fitted.md).
+  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md).
 
 ## Value
 

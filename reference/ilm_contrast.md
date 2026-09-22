@@ -1,7 +1,7 @@
 # Compare estimated marginal means
 
 Differences between the means from
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md),
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
 with intervals and a multiplicity adjustment.
 
 ## Usage
@@ -23,7 +23,7 @@ ilm_contrast(
 - object:
 
   An
-  [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
   result.
 
 - method:
@@ -64,7 +64,7 @@ single-step studentized maximum: the contrasts' joint covariance is
 known exactly here, `C L V L' C'`, so the reference distribution is
 simulated from it directly rather than bootstrapped. This is the same
 construction
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 uses on raw data, where it reproduced
 [`TukeyHSD()`](https://rdrr.io/r/stats/TukeyHSD.html) to 0.006 on the
 design Tukey is exact for.
@@ -75,8 +75,8 @@ to adjust and the column reads `"none"` whatever was asked.
 
 ## See also
 
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md),
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 for the same comparison made without a model.
 
 ## Examples

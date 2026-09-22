@@ -1,7 +1,7 @@
 # Cluster observations, choosing the number of clusters
 
 Groups the rows of an
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
 result, or any numeric coordinates, by k-means or hierarchical
 clustering. When `k` is not given it is searched for over `1..k_max` by
 the gap statistic. Every cluster gets a stability score from bootstrap
@@ -33,7 +33,7 @@ ilm_cluster(
 - x:
 
   An
-  [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   result, or a numeric matrix or data frame of coordinates with one row
   per observation.
 
@@ -91,7 +91,7 @@ ilm_cluster(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -129,9 +129,9 @@ of clusters in a data set via the gap statistic. JRSS B 63(2).
 
 ## See also
 
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md),
-[`ilm_plot_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_plot_cluster.md).
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md),
+[`ilm_plot_cluster()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster.md).
 
 ## Examples
 

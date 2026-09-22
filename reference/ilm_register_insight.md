@@ -20,7 +20,7 @@ not installed.
 ## Details
 
 This is not a substitute for
-[`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md),
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md),
 which says things the easystats stack cannot – what illume's own
 diagnostics found, and what that implies for the estimates. It is there
 because it costs a user nothing to have the option, and because an
@@ -29,8 +29,8 @@ check against.
 
 ## See also
 
-[`ilm_register_marginaleffects()`](https://craig-hutton.github.io/illume/reference/ilm_register_marginaleffects.md),
-[`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md).
+[`ilm_register_marginaleffects()`](https://huttoncp.github.io/illume/reference/ilm_register_marginaleffects.md),
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md).
 
 ## Examples
 

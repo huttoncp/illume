@@ -16,7 +16,7 @@ ilm_dsep(g, x, y, z = character())
 - g:
 
   An
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md).
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md).
 
 - x, y:
 

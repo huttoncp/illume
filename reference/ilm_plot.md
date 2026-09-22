@@ -2,7 +2,7 @@
 
 Chooses a plot appropriate to the classes of what you give it, annotates
 it with the same diagnostic verdict
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
 reports, and switches to a binned density when there are too many points
 to show individually.
 
@@ -26,7 +26,8 @@ ilm_plot(
   max_levels = 20L,
   verdict = TRUE,
   main = NULL,
-  ...
+  ...,
+  pch = NULL
 )
 ```
 
@@ -102,6 +103,13 @@ ilm_plot(
   Passed to
   [`tinyplot::tinyplot()`](https://grantmcdermott.com/tinyplot/man/tinyplot.html).
 
+- pch:
+
+  Plotting character. Takes a NAME as well as a number:
+  `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+  spaces, underscores and hyphens are ignored. A single character is
+  drawn literally, so `pch = "x"` is still the letter x.
+
 ## Value
 
 Invisibly, a list with the geom used, the reason, and the note shown.
@@ -110,7 +118,7 @@ Invisibly, a list with the geom used, the reason, and the note shown.
 
 `geom = "auto"` picks from the data. When you name a geom instead, some
 require both `x` and `y` and some use `x` alone.
-[`ilm_geom_spec()`](https://craig-hutton.github.io/illume/reference/ilm_geom_spec.md)
+[`ilm_geom_spec()`](https://huttoncp.github.io/illume/reference/ilm_geom_spec.md)
 returns the full table, and it is the same table the argument checks
 read, so it cannot drift from the behaviour:
 
@@ -129,10 +137,10 @@ read, so it cannot drift from the behaviour:
 
 ## See also
 
-[`ilm_geom_spec()`](https://craig-hutton.github.io/illume/reference/ilm_geom_spec.md),
-[`ilm_pick_geom()`](https://craig-hutton.github.io/illume/reference/ilm_pick_geom.md),
-[`ilm_plot_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_all.md),
-[`ilm_plot_model()`](https://craig-hutton.github.io/illume/reference/ilm_plot_model.md).
+[`ilm_geom_spec()`](https://huttoncp.github.io/illume/reference/ilm_geom_spec.md),
+[`ilm_pick_geom()`](https://huttoncp.github.io/illume/reference/ilm_pick_geom.md),
+[`ilm_plot_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_all.md),
+[`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md).
 
 ## Examples
 

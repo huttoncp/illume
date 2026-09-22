@@ -47,7 +47,7 @@ routes to this function.
 
 ## See also
 
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 for temporal correlation,
-[`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md)
+[`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md)
 for omitted variables.

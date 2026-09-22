@@ -40,7 +40,7 @@ not cover. Use `default` to change that.
 ## See also
 
 [`match()`](https://rdrr.io/r/base/match.html),
-[`ilm_recode_errors()`](https://craig-hutton.github.io/illume/reference/ilm_recode_errors.md).
+[`ilm_recode_errors()`](https://huttoncp.github.io/illume/reference/ilm_recode_errors.md).
 
 ## Examples
 

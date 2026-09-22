@@ -36,7 +36,7 @@
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/craig-hutton/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -46,13 +46,13 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/craig-hutton/illume/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/huttoncp/illume/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.7.9000" id="illume-0079000">illume 0.0.7.9000<a class="anchor" aria-label="anchor" href="#illume-0079000"></a></h2>
-<p>Ten features, each validated against an outside implementation where one exists. The package now covers the path from a sample-size calculation to a scenario a stakeholder can act on.</p>
-<p>Every one of them produced at least one real bug, and none of those came from the test suite. They came from comparing against something outside or from widening a simulation, which remains the only thing that has ever found a defect here.</p>
+<p>Ten features, each validated against an outside implementation where one exists, and then a second round that arrived as defect reports from a separate project built against the package. It now covers the path from a sample-size calculation – with or without a pilot to base one on – to a scenario a stakeholder can act on.</p>
+<p>Every one of them produced at least one real bug, and none of those came from the test suite. They came from comparing against something outside, from widening a simulation, or from someone calling illume from outside it, which remain the only things that have ever found a defect here.</p>
 <div class="section level3">
 <h3 id="estimated-marginal-means-and-contrasts-0-0-7-9000">Estimated marginal means and contrasts<a class="anchor" aria-label="anchor" href="#estimated-marginal-means-and-contrasts-0-0-7-9000"></a></h3>
 <ul><li>
@@ -186,6 +186,45 @@
 <ul><li>
 <strong><code>ilm_power(term = )</code> now takes a variable name as well as a coefficient name.</strong> A researcher planning a trial thinks <code>"arm"</code>, not <code>"armtreatment"</code>. The variable is resolved through the model matrix’s <code>assign</code> attribute, not by matching a name prefix, so an exposure <code>x</code> does not collect a covariate called <code>xray</code>. A term with more than one column – a three-level factor, a spline – is refused with its coefficients listed and <code><a href="../reference/ilm_anova.html">ilm_anova()</a></code> named, because a power curve follows one effect size at a time and choosing a column silently would report power for a comparison nobody asked for.</li>
 </ul></div>
+<div class="section level3">
+<h3 id="planning-a-study-that-has-not-been-run-0-0-7-9000">Planning a study that has not been run<a class="anchor" aria-label="anchor" href="#planning-a-study-that-has-not-been-run-0-0-7-9000"></a></h3>
+<p><code><a href="../reference/ilm_scaffold.html">ilm_scaffold()</a></code> builds a design grid from a study specification, attaches the parameters you assume, and returns an ordinary <code>"ilm_model"</code>. Everything downstream then works unchanged, which is the point: the assumptions can be interrogated before anything is built on them. <code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code> is the same thing plus a power curve, in one call.</p>
+<ul><li>Assumptions go in <strong>either</strong> as coefficients on the link scale, or as expected <strong>cell means on the response scale</strong> – “controls average 12, the treated group averages 14.5” – which is the form most people actually hold one in. illume solves back to coefficients.</li>
+<li>A least-squares solve always returns something, so cell means that the formula cannot produce would otherwise give a scaffold for a different study than the one being planned. Crossed means under an additive formula stop, name the cell that is off and by how much, and name <code>arm * time</code> as the remedy.</li>
+<li>
+<code>n_unit</code> counts participants when the formula has a grouping bar and rows when it does not, so the number given is the number that goes in a protocol. A between-unit variable is allocated to UNITS and repeated down their rows; allocating it to rows would put a participant in both arms.</li>
+<li>
+<code>icc</code> is accepted in place of <code>re_sd</code>, since an intraclass correlation is what a repeated-measures literature reports.</li>
+<li>Against the closed form for a two-sample <strong>t</strong> test: 0.858/0.995/1.000 simulated against 0.872/0.993/1.000 predicted at 100/200/300 participants. Against a treatment-by-time mixed model hand-rolled in plain R and fitted with <strong>lme4/lmerTest</strong>, at 40/80/140 participants: 0.284/0.452/0.654 against 0.242/0.440/0.632. All within Monte Carlo error, but all three lean the same way, which is what a <strong>z</strong> reference against a Satterthwaite <strong>t</strong> does.</li>
+<li>
+<code><a href="../reference/ilm_emmeans.html">ilm_emmeans()</a></code> on a scaffold returns the cell means that were assumed, to 1e-6 – the solve goes one way and that comes back the other, so the check does not share an error with the thing it checks.</li>
+<li>The print method says the parameters were assumed, not estimated, and that the standard errors are one realisation of the design rather than a property of the assumptions. An <code>"ilm_model"</code> that was never fitted to anything is exactly the sort of object that gets mistaken for a result.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="a-random-slope-was-being-averaged-as-a-random-intercept-0-0-7-9000">A random slope was being averaged as a random intercept<a class="anchor" aria-label="anchor" href="#a-random-slope-was-being-averaged-as-a-random-intercept-0-0-7-9000"></a></h3>
+<p>In both places it could be. Found while building the above, since a treatment-by-time design is what that is mostly for.</p>
+<ul><li>
+<strong><code><a href="../reference/ilm_power.html">ilm_power()</a></code> drew only the intercept variance.</strong> The draw took <code>Sigma[[k]][1, 1]</code> and added it as a per-group shift, so a fit with <code>(1 + time | id)</code> produced simulated participants whose individual trajectories varied no more than residual noise allows: a per-subject slope SD of 0.50 where the fit said 1.14 and the generating value was 1.20. Every simulated participant moved in near-parallel, which understates how much they differ and so <strong>overstates</strong> power for anything interacting with the within-subject variable – 0.450 against 0.333 on the test case, a third too high.</li>
+<li>The scale of a term lives in <code>Sigma</code> and its shape in <code>Sigma_d</code>, so the covariance of a group’s whole random-effect vector is their product. The draw now uses it, with the bar re-evaluated on the simulated study’s own rows. Drawn data now has a slope SD of 1.248 against the real data’s 1.250.</li>
+<li>
+<strong><code>predict(marginal = TRUE)</code> made the same simplification, and is fixed too.</strong> It drew <code>Sigma</code> alone and added it to every row, which drops the slope variance and also holds the shift constant across rows when the spread being integrated over grows with distance from where the slope is centred. On a logistic model with a fitted slope SD of 0.81 the population-averaged probability at the far end of the range came back as 0.703 where the correct average is 0.618.</li>
+<li>The draw is now the matrix normal the objective actually specifies: one group’s effect is a <code>dk x C</code> matrix with row covariance <code>Sigma_d</code> and column covariance <code>Sigma</code>, so <code>U = A Z B</code> with <code>AA' = Sigma_d</code> and <code>B'B = Sigma</code>, and the contribution at a row is <code>z_row %*% U</code>. <code><a href="../reference/ilm_power.html">ilm_power()</a></code> and <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> now read that factorisation from one place, having already gone out of step once.</li>
+<li>When <code>dk == 1</code> this is the previous draw exactly, down to the random number stream, so nothing that was already right moved.</li>
+<li>Checked against a brute-force average over 400,000 draws computed independently, at every point of the prediction grid, for a random intercept and for a random slope.</li>
+<li>
+<strong>Under an identity link the average is now exact rather than simulated.</strong> <code>E[eta + z'u] = eta</code>, so there was a closed form all along and simulating it returned a noisy estimate of a number already known – 0.14 on the response scale with 200 draws and a random slope. The result no longer depends on <code>ndraw</code>.</li>
+<li>A bar that varies over a column the prediction data does not carry now warns and says it integrated the intercept only. Averaging over part of a term is a different quantity from averaging over the term.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="plotting-characters-by-name-0-0-7-9000">Plotting characters by name<a class="anchor" aria-label="anchor" href="#plotting-characters-by-name-0-0-7-9000"></a></h3>
+<ul><li>
+<code>pch = "filled circle"</code> works wherever <code>pch = 16</code> did. Base R’s <code>pch</code> is 26 integers nobody remembers, nothing in the argument says which is which, and the difference between 16, 19, 20 and 21 is not guessable – so a plot gets whichever code the author recalled and a reader comparing two plots cannot tell whether a difference in the markers was meant.</li>
+<li>Names are also checkable in a way numbers are not: <code>pch = 26</code> is accepted by <code>graphics</code> and quietly draws nothing, while a name that is not in the table stops and lists the ones that are. All 26 codes have a name, most have aliases, and case, spaces, underscores, hyphens and dots are all ignored.</li>
+<li>A single character is left alone, because base R draws it literally – translating <code>pch = "x"</code> would silently turn the plot into crosses.</li>
+<li>
+<code>pch</code> is now a documented argument of <code><a href="../reference/ilm_plot.html">ilm_plot()</a></code>, <code><a href="../reference/ilm_plot_scatter.html">ilm_plot_scatter()</a></code>, <code><a href="../reference/ilm_plot_line.html">ilm_plot_line()</a></code>, <code><a href="../reference/ilm_plot_stat_error.html">ilm_plot_stat_error()</a></code>, <code><a href="../reference/ilm_plot_box.html">ilm_plot_box()</a></code> and <code><a href="../reference/ilm_plot_violin.html">ilm_plot_violin()</a></code> rather than something to be discovered inside <code>...</code>. It sits after <code>...</code>, so no existing positional call can be matched to it.</li>
+</ul><p>The obvious implementation – route every call through one <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call()</a></code> funnel so the translation lives in a single place – <strong>is wrong here, and passed the whole test suite before <code>R CMD check</code> caught it.</strong> <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call()</a></code> puts the evaluated arguments into the call, and tinyplot deparses its arguments to title a legend, so a numeric <code>by</code> column arrived as a deparsed 32-element vector and the legend width computation threw <code>invalid graphics state</code>. The failing call was <code>ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend = "lm")</code> – an example that had been in the package, working, for months.</p>
+</div>
 <div class="section level3">
 <h3 id="finite-degrees-of-freedom-for-a-mixed-model-0-0-7-9000">Finite degrees of freedom for a mixed model<a class="anchor" aria-label="anchor" href="#finite-degrees-of-freedom-for-a-mixed-model-0-0-7-9000"></a></h3>
 <ul><li>

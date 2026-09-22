@@ -23,7 +23,7 @@ ilm_dag_test(
 - g:
 
   An
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md).
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md).
 
 - data:
 
@@ -74,12 +74,12 @@ and says so in the `note` column rather than quietly dropping it.
 0.03 is significant and means nothing, so a claim counts as contradicted
 only when it is both statistically significant after adjustment and
 larger than `min_effect` in partial correlation. This is the stance
-[`ilm_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_variogram.md)
+[`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md)
 takes for the same reason.
 
 ## See also
 
-[`ilm_dag_implied()`](https://craig-hutton.github.io/illume/reference/ilm_dag_implied.md)
+[`ilm_dag_implied()`](https://huttoncp.github.io/illume/reference/ilm_dag_implied.md)
 for the claims themselves.
 
 ## Examples

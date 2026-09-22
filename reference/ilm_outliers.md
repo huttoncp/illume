@@ -63,7 +63,7 @@ from a heavy tail – and the third is common. Dropping flagged rows
 because they are flagged changes the estimand and biases whatever is
 fitted next; if the tail is real, the remedy is a model that expects it,
 which for illume means a different family or [ilm_model(dispformula =
-)](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+)](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## References
 
@@ -72,9 +72,9 @@ Outliers. ASQC Quality Press.
 
 ## See also
 
-[`ilm_outliers_all()`](https://craig-hutton.github.io/illume/reference/ilm_outliers_all.md)
+[`ilm_outliers_all()`](https://huttoncp.github.io/illume/reference/ilm_outliers_all.md)
 for a whole data frame,
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
 for the distribution a flag should be read against.
 
 ## Examples

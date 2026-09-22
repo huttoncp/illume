@@ -38,7 +38,7 @@ ilm_plot_histogram(data, x, by = NULL, breaks = "Sturges", ...)
 
 ## See also
 
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md),
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md),
 which picks a geometry for you.
 
 ## Examples

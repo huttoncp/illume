@@ -17,7 +17,7 @@ ilm_zi_coef(object, level = 0.95)
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with a `ziformula`.
 
 - level:
@@ -31,9 +31,9 @@ with an `odds_ratio` column since the scale is a logit.
 
 ## See also
 
-[`ilm_zi_prob()`](https://craig-hutton.github.io/illume/reference/ilm_zi_prob.md)
+[`ilm_zi_prob()`](https://huttoncp.github.io/illume/reference/ilm_zi_prob.md)
 for the fitted probabilities themselves,
-[`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
 for whether a zero part is called for at all.
 
 ## Examples

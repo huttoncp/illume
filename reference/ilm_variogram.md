@@ -4,7 +4,7 @@ Bins every pair of observations within a group by how far apart they
 are, and reports the residual correlation in each bin against an
 envelope built by simulating from the fitted model and refitting. This
 is the check for a
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
 term, and the one to use whenever observation times are irregular.
 
 ## Usage
@@ -101,14 +101,14 @@ ilm_variogram(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
 Invisibly, a list with the per-bin `table`, the simulated null, and the
 number of replicates that refitted.
 
-## Why not [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+## Why not [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 
 That function matches pairs at exact lags, which is right for evenly
 spaced data and close to useless without it. On a 60-unit panel with six
@@ -120,11 +120,11 @@ lags returned no verdict. Binning by distance uses all 900 pairs.
 
 Correlation that starts high and decays toward zero as separation grows
 is what an autoregressive process looks like, and is what
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
 fits. Correlation that is flat and positive at every separation is a
 group effect the random intercept has not absorbed. Correlation that
 rises again at some separation is a cycle; see
-[`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md).
+[`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md).
 
 The envelope is not centred on zero, and should not be. Residuals within
 a group sum to roughly zero, so pairs of them correlate negatively even
@@ -145,11 +145,11 @@ S-PLUS*. Springer. (Chapter 5 covers the residual variogram.)
 
 ## See also
 
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
 for the remedy,
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 for evenly spaced data,
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md).
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md).
 
 ## Examples
 

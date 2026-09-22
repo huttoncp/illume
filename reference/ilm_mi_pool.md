@@ -18,7 +18,7 @@ ilm_mi_pool(object, formula = NULL, ...)
 - object:
 
   An
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   result, or a list of fitted models.
 
 - formula:
@@ -28,7 +28,7 @@ ilm_mi_pool(object, formula = NULL, ...)
 - ...:
 
   Passed to
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Value
 
@@ -50,7 +50,7 @@ with multiple imputation. Biometrika 86(4).
 
 ## See also
 
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md).
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md).
 
 ## Examples
 

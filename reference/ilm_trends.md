@@ -36,7 +36,7 @@ ilm_trends(
 - at:
 
   Named list fixing other predictors, as in
-  [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md).
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md).
   The slope of `var` is constant across these unless `var` enters
   non-linearly or interacts with them, in which case where you evaluate
   it matters and the result says so.
@@ -44,7 +44,7 @@ ilm_trends(
 - weights:
 
   How to average over factors not in `specs`; see
-  [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md).
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md).
 
 - delta:
 
@@ -61,7 +61,7 @@ ilm_trends(
   Denominator degrees of freedom for the within-level tests: one of
   `"auto"`, `"satterthwaite"`, `"kenward-roger"`, `"residual"`,
   `"asymptotic"`, or a single number. See
-  [`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md).
+  [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md).
   `"auto"` gives an exact t where nothing was integrated out,
   Satterthwaite for a gaussian mixed model, and a z test otherwise.
 
@@ -70,7 +70,7 @@ ilm_trends(
 A data frame of class `"ilm_emm"`, one row per level of `specs`, with
 `estimate`, `se`, `df`, `statistic`, `p.value`, `lower` and `upper`.
 Being an `"ilm_emm"` it can be passed straight to
-[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md).
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md).
 
 ## The two questions, which are not the same question
 
@@ -79,7 +79,7 @@ arm. Two different follow-ups are then available, and they answer
 different things:
 
 - **Do the slopes differ between arms?** Pass the result to
-  [`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md),
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md),
   which differences the rows. This is the interaction restated one pair
   at a time.
 
@@ -95,7 +95,7 @@ within-arm result gets written up as a between-arm claim.
 
 ## Why a marginal mean cannot do this
 
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 averages predictions with the covariate held at its mean, which
 collapses the very thing the interaction is about. The slope has to be
 estimated as a slope. The two share all their machinery – the same
@@ -104,11 +104,11 @@ only in what fills the contrast matrix.
 
 ## See also
 
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 for means,
-[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
 for differences between the slopes,
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
 for the omnibus interaction this takes apart.
 
 ## Examples

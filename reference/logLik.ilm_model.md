@@ -3,23 +3,23 @@
 Returns the **Laplace-approximate** marginal log-likelihood – the
 likelihood with the random effects integrated out, using the
 approximation described in
-[`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md).
+[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md).
 The `df` attribute counts fixed effects *and* covariance parameters,
 which is the convention
-[`AIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md)
+[`AIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
 and
-[`BIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md)
+[`BIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
 use.
 
 Returns the **Laplace-approximate** marginal log-likelihood – the
 likelihood with the random effects integrated out, using the
 approximation described in
-[`ilm_fit()`](https://craig-hutton.github.io/illume/reference/ilm_fit.md).
+[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md).
 The `df` attribute counts fixed effects *and* covariance parameters,
 which is the convention
-[`AIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md)
+[`AIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
 and
-[`BIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md)
+[`BIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
 use.
 
 ## Usage
@@ -69,10 +69,10 @@ approximation error largely cancels.
 
 ## See also
 
-[`AIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md),
-[`BIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md),
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md).
+[`AIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md),
+[`BIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).
 
-[`AIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md),
-[`BIC.ilm_model()`](https://craig-hutton.github.io/illume/reference/AIC.ilm_model.md),
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md).
+[`AIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md),
+[`BIC.ilm_model()`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).

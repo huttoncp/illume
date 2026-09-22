@@ -67,7 +67,7 @@ ilm_check_ar(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -75,7 +75,7 @@ Invisibly, a list with the per-lag `table`, the matching `pacf` table,
 the observed values and per-component z scores, the simulated null and
 the number of replicates that refitted. The whole thing can be handed
 straight to
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
 to avoid refitting.
 
 ## Which residual, and why it matters
@@ -114,10 +114,10 @@ structures.)
 
 ## See also
 
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
 for the picture,
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md),
-[`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md).
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+[`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md).
 
 ## Examples
 

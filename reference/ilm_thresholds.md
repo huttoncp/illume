@@ -16,7 +16,7 @@ ilm_thresholds(object, level = 0.95)
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with an ordinal family.
 
 - level:
@@ -35,7 +35,7 @@ pushes probability towards the higher categories.
 
 ## See also
 
-[`ilm_check_proportional()`](https://craig-hutton.github.io/illume/reference/ilm_check_proportional.md)
+[`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
 for the assumption that makes one coefficient per predictor enough.
 
 ## Examples

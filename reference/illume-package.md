@@ -33,7 +33,7 @@ question.
 
 `"gaussian"`, `"binomial"`, `"poisson"`, `"nbinom"` and `"multinomial"`;
 see
-[`ilm_family()`](https://craig-hutton.github.io/illume/reference/ilm_family.md).
+[`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md).
 Zero-inflation, hurdle models and Tweedie are deliberately out of scope,
 because `glmmTMB` covers those well.
 
@@ -46,7 +46,7 @@ categories, *not* a contrast against a baseline category. This differs
 from [`nnet::multinom()`](https://rdrr.io/pkg/nnet/man/multinom.html)
 and `brms`, which use baseline-category coding, and matters when reading
 output: see
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md).
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md).
 
 ## Why the diagnostics are prominent
 
@@ -55,36 +55,36 @@ coefficients while its covariance matrix is unusable, so the standard
 errors are meaningless even though nothing looks wrong. Every fit
 therefore carries a table of checks (see `fit$checks`), each with a
 status, a plain-language reason, and a suggested remedy.
-[`summary.ilm_model()`](https://craig-hutton.github.io/illume/reference/summary.ilm_model.md)
+[`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)
 prints them.
 
 ## Main entry points
 
-- [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md):
+- [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md):
 
   fit a model from a formula, for any family
 
-- [`ilm_family()`](https://craig-hutton.github.io/illume/reference/ilm_family.md):
+- [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md):
 
   what each response distribution assumes
 
-- [`summary.ilm_model()`](https://craig-hutton.github.io/illume/reference/summary.ilm_model.md):
+- [`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md):
 
   coefficient table plus assumption checks
 
-- [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md):
+- [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md):
 
   Type II/III analysis of deviance for fixed effects
 
-- [`predict.ilm_model()`](https://craig-hutton.github.io/illume/reference/predict.ilm_model.md):
+- [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md):
 
   category probabilities, conditional or population-averaged
 
-- [`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md):
+- [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md):
 
   residual diagnostic panels
 
-- [`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md):
+- [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md):
 
   parametric-bootstrap likelihood-ratio test
 
@@ -115,9 +115,9 @@ R*, 2nd ed. Chapman & Hall/CRC.
 
 Useful links:
 
-- <https://github.com/craig-hutton/illume>
+- <https://github.com/huttoncp/illume>
 
-- Report bugs at <https://github.com/craig-hutton/illume/issues>
+- Report bugs at <https://github.com/huttoncp/illume/issues>
 
 ## Author
 

@@ -33,7 +33,7 @@ ilm_plot_density(data, x, by = NULL, ...)
 
 ## See also
 
-[`ilm_plot_histogram()`](https://craig-hutton.github.io/illume/reference/ilm_plot_histogram.md).
+[`ilm_plot_histogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_histogram.md).
 
 ## Examples
 

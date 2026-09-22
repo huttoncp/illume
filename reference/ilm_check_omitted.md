@@ -1,7 +1,7 @@
 # Screen variables the model does not use
 
 Runs
-[`ilm_check_covariate()`](https://craig-hutton.github.io/illume/reference/ilm_check_covariate.md)
+[`ilm_check_covariate()`](https://huttoncp.github.io/illume/reference/ilm_check_covariate.md)
 over every variable in a data frame that the model's formula does not
 mention, and reports any whose residual pattern suggests it should have
 been included.

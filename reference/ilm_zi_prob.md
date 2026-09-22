@@ -13,7 +13,7 @@ ilm_zi_prob(object, newdata = NULL)
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with a `ziformula`.
 
 - newdata:
@@ -26,7 +26,7 @@ Numeric vector of probabilities between 0 and 1.
 
 ## See also
 
-[`ilm_zi_coef()`](https://craig-hutton.github.io/illume/reference/ilm_zi_coef.md).
+[`ilm_zi_coef()`](https://huttoncp.github.io/illume/reference/ilm_zi_coef.md).
 
 ## Examples
 

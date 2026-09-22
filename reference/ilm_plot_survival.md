@@ -65,7 +65,7 @@ ilm_plot_survival(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 - colour, fill, alpha, size:
 
@@ -95,8 +95,8 @@ curves are drawn.
 
 ## See also
 
-[`ilm_survival()`](https://craig-hutton.github.io/illume/reference/ilm_survival.md),
-[`ilm_surv()`](https://craig-hutton.github.io/illume/reference/ilm_surv.md).
+[`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md),
+[`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md).
 
 ## Examples
 

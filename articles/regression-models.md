@@ -1,11 +1,11 @@
 # Regression models
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 fits every model in this package. The formula is lme4’s, the response
 distribution is an argument, and the object that comes back is the same
 whatever you fitted – so
 [`summary()`](https://rdrr.io/r/base/summary.html),
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 [`predict()`](https://rdrr.io/r/stats/predict.html) and the diagnostics
 do not change as the model gets more complicated.
 
@@ -184,7 +184,7 @@ one can.
 
 ## Testing fixed effects
 
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
 gives an analysis of deviance. Each term is tested **jointly across all
 category dimensions**, so a predictor with one column is tested on two
 degrees of freedom when there are three categories.
@@ -212,7 +212,7 @@ For small samples neither is ideal, because both rely on large-sample
 approximations. What to do about it depends on the family.
 
 For a **gaussian** mixed model,
-[`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md)
+[`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md)
 supplies a finite denominator degrees of freedom – Satterthwaite by
 default, Kenward-Roger where it applies – which turns the chi-square
 into an F:
@@ -230,7 +230,7 @@ behind.
 
 For **any other family**, including the multinomial here, neither
 approximation is derived and neither is offered.
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md)
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
 replaces the assumed reference distribution with a simulated one
 instead, which needs no such derivation:
 
@@ -263,16 +263,16 @@ comparable, and their difference is not a likelihood ratio.
 So: **settle the mean structure under the default, then refit with
 `reml = TRUE` for the estimates you report.** Once set,
 `ilm_anova(test = "LRT")` and
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md)
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
 refuse rather than quietly comparing things that are not comparable, and
 so does
-[`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md)
+[`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
 – a sandwich needs per-observation scores, and integrating the
 coefficients out leaves none.
 
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 and
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 default to REML, because in both the fixed effects were fixed before any
 data were seen: by the graph in one case and by the design in the other.
 
@@ -352,7 +352,7 @@ because mgcv identifies smooths by name.
 ## Simple models, and exact inference
 
 Nothing requires a random effect.
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 fits an ordinary regression, and when the family is gaussian and nothing
 is integrated out it reports **exact** inference rather than
 large-sample approximations:
@@ -380,7 +380,7 @@ round(summary(lm(v ~ x + z, data = sd2))$coefficients, 5)
 
 The two agree to numerical precision, including the residual standard
 deviation and the degrees of freedom.
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
 likewise switches from chi-square to F:
 
 ``` r
@@ -470,7 +470,7 @@ so and name a specific rank to try.
 
 ## Checking the fitted model
 
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md)
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)
 draws diagnostic panels built for a categorical outcome rather than
 borrowed from tools designed for continuous responses:
 
@@ -481,9 +481,9 @@ ilm_appraise(fit)
 
 Two further checks are worth knowing about, because broad residual
 summaries have very little power to detect the problems they address.
-[`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md)
+[`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md)
 tests variables you did *not* include, and
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 tests for leftover correlation over time:
 
 ``` r
@@ -493,7 +493,7 @@ ilm_check_ar(fit, time = dd$time, group = dd$subj)
 ```
 
 And
-[`ilm_consistency()`](https://craig-hutton.github.io/illume/reference/ilm_consistency.md)
+[`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
 asks the most direct question available: can the model recover itself
 from data it generated? If not, the fitting method is not reliable for
 this model and this amount of data.
@@ -509,7 +509,7 @@ Repeated measurements on the same unit are rarely independent, and there
 are two quite different reasons why – which matter because they need
 opposite remedies.
 
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
 draws the residual autocorrelation and partial autocorrelation by lag,
 within group, with a verdict on each lag:
 
@@ -535,10 +535,10 @@ Three things make this not
 
 ### When the times are not evenly spaced
 
-[`ilm_ar1()`](https://craig-hutton.github.io/illume/reference/ilm_ar1.md)
+[`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
 needs a common step, because “one step” has to mean something. When
 visits fall where they fall, use
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md):
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md):
 the correlation between two observations is `rho` raised to the gap
 between them, which is `nlme`’s `corCAR1()` and reduces to AR(1) when
 every gap is one.
@@ -562,12 +562,12 @@ latent, is the usual fix.
 
 ### Checking a correlation structure over irregular time
 
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 matches pairs at exact lags, which stops working once the times are
 irregular: on a sixty-unit panel with six observations each drawn from
 thirty possible times, it found 53 pairs at lag 1, five at lag 2 and
 none beyond.
-[`ilm_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_variogram.md)
+[`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md)
 bins every within-group pair by how far apart it is instead, and uses
 all 900.
 
@@ -581,9 +581,9 @@ remedies:
 
 | what you see | what it is | what to do |
 |----|----|----|
-| decays from the shortest separation | autoregression | [`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md) |
+| decays from the shortest separation | autoregression | [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md) |
 | the same level at every separation | a group effect | add or widen a random effect |
-| alternates in sign | a cycle | [`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md), [`ilm_cyclic()`](https://craig-hutton.github.io/illume/reference/ilm_cyclic.md) |
+| alternates in sign | a cycle | [`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md), [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md) |
 
 The envelope again comes from refitting simulated data, and again is not
 centred on zero: residuals within a group sum to roughly zero, so pairs
@@ -643,7 +643,7 @@ The partial autocorrelation is what separates them, and so is the
 *shape* of the ordinary one. Autoregression decays through zero and
 stays there. A cycle comes back up to a positive peak at its period – a
 spike at lag 12 in monthly data, lag 7 in daily data.
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 reads that difference and names the period rather than reaching for
 AR(1), which cannot represent a cycle at all.
 
@@ -670,7 +670,7 @@ ilm_model(y ~ x + ilm_cyclic(doy, 365.25, df = 8) + (1 | subj), data = dd,
           family = "gaussian")
 ```
 
-[`ilm_cyclic()`](https://craig-hutton.github.io/illume/reference/ilm_cyclic.md)
+[`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
 is a cubic spline that closes on itself: the value and its first two
 derivatives match across the wrap, so December runs into January without
 a step. An ordinary `bs()` or `ns()` on a phase variable does not know
@@ -686,7 +686,7 @@ by at most 23 AIC. Pick on the shape you expect, not on the basis.
 
 ## When the spread is not constant
 
-[`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+[`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
 reports two patterns, and both have the same remedy: model the logarithm
 of the dispersion instead of treating it as one number.
 
@@ -730,7 +730,7 @@ zero. It means “somewhere at or below the limit”, and fitting it as a
 zero pulls the mean down and the variance in. Same for a scale that tops
 out, a score capped at 100, a measurement beyond an instrument’s range.
 
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
 names the pile-up before you model it:
 
 ``` r
@@ -748,7 +748,7 @@ ilm_describe(d0)[, c("variable", "gauss", "gauss_note")]
 ```
 
 and
-[`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md)
+[`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
 is the remedy. A censored observation contributes the probability of the
 interval it is known to lie in rather than a density at a value it was
 never observed at:
@@ -796,7 +796,7 @@ ilm_model(time ~ treatment + age + (1 | centre), data = dd, family = "weibull",
           censor = ilm_surv(dd$time, dd$event))
 ```
 
-[`ilm_surv()`](https://craig-hutton.github.io/illume/reference/ilm_surv.md)
+[`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md)
 takes `event` in the convention
 [`survival::Surv()`](https://rdrr.io/pkg/survival/man/Surv.html) uses —
 `1` when the event happened, `0` when the subject was still event-free
@@ -842,7 +842,7 @@ outside the band. The same measure on a Weibull fitted to log-logistic
 data gave a *smaller* gap, 0.09, and a verdict of `FAIL` with 26% of the
 curve outside. A threshold on the gap would have got both backwards.
 
-[`ilm_survival()`](https://craig-hutton.github.io/illume/reference/ilm_survival.md)
+[`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
 returns the curve itself, with intervals, for plotting elsewhere.
 
 Residuals work as they do everywhere else. The quantile residual of a
@@ -855,9 +855,9 @@ p-values ran from 0.37 to 0.90.
 
 Interactions are ordinary terms: `x * z` and `g * x` fit, their columns
 are grouped into one multi-degree-of-freedom row in
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 and
-[`ilm_check_collinearity()`](https://craig-hutton.github.io/illume/reference/ilm_check_collinearity.md)
+[`ilm_check_collinearity()`](https://huttoncp.github.io/illume/reference/ilm_check_collinearity.md)
 reports them as single terms.
 
 Two things are worth knowing.
@@ -869,7 +869,7 @@ interacts with, not averaged over it. On a 600-row model the `x` row
 came back at a chi-square of 167 under `contr.treatment` and 1086 under
 `contr.sum` – same model, same data. Only the second is what a Type III
 main effect is supposed to mean, so
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
 warns and names the fix:
 
 ``` r
@@ -914,12 +914,12 @@ ilm_rdd(d, "score", "running", cutoff = 0)
 The rule that makes these safe to automate: the **design** fixes the
 mean structure and nothing searches over it. Only the error structure is
 adjusted when a diagnostic asks.
-[`vignette("causal-models")`](https://craig-hutton.github.io/illume/articles/causal-models.md)
+[`vignette("causal-models")`](https://huttoncp.github.io/illume/articles/causal-models.md)
 covers all three.
 
 ## Reading a fit back in words
 
-[`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md)
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
 writes out what a model says – each effect on the scale the response is
 measured on, how strong the evidence is, what the diagnostics found, and
 how far to trust the estimates:
@@ -934,7 +934,7 @@ same words. It says nothing about bias that a diagnostic did not
 measure, and it uses causal language only when the object carries a
 design that licenses it – otherwise every effect is “associated with”.
 
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 gives the piece that makes this readable for a model with a link
 function: the average marginal effect on the response scale. An odds
 ratio of 2 can be a 3-point change in probability or a 20-point one
@@ -1027,7 +1027,7 @@ Values sitting exactly at 0 or 1 have no likelihood, because the density
 has no mass there, and the error says so along with the two honest
 responses: they are a separate process, in which case model them as one
 with `ziformula`, or they are rounding, in which case
-[`ilm_squeeze()`](https://craig-hutton.github.io/illume/reference/ilm_squeeze.md)
+[`ilm_squeeze()`](https://huttoncp.github.io/illume/reference/ilm_squeeze.md)
 applies the Smithson-Verkuilen shift and reports how far it moved
 things.
 
@@ -1037,8 +1037,8 @@ A treatment people chose rather than were assigned, a price set in
 response to demand, an exposure measured with error. If an instrument is
 available – something that moves the regressor without acting on the
 outcome any other way –
-[`ilm_iv()`](https://craig-hutton.github.io/illume/reference/ilm_iv.md)
-uses it.
+[`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md) uses
+it.
 
 ``` r
 
@@ -1056,7 +1056,7 @@ actually needs; Durbin-Wu-Hausman, asking whether the regressor was
 endogenous at all, since if it was not then least squares was unbiased
 and far more precise; and Sargan’s J when there is more than one
 instrument. When the instrument is weak,
-[`ilm_iv_ar()`](https://craig-hutton.github.io/illume/reference/ilm_iv_ar.md)
+[`ilm_iv_ar()`](https://huttoncp.github.io/illume/reference/ilm_iv_ar.md)
 gives a confidence set that stays valid however weak it is – and can
 come back unbounded, which is the honest answer a Wald interval hides.
 
@@ -1098,14 +1098,14 @@ outcome model is linear and has no treatment-by-mediator interaction.
 With an interaction the indirect effect differs by arm and one product
 cannot be two numbers; with a binary outcome the product is not on the
 scale of the effect at all.
-[`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md)
+[`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md)
 estimates the counterfactual definitions, and reproduces the product
 exactly where the product is right.
 
 The decomposition needs no unmeasured confounding of the **mediator**
 and the outcome, which the data cannot check because the mediator was
 not randomised.
-[`ilm_mediate_sens()`](https://craig-hutton.github.io/illume/reference/ilm_mediate_sens.md)
+[`ilm_mediate_sens()`](https://huttoncp.github.io/illume/reference/ilm_mediate_sens.md)
 asks the answerable question instead: how strong would such confounding
 have to be before the indirect effect went away, and how that compares
 with the predictors you did measure.

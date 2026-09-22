@@ -3,19 +3,21 @@
 ## illume 0.0.7.9000
 
 Ten features, each validated against an outside implementation where one
-exists. The package now covers the path from a sample-size calculation
-to a scenario a stakeholder can act on.
+exists, and then a second round that arrived as defect reports from a
+separate project built against the package. It now covers the path from
+a sample-size calculation – with or without a pilot to base one on – to
+a scenario a stakeholder can act on.
 
 Every one of them produced at least one real bug, and none of those came
-from the test suite. They came from comparing against something outside
-or from widening a simulation, which remains the only thing that has
-ever found a defect here.
+from the test suite. They came from comparing against something outside,
+from widening a simulation, or from someone calling illume from outside
+it, which remain the only things that have ever found a defect here.
 
 ### Estimated marginal means and contrasts
 
-- [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+- [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
   and
-  [`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md).
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md).
   Marginal means are exact linear combinations `L %*% beta` with
   variance `L V L'`, computed on the link scale where that is exact.
   Pairwise, against-a-control and polynomial contrasts, with a
@@ -35,7 +37,7 @@ ever found a defect here.
   the two factors are associated that moved a contrast by more than 0.5
   against a coefficient of 0.4. Proportional is now the product of the
   one-way margins; `"cells"` remains available, and
-  [`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
   warns when asked to difference them.
 
 ### Zero-inflated and hurdle counts
@@ -55,7 +57,7 @@ ever found a defect here.
   count part alone gave a median of 1.4e-38 and every one below 0.05.
 - `ilm_sim_cond()`, which five diagnostics build their reference from,
   had to learn it too – otherwise
-  [`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+  [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
   compares a zero-inflated fit against draws from the count part and
   reports the inflation it was told about as a failure. It did: FAIL at
   1482 observed zeros against 484 expected. Now 1042 against 1041, and 0
@@ -75,7 +77,7 @@ ever found a defect here.
   [`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html) expand
   the first factor to all its levels: the same likelihood, a singular
   Hessian, and every standard error `NaN`.
-- [`ilm_check_proportional()`](https://craig-hutton.github.io/illume/reference/ilm_check_proportional.md)
+- [`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
   tests the assumption that makes one coefficient per predictor enough.
   Its reference is **simulated, not chi-squared** – the per-cut fits
   share their data, and a chi-squared reference flagged a perfectly
@@ -85,7 +87,7 @@ ever found a defect here.
 
 ### Type II by default
 
-- [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+- [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   now defaults to `type = 2`, which does not depend on how the factors
   are coded and coincides with Type III whenever there is no
   interaction.
@@ -105,9 +107,9 @@ ever found a defect here.
 
 ### Cluster-robust standard errors
 
-- [`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md)
+- [`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md)
   and
-  [`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md),
+  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md),
   with CR0, CR1 and CR2 and a t reference on Bell-McCaffrey degrees of
   freedom.
 
@@ -139,7 +141,7 @@ ever found a defect here.
 - Boundary values have no likelihood, and the error names both honest
   responses: a separate process, which `ziformula` now really does model
   for a beta response, or rounding, which
-  [`ilm_squeeze()`](https://craig-hutton.github.io/illume/reference/ilm_squeeze.md)
+  [`ilm_squeeze()`](https://huttoncp.github.io/illume/reference/ilm_squeeze.md)
   handles by the Smithson-Verkuilen shift while reporting how far it
   moved things.
 - Zero-inflated beta against glmmTMB: mean coefficients to 9.9e-07, zero
@@ -160,19 +162,19 @@ ever found a defect here.
 - The first-stage F is reported against both thresholds: the familiar
   10, and the 104.7 a conventional 5% t-test actually needs (Lee et
   al. 2022). Durbin-Wu-Hausman and Sargan’s J print unasked.
-- [`ilm_iv_ar()`](https://craig-hutton.github.io/illume/reference/ilm_iv_ar.md)
+- [`ilm_iv_ar()`](https://huttoncp.github.io/illume/reference/ilm_iv_ar.md)
   is the remedy the F diagnoses: an Anderson-Rubin set that stays valid
   however weak the instrument is. With F = 0.235 the Wald interval
   reports a tidy \[-2.62, 5.82\] and the AR set is unbounded.
 
 ### Multivariate anomaly detection
 
-- [`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+- [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
   finds rows implausible as a COMBINATION. On test data with ten rows
   pushed off the correlation structure, the column-at-a-time scan caught
   none of them.
 - The rank comes from parallel analysis, **not** the cross-validation
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   uses: that chose 6 or 7 on a rank-2 structure, on clean data as well
   as contaminated, and detection fell from 0.975 to 0.560.
 - The fit is trimmed rather than held out in folds. Folds did nothing –
@@ -185,12 +187,12 @@ ever found a defect here.
 
 ### Generalized low rank models
 
-- [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md),
+- [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md),
   and `method = "glrm"` on
-  [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
-  [`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+  [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
   and
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md).
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md).
   A loss per column type rather than squared error on one-hot
   indicators, so a category is reconstructed AS a category.
 - With quadratic loss and no penalty it IS principal components,
@@ -205,9 +207,9 @@ ever found a defect here.
 
 ### Survey weights
 
-- [`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md)
+- [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md)
   and
-  [`ilm_svy_coef()`](https://craig-hutton.github.io/illume/reference/ilm_svy_coef.md):
+  [`ilm_svy_coef()`](https://huttoncp.github.io/illume/reference/ilm_svy_coef.md):
   Taylor linearization with clustering, stratification and finite
   population correction.
 - Against **survey::svyglm**: coefficients to 8.1e-09, standard errors
@@ -225,12 +227,12 @@ ever found a defect here.
 
 ### Causal mediation
 
-- [`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md)
+- [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md)
   estimates the counterfactual ACME and ADE, reproducing the Baron-Kenny
   product exactly where the product is right (to 0.0004) and differing
   where it is not: with an interaction the two ACMEs are 0.416 and
   0.782, and a single product cannot be both.
-- [`ilm_mediate_sens()`](https://craig-hutton.github.io/illume/reference/ilm_mediate_sens.md)
+- [`ilm_mediate_sens()`](https://huttoncp.github.io/illume/reference/ilm_mediate_sens.md)
   addresses the assumption nothing can test. Over 30 replicates the
   predicted bias matched the realised one to three decimals at every
   confounder strength, recovering a true ACME of 0.42 as 0.4205, 0.4188
@@ -238,7 +240,7 @@ ever found a defect here.
 
 ### Effect sizes, scenarios and power
 
-- [`ilm_effects()`](https://craig-hutton.github.io/illume/reference/ilm_effects.md)
+- [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md)
   reports each coefficient on its family’s own scale – odds ratio,
   incidence rate ratio, time ratio, hazard ratio, proportional odds
   ratio – with intervals built on the link scale and transformed. Odds
@@ -246,9 +248,9 @@ ever found a defect here.
   their intervals
   [`confint.default()`](https://rdrr.io/r/stats/confint.html) to 1e-4. A
   ratio from a MIXED model is labelled conditional, with
-  [`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
   named for the marginal one.
-- [`ilm_scenario()`](https://craig-hutton.github.io/illume/reference/ilm_scenario.md)
+- [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
   projects named settings. The default standardises over the observed
   units, which is not the same as predicting for a unit at the average
   covariate – 0.657 against 0.683 on a logistic fit – and says which it
@@ -256,7 +258,7 @@ ever found a defect here.
   25-year-old with 35 years of service has both values in range and sits
   2.39 standardised units from the nearest real person against 0.25 for
   a typical one.
-- [`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md)
+- [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
   simulates studies at each size and effect. Against the closed form for
   a linear model, 0.450/0.737/0.956/0.999 predicted against
   0.450/0.762/0.952/0.997 simulated, and a required n of 240 (207
@@ -266,9 +268,9 @@ ever found a defect here.
 
 ### Two defects, found from outside
 
-- **[`ilm_check_covariate()`](https://craig-hutton.github.io/illume/reference/ilm_check_covariate.md)
+- **[`ilm_check_covariate()`](https://huttoncp.github.io/illume/reference/ilm_check_covariate.md)
   and
-  [`ilm_check_omitted()`](https://craig-hutton.github.io/illume/reference/ilm_check_omitted.md)
+  [`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md)
   failed on any missing data.** The fit drops rows through `na.omit`, so
   its residuals are shorter than the data frame a covariate is passed
   from, and both died with `arguments must have same length` – an error
@@ -303,15 +305,15 @@ Same source, same method, one round later.
 - **`set_coef()` rebuilt the mean and the covariance structure and
   nothing else.** Setting a dispersion changed the stored parameter
   vector and left `$dispersion` at its fitted value, so
-  [`ilm_simulate()`](https://craig-hutton.github.io/illume/reference/ilm_simulate.md)
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
   went on drawing from the fitted residual SD: `log_sigma` set to
   `log(4)` produced draws with SD 1.00. Nothing errored, and the number
   that came back was a perfectly ordinary standard deviation. The same
   gap left ordinal thresholds, zero-inflation parameters and a
   dispersion model stale, and it reached further than
-  [`ilm_simulate()`](https://craig-hutton.github.io/illume/reference/ilm_simulate.md)
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
   –
-  [`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md)
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
   draws its responses through the same field, so a power curve run on an
   object with assumed parameters used the fitted dispersion instead of
   the assumed one.
@@ -341,14 +343,143 @@ code.
   does not collect a covariate called `xray`. A term with more than one
   column – a three-level factor, a spline – is refused with its
   coefficients listed and
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   named, because a power curve follows one effect size at a time and
   choosing a column silently would report power for a comparison nobody
   asked for.
 
+### Planning a study that has not been run
+
+[`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md)
+builds a design grid from a study specification, attaches the parameters
+you assume, and returns an ordinary `"ilm_model"`. Everything downstream
+then works unchanged, which is the point: the assumptions can be
+interrogated before anything is built on them.
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+is the same thing plus a power curve, in one call.
+
+- Assumptions go in **either** as coefficients on the link scale, or as
+  expected **cell means on the response scale** – “controls average 12,
+  the treated group averages 14.5” – which is the form most people
+  actually hold one in. illume solves back to coefficients.
+- A least-squares solve always returns something, so cell means that the
+  formula cannot produce would otherwise give a scaffold for a different
+  study than the one being planned. Crossed means under an additive
+  formula stop, name the cell that is off and by how much, and name
+  `arm * time` as the remedy.
+- `n_unit` counts participants when the formula has a grouping bar and
+  rows when it does not, so the number given is the number that goes in
+  a protocol. A between-unit variable is allocated to UNITS and repeated
+  down their rows; allocating it to rows would put a participant in both
+  arms.
+- `icc` is accepted in place of `re_sd`, since an intraclass correlation
+  is what a repeated-measures literature reports.
+- Against the closed form for a two-sample **t** test: 0.858/0.995/1.000
+  simulated against 0.872/0.993/1.000 predicted at 100/200/300
+  participants. Against a treatment-by-time mixed model hand-rolled in
+  plain R and fitted with **lme4/lmerTest**, at 40/80/140 participants:
+  0.284/0.452/0.654 against 0.242/0.440/0.632. All within Monte Carlo
+  error, but all three lean the same way, which is what a **z**
+  reference against a Satterthwaite **t** does.
+- [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+  on a scaffold returns the cell means that were assumed, to 1e-6 – the
+  solve goes one way and that comes back the other, so the check does
+  not share an error with the thing it checks.
+- The print method says the parameters were assumed, not estimated, and
+  that the standard errors are one realisation of the design rather than
+  a property of the assumptions. An `"ilm_model"` that was never fitted
+  to anything is exactly the sort of object that gets mistaken for a
+  result.
+
+### A random slope was being averaged as a random intercept
+
+In both places it could be. Found while building the above, since a
+treatment-by-time design is what that is mostly for.
+
+- **[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+  drew only the intercept variance.** The draw took `Sigma[[k]][1, 1]`
+  and added it as a per-group shift, so a fit with `(1 + time | id)`
+  produced simulated participants whose individual trajectories varied
+  no more than residual noise allows: a per-subject slope SD of 0.50
+  where the fit said 1.14 and the generating value was 1.20. Every
+  simulated participant moved in near-parallel, which understates how
+  much they differ and so **overstates** power for anything interacting
+  with the within-subject variable – 0.450 against 0.333 on the test
+  case, a third too high.
+- The scale of a term lives in `Sigma` and its shape in `Sigma_d`, so
+  the covariance of a group’s whole random-effect vector is their
+  product. The draw now uses it, with the bar re-evaluated on the
+  simulated study’s own rows. Drawn data now has a slope SD of 1.248
+  against the real data’s 1.250.
+- **`predict(marginal = TRUE)` made the same simplification, and is
+  fixed too.** It drew `Sigma` alone and added it to every row, which
+  drops the slope variance and also holds the shift constant across rows
+  when the spread being integrated over grows with distance from where
+  the slope is centred. On a logistic model with a fitted slope SD of
+  0.81 the population-averaged probability at the far end of the range
+  came back as 0.703 where the correct average is 0.618.
+- The draw is now the matrix normal the objective actually specifies:
+  one group’s effect is a `dk x C` matrix with row covariance `Sigma_d`
+  and column covariance `Sigma`, so `U = A Z B` with `AA' = Sigma_d` and
+  `B'B = Sigma`, and the contribution at a row is `z_row %*% U`.
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+  and [`predict()`](https://rdrr.io/r/stats/predict.html) now read that
+  factorisation from one place, having already gone out of step once.
+- When `dk == 1` this is the previous draw exactly, down to the random
+  number stream, so nothing that was already right moved.
+- Checked against a brute-force average over 400,000 draws computed
+  independently, at every point of the prediction grid, for a random
+  intercept and for a random slope.
+- **Under an identity link the average is now exact rather than
+  simulated.** `E[eta + z'u] = eta`, so there was a closed form all
+  along and simulating it returned a noisy estimate of a number already
+  known – 0.14 on the response scale with 200 draws and a random slope.
+  The result no longer depends on `ndraw`.
+- A bar that varies over a column the prediction data does not carry now
+  warns and says it integrated the intercept only. Averaging over part
+  of a term is a different quantity from averaging over the term.
+
+### Plotting characters by name
+
+- `pch = "filled circle"` works wherever `pch = 16` did. Base R’s `pch`
+  is 26 integers nobody remembers, nothing in the argument says which is
+  which, and the difference between 16, 19, 20 and 21 is not guessable –
+  so a plot gets whichever code the author recalled and a reader
+  comparing two plots cannot tell whether a difference in the markers
+  was meant.
+- Names are also checkable in a way numbers are not: `pch = 26` is
+  accepted by `graphics` and quietly draws nothing, while a name that is
+  not in the table stops and lists the ones that are. All 26 codes have
+  a name, most have aliases, and case, spaces, underscores, hyphens and
+  dots are all ignored.
+- A single character is left alone, because base R draws it literally –
+  translating `pch = "x"` would silently turn the plot into crosses.
+- `pch` is now a documented argument of
+  [`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md),
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md),
+  [`ilm_plot_line()`](https://huttoncp.github.io/illume/reference/ilm_plot_line.md),
+  [`ilm_plot_stat_error()`](https://huttoncp.github.io/illume/reference/ilm_plot_stat_error.md),
+  [`ilm_plot_box()`](https://huttoncp.github.io/illume/reference/ilm_plot_box.md)
+  and
+  [`ilm_plot_violin()`](https://huttoncp.github.io/illume/reference/ilm_plot_violin.md)
+  rather than something to be discovered inside `...`. It sits after
+  `...`, so no existing positional call can be matched to it.
+
+The obvious implementation – route every call through one
+[`do.call()`](https://rdrr.io/r/base/do.call.html) funnel so the
+translation lives in a single place – **is wrong here, and passed the
+whole test suite before `R CMD check` caught it.**
+[`do.call()`](https://rdrr.io/r/base/do.call.html) puts the evaluated
+arguments into the call, and tinyplot deparses its arguments to title a
+legend, so a numeric `by` column arrived as a deparsed 32-element vector
+and the legend width computation threw `invalid graphics state`. The
+failing call was
+`ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend = "lm")` – an
+example that had been in the package, working, for months.
+
 ### Finite degrees of freedom for a mixed model
 
-- [`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md)
+- [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md)
   adds Satterthwaite and Kenward-Roger. A Wald statistic treats the
   variance components as known; they are not, and with few clusters the
   chi-square reference is anti-conservative – which is the regime a
@@ -371,7 +502,7 @@ code.
   intercepts and slopes with one residual variance, where Kenward and
   Roger derived it and where repeated-measures designs live. Once a
   correlation parameter enters it does not, so
-  [`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md)
+  [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md)
   checks first and refuses with the reason, naming Satterthwaite
   instead.
 
@@ -396,7 +527,7 @@ code.
   to the design matrix, so changing the fixed effects changes which data
   it is the likelihood of. Settle the mean structure under ML, then
   refit with `reml = TRUE` for what you report.
-  [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
   defaults to REML instead, because the graph fixed the adjustment set
   before any data were seen.
 - Available for **every family**, not only gaussian. `glmmTMB` does
@@ -414,18 +545,18 @@ code.
   glmmTMB’s convention.
 - Guards, because every one of these fails silently otherwise. A
   likelihood-ratio
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   and
-  [`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md)
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
   refuse on a REML fit and say what to do.
-  [`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md)
+  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
   refuses too – integrating the coefficients out leaves no
   per-observation score for a sandwich to sum, which is the same
   combination `glmmTMB`’s `estfun` rejects.
 
 ### Marginal slopes
 
-- [`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md)
+- [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
   takes an interaction apart when one side of it is continuous – the
   treatment-by-time case, where the omnibus test says an interaction
   exists and says nothing about what is driving it.
@@ -438,11 +569,11 @@ code.
 - A marginal mean cannot answer either, because averaging at the mean of
   the covariate collapses the thing being asked about. But a slope is
   the same `L %*% beta` with a different `L`, so
-  [`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md)
+  [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
   returns the class
-  [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
   does and
-  [`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
   differences the rows without knowing the difference.
 - Against
   [`emmeans::emtrends`](https://rvlenth.github.io/emmeans/reference/emtrends.html):
@@ -454,12 +585,12 @@ code.
 
 ### ANOVA, specified by naming columns
 
-- [`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md).
+- [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md).
   Name the participant, the outcome, and which factors vary between or
   within participants. No formula with an error term, no reshaping.
 - The omnibus table is computed **classically** rather than read off the
   mixed model, and that is the whole reason it exists:
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   reports a Wald chi-square, because once random effects are integrated
   out there is no exact residual degrees of freedom to divide by. An F,
   a mean squared error, a generalized eta squared and a
@@ -492,7 +623,7 @@ code.
   directions** rather than every cell pair: all nine cells of a 3-by-3
   give thirty-six differences, most of which move both factors at once.
   Where the interaction is with a covariate the follow-up is
-  [`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md).
+  [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md).
 
 ### The studies, re-run in full
 
@@ -541,7 +672,7 @@ code.
   0.475 on the design with the most data and the clearest structure,
   where there are enough held-out cells to choose well. Neither
   criterion dominates, so neither is imposed.
-  [`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+  [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
   continues to use parallel analysis for its own reason: it needs the
   directions that are real shared structure, not the rank that best
   predicts a cell.
@@ -562,11 +693,11 @@ code.
   gaussian mixed, binomial, Poisson mixed, negative binomial, beta,
   ordinal, zero-inflated and multinomial mixed, plus
   [`summary()`](https://rdrr.io/r/base/summary.html),
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
   [`predict()`](https://rdrr.io/r/stats/predict.html),
-  [`ilm_rqr()`](https://craig-hutton.github.io/illume/reference/ilm_rqr.md)
+  [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
   and
-  [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md).
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md).
   Fourteen of fourteen.
 - The AD objective touches eight RTMB symbols – `AD`, `ADREPORT`,
   `diag`, `getAll`, `logspace_add`, `logspace_sub`, `matrix`, `solve` –
@@ -598,12 +729,12 @@ code.
   0.6.x. The shape of `theme` is now always checked, the names are
   enumerated when the helper exists, and otherwise tinyplot is left to
   object. Themes work again on 0.6.1.
-- [`ilm_plot_var_pairs()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_pairs.md)
+- [`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md)
   genuinely needs `tinypairs()`, which is 0.7.0-only. It now says so and
   names
-  [`ilm_plot_scatter()`](https://craig-hutton.github.io/illume/reference/ilm_plot_scatter.md)
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md)
   and
-  [`ilm_plot_var_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_all.md)
+  [`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md)
   as the alternatives, rather than failing with “not an exported
   object”.
 - Measured on tinyplot 0.6.1: twelve of thirteen plotting paths work,
@@ -637,8 +768,8 @@ worth showing, and an imputation route for data too wide to regress.
 ### Progress
 
 - `progress` on the bootstrap functions,
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md),
-  [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+  [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
   and the refit-based diagnostics. It defaults to \[interactive()\], so
   a bar appears when a person is watching and nothing is written into a
   script, a test or a knitted document.
@@ -653,7 +784,7 @@ worth showing, and an imputation route for data too wide to regress.
   there is no regression to fit, and `"auto"` falls back to a
   regularised low-rank reconstruction, bootstrapped so the imputations
   differ and pooled by
-  [`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md)
+  [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
   – multiple imputation PCA, after Josse and Husson (2016).
 - The rank is chosen by cross-validation over held-out observed cells.
 
@@ -689,7 +820,7 @@ worth showing, and an imputation route for data too wide to regress.
 
   The middle row is the warning: with no low-rank structure to find,
   imposing one is worse than filling in column means.
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   detects that by asking whether a rank-k fit predicts held-out cells
   better than the column means do, and says so when it does not. A first
   attempt warned when cross-validation hit its rank ceiling and MISSED
@@ -702,7 +833,7 @@ worth showing, and an imputation route for data too wide to regress.
 
 ### Fixes
 
-- [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+- [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   failed outright on any two-column selection. The number of dimensions
   available from p columns is min(n - 1, p), not p - 1 – two columns
   have two components, and asking PCAmix for one is an error rather than
@@ -725,11 +856,11 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Flagging unusual values
 
-- [`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+- [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
   scores every value by how far it sits from the centre and flags those
   past a threshold, by Tukey fence (`"iqr"`), modified z-score (`"mad"`)
   or ordinary z-score.
-  [`ilm_outliers_all()`](https://craig-hutton.github.io/illume/reference/ilm_outliers_all.md)
+  [`ilm_outliers_all()`](https://huttoncp.github.io/illume/reference/ilm_outliers_all.md)
   runs it over every numeric column, optionally within groups, and
   returns the row each flagged value came from.
 - Grouping is not a detail. A value can be ordinary for its own group
@@ -743,32 +874,32 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Named plots
 
-- [`ilm_plot_histogram()`](https://craig-hutton.github.io/illume/reference/ilm_plot_histogram.md),
-  [`ilm_plot_density()`](https://craig-hutton.github.io/illume/reference/ilm_plot_density.md),
-  [`ilm_plot_box()`](https://craig-hutton.github.io/illume/reference/ilm_plot_box.md),
-  [`ilm_plot_violin()`](https://craig-hutton.github.io/illume/reference/ilm_plot_violin.md),
-  [`ilm_plot_scatter()`](https://craig-hutton.github.io/illume/reference/ilm_plot_scatter.md),
-  [`ilm_plot_bar()`](https://craig-hutton.github.io/illume/reference/ilm_plot_bar.md),
-  [`ilm_plot_line()`](https://craig-hutton.github.io/illume/reference/ilm_plot_line.md)
+- [`ilm_plot_histogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_histogram.md),
+  [`ilm_plot_density()`](https://huttoncp.github.io/illume/reference/ilm_plot_density.md),
+  [`ilm_plot_box()`](https://huttoncp.github.io/illume/reference/ilm_plot_box.md),
+  [`ilm_plot_violin()`](https://huttoncp.github.io/illume/reference/ilm_plot_violin.md),
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md),
+  [`ilm_plot_bar()`](https://huttoncp.github.io/illume/reference/ilm_plot_bar.md),
+  [`ilm_plot_line()`](https://huttoncp.github.io/illume/reference/ilm_plot_line.md)
   and
-  [`ilm_plot_stat_error()`](https://craig-hutton.github.io/illume/reference/ilm_plot_stat_error.md).
-  [`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md)
+  [`ilm_plot_stat_error()`](https://huttoncp.github.io/illume/reference/ilm_plot_stat_error.md).
+  [`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
   picks a geometry for you; these are the same drawing done by naming
   the plot you want.
-- [`ilm_plot_var()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var.md)
+- [`ilm_plot_var()`](https://huttoncp.github.io/illume/reference/ilm_plot_var.md)
   and
-  [`ilm_plot_var_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_all.md)
+  [`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md)
   choose from the column types;
-  [`ilm_plot_var_pairs()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_pairs.md)
+  [`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md)
   plots every pair, handling mixed numeric and categorical columns
   rather than only numeric ones;
-  [`ilm_plot_c()`](https://craig-hutton.github.io/illume/reference/ilm_plot_c.md)
+  [`ilm_plot_c()`](https://huttoncp.github.io/illume/reference/ilm_plot_c.md)
   composes several plots into one figure.
-- [`ilm_plot_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_na_all.md)
+- [`ilm_plot_na_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_na_all.md)
   and
-  [`ilm_plot_na()`](https://craig-hutton.github.io/illume/reference/ilm_plot_na.md)
+  [`ilm_plot_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_na.md)
   show missingness across columns and across groups.
-  [`ilm_plot_missing()`](https://craig-hutton.github.io/illume/reference/ilm_plot_missing.md)
+  [`ilm_plot_missing()`](https://huttoncp.github.io/illume/reference/ilm_plot_missing.md)
   now draws through the first of these, so there is one implementation.
 - Everything is on tinyplot. That was the last base-graphics plot in the
   package, and columns are named as strings throughout, the way the rest
@@ -776,10 +907,10 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Bootstrap differences can be seen, not just summarised
 
-- [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   keeps the replicate differences, labelled by comparison, and reports
   `p_superiority` – the share of replicates above zero.
-- [`ilm_plot_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_plot_boot_diff.md)
+- [`ilm_plot_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_plot_boot_diff.md)
   draws them for any comparison in the result, with zero and the
   interval marked. The interval says where the difference is; this says
   what the resampling produced, which is whether it is symmetric,
@@ -809,7 +940,7 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Missing values are no longer dropped in silence
 
-- [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+- [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   reports how many rows went and which columns took them. Past a tenth
   of the data it also says what that does and does not imply. Dropping
   incomplete rows is usually right; doing it silently is not, because a
@@ -818,7 +949,7 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Deciding whether it matters
 
-- [`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+- [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
   reports how much is missing, which columns go missing together,
   whether the pattern is monotone, and what missingness is related to –
   then says what that implies.
@@ -828,7 +959,7 @@ Missing data, and the profiling set that reads its patterns.
   weaker than MCAR, and often true. So missingness tied to a covariate
   gets “complete cases stay unbiased”, and only missingness tied to the
   outcome gets sent to
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md).
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md).
 - **MAR versus MNAR is not tested, because it cannot be.** The data that
   would separate them are the data that are missing. What is testable is
   MCAR, and that is what is tested; the result says plainly that a
@@ -837,14 +968,14 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Filling them in, honestly
 
-- [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+- [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   does multiple imputation by chained equations, one \[ilm_model()\] per
   incomplete variable with the family its own type calls for. Each value
   is **drawn** from the predictive distribution – coefficients from
   their sampling distribution, the residual scale from its own
   posterior, then the response’s randomness on top – rather than set to
   a fitted mean.
-- [`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md)
+- [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
   fits across the imputations and combines by Rubin’s rules, with
   Barnard-Rubin degrees of freedom, and reports the fraction of
   information lost to missingness per coefficient.
@@ -853,37 +984,37 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Profiling: dimension reduction, clustering, and what the clusters are
 
-- [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+- [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   reduces a frame’s columns to a few dimensions, choosing PCA, MCA or a
   mixed method from the column types rather than making the user name
   it.
-- [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+- [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
   groups the rows, choosing `k` by the gap statistic, and reports two
   different things a bare assignment does not: per-cluster **stability**
   by bootstrap Jaccard, and per-observation **ambiguity** from the
   silhouette width. A point can sit on a boundary inside a large, stable
   cluster, and a size-based flag alone would never show it.
-- [`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+- [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
   runs both and says what each cluster *is* – “cluster 4 is
   characterised by dim 1 (high disp, cyl)” – by v-test, the device
   FactoMineR’s `catdes()` uses. It is documented as a threshold rather
   than a test, because the clusters were found from the coordinates
   being tested.
-- [`ilm_reduce_na()`](https://craig-hutton.github.io/illume/reference/ilm_reduce_na.md),
-  [`ilm_cluster_na()`](https://craig-hutton.github.io/illume/reference/ilm_cluster_na.md)
+- [`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md),
+  [`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md)
   and
-  [`ilm_profile_na()`](https://craig-hutton.github.io/illume/reference/ilm_profile_na.md)
+  [`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md)
   do the same to the *pattern of missingness*: which columns go missing
   together, and for whom. A block of variables lost as one points at a
   shared cause, which is a different problem from values going one at a
   time.
-- [`ilm_plot_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_plot_reduce.md),
-  [`ilm_plot_reduce_scree()`](https://craig-hutton.github.io/illume/reference/ilm_plot_reduce_scree.md),
-  [`ilm_plot_reduce_contrib()`](https://craig-hutton.github.io/illume/reference/ilm_plot_reduce_contrib.md),
-  [`ilm_plot_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_plot_cluster.md),
-  [`ilm_plot_cluster_gap()`](https://craig-hutton.github.io/illume/reference/ilm_plot_cluster_gap.md)
+- [`ilm_plot_reduce()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce.md),
+  [`ilm_plot_reduce_scree()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_scree.md),
+  [`ilm_plot_reduce_contrib()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_contrib.md),
+  [`ilm_plot_cluster()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster.md),
+  [`ilm_plot_cluster_gap()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster_gap.md)
   and
-  [`ilm_plot_profile()`](https://craig-hutton.github.io/illume/reference/ilm_plot_profile.md),
+  [`ilm_plot_profile()`](https://huttoncp.github.io/illume/reference/ilm_plot_profile.md),
   each with an `_na` counterpart.
 - `PCAmixdata` and `cluster` join Suggests behind require-guards.
   Neither is a hard dependency and no new Imports were added.
@@ -925,7 +1056,7 @@ Missing data, and the profiling set that reads its patterns.
 
 - **A marginal test answers the wrong question, and looks right doing
   it.** The first version of
-  [`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+  [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
   asked whether missingness was associated with the outcome, full stop.
   But when missingness follows a covariate the outcome also depends on,
   the two are marginally associated while carrying no information about
@@ -946,11 +1077,11 @@ Missing data, and the profiling set that reads its patterns.
 - `ilm_pool()` was already taken. `R/ilm_parallel.R` defines it to build
   a cluster of worker processes and six diagnostics call it, so the
   Rubin’s-rules pooler is
-  [`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md).
+  [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md).
   Load order happened to favour the existing function, so the new one
   was unreachable rather than breaking
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
-  [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+  [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
   and the rest.
 - A gaussian imputation drew its noise from `sd(y)` where
   [`sigma()`](https://rdrr.io/r/stats/sigma.html) and
@@ -972,28 +1103,28 @@ Missing data, and the profiling set that reads its patterns.
 Designs that identify an effect, and a way to read a fit back in words.
 
 The inference engine is unchanged from 0.0.2.9000 –
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 returns the same estimates – so the coverage and Type I error evidence
 recorded under that version still applies to everything here. What is
 new sits on top of it.
 
 ### Causal graphs
 
-- [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md)
+- [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md)
   reads a causal graph from a dagitty-style string, an edge frame or a
   `dagitty` object. A bidirected edge is stored as an unobserved common
   cause, so there is one representation rather than two.
-- [`ilm_adjust_sets()`](https://craig-hutton.github.io/illume/reference/ilm_adjust_sets.md)
+- [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md)
   gives the minimal sets of **measured** variables that identify an
   exposure effect. An empty result is a finding: it says the data cannot
   answer the question, which is the most useful thing a graph can say
   and can only be said before the modelling.
-- [`ilm_dag_implied()`](https://craig-hutton.github.io/illume/reference/ilm_dag_implied.md)
+- [`ilm_dag_implied()`](https://huttoncp.github.io/illume/reference/ilm_dag_implied.md)
   lists what the graph claims about the data – one testable independence
   per missing edge – and
-  [`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md)
+  [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md)
   checks those claims, with a verdict per claim and one overall.
-- [`ilm_dsep()`](https://craig-hutton.github.io/illume/reference/ilm_dsep.md)
+- [`ilm_dsep()`](https://huttoncp.github.io/illume/reference/ilm_dsep.md)
   exposes the d-separation the rest is built on.
 - The graph algorithms are written in-package. `dagitty` imports V8, and
   a JavaScript engine is a heavy thing to require of someone who wants
@@ -1002,7 +1133,7 @@ new sits on top of it.
 
 ### The DAG-guided workflow
 
-- [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+- [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
   takes a graph and a data frame and runs the analysis: checks the graph
   against the data, finds what must be adjusted for, picks a response
   distribution, looks for grouping structure, fits, diagnoses, and
@@ -1024,10 +1155,10 @@ new sits on top of it.
 
 ### Difference in differences
 
-- [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md)
+- [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
   estimates the ATT, tests parallel trends in the pre-period, and
   returns an event study that
-  [`ilm_plot_did()`](https://craig-hutton.github.io/illume/reference/ilm_plot_did.md)
+  [`ilm_plot_did()`](https://huttoncp.github.io/illume/reference/ilm_plot_did.md)
   draws.
 - Staggered adoption is **refused** rather than quietly estimated: under
   heterogeneous effects a pooled two-way fixed effects estimate is not
@@ -1039,12 +1170,12 @@ new sits on top of it.
 
 ### Regression discontinuity
 
-- [`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md)
+- [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md)
   gives the jump at the cutoff from a local linear fit with a triangular
   kernel, plus four design checks: density at the cutoff, covariate
   balance, placebo cutoffs, and how far the estimate moves with the
   bandwidth.
-  [`ilm_plot_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_plot_rdd.md)
+  [`ilm_plot_rdd()`](https://huttoncp.github.io/illume/reference/ilm_plot_rdd.md)
   draws binned means with the fitted lines.
 - Fuzzy assignment is detected and not reported as sharp.
 - The bias-corrected robust intervals of Calonico, Cattaneo and Titiunik
@@ -1053,7 +1184,7 @@ new sits on top of it.
 
 ### Reading a fit in words
 
-- [`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md)
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   writes out what a model says: each effect on the scale the response is
   measured on, the strength of the evidence, what the diagnostics found,
   and how far to trust the estimates. Methods for `ilm_model`,
@@ -1068,17 +1199,17 @@ new sits on top of it.
 - Nothing is said about bias that a diagnostic did not measure. Every
   such sentence traces to a check that ran, carries its verdict and
   names its remedy.
-- [`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+- [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
   gives average marginal effects on the response scale by the delta
   method, over the full parameter vector including the covariance
   parameters, since a population-averaged prediction depends on them.
-- [`ilm_register_insight()`](https://craig-hutton.github.io/illume/reference/ilm_register_insight.md)
+- [`ilm_register_insight()`](https://huttoncp.github.io/illume/reference/ilm_register_insight.md)
   makes `parameters`, `performance` and `report` work on an `ilm_model`.
   `insight` stays in `Suggests`.
 
 ### Comparing more than two groups
 
-- [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   compares every pair of levels rather than exactly two, takes a
   formula, and is simultaneous by default. See the 0.0.2.9000 notes.
 
@@ -1122,7 +1253,7 @@ new sits on top of it.
 
 ### Fixes
 
-- [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md)
+- [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
   read a two-level factor’s labels in alphabetical order, so
   `post = factor(x, levels = c("before", "after"))` made “before” the
   treated period and inverted the estimate. A factor’s own level order
@@ -1141,7 +1272,7 @@ they can now also fit.
 
 ### Features
 
-- [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+- [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   fits every supported family through one formula interface, so the
   object, the methods and the diagnostics do not change as the model
   gets more complicated.
@@ -1149,14 +1280,14 @@ they can now also fit.
   F inference agreeing with [`lm()`](https://rdrr.io/r/stats/lm.html)
   and [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html), rather
   than the large-sample approximations used elsewhere.
-- [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+- [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   gives Type II and Type III analysis of deviance, testing each term
   jointly across all category dimensions, with Wald, likelihood-ratio
   and parametric bootstrap variants.
 - Built-in diagnostics
-  ([`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md),
-  [`ilm_rqr_test()`](https://craig-hutton.github.io/illume/reference/ilm_rqr_test.md),
-  [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md))
+  ([`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+  [`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md),
+  [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md))
   state whether each assumption is consistent with the data and name a
   remedy when it is not.
 - Reduced-rank (`rr`) category covariances make larger numbers of
@@ -1164,7 +1295,7 @@ they can now also fit.
 
 ### Time structure and cycles
 
-- [`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+- [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
   draws the residual autocorrelation and partial autocorrelation by lag,
   within group, against an envelope built by simulating from the fit and
   refitting. The partial autocorrelation comes from Durbin-Levinson
@@ -1173,18 +1304,18 @@ they can now also fit.
   [`stats::pacf()`](https://rdrr.io/r/stats/acf.html) to 1e-8.
 - The band is drawn at the critical value the p-value is computed
   against, so a point outside the band is exactly a lag the check flags.
-- [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+- [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
   now distinguishes a **cycle** from autoregression and names the
   period. The two need opposite remedies and an AR term cannot represent
   a cycle at all.
-- [`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md)
+- [`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md)
   and
-  [`ilm_cyclic()`](https://craig-hutton.github.io/illume/reference/ilm_cyclic.md)
+  [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
   fit that cycle.
-  [`ilm_cyclic()`](https://craig-hutton.github.io/illume/reference/ilm_cyclic.md)
+  [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
   is a cubic spline that closes on itself, so the curve and its first
   two derivatives match across the wrap.
-- [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+- [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
   and the residual machinery now work for every family. Previously the
   Pearson residual was indexed by `object$J`, which is 2 for each
   univariate family and did not match the one residual series those
@@ -1192,19 +1323,19 @@ they can now also fit.
 
 ### Correlation over irregular time
 
-- [`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+- [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   fits a first-order autoregression whose correlation is `rho` raised to
   the gap between observations, so the spacing need not be regular.
-  [`ilm_ar1()`](https://craig-hutton.github.io/illume/reference/ilm_ar1.md)
+  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
   is the evenly spaced constructor; neither existed before, and the bare
   `list(idx =, n_group =, Tt =)` the fitter used to take still works.
-- [`ilm_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_variogram.md)
+- [`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md)
   and
-  [`ilm_plot_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_plot_variogram.md)
+  [`ilm_plot_variogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_variogram.md)
   bin every within-group pair by separation and report the residual
   correlation in each bin against the refit-based envelope. This is what
   makes a
-  [`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   term checkable, and it tells apart the three shapes that need three
   different remedies: autoregression, an unabsorbed group effect, and a
   cycle.
@@ -1222,12 +1353,12 @@ they can now also fit.
   hazard scale – while the baseline is free to bend.
 - `rp_df` sets how much it can bend, `rp_knots` places the knots
   directly.
-- [`ilm_rp_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_rp_lrt.md)
+- [`ilm_rp_lrt()`](https://huttoncp.github.io/illume/reference/ilm_rp_lrt.md)
   tests the spline against the straight-line special case it
   generalises, and names the simpler family when that fits as well.
-- [`ilm_survival()`](https://craig-hutton.github.io/illume/reference/ilm_survival.md)
+- [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
   and
-  [`ilm_plot_survival()`](https://craig-hutton.github.io/illume/reference/ilm_plot_survival.md)
+  [`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md)
   work for it. [`predict()`](https://rdrr.io/r/stats/predict.html) on
   new data does not, and says why: the linear predictor depends on time
   through the baseline, so there is no fitted value for a covariate
@@ -1252,7 +1383,7 @@ they can now also fit.
   `~ group` for a separate spread per level, `~ x` for one that changes
   with a covariate, `~ mu` for a power of the fitted mean. `mu` is a
   reserved name. This is the remedy
-  [`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
   diagnoses, and the check now names it.
 - Available for every family with a dispersion parameter – gaussian,
   negative binomial, and the three accelerated failure time families. A
@@ -1262,15 +1393,15 @@ they can now also fit.
 
 ### Censored responses
 
-- [`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md)
+- [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
   marks observations known only as an interval – at or below a floor, at
   or above a ceiling – and `ilm_model(censor = )` fits them as the
   probability of that interval. With no random effects this is the Tobit
   model.
-- [`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+- [`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
   names a pile-up at either extreme of a continuous variable, and points
   at
-  [`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md),
+  [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md),
   so the problem is visible before the model is fitted rather than
   after.
 - Censoring switches off the exact t and F path, because a censored
@@ -1292,9 +1423,9 @@ they can now also fit.
   convention
   [`survival::Surv()`](https://rdrr.io/pkg/survival/man/Surv.html) uses,
   which is the opposite of the code stored internally.
-- [`ilm_survival()`](https://craig-hutton.github.io/illume/reference/ilm_survival.md)
+- [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
   gives the predicted survival curve with intervals, and
-  [`ilm_plot_survival()`](https://craig-hutton.github.io/illume/reference/ilm_plot_survival.md)
+  [`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md)
   draws it over the Kaplan-Meier estimate with an envelope and a
   verdict. The Kaplan-Meier is computed in-package, and matches
   [`survival::survfit()`](https://rdrr.io/pkg/survival/man/survfit.html)
@@ -1306,7 +1437,7 @@ they can now also fit.
 
 ### Comparing more than two groups
 
-- [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   compares every pair of levels, not just two, and takes a formula:
   `ilm_boot_diff(score ~ grp, data = d)` as well as
   `ilm_boot_diff(d, "score", "grp")`. `ref =` compares every level
@@ -1323,7 +1454,7 @@ they can now also fit.
 - Each row now carries `p_value` and `p_adj` alongside the interval,
   read off the same bootstrap maximum, so the test and the interval
   agree.
-- [`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
   is now generic, and its first argument is `x` rather than `data`.
   Positional calls are unaffected; a call naming `data =` for the data
   frame needs the formula form.
@@ -1366,7 +1497,7 @@ Summary notes; the full tables belong with the methods paper.
   of 167 under `contr.treatment` and 1086 under `contr.sum` – same
   model, same data. Rows spanning more than one column (`g`, `g:x`) were
   invariant, since both codings span the same subspace.
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md)
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   now warns and names the fix.
 
 - **The log-likelihood was missing a constant that grew with the
@@ -1446,7 +1577,7 @@ Summary notes; the full tables belong with the methods paper.
 
 - **Applying the remedy clears the diagnosis.** On a 900-row design with
   spreads of 0.5 and 2.0 by stratum,
-  [`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
   went from `WARN` with a variance ratio of 12.01 to `OK` with 1.06, and
   AIC fell from 3274.6 to 2653.6.
 
@@ -1464,7 +1595,7 @@ Summary notes; the full tables belong with the methods paper.
   uniform (Kolmogorov-Smirnov p = 0.18), because the fitted means vary
   from row to row and spread the pile-up out. The pile-up is visible in
   the data, not in the residuals, which is why
-  [`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+  [`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
   now names it.
 
 - **All three AFT families match
@@ -1534,7 +1665,7 @@ Summary notes; the full tables belong with the methods paper.
   standard error of 0.0766, and `sqrt(0.0766^2 + 0.0446^2) = 0.0886`
   against an observed spread of 0.0875. Scored against the moving
   target, coverage was 0.943.
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   now says so in its documentation; the slopes are unaffected either
   way.
 
@@ -1553,7 +1684,7 @@ Summary notes; the full tables belong with the methods paper.
   after the fix, at 200 replicates and a nominal 0.05: 0.045, 0.050,
   0.035 and 0.055 for a Tobit, an accelerated failure time, a dispersion
   model and a flexible baseline.
-- [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+- [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   kept the caller’s formula environment. `lme4::nobars()`,
   [`mgcv::interpret.gam()`](https://rdrr.io/pkg/mgcv/man/interpret.gam.html)
   and
@@ -1572,20 +1703,20 @@ Summary notes; the full tables belong with the methods paper.
   [`poly()`](https://rdrr.io/r/stats/poly.html) and
   [`scale()`](https://rdrr.io/r/base/scale.html) returned quietly wrong
   numbers.
-- [`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+- [`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
   accepts a data frame again. With no `y` it handed the whole frame to
   the categorical branch, which failed with “the condition has length \>
   1” for any frame of more than one column, and returned nonsense rather
   than failing for a frame of exactly one. It now describes every column
   when they are all of a kind, takes several column names, and names
-  [`ilm_describe_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_all.md)
+  [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md)
   when the kinds are mixed.
 - `ilm_plot_model(what = "effect")` draws one curve per interaction
   partner. It previously held the partner at its most common level, drew
   one of several quite different slopes, and did not say so.
-- [`ilm_rqr()`](https://craig-hutton.github.io/illume/reference/ilm_rqr.md),
+- [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md),
   `ilm_pearson_ovr()` and
-  [`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md)
+  [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)
   are family-aware throughout. The quantile residual errored for
   gaussian and Poisson models and returned plausible-looking but
   non-uniform values for binomial ones; a test that checked only

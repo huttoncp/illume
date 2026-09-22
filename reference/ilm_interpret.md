@@ -28,11 +28,11 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 - object:
 
   An
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md),
-  [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md),
-  [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
+  [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
   or
-  [`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md).
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md).
 
 - ...:
 
@@ -61,11 +61,10 @@ An object of class `"ilm_interpretation"`: a list of sections, which
 
 A regression coefficient is an association. This says "associated with"
 unless the object carries a design that identifies an effect – an
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 with a valid adjustment set, an
-[`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md),
-an
-[`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md)
+[`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md),
+an [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md)
 – in which case it says so and names what licenses it. That is the
 single most common error in reporting a model, and the one place an
 automatic interpreter could do real damage, so it is handled explicitly.
@@ -82,8 +81,8 @@ The prose is templated. The same fit gives the same words every time.
 
 ## See also
 
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md).
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).
 
 ## Examples
 

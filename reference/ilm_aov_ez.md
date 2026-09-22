@@ -63,13 +63,13 @@ ilm_aov_ez(
   `"aov"` (the default) computes the omnibus table classically and fits
   a mixed model alongside. `"mixed"` makes the mixed model the primary
   analysis, translating this specification into the corresponding
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   formula.
 
 - reml:
 
   Passed to
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for the companion fit. `TRUE` here, because the design fixed the fixed
   effects before any data were seen.
 
@@ -103,7 +103,7 @@ ilm_aov_ez(
 
 An object of class `"ilm_aov_ez"`: `anova` (the table), `sphericity`,
 `fit` (the companion
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)),
 `posthoc`, `notes`, and the design.
 
 ## What it reports, and why not just a mixed model
@@ -111,7 +111,7 @@ An object of class `"ilm_aov_ez"`: `anova` (the table), `sphericity`,
 On a balanced complete design a mixed model and a classical
 repeated-measures ANOVA answer the same question. They report it
 differently, and one of them reports things the other cannot:
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 gives a Wald chi-square, because once random effects are integrated out
 there is no exact residual degrees of freedom to divide by. An F, a mean
 squared error, a generalized eta squared and a Greenhouse-Geisser
@@ -153,13 +153,13 @@ variable. Covariates are measured by definition, so they are added to
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 for the general engine,
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 and
-[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md)
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
 for follow-ups,
-[`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md)
+[`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
 when the interaction is with a continuous predictor.
 
 ## Examples

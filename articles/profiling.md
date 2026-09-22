@@ -18,11 +18,11 @@ pr
 ilm_plot_profile(pr)
 ```
 
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
 runs
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
 then
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 on the dimensions it produced, then characterises the clusters. The
 three are also available separately, which is what you want as soon as
 you disagree with one of its choices.
@@ -77,7 +77,7 @@ nothing to gain there. What it adds is mixed data, and
 categorical columns.
 
 See
-[`?ilm_glrm`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+[`?ilm_glrm`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
 for the ridge penalty, which is chosen by cross-validation because a
 fixed value is wrong across sizes and missingness rates.
 
@@ -155,10 +155,10 @@ most of what the imputation then does.
 
 ## See also
 
-[`?ilm_reduce`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
-[`?ilm_cluster`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
-[`?ilm_profile`](https://craig-hutton.github.io/illume/reference/ilm_profile.md),
-[`?ilm_glrm`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md),
-[`vignette("anomaly-detection")`](https://craig-hutton.github.io/illume/articles/anomaly-detection.md)
+[`?ilm_reduce`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+[`?ilm_cluster`](https://huttoncp.github.io/illume/reference/ilm_cluster.md),
+[`?ilm_profile`](https://huttoncp.github.io/illume/reference/ilm_profile.md),
+[`?ilm_glrm`](https://huttoncp.github.io/illume/reference/ilm_glrm.md),
+[`vignette("anomaly-detection")`](https://huttoncp.github.io/illume/articles/anomaly-detection.md)
 for rows that fit no group, and
-[`vignette("missing-data")`](https://craig-hutton.github.io/illume/articles/missing-data.md).
+[`vignette("missing-data")`](https://huttoncp.github.io/illume/articles/missing-data.md).

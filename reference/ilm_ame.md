@@ -16,7 +16,7 @@ ilm_ame(object, terms = NULL, eps = 1e-04)
 - object:
 
   An
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 - terms:
 
@@ -47,10 +47,10 @@ otherwise would understate the uncertainty.
 
 ## See also
 
-[`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md),
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md),
 and the `marginaleffects` package, which does this and a great deal more
 once
-[`ilm_register_marginaleffects()`](https://craig-hutton.github.io/illume/reference/ilm_register_marginaleffects.md)
+[`ilm_register_marginaleffects()`](https://huttoncp.github.io/illume/reference/ilm_register_marginaleffects.md)
 is called.
 
 ## Examples

@@ -47,8 +47,8 @@ replicates rather than re-drawing it, which is stated where it matters.
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md),
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md),
 whose `p_zero` column is often the first sign of a floor.
 
 ## Examples

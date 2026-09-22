@@ -5,7 +5,7 @@ Line plot
 ## Usage
 
 ``` r
-ilm_plot_line(data, y, x, by = NULL, ...)
+ilm_plot_line(data, y, x, by = NULL, ..., pch = NULL)
 ```
 
 ## Arguments
@@ -27,13 +27,20 @@ ilm_plot_line(data, y, x, by = NULL, ...)
   Passed to
   [`tinyplot::tinyplot()`](https://grantmcdermott.com/tinyplot/man/tinyplot.html).
 
+- pch:
+
+  Plotting character. Takes a NAME as well as a number:
+  `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+  spaces, underscores and hyphens are ignored. A single character is
+  drawn literally, so `pch = "x"` is still the letter x.
+
 ## Value
 
 `NULL`, invisibly.
 
 ## See also
 
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
 for what a line plot of residuals cannot show.
 
 ## Examples

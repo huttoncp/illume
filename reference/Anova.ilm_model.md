@@ -1,7 +1,7 @@
 # car::Anova method
 
 Lets `car::Anova(fit, type = 3)` dispatch to
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 so it uses the correct joint blocking across categories instead of
 `car`'s default, which would test only one category.
 
@@ -33,7 +33,7 @@ Anova.ilm_model(
 - ...:
 
   Passed to
-  [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md).
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).
 
 ## Value
 

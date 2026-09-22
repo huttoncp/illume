@@ -35,11 +35,11 @@ and a `status`.
 ## Details
 
 The remedy is [ilm_model(ziformula =
-)](https://craig-hutton.github.io/illume/reference/ilm_model.md), which
-adds a second linear predictor for the probability of an excess zero.
-Whether that should be a mixture (`zi_type = "inflated"`) or two
-processes (`"hurdle"`) is a question about what the zeros mean rather
-than one this check can answer.
+)](https://huttoncp.github.io/illume/reference/ilm_model.md), which adds
+a second linear predictor for the probability of an excess zero. Whether
+that should be a mixture (`zi_type = "inflated"`) or two processes
+(`"hurdle"`) is a question about what the zeros mean rather than one
+this check can answer.
 
 ## Examples
 

@@ -3,7 +3,7 @@
 Fills in missing values `m` times, each fill drawn rather than fitted,
 so that the analysis afterwards can price in not having observed them.
 Each incomplete variable is regressed on the others with
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
 using the family its own type calls for, and the missing entries are
 drawn from the resulting predictive distribution.
 
@@ -55,7 +55,7 @@ ilm_impute(
   generalized low rank model instead, which uses a loss suited to each
   column's type and so can impute CATEGORICAL columns, which `"lowrank"`
   leaves alone – see
-  [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md).
+  [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md).
   low-rank route when they cannot be fitted; `"fcs"` and `"lowrank"`
   force one. See the section below for what each costs.
 
@@ -82,7 +82,7 @@ ilm_impute(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -103,7 +103,7 @@ distribution and the response's own randomness is added on top – so the
 fills differ from one imputation to the next in the way the unknown
 values really could. And the `m` completed data sets are analysed
 separately and pooled by Rubin's rules in
-[`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md),
+[`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md),
 where the spread of the estimates across imputations becomes part of the
 reported uncertainty.
 
@@ -117,7 +117,7 @@ That the data are missing at random given the variables supplied: the
 chance a value is missing may depend on what is observed, but not on the
 missing value itself once the observed variables are accounted for. That
 assumption is **not testable**
-([`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+([`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 explains why), and imputation does not make it true. Including variables
 that predict both the missingness and the missing value makes it more
 plausible.
@@ -177,7 +177,7 @@ three ways. Coverage of a nominal 95% interval for the coefficient on
 
 Three things to read off it. Complete cases are **unbiased** when
 missingness depends on a covariate, even at 40% missing – which is why
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 distinguishes that case and tells you not to bother imputing. Complete
 cases **fail badly** when missingness depends on the outcome: a bias of
 -0.099 is a fifth of the effect, and coverage collapses to 0.615.
@@ -211,9 +211,9 @@ pooled.
 
 ## See also
 
-[`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md)
+[`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
 to analyse them,
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 to decide whether you need to.
 
 ## Examples

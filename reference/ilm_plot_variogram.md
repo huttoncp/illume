@@ -20,7 +20,7 @@ ilm_plot_variogram(
 - res:
 
   The value returned by
-  [`ilm_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_variogram.md).
+  [`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md).
 
 - colour:
 
@@ -48,7 +48,7 @@ Invisibly, the table behind the plot.
 
 ## See also
 
-[`ilm_variogram()`](https://craig-hutton.github.io/illume/reference/ilm_variogram.md).
+[`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md).
 
 ## Examples
 

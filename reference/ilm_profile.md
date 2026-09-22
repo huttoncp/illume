@@ -1,9 +1,9 @@
 # Profile a data set: reduce, cluster, and describe the clusters
 
 Runs
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
 then
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 on the dimensions it produces, then says what distinguishes each cluster
 – which dimensions it sits unusually far along, and which original
 variables those dimensions are made of. The result is a sentence per
@@ -34,7 +34,7 @@ ilm_profile(
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - ndim:
 
@@ -48,13 +48,13 @@ ilm_profile(
   than squared error on one-hot indicators, and reconstructs a category
   as a category. It costs an iterative fit, and on all-numeric data the
   two are the same model – see
-  [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+  [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
   for when it is worth that.
 
 - ...:
 
   Passed to
-  [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
+  [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md),
   for instance `k`, `k_max`, `method`, `B` or `seed`.
 
 - vtest_threshold:
@@ -85,7 +85,7 @@ and the 1.96 default is a threshold that behaves sensibly rather than a
 5% test. Treat a characterisation as a description of the partition you
 have, not as evidence that the partition is real – the stability and
 silhouette figures in
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 are what speak to that.
 
 For numeric variables the reported direction combines the v-test's sign
@@ -94,10 +94,10 @@ can run either way. Categorical variables are named without a direction.
 
 ## See also
 
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
-[`ilm_plot_profile()`](https://craig-hutton.github.io/illume/reference/ilm_plot_profile.md),
-[`ilm_profile_na()`](https://craig-hutton.github.io/illume/reference/ilm_profile_na.md).
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md),
+[`ilm_plot_profile()`](https://huttoncp.github.io/illume/reference/ilm_plot_profile.md),
+[`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md).
 
 ## Examples
 

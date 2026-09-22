@@ -14,7 +14,7 @@ ilm_power_n(object, target = 0.8)
 - object:
 
   An
-  [`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md)
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
   result.
 
 - target:
@@ -24,8 +24,12 @@ ilm_power_n(object, target = 0.8)
 ## Value
 
 A data frame with one row per effect size: the interpolated `n`, and the
-`n_lower`/`n_upper` implied by the Monte Carlo interval.
+`n_lower`/`n_upper` implied by the Monte Carlo interval. For a result
+from
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+it also carries `n_unit`, the same figure in participants rather than
+rows.
 
 ## See also
 
-[`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md).
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md).

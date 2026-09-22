@@ -84,7 +84,7 @@ ilm_rdd(
 - ...:
 
   Passed to
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Value
 
@@ -152,9 +152,9 @@ Econometrica 82(6).
 
 ## See also
 
-[`ilm_plot_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_plot_rdd.md),
-[`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md),
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+[`ilm_plot_rdd()`](https://huttoncp.github.io/illume/reference/ilm_plot_rdd.md),
+[`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Examples
 

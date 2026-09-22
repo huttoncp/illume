@@ -48,9 +48,9 @@ narrow, most noticeably in the tail beyond the last observed event.
 
 ## See also
 
-[`ilm_plot_survival()`](https://craig-hutton.github.io/illume/reference/ilm_plot_survival.md),
+[`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md),
 which draws it against the Kaplan-Meier estimate,
-[`ilm_surv()`](https://craig-hutton.github.io/illume/reference/ilm_surv.md).
+[`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md).
 
 ## Examples
 

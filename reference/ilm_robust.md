@@ -2,7 +2,7 @@
 
 The same coefficients, re-tested against a covariance that does not
 assume the variance structure is right. See
-[`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md)
+[`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md)
 for what the corrections do.
 
 ## Usage
@@ -22,13 +22,13 @@ ilm_robust(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with no random effects.
 
 - cluster:
 
   Clustering, as in
-  [`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md).
+  [`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md).
   `NULL` gives heteroskedasticity-robust standard errors.
 
 - type:
@@ -62,7 +62,7 @@ the warning.
 
 ## See also
 
-[`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md).
+[`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md).
 
 ## Examples
 

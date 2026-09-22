@@ -72,8 +72,8 @@ parameters.
 
 ## See also
 
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md)
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md)
 for a formatted table with tests.
 
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md)
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md)
 for a formatted table with tests.

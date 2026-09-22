@@ -1,7 +1,7 @@
 # Missing values in one column, across groups
 
 Where
-[`ilm_plot_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_na_all.md)
+[`ilm_plot_na_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_na_all.md)
 compares columns, this compares groups within one column – which is how
 a pattern in *who* is missing shows itself.
 
@@ -25,7 +25,7 @@ ilm_plot_na(data, x, by = NULL, stat = c("p_na", "na", "n"), ...)
 
   Grouping column(s) to split by, as a character vector. Required:
   without it there is only one bar, which is
-  [`ilm_plot_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_na_all.md)'s
+  [`ilm_plot_na_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_na_all.md)'s
   job.
 
 - stat:
@@ -43,8 +43,8 @@ ilm_plot_na(data, x, by = NULL, stat = c("p_na", "na", "n"), ...)
 
 ## See also
 
-[`ilm_plot_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_na_all.md),
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md).
+[`ilm_plot_na_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_na_all.md),
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md).
 
 ## Examples
 

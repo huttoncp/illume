@@ -17,8 +17,7 @@ ilm_iv_ar(object, level = 0.95, range = NULL, n_grid = 2001L)
 
 - object:
 
-  An
-  [`ilm_iv()`](https://craig-hutton.github.io/illume/reference/ilm_iv.md)
+  An [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md)
   fit with exactly one endogenous regressor.
 
 - level:
@@ -57,7 +56,7 @@ Mathematical Statistics* 20, 46-63.
 
 ## See also
 
-[`ilm_iv()`](https://craig-hutton.github.io/illume/reference/ilm_iv.md).
+[`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md).
 
 ## Examples
 

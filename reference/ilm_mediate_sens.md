@@ -22,7 +22,7 @@ ilm_mediate_sens(
 - object:
 
   An
-  [`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md)
+  [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md)
   result on linear models.
 
 - lambda_m, lambda_y:
@@ -56,7 +56,7 @@ University Press, chapter 3.
 
 ## See also
 
-[`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md).
+[`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md).
 
 ## Examples
 

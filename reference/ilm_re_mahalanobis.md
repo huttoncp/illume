@@ -34,5 +34,5 @@ Comparing them to the theoretical chi-square distribution is therefore
 anti-conservative: a misspecified covariance can still look acceptable.
 Treat this panel as indicative rather than as a test. The plot produced
 by
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md)
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)
 is annotated accordingly.

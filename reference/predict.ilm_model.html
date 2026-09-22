@@ -40,7 +40,7 @@ intervals.'></head><body>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/craig-hutton/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -50,7 +50,7 @@ intervals.'></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Predicted category probabilities</h1>
-      <small class="dont-index">Source: <a href="https://github.com/craig-hutton/illume/blob/main/R/ilm_predict.R" class="external-link"><code>R/ilm_predict.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_predict.R" class="external-link"><code>R/ilm_predict.R</code></a></small>
       <div class="d-none name"><code>predict.ilm_model.Rd</code></div>
     </div>
 
@@ -152,6 +152,16 @@ transform of the average. The population-averaged probabilities are pulled
 toward being more even across categories. Which you want depends on the
 question – "what do I expect for an average subject?" or "what proportion of
 the population falls in each category?"</p>
+<p>Under an <strong>identity link</strong> the two coincide exactly, because the random
+effects have mean zero and nothing nonlinear stands between. <code>marginal</code> is
+then answered in closed form rather than by simulation, so the result does
+not depend on <code>ndraw</code> and carries no Monte Carlo noise.</p>
+<p>A <strong>random slope</strong> is averaged over as a slope. The amount being integrated
+over then depends on the row – it grows with distance from wherever the
+slope is centred – so the marginal and conditional curves separate by more
+at the ends of the range than in the middle. Averaging such a term as if it
+were an intercept understates that, and the error grows with the slope
+variance and with distance from centre.</p>
     </div>
     <div class="section level2">
     <h2 id="uncertainty">Uncertainty<a class="anchor" aria-label="anchor" href="#uncertainty"></a></h2>

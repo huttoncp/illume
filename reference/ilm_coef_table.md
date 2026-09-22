@@ -28,7 +28,7 @@ Wald statistic can *shrink* rather than grow. This is the Hauck-Donner
 effect. If a term matters to your conclusions, confirm it with a
 likelihood-ratio test via `ilm_anova(test = "LRT")` or, for small
 samples,
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md).
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md).
 
 ## References
 

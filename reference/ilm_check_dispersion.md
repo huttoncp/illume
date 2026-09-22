@@ -35,7 +35,7 @@ p-value and a `status`.
 
 ## See also
 
-[`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
 when the excess variance is concentrated at zero.
 
 ## Examples

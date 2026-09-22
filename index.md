@@ -14,7 +14,7 @@ the whole way.
 ## Two commitments
 
 **One engine fits everything.**
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 goes from a simple regression to a mixed model with smooths and
 correlated errors, across families from gaussian through counts,
 proportions, ordered and unordered categories, and survival times. All
@@ -22,18 +22,18 @@ of them are fitted by approximate maximum likelihood using the Laplace
 approximation via [RTMB](https://github.com/kaskr/RTMB). Because a
 single engine fits them all,
 [`summary()`](https://rdrr.io/r/base/summary.html),
-[`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md),
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 [`predict()`](https://rdrr.io/r/stats/predict.html) and every diagnostic
 stay the same as the model gets harder.
 
 **Every check names a remedy that exists in this package.** A diagnostic
 that tells you an assumption fails and leaves you to find the fix
 elsewhere is a complaint, not a tool.
-[`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+[`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
 names `dispformula`;
-[`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
 names `ziformula`;
-[`ilm_check_proportional()`](https://craig-hutton.github.io/illume/reference/ilm_check_proportional.md)
+[`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
 names `family = "multinomial"`. Where a remedy did not exist, it was
 built – which is most of what this package is.
 
@@ -42,7 +42,7 @@ built – which is most of what this package is.
 ``` r
 
 # install.packages("remotes")
-remotes::install_github("craig-hutton/illume")
+remotes::install_github("huttoncp/illume")
 ```
 
 R \>= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.
@@ -81,7 +81,7 @@ ilm_interpret(fit)
 ```
 
 If
-[`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
 flags excess zeros, the next line is `ilm_model(..., ziformula = ~ 1)`
 and everything downstream is unchanged. That is the shape of the whole
 package.
@@ -90,16 +90,16 @@ package.
 
 |  |  |
 |----|----|
-| **Models** | [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
-| **Other designs** | [`ilm_iv()`](https://craig-hutton.github.io/illume/reference/ilm_iv.md) instrumental variables, [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md) difference in differences, [`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md) regression discontinuity, [`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md) complex samples |
-| **Diagnostics** | [`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
-| **Inference** | [`ilm_anova()`](https://craig-hutton.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://craig-hutton.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://craig-hutton.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md), [`ilm_boot_ci()`](https://craig-hutton.github.io/illume/reference/ilm_boot_ci.md) |
-| **ANOVA** | [`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
-| **Exploration** | [`ilm_describe_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_all.md), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md), [`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md) |
-| **Structure** | [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md), [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md) |
-| **Missing data** | [`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md), [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://craig-hutton.github.io/illume/reference/ilm_mi_pool.md) |
-| **Causal** | [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://craig-hutton.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md) |
-| **Design and decision** | [`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md), [`ilm_scenario()`](https://craig-hutton.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md) |
+| **Models** | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
+| **Other designs** | [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md) instrumental variables, [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md) difference in differences, [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md) regression discontinuity, [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md) complex samples |
+| **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
+| **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md), [`ilm_boot_ci()`](https://huttoncp.github.io/illume/reference/ilm_boot_ci.md) |
+| **ANOVA** | [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
+| **Exploration** | [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md), [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) |
+| **Structure** | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md), [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md) |
+| **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md), [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) |
+| **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
+| **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
 
 ## The multinomial claim, stated carefully
 
@@ -137,7 +137,7 @@ coefficient you intend to interpret it is not.
 ## How it is validated
 
 Every claim in the documentation is a measurement. The
-[`studies/`](https://github.com/craig-hutton/illume/tree/main/studies)
+[`studies/`](https://github.com/huttoncp/illume/tree/main/studies)
 directory of this repository (not shipped with the installed package)
 holds the scripts, the retained runs, and a generated findings log per
 study:
@@ -181,9 +181,9 @@ parameters::model_parameters(fit)
 | Vignette | Covers |
 |----|----|
 | `workflow` | the whole path, eleven stages |
-| `regression-models` | [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
+| `regression-models` | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
 | `exploring-data` | descriptives, plots, bootstrap intervals |
-| `profiling` | [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md) |
+| `profiling` | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md) |
 | `anomaly-detection` | rows that are implausible as combinations |
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
@@ -237,10 +237,10 @@ a comparison against an independent implementation that somebody else
 wrote – `lme4`, `glmmTMB`, `emmeans`, `afex`, `car`, `lmerTest`,
 `survey`, `sandwich`, `mice` and the rest – and the scripts, the
 retained runs and the generated findings are in
-[`studies/`](https://github.com/craig-hutton/illume/tree/main/studies)
-for anyone who wants to re-run them. Every real defect this package has
-had was found that way. None was found by reading the code, and none by
-the test suite.
+[`studies/`](https://github.com/huttoncp/illume/tree/main/studies) for
+anyone who wants to re-run them. Every real defect this package has had
+was found that way. None was found by reading the code, and none by the
+test suite.
 
 That is the standard the package asks to be judged by, and it is the
 same standard whoever wrote it. \## Standing on other people’s shoulders
@@ -276,7 +276,7 @@ fairly literal kind.
 
 **And some of it was read straight out of their source.** The
 Greenhouse-Geisser, Huynh-Feldt and Mauchly arithmetic in
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 was taken from `car`, because there are several non-equivalent forms in
 print and the one that matters is the one people compare against. The
 generalized eta squared formula came from `afex` for the same reason.
@@ -294,9 +294,9 @@ written by the same author for the BC Public Service. The lineage is
 visible in the function names: `describe()`, `describe_all()`,
 `counts()`, `counts_tb()`, `dupes()`, `copies()`, `wash_df()`,
 `recode_errors()`, `translate()` and the whole `plot_*()` family became
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md),
-[`ilm_counts()`](https://craig-hutton.github.io/illume/reference/ilm_counts.md),
-[`ilm_dupes()`](https://craig-hutton.github.io/illume/reference/ilm_dupes.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md),
+[`ilm_counts()`](https://huttoncp.github.io/illume/reference/ilm_counts.md),
+[`ilm_dupes()`](https://huttoncp.github.io/illume/reference/ilm_dupes.md)
 and the rest, with the same idea behind them – that the routine work
 before a model should be one call with a consistent interface, rather
 than six lines of [`sapply()`](https://rdrr.io/r/base/lapply.html)
@@ -330,10 +330,10 @@ MIT. See `LICENSE`.
 ## Contributing
 
 See
-[CONTRIBUTING.md](https://craig-hutton.github.io/illume/CONTRIBUTING.md).
+[CONTRIBUTING.md](https://huttoncp.github.io/illume/CONTRIBUTING.md).
 Two things get asked of anything new: that it adds no hard dependency,
 and that any diagnostic names a remedy which exists in this package.
 
 Please note that this project is released with a [Contributor Code of
-Conduct](https://craig-hutton.github.io/illume/CODE_OF_CONDUCT.md). By
+Conduct](https://huttoncp.github.io/illume/CODE_OF_CONDUCT.md). By
 contributing, you agree to abide by its terms.

@@ -32,8 +32,8 @@ A data frame with `obs`, `n`, `na` and `p_na`.
 
 ## See also
 
-[`ilm_describe_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_na_all.md),
-[`ilm_plot_missing()`](https://craig-hutton.github.io/illume/reference/ilm_plot_missing.md).
+[`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md),
+[`ilm_plot_missing()`](https://huttoncp.github.io/illume/reference/ilm_plot_missing.md).
 
 ## Examples
 

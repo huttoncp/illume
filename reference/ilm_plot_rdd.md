@@ -22,7 +22,7 @@ ilm_plot_rdd(
 - x:
 
   An
-  [`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md)
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md)
   result.
 
 - nbins:
@@ -44,7 +44,7 @@ ilm_plot_rdd(
 
 ## See also
 
-[`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md).
+[`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md).
 
 ## Examples
 

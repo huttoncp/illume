@@ -1,7 +1,7 @@
 # Replace known-bad values in a vector
 
 The vector path of
-[`ilm_recode_errors()`](https://craig-hutton.github.io/illume/reference/ilm_recode_errors.md),
+[`ilm_recode_errors()`](https://huttoncp.github.io/illume/reference/ilm_recode_errors.md),
 exposed for use inside other pipelines. Factor levels that are recoded
 away are dropped.
 

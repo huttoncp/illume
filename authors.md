@@ -7,16 +7,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/craig-hutton/illume/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/huttoncp/illume/blob/main/DESCRIPTION)
 
 Hutton C (2026). *illume: Exploration and Frequentist Inference in One
 Toolkit*. R package version 0.0.7.9000,
-<https://github.com/craig-hutton/illume>.
+<https://github.com/huttoncp/illume>.
 
     @Manual{,
       title = {illume: Exploration and Frequentist Inference in One Toolkit},
       author = {Craig Hutton},
       year = {2026},
       note = {R package version 0.0.7.9000},
-      url = {https://github.com/craig-hutton/illume},
+      url = {https://github.com/huttoncp/illume},
     }

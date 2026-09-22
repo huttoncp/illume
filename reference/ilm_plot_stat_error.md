@@ -5,7 +5,15 @@ A summary per group with a measure of spread around it.
 ## Usage
 
 ``` r
-ilm_plot_stat_error(data, y, x, by = NULL, stat = c("mean", "median"), ...)
+ilm_plot_stat_error(
+  data,
+  y,
+  x,
+  by = NULL,
+  stat = c("mean", "median"),
+  ...,
+  pch = NULL
+)
 ```
 
 ## Arguments
@@ -35,6 +43,13 @@ ilm_plot_stat_error(data, y, x, by = NULL, stat = c("mean", "median"), ...)
   Passed to
   [`tinyplot::tinyplot()`](https://grantmcdermott.com/tinyplot/man/tinyplot.html).
 
+- pch:
+
+  Plotting character. Takes a NAME as well as a number:
+  `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+  spaces, underscores and hyphens are ignored. A single character is
+  drawn literally, so `pch = "x"` is still the letter x.
+
 ## Value
 
 `NULL`, invisibly.
@@ -49,12 +64,12 @@ not.
 
 Overlapping error bars are a poor test of a difference – they are
 conservative and lossy.
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 gives the difference itself with its own interval.
 
 ## See also
 
-[`ilm_boot_diff()`](https://craig-hutton.github.io/illume/reference/ilm_boot_diff.md)
+[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
 for the comparison this plot invites.
 
 ## Examples

@@ -25,7 +25,7 @@ ilm_reduce(data, cols = NULL, ndim = 5, method = c("pcamix", "glrm"), ...)
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - ndim:
 
@@ -39,13 +39,13 @@ ilm_reduce(data, cols = NULL, ndim = 5, method = c("pcamix", "glrm"), ...)
   than squared error on one-hot indicators, and reconstructs a category
   as a category. It costs an iterative fit, and on all-numeric data the
   two are the same model – see
-  [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+  [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
   for when it is worth that.
 
 - ...:
 
   Passed to
-  [`ilm_glrm()`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+  [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
   when `method = "glrm"`.
 
 ## Value
@@ -54,7 +54,7 @@ An object of class `"ilm_reduce"`: `method` (`"pca"`, `"mca"` or
 `"famd"`), `eig` (dimension, eigenvalue, percent of variance and its
 cumulative total), `ind_coord` (`row_id` and one column per retained
 dimension – this is what
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 takes), `var_contrib` (`variable`, `dim`, `sqload`: how strongly each
 original variable relates to each dimension, on a 0 to 1 scale, for
 numeric and categorical variables alike), `n`, and `fit`, the underlying
@@ -77,11 +77,11 @@ Multivariate analysis of mixed data: the PCAmixdata R package. arXiv
 
 ## See also
 
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
 to group the rows,
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
 for the whole pipeline,
-[`ilm_reduce_na()`](https://craig-hutton.github.io/illume/reference/ilm_reduce_na.md)
+[`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
 for the same thing applied to missingness.
 
 ## Examples

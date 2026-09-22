@@ -88,14 +88,14 @@ advice:
   correctness, and it adds assumptions.
 
 - missingness related to `y` itself: complete cases are biased, and
-  [`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   is the remedy.
 
 ## See also
 
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md),
-[`ilm_describe_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_na_all.md),
-[`ilm_plot_missing()`](https://craig-hutton.github.io/illume/reference/ilm_plot_missing.md).
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+[`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md),
+[`ilm_plot_missing()`](https://huttoncp.github.io/illume/reference/ilm_plot_missing.md).
 
 ## Examples
 

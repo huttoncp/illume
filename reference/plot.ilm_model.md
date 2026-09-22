@@ -1,7 +1,7 @@
 # Plot a fitted model
 
 A shorthand for
-[`ilm_plot_model()`](https://craig-hutton.github.io/illume/reference/ilm_plot_model.md),
+[`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md),
 which is the fuller interface.
 
 ## Usage
@@ -20,12 +20,12 @@ plot(x, what = "coef", ...)
 - what:
 
   Which plot to draw; see
-  [`ilm_plot_model()`](https://craig-hutton.github.io/illume/reference/ilm_plot_model.md).
+  [`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md).
 
 - ...:
 
   Passed to
-  [`ilm_plot_model()`](https://craig-hutton.github.io/illume/reference/ilm_plot_model.md).
+  [`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md).
 
 ## Value
 

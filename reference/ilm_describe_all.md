@@ -1,7 +1,7 @@
 # Describe every column of a data frame
 
 Applies
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
 to each column and returns one table per class, so columns with
 different summaries are not forced into a common shape.
 
@@ -69,7 +69,7 @@ ilm_describe_all(
 - cap, min_n:
 
   Control the `gauss` index; see
-  [`ilm_gauss_check()`](https://craig-hutton.github.io/illume/reference/ilm_gauss_check.md).
+  [`ilm_gauss_check()`](https://huttoncp.github.io/illume/reference/ilm_gauss_check.md).
 
 ## Value
 
@@ -86,7 +86,7 @@ matrix.
 
 ## See also
 
-[`ilm_frame_issues()`](https://craig-hutton.github.io/illume/reference/ilm_frame_issues.md)
+[`ilm_frame_issues()`](https://huttoncp.github.io/illume/reference/ilm_frame_issues.md)
 for problems belonging to pairs of columns.
 
 ## Examples

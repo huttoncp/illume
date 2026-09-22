@@ -11,7 +11,7 @@ library(illume)
 
 ## Before: how large a study
 
-[`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md)
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
 treats a fitted model as the truth, simulates studies at the sizes you
 are considering, refits each one, and counts how often the term is
 detected. Nothing in it needs a closed-form variance, so it covers mixed
@@ -79,9 +79,123 @@ number of groups fixed while n grew, which is the wrong thing to hold
 fixed. A cluster drawn twice becomes two clusters, or the design has
 fewer independent groups than it appears to.
 
+A random **slope** is drawn as a random slope, not as an intercept
+shift. A `(1 + time | id)` design whose participants were all given the
+same slope would have them moving in near-parallel, which understates
+how far they differ and so overstates power for anything interacting
+with `time`.
+
+### When there is no pilot study
+
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+treats a fitted model as the truth, and a study being planned has
+nothing to fit.
+[`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md)
+builds the model from assumptions instead: a design grid, the parameters
+you are prepared to defend, and an ordinary `ilm_model` object that
+everything else in the package will accept.
+
+Assumptions go in as cell means on the response scale, which is the form
+most people actually hold one in.
+
+``` r
+
+d <- list(arm = c("control", "treatment"), time = c("pre", "post"))
+cells <- c(control.pre = 20, control.post = 21,
+           treatment.pre = 20, treatment.post = 25)
+
+s <- ilm_scaffold(change ~ arm * time + (1 | id), design = d,
+                  within = "time", n_unit = 60,
+                  cells = cells, sd = 6, icc = 0.5)
+#> <ilm_scaffold>  parameters ASSUMED, not estimated
+#>   formula    : change ~ arm * time + (1 | id)
+#>   family     : gaussian
+#>   size       : 60 ids x 2 = 120 rows
+#>   between    : arm
+#>   within     : time
+#>
+#>   assumed coefficients
+#>           (Intercept)          armtreatment              timepost
+#>                    20                     0                     1
+#> armtreatment:timepost
+#>                     4
+#>
+#>   residual sd : 6
+#>   id sd     : 6
+```
+
+`n_unit` counts participants, not rows, so the number you give is the
+number that goes in a protocol. `arm` varies between participants and
+`time` within, and the grid is built accordingly – allocating a
+between-participants variable to rows would put the same person in both
+arms.
+
+The point of returning a model rather than a number is that the
+assumptions can be interrogated before anything is built on them. The
+cell means went in; here they are coming back out through an entirely
+different route.
+
+``` r
+
+ilm_emmeans(s, c("arm", "time"))
+#>        arm time estimate    se lower upper
+#>    control  pre       20 1.595 16.87 23.13
+#>  treatment  pre       20 1.595 16.87 23.13
+#>    control post       21 1.595 17.87 24.13
+#>  treatment post       25 1.595 21.87 28.13
+```
+
+Cell means the formula cannot produce are refused rather than
+approximated. A least-squares solve always returns *something*, and the
+something it returns for crossed means under an additive formula is a
+scaffold for a different study:
+
+``` r
+
+ilm_scaffold(change ~ arm + time, design = d, within = "time",
+             n_unit = 60, cells = cells, sd = 6, icc = 0.5)
+#> Error: this formula cannot produce the cell means given: cell
+#> 'control.pre' is off by 1 on the link scale. Cell means that differ by
+#> more than the terms in the formula allow need the interaction between
+#> them -- arm * time rather than arm + time.
+```
+
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+is the scaffold plus the power curve in one call.
+
+``` r
+
+pw <- ilm_power_design(change ~ arm * time + (1 | id), design = d,
+                       within = "time", n_unit = c(60, 120, 240, 400),
+                       cells = cells, sd = 6, icc = 0.5,
+                       term = "arm:time", sims = 300)
+#>  n_unit   n effect power mc_lower mc_upper power_converged converged
+#>      60 120      4 0.470    0.414    0.526           0.470         1
+#>     120 240      4 0.700    0.646    0.749           0.700         1
+#>     240 480      4 0.967    0.940    0.982           0.967         1
+#>     400 800      4 1.000    0.987    1.000           1.000         1
+
+ilm_power_n(pw, target = 0.8)
+#>  effect   n  n_lower n_upper n_unit n_unit_lower n_unit_upper
+#>       4 330 292.5298 365.872    165     146.2649      182.936
+```
+
+Read `n_unit`, not `n`: 165 participants measured twice, not 330 people.
+
+The standard errors printed on a scaffold come from **one realisation**
+of the design at its own size. They are not a property of the
+assumptions, and power read off them would be one coin flip. That is
+what
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+is for.
+
+None of this makes an assumption true. It makes the assumption explicit,
+and separates “we need 165 participants” from the four numbers that
+claim implies.
+
 ## After: how large the effect
 
-[`ilm_effects()`](https://craig-hutton.github.io/illume/reference/ilm_effects.md)
+[`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md)
 reports each coefficient on the scale its family puts it on.
 
 ``` r
@@ -111,7 +225,7 @@ symmetric and can reach below zero.
 odds ratio for a *given cluster* – two patients in the same hospital,
 one exposed – not for the population, and the gap widens as the random
 effects grow. The print says so and names
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 for the population-averaged quantity:
 
 ``` r
@@ -143,7 +257,7 @@ ilm_effects(fit, vcov = ilm_vcov_cluster(fit, ~ clinic))
 
 ## Then: what would happen if
 
-[`ilm_scenario()`](https://craig-hutton.github.io/illume/reference/ilm_scenario.md)
+[`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
 sets predictors to values someone is considering and reports what the
 model implies.
 
@@ -204,12 +318,15 @@ it, and nothing in the number tells them.
 
 ## See also
 
-[`vignette("workflow")`](https://craig-hutton.github.io/illume/articles/workflow.md)
+[`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
 for where these sit in an analysis,
-[`?ilm_power`](https://craig-hutton.github.io/illume/reference/ilm_power.md),
-[`?ilm_effects`](https://craig-hutton.github.io/illume/reference/ilm_effects.md),
-[`?ilm_scenario`](https://craig-hutton.github.io/illume/reference/ilm_scenario.md),
+[`?ilm_power`](https://huttoncp.github.io/illume/reference/ilm_power.md),
+[`?ilm_scaffold`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md)
 and
-[`?ilm_ame`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`?ilm_power_design`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+for planning without a pilot,
+[`?ilm_effects`](https://huttoncp.github.io/illume/reference/ilm_effects.md),
+[`?ilm_scenario`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
+and [`?ilm_ame`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 for the marginal effect of a one-unit change rather than a named
 scenario.

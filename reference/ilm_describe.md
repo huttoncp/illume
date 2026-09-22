@@ -34,7 +34,7 @@ ilm_describe(
   Name of the column to summarise, or several names. With none, `data`
   is taken as the thing to describe: a bare vector, or a data frame
   whose columns are all of one kind. For a frame of mixed kinds use
-  [`ilm_describe_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_all.md),
+  [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md),
   which returns one table per kind.
 
 - by:
@@ -71,7 +71,7 @@ ilm_describe(
 - cap, min_n:
 
   Control the `gauss` index; see
-  [`ilm_gauss_check()`](https://craig-hutton.github.io/illume/reference/ilm_gauss_check.md).
+  [`ilm_gauss_check()`](https://huttoncp.github.io/illume/reference/ilm_gauss_check.md).
 
 ## Value
 
@@ -85,11 +85,11 @@ say whether they are worth asking for.
 
 ## See also
 
-[`ilm_describe_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_all.md)
+[`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md)
 for every column,
-[`ilm_gauss_check()`](https://craig-hutton.github.io/illume/reference/ilm_gauss_check.md)
+[`ilm_gauss_check()`](https://huttoncp.github.io/illume/reference/ilm_gauss_check.md)
 for the index,
-[`ilm_describe_na()`](https://craig-hutton.github.io/illume/reference/ilm_describe_na.md)
+[`ilm_describe_na()`](https://huttoncp.github.io/illume/reference/ilm_describe_na.md)
 for missingness.
 
 ## Examples

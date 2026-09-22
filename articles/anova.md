@@ -127,7 +127,7 @@ With only two levels there is one difference and nothing to violate.
 With three or more, it can fail – and when it does, the test says
 “significant” more often than it should.
 
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 runs Mauchly’s test and reports it, along with the two standard
 corrections:
 
@@ -164,7 +164,7 @@ ilm_model(recall ~ dose * session + (1 | id), data = d,
 
 `re_struct = "us"` leaves the covariance between sessions completely
 free, so there is nothing to correct. If sphericity fails badly,
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 will say so and point you here. It is not always the right move – it
 costs parameters, and with few participants that matters – but it is the
 honest alternative to adjusting a broken test.
@@ -175,7 +175,7 @@ An F test with three or more levels tells you the means are not all the
 same. It does not tell you which ones differ, and that is usually the
 finding.
 
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 does this for you, for significant effects where there is something to
 compare. (A two-level factor is skipped: its F test *is* the
 comparison.)
@@ -245,7 +245,7 @@ is in front of you.
 Sometimes time is not three sessions but a number – week 0, 2, 6, 12 –
 and you want to know whether the *slope* differs by group. ANOVA cannot
 do that: it needs levels. This is what
-[`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md)
+[`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
 is for.
 
 ``` r
@@ -305,7 +305,7 @@ what a classical ANCOVA can use.
 
 If your covariate was measured *at every session* – daily stress, sleep
 the night before, session-specific dose –
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 will stop and tell you so. This is not fussiness. A time-varying
 covariate carries two effects at once:
 
@@ -326,7 +326,7 @@ one session. Not “handles it badly” – cannot use them at all, because
 every within-participant comparison needs all their cells. They get
 dropped.
 
-[`ilm_aov_ez()`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md)
+[`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 tells you when that happens:
 
     ilm_aov_ez: 35 participants, 3 within-participant cell(s)
@@ -361,8 +361,8 @@ a$formula
 | `anova_table = list(es = "ges")` | reported by default |
 | `correction = "GG"` | `correction = "GG"` |
 | `observed = "age"` | `observed = "age"`; covariates are automatic |
-| `emmeans(fit, ~ a)` then [`pairs()`](https://rdrr.io/r/graphics/pairs.html) | done for you; or [`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md) + [`ilm_contrast()`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md) |
-| `emtrends()` | [`ilm_trends()`](https://craig-hutton.github.io/illume/reference/ilm_trends.md) |
+| `emmeans(fit, ~ a)` then [`pairs()`](https://rdrr.io/r/graphics/pairs.html) | done for you; or [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md) + [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md) |
+| `emtrends()` | [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md) |
 | SPSS “Tests of Within-Subjects Effects” | the same table, with `ges` instead of partial eta squared |
 
 The numbers agree with `afex` to machine precision – F to twelve decimal
@@ -381,13 +381,13 @@ is judged rather than missed.
 
 ## See also
 
-[`?ilm_aov_ez`](https://craig-hutton.github.io/illume/reference/ilm_aov_ez.md),
-[`?ilm_trends`](https://craig-hutton.github.io/illume/reference/ilm_trends.md),
-[`?ilm_emmeans`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md),
-[`?ilm_contrast`](https://craig-hutton.github.io/illume/reference/ilm_contrast.md),
-[`vignette("regression-models")`](https://craig-hutton.github.io/illume/articles/regression-models.md)
+[`?ilm_aov_ez`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),
+[`?ilm_trends`](https://huttoncp.github.io/illume/reference/ilm_trends.md),
+[`?ilm_emmeans`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+[`?ilm_contrast`](https://huttoncp.github.io/illume/reference/ilm_contrast.md),
+[`vignette("regression-models")`](https://huttoncp.github.io/illume/articles/regression-models.md)
 for the general modelling engine underneath, and
-[`vignette("effect-size-and-power")`](https://craig-hutton.github.io/illume/articles/effect-size-and-power.md)
+[`vignette("effect-size-and-power")`](https://huttoncp.github.io/illume/articles/effect-size-and-power.md)
 for planning the next study.
 
 Olejnik, S. and Algina, J. (2003). Generalized eta and omega squared

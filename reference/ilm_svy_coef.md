@@ -18,13 +18,13 @@ ilm_svy_coef(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   from a complex sample.
 
 - design:
 
   An
-  [`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md),
+  [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md),
   or `NULL` to use the fit's own.
 
 - level:
@@ -34,7 +34,7 @@ ilm_svy_coef(
 - lonely:
 
   See
-  [`ilm_svy_vcov()`](https://craig-hutton.github.io/illume/reference/ilm_svy_vcov.md).
+  [`ilm_svy_vcov()`](https://huttoncp.github.io/illume/reference/ilm_svy_vcov.md).
 
 ## Value
 
@@ -43,8 +43,8 @@ and `upper`, on the design degrees of freedom.
 
 ## See also
 
-[`ilm_design()`](https://craig-hutton.github.io/illume/reference/ilm_design.md),
-[`ilm_svy_vcov()`](https://craig-hutton.github.io/illume/reference/ilm_svy_vcov.md).
+[`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md),
+[`ilm_svy_vcov()`](https://huttoncp.github.io/illume/reference/ilm_svy_vcov.md).
 
 ## Examples
 

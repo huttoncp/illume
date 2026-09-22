@@ -14,7 +14,7 @@ plot(x, target = 0.8, ...)
 - x:
 
   An
-  [`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md)
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
   result.
 
 - target:
@@ -31,4 +31,4 @@ plot(x, target = 0.8, ...)
 
 ## See also
 
-[`ilm_power()`](https://craig-hutton.github.io/illume/reference/ilm_power.md).
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md).

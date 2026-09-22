@@ -22,7 +22,7 @@ ilm_plot_did(
 - x:
 
   An
-  [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md)
+  [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
   result.
 
 - main, xlab, ylab:
@@ -40,7 +40,7 @@ ilm_plot_did(
 
 ## See also
 
-[`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md).
+[`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md).
 
 ## Examples
 

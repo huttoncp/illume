@@ -32,7 +32,7 @@ ilm_plot_acf(
 - object:
 
   A fitted `"ilm_model"`, or the value returned by
-  [`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md),
+  [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md),
   which lets the plot reuse that call's refits instead of paying for
   them twice.
 
@@ -131,9 +131,9 @@ zero line rather than silently omitted.
 
 ## See also
 
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 for the table and the p-values,
-[`ilm_check_variance()`](https://craig-hutton.github.io/illume/reference/ilm_check_variance.md)
+[`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
 for the other within-group assumption.
 
 ## Examples

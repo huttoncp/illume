@@ -42,15 +42,15 @@ ilm_plot_var(data, var1, var2 = NULL, by = NULL, verbose = FALSE, ...)
 
 ## Details
 
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md)
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
 does the same job through a `geom = "auto"` argument. This is the same
 choice made by naming variables rather than a geometry, and it says
 which it picked when asked.
 
 ## See also
 
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md),
-[`ilm_plot_var_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_all.md).
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md),
+[`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md).
 
 ## Examples
 

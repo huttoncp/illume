@@ -36,7 +36,7 @@ rather than fixed in advance, treat the p-value as indicative.
 
 ## See also
 
-[`ilm_plot_survival()`](https://craig-hutton.github.io/illume/reference/ilm_plot_survival.md),
+[`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md),
 which checks the same thing against the Kaplan-Meier estimate rather
 than against the special case.
 

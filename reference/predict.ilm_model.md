@@ -96,6 +96,18 @@ pulled toward being more even across categories. Which you want depends
 on the question – "what do I expect for an average subject?" or "what
 proportion of the population falls in each category?"
 
+Under an **identity link** the two coincide exactly, because the random
+effects have mean zero and nothing nonlinear stands between. `marginal`
+is then answered in closed form rather than by simulation, so the result
+does not depend on `ndraw` and carries no Monte Carlo noise.
+
+A **random slope** is averaged over as a slope. The amount being
+integrated over then depends on the row – it grows with distance from
+wherever the slope is centred – so the marginal and conditional curves
+separate by more at the ends of the range than in the middle. Averaging
+such a term as if it were an intercept understates that, and the error
+grows with the slope variance and with distance from centre.
+
 ## Uncertainty
 
 Standard errors and intervals come from simulation rather than a
@@ -108,7 +120,7 @@ If the fit was made with `joint = TRUE` the draws include the penalised
 smooth coefficients. Without it only the fixed effects vary, which
 breaks the correlation described in `ilm_joint_draws()` and distorts
 intervals around smooths; a warning says so.
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 enables it automatically when the model contains smooths.
 
 Random-effect draws are held fixed across rows and across parameter
@@ -125,5 +137,5 @@ marginal prediction.)
 
 ## See also
 
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md),
-[`ilm_fitted()`](https://craig-hutton.github.io/illume/reference/ilm_fitted.md).
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+[`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md).

@@ -38,8 +38,8 @@ Invisibly, a list with the observed and simulated summaries and a
 
 ## See also
 
-[`ilm_check_dispersion()`](https://craig-hutton.github.io/illume/reference/ilm_check_dispersion.md),
-[`ilm_check_zeros()`](https://craig-hutton.github.io/illume/reference/ilm_check_zeros.md)
+[`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md),
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
 for the specific failures this can only hint at.
 
 ## Examples

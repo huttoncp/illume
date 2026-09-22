@@ -33,7 +33,7 @@ category codes.
 Four separate tools depend on it: population-averaged predictions,
 parametric-bootstrap tests, the simulated envelopes in every residual
 diagnostic, and
-[`ilm_consistency()`](https://craig-hutton.github.io/illume/reference/ilm_consistency.md).
+[`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md).
 Simulation is how this package builds reference distributions, rather
 than relying on theoretical ones that may not hold.
 
@@ -46,6 +46,6 @@ there is nothing in the computation graph for TMB to redraw.
 
 ## See also
 
-[`ilm_consistency()`](https://craig-hutton.github.io/illume/reference/ilm_consistency.md),
-[`ilm_pb_lrt()`](https://craig-hutton.github.io/illume/reference/ilm_pb_lrt.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md).
+[`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md),
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).

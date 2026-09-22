@@ -16,7 +16,7 @@ ilm_effects(object, level = 0.95, standardise = FALSE, vcov = NULL)
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 - level:
 
@@ -31,9 +31,9 @@ ilm_effects(object, level = 0.95, standardise = FALSE, vcov = NULL)
 
   Optional covariance matrix to use instead of the model's, for instance
   from
-  [`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md)
+  [`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md)
   or
-  [`ilm_svy_vcov()`](https://craig-hutton.github.io/illume/reference/ilm_svy_vcov.md).
+  [`ilm_svy_vcov()`](https://huttoncp.github.io/illume/reference/ilm_svy_vcov.md).
 
 ## Value
 
@@ -53,7 +53,7 @@ cluster**: two patients in the same hospital, one exposed. It is not the
 ratio for the population, and the gap widens as the random effects grow.
 Which one a reader wants is almost always the population one, and which
 one they are usually given is this one. It is labelled, and
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 computes the population-averaged quantity.
 
 ## Standardised coefficients
@@ -69,11 +69,11 @@ that.
 
 ## See also
 
-[`ilm_ame()`](https://craig-hutton.github.io/illume/reference/ilm_ame.md)
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
 for the population-averaged effect,
-[`ilm_emmeans()`](https://craig-hutton.github.io/illume/reference/ilm_emmeans.md)
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 for group means,
-[`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md)
+[`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md)
 for a robust covariance to pass in.
 
 ## Examples

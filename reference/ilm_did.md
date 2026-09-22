@@ -4,7 +4,7 @@ Estimates the effect of a treatment that switches on for some units at
 some time, by comparing the change in the treated group with the change
 in the control group. The estimate is the interaction in a mixed model,
 so the fit is an ordinary
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 and every diagnostic and method applies to it.
 
 ## Usage
@@ -90,7 +90,7 @@ ilm_did(
 - ...:
 
   Passed to
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Value
 
@@ -112,7 +112,7 @@ treatment, and that is worth doing. Two things here do it:
   treatment. Pre-treatment coefficients should sit near zero. This is
   the more informative of the two, because it shows *how* a violation
   looks, and
-  [`ilm_plot_did()`](https://craig-hutton.github.io/illume/reference/ilm_plot_did.md)
+  [`ilm_plot_did()`](https://huttoncp.github.io/illume/reference/ilm_plot_did.md)
   draws it.
 
 ## Serial correlation
@@ -164,9 +164,9 @@ treatment timing. Journal of Econometrics 225(2).
 
 ## See also
 
-[`ilm_plot_did()`](https://craig-hutton.github.io/illume/reference/ilm_plot_did.md),
-[`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md),
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+[`ilm_plot_did()`](https://huttoncp.github.io/illume/reference/ilm_plot_did.md),
+[`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Examples
 

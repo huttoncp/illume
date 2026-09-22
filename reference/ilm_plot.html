@@ -40,7 +40,7 @@ binned density when there are too many points to show individually."></head><bod
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/craig-hutton/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -50,7 +50,7 @@ binned density when there are too many points to show individually."></head><bod
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Adaptive plot of one or two variables</h1>
-      <small class="dont-index">Source: <a href="https://github.com/craig-hutton/illume/blob/main/R/ilm_plot.R" class="external-link"><code>R/ilm_plot.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_plot.R" class="external-link"><code>R/ilm_plot.R</code></a></small>
       <div class="d-none name"><code>ilm_plot.Rd</code></div>
     </div>
 
@@ -79,7 +79,8 @@ binned density when there are too many points to show individually.</p>
 <span>  max_levels <span class="op">=</span> <span class="fl">20L</span>,</span>
 <span>  verdict <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  main <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  <span class="va">...</span></span>
+<span>  <span class="va">...</span>,</span>
+<span>  pch <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -153,6 +154,13 @@ it instead.</p></dd>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Passed to <code><a href="https://grantmcdermott.com/tinyplot/man/tinyplot.html" class="external-link">tinyplot::tinyplot()</a></code>.</p></dd>
+
+
+<dt id="arg-pch">pch<a class="anchor" aria-label="anchor" href="#arg-pch"></a></dt>
+<dd><p>Plotting character. Takes a NAME as well as a number:
+<code>"filled circle"</code> is 16, and every code from 0 to 25 has one. Case,
+spaces, underscores and hyphens are ignored. A single character is
+drawn literally, so <code>pch = "x"</code> is still the letter x.</p></dd>
 
 </dl></div>
     <div class="section level2">

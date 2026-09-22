@@ -33,13 +33,13 @@ A numeric matrix with `df` columns.
 ## Details
 
 The alternative to
-[`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md),
+[`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md),
 and the one whose flexibility is *local*: changing the curve near one
 knot leaves the rest of the cycle alone, where adding a Fourier harmonic
 changes the shape everywhere.
 
 Do not expect a large gain from that. Compared against
-[`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md)
+[`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md)
 at matched degrees of freedom on a twelve-phase cycle, the two were
 within a few AIC of each other for every smooth shape tried, and where
 the shape really jumped a factor beat both by a hundred or more. On a
@@ -50,7 +50,7 @@ AIC.
 Reach for it when the cycle is long, when you want more resolution in
 one part of it without disturbing the rest, or when the alternative is a
 factor with more levels than the data can pay for. Reach for
-[`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md)
+[`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md)
 on a short cycle or a plain rise and fall, and for a factor when the
 shape has a genuine step in it.
 
@@ -71,9 +71,9 @@ freedom estimating a jump that is not there.
 
 ## See also
 
-[`ilm_fourier()`](https://craig-hutton.github.io/illume/reference/ilm_fourier.md)
+[`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md)
 for the cheaper smooth alternative,
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md),
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md),
 which names the period when the residuals contain a cycle.
 
 ## Examples

@@ -22,7 +22,7 @@ once to choose and once to test. illume’s coverage is nominal across 23
 designs precisely because nothing does that.
 
 So
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 takes the mean structure from the graph and leaves it alone. What it
 *will* adjust, when a diagnostic asks, is the **error** structure – a
 model for the dispersion, a random effect for grouping. Those change
@@ -33,7 +33,7 @@ step is recorded and printed as it happens.
 
 ### Writing one down
 
-[`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md)
+[`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md)
 reads the `dagitty` text form, an edge list, or a `dagitty` object.
 
 ``` r
@@ -112,9 +112,9 @@ rather than after.
 ### What the graph claims about the data
 
 Every missing arrow is a testable claim.
-[`ilm_dag_implied()`](https://craig-hutton.github.io/illume/reference/ilm_dag_implied.md)
+[`ilm_dag_implied()`](https://huttoncp.github.io/illume/reference/ilm_dag_implied.md)
 lists them and
-[`ilm_dag_test()`](https://craig-hutton.github.io/illume/reference/ilm_dag_test.md)
+[`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md)
 checks them:
 
 ``` r
@@ -277,7 +277,7 @@ ilm_interpret(fit, ame = FALSE)
 
 Note that this says “leads to” rather than “is associated with”, and
 says why. Without a design that identifies an effect,
-[`ilm_interpret()`](https://craig-hutton.github.io/illume/reference/ilm_interpret.md)
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
 will not use causal language at all – and it tells you that the licence
 rests on the graph being right, which is an assumption you supplied
 rather than something the data established.
@@ -535,9 +535,9 @@ of being treated.
 
 |  | identifying assumption | checkable? |
 |----|----|----|
-| [`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md) | the graph is right, and the adjustment set is measured | partly: the implied independencies |
-| [`ilm_did()`](https://craig-hutton.github.io/illume/reference/ilm_did.md) | parallel trends | partly: the pre-treatment periods |
-| [`ilm_rdd()`](https://craig-hutton.github.io/illume/reference/ilm_rdd.md) | nothing else changes at the cutoff | partly: density, balance, placebos |
+| [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md) | the graph is right, and the adjustment set is measured | partly: the implied independencies |
+| [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md) | parallel trends | partly: the pre-treatment periods |
+| [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md) | nothing else changes at the cutoff | partly: density, balance, placebos |
 
 None of them is checkable where it matters, which is the part that
 concerns a counterfactual. Everything above makes an assumption more or
@@ -545,15 +545,15 @@ less plausible; none of it makes one true.
 
 ## See also
 
-[`vignette("regression-models")`](https://craig-hutton.github.io/illume/articles/regression-models.md)
+[`vignette("regression-models")`](https://huttoncp.github.io/illume/articles/regression-models.md)
 for the modelling engine and its diagnostics,
-[`vignette("exploring-data")`](https://craig-hutton.github.io/illume/articles/exploring-data.md)
+[`vignette("exploring-data")`](https://huttoncp.github.io/illume/articles/exploring-data.md)
 for the exploration side, and
-[`vignette("effect-size-and-power")`](https://craig-hutton.github.io/illume/articles/effect-size-and-power.md)
+[`vignette("effect-size-and-power")`](https://huttoncp.github.io/illume/articles/effect-size-and-power.md)
 for
-[`ilm_scenario()`](https://craig-hutton.github.io/illume/reference/ilm_scenario.md),
+[`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
 which turns a fitted causal model into the projection a decision needs.
 Mediation – how much of an effect runs THROUGH something else – is
-[`ilm_mediate()`](https://craig-hutton.github.io/illume/reference/ilm_mediate.md),
+[`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md),
 documented in
-[`vignette("regression-models")`](https://craig-hutton.github.io/illume/articles/regression-models.md).
+[`vignette("regression-models")`](https://huttoncp.github.io/illume/articles/regression-models.md).

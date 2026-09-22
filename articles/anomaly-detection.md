@@ -10,7 +10,7 @@ library(illume)
 
 ## One column, or the combination
 
-[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+[`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
 asks whether a **value** is extreme for its own column.
 
 ``` r
@@ -19,7 +19,7 @@ ilm_outliers(d, "height")
 ilm_outliers_all(d)            # every column at once
 ```
 
-[`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+[`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
 asks whether a **row** is a plausible combination.
 
 ``` r
@@ -58,7 +58,7 @@ below overturned the first version of it.
 
 ### The rank is not the imputation rank
 
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
 chooses the number of directions by cross-validating held-out cells,
 which is exactly right for filling a value in and wrong here. On a
 rank-2 structure in eight columns it chose **6 or 7** – on clean data as
@@ -66,7 +66,7 @@ well as contaminated – and those extra components span the very
 directions the anomalies depart along. Detection fell from 0.975 to
 0.560.
 
-[`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+[`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
 uses parallel analysis instead: permute each column independently, which
 destroys everything the columns share while leaving each one’s own
 distribution alone, and keep a component only when it beats what the
@@ -131,7 +131,7 @@ accordingly: 0.89 at 5% contamination, 0.67 at 10%, 0.41 at 20%.
 
 That is the method reaching its limit rather than failing quietly, and
 the tool for a second group is
-[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md),
 which is looking for exactly that.
 
 ``` r
@@ -148,9 +148,9 @@ real effects get removed, and the print says so every time.
 
 ## See also
 
-[`?ilm_anomaly`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md),
-[`?ilm_outliers`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md),
-[`vignette("profiling")`](https://craig-hutton.github.io/illume/articles/profiling.md)
+[`?ilm_anomaly`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md),
+[`?ilm_outliers`](https://huttoncp.github.io/illume/reference/ilm_outliers.md),
+[`vignette("profiling")`](https://huttoncp.github.io/illume/articles/profiling.md)
 for the dimension reduction underneath, and
-[`vignette("workflow")`](https://craig-hutton.github.io/illume/articles/workflow.md)
+[`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
 for where this sits.

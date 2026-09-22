@@ -22,7 +22,7 @@ dim(d)
 #> [1] 900  13
 ```
 
-[`ilm_sim()`](https://craig-hutton.github.io/illume/reference/ilm_sim.md)
+[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
 generates a synthetic dataset for examples and tests. Every column is
 there because some check should have something to say about it — a
 fixture where nothing is wrong tests nothing.
@@ -192,7 +192,7 @@ r$time[, c("variable", "n_unique", "spacing", "regular", "n_gaps", "note")]
 ```
 
 `regular` and `n_gaps` matter because
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)’s
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
 AR(1) term needs regularly spaced observations within group. Seeing
 “irregular, 3 gaps” here is much better than discovering it when the
 model fails.
@@ -240,10 +240,10 @@ looking at.
 
 ## Plots that carry the verdict
 
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md)
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
 chooses a plot from the classes of what you give it, and annotates it
 with the same verdict
-[`ilm_describe()`](https://craig-hutton.github.io/illume/reference/ilm_describe.md)
+[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
 reports.
 
 ``` r
@@ -419,7 +419,7 @@ ilm_counts_tb(d$site, n = 2)
 #> 2     South   265              46
 ```
 
-[`ilm_counts_tb()`](https://craig-hutton.github.io/illume/reference/ilm_counts_tb.md)
+[`ilm_counts_tb()`](https://huttoncp.github.io/illume/reference/ilm_counts_tb.md)
 shows both ends at once because that is where the problems are: a level
 that dominates, and levels too thin to model.
 
@@ -574,17 +574,17 @@ family, or `ilm_model(dispformula = )`.
 
 ## Naming the plot you want
 
-[`ilm_plot()`](https://craig-hutton.github.io/illume/reference/ilm_plot.md)
+[`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
 chooses a geometry from the data. When you would rather say which one,
 each has its own function —
-[`ilm_plot_histogram()`](https://craig-hutton.github.io/illume/reference/ilm_plot_histogram.md),
-[`ilm_plot_density()`](https://craig-hutton.github.io/illume/reference/ilm_plot_density.md),
-[`ilm_plot_box()`](https://craig-hutton.github.io/illume/reference/ilm_plot_box.md),
-[`ilm_plot_violin()`](https://craig-hutton.github.io/illume/reference/ilm_plot_violin.md),
-[`ilm_plot_scatter()`](https://craig-hutton.github.io/illume/reference/ilm_plot_scatter.md),
-[`ilm_plot_bar()`](https://craig-hutton.github.io/illume/reference/ilm_plot_bar.md),
-[`ilm_plot_line()`](https://craig-hutton.github.io/illume/reference/ilm_plot_line.md),
-[`ilm_plot_stat_error()`](https://craig-hutton.github.io/illume/reference/ilm_plot_stat_error.md)
+[`ilm_plot_histogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_histogram.md),
+[`ilm_plot_density()`](https://huttoncp.github.io/illume/reference/ilm_plot_density.md),
+[`ilm_plot_box()`](https://huttoncp.github.io/illume/reference/ilm_plot_box.md),
+[`ilm_plot_violin()`](https://huttoncp.github.io/illume/reference/ilm_plot_violin.md),
+[`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md),
+[`ilm_plot_bar()`](https://huttoncp.github.io/illume/reference/ilm_plot_bar.md),
+[`ilm_plot_line()`](https://huttoncp.github.io/illume/reference/ilm_plot_line.md),
+[`ilm_plot_stat_error()`](https://huttoncp.github.io/illume/reference/ilm_plot_stat_error.md)
 — and they all take column names as strings, like everything else here.
 
 ``` r
@@ -598,9 +598,9 @@ ilm_plot_c(
 
 ![](exploring-data_files/figure-html/namedplots-1.png)
 
-[`ilm_plot_var_pairs()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_pairs.md)
+[`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md)
 handles every pair at once, mixed column types included, and
-[`ilm_plot_var_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_all.md)
+[`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md)
 draws one panel per column.
 
 The bootstrap difference from earlier can be seen rather than only
@@ -620,9 +620,9 @@ which the two endpoints cannot show.
 
 ## Profiling: what shape is this data set?
 
-[`ilm_describe_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_all.md)
+[`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md)
 tells you about columns one at a time.
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
 asks a different question – are there *kinds* of row here? – by reducing
 the columns to a few dimensions, clustering on those, and then saying
 what each cluster is.
@@ -675,7 +675,7 @@ characterisation.
 
 ## Missing values
 
-[`ilm_describe_na_all()`](https://craig-hutton.github.io/illume/reference/ilm_describe_na_all.md)
+[`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md)
 counts them. The harder question is whether they matter, and that has a
 more useful answer than it usually gets.
 
@@ -862,13 +862,13 @@ ilm_interpret(f, ame = FALSE)
 ```
 
 See
-[`vignette("workflow")`](https://craig-hutton.github.io/illume/articles/workflow.md)
+[`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
 for where this sits in an analysis,
-[`vignette("regression-models")`](https://craig-hutton.github.io/illume/articles/regression-models.md)
+[`vignette("regression-models")`](https://huttoncp.github.io/illume/articles/regression-models.md)
 for the modelling half,
-[`vignette("profiling")`](https://craig-hutton.github.io/illume/articles/profiling.md)
+[`vignette("profiling")`](https://huttoncp.github.io/illume/articles/profiling.md)
 for structure across many columns,
-[`vignette("anomaly-detection")`](https://craig-hutton.github.io/illume/articles/anomaly-detection.md)
+[`vignette("anomaly-detection")`](https://huttoncp.github.io/illume/articles/anomaly-detection.md)
 for rows that are implausible as combinations, and
-[`vignette("causal-models")`](https://craig-hutton.github.io/illume/articles/causal-models.md)
+[`vignette("causal-models")`](https://huttoncp.github.io/illume/articles/causal-models.md)
 for turning an association into a causal claim.

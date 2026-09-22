@@ -5,7 +5,15 @@ Scatter plot
 ## Usage
 
 ``` r
-ilm_plot_scatter(data, y, x, by = NULL, trend = c("none", "lm", "loess"), ...)
+ilm_plot_scatter(
+  data,
+  y,
+  x,
+  by = NULL,
+  trend = c("none", "lm", "loess"),
+  ...,
+  pch = NULL
+)
 ```
 
 ## Arguments
@@ -27,7 +35,7 @@ ilm_plot_scatter(data, y, x, by = NULL, trend = c("none", "lm", "loess"), ...)
   `"none"`, `"lm"` or `"loess"`. A trend line here is a description of
   the two columns shown and nothing more – it holds nothing else fixed,
   so it is not the effect
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   would estimate.
 
 - ...:
@@ -35,13 +43,20 @@ ilm_plot_scatter(data, y, x, by = NULL, trend = c("none", "lm", "loess"), ...)
   Passed to
   [`tinyplot::tinyplot()`](https://grantmcdermott.com/tinyplot/man/tinyplot.html).
 
+- pch:
+
+  Plotting character. Takes a NAME as well as a number:
+  `"filled circle"` is 16, and every code from 0 to 25 has one. Case,
+  spaces, underscores and hyphens are ignored. A single character is
+  drawn literally, so `pch = "x"` is still the letter x.
+
 ## Value
 
 `NULL`, invisibly.
 
 ## See also
 
-[`ilm_plot_var_pairs()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_pairs.md)
+[`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md)
 for every pair at once.
 
 ## Examples

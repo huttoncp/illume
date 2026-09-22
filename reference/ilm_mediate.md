@@ -26,13 +26,13 @@ ilm_mediate(
 - model_m:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for the mediator.
 
 - model_y:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for the outcome, including both the treatment and the mediator among
   its predictors.
 
@@ -65,7 +65,7 @@ ilm_mediate(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -105,7 +105,7 @@ whatever makes someone's mediator high may also make their outcome high
 for reasons that have nothing to do with the treatment.
 
 Nothing in the data tests this.
-[`ilm_mediate_sens()`](https://craig-hutton.github.io/illume/reference/ilm_mediate_sens.md)
+[`ilm_mediate_sens()`](https://huttoncp.github.io/illume/reference/ilm_mediate_sens.md)
 asks the answerable question instead: how strong would such confounding
 have to be before the indirect effect went away.
 
@@ -116,9 +116,9 @@ mediation analysis. *Psychological Methods* 15, 309-334.
 
 ## See also
 
-[`ilm_mediate_sens()`](https://craig-hutton.github.io/illume/reference/ilm_mediate_sens.md)
+[`ilm_mediate_sens()`](https://huttoncp.github.io/illume/reference/ilm_mediate_sens.md)
 for the untestable assumption,
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 for whether the adjustment sets are available at all.
 
 ## Examples

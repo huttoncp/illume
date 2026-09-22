@@ -38,7 +38,7 @@ ilm_iv(
 
   Optional one-sided formula or vector for cluster-robust standard
   errors; see
-  [`ilm_vcov_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_vcov_cluster.md).
+  [`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md).
 
 - robust:
 
@@ -79,7 +79,7 @@ That case is an error here rather than a silent one.
   matters and the one no test reaches.
 
 When the instrument is weak the remedy is
-[`ilm_iv_ar()`](https://craig-hutton.github.io/illume/reference/ilm_iv_ar.md),
+[`ilm_iv_ar()`](https://huttoncp.github.io/illume/reference/ilm_iv_ar.md),
 which builds a confidence set that stays valid however weak it is.
 
 ## References
@@ -89,9 +89,9 @@ t-ratio inference for IV. *American Economic Review* 112, 3260-3290.
 
 ## See also
 
-[`ilm_iv_ar()`](https://craig-hutton.github.io/illume/reference/ilm_iv_ar.md)
+[`ilm_iv_ar()`](https://huttoncp.github.io/illume/reference/ilm_iv_ar.md)
 for weak-instrument-robust intervals,
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 for choosing an adjustment set when no instrument is available.
 
 ## Examples

@@ -17,7 +17,7 @@ ilm_plot_reduce_contrib_na(x, dim = 1, top_n = 10, ...)
 - x:
 
   An
-  [`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md)
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   result.
 
 - dim:
@@ -39,7 +39,7 @@ ilm_plot_reduce_contrib_na(x, dim = 1, top_n = 10, ...)
 
 ## See also
 
-[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md).
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md).
 
 ## Examples
 

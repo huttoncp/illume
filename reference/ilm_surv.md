@@ -37,7 +37,7 @@ The argument is `event`, in the convention
 [`survival::Surv()`](https://rdrr.io/pkg/survival/man/Surv.html) uses:
 `1` when the event was observed, `0` when the subject was censored. That
 is the opposite of the code
-[`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md)
+[`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
 stores, which is why this wrapper exists – getting it backwards silently
 fits the model to the wrong subjects, and the fit will not look wrong.
 
@@ -54,9 +54,9 @@ so they are reproducible and every replicate is censored consistently.
 
 ## See also
 
-[`ilm_censor()`](https://craig-hutton.github.io/illume/reference/ilm_censor.md)
+[`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
 for floors and ceilings,
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 with `family = "weibull"`, `"lognormal"` or `"loglogistic"`.
 
 ## Examples

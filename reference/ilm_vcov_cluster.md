@@ -17,7 +17,7 @@ ilm_vcov_cluster(object, cluster = NULL, type = c("CR2", "CR1", "CR0"))
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with no random effects.
 
 - cluster:
@@ -60,7 +60,7 @@ There is no threshold that makes the problem go away, but below roughly
 matter a great deal, and below about 15 no adjustment reliably rescues
 the interval – the estimator is being asked to learn a covariance from a
 dozen numbers.
-[`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md)
+[`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
 reports the count and says so. The honest alternative there is a design
 with more clusters, or a model that says what the correlation is rather
 than working around it.
@@ -76,7 +76,7 @@ cluster-robust inference. *Journal of Human Resources* 50, 317-372.
 
 ## See also
 
-[`ilm_robust()`](https://craig-hutton.github.io/illume/reference/ilm_robust.md)
+[`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
 for a coefficient table built on it.
 
 ## Examples

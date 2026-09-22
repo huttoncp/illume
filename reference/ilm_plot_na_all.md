@@ -2,7 +2,7 @@
 
 A bar per column. The first question to ask of an unfamiliar data set,
 and the one
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 then turns into advice.
 
 ## Usage
@@ -39,9 +39,9 @@ ilm_plot_na_all(data, by = NULL, stat = c("p_na", "na", "n"), ...)
 
 ## See also
 
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 for whether it matters,
-[`ilm_profile_na()`](https://craig-hutton.github.io/illume/reference/ilm_profile_na.md)
+[`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md)
 for which columns go missing together.
 
 ## Examples

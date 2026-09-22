@@ -89,8 +89,8 @@ matrices.
 
 ## See also
 
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md).
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).
 
-[`ilm_coef_table()`](https://craig-hutton.github.io/illume/reference/ilm_coef_table.md),
-[`ilm_appraise()`](https://craig-hutton.github.io/illume/reference/ilm_appraise.md).
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md),
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).

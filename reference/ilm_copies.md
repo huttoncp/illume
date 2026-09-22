@@ -43,7 +43,7 @@ A data frame; the columns depend on `filter`.
 
 ## See also
 
-[`ilm_dupes()`](https://craig-hutton.github.io/illume/reference/ilm_dupes.md)
+[`ilm_dupes()`](https://huttoncp.github.io/illume/reference/ilm_dupes.md)
 for the common case.
 
 ## Examples

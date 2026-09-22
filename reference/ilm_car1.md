@@ -49,11 +49,11 @@ model that fits and one that does not.
 
 ## See also
 
-[`ilm_ar1()`](https://craig-hutton.github.io/illume/reference/ilm_ar1.md)
+[`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
 for evenly spaced time,
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 and
-[`ilm_plot_acf()`](https://craig-hutton.github.io/illume/reference/ilm_plot_acf.md)
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
 to test whether the structure is needed.
 
 ## Examples

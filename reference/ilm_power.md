@@ -3,7 +3,7 @@
 Treats a fitted model as the truth, generates datasets of the requested
 sizes, refits each, and counts how often the named term is detected. It
 works for any family
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 fits, because it never needs a closed-form variance.
 
 ## Usage
@@ -26,7 +26,7 @@ ilm_power(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   to treat as the truth.
 
 - n:
@@ -65,7 +65,7 @@ ilm_power(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -97,11 +97,11 @@ Methodology* 11, 94.
 
 ## See also
 
-[`ilm_power_n()`](https://craig-hutton.github.io/illume/reference/ilm_power_n.md)
+[`ilm_power_n()`](https://huttoncp.github.io/illume/reference/ilm_power_n.md)
 to read off the size for a target power,
-[`plot.ilm_power()`](https://craig-hutton.github.io/illume/reference/plot.ilm_power.md)
+[`plot.ilm_power()`](https://huttoncp.github.io/illume/reference/plot.ilm_power.md)
 for the curve,
-[`ilm_simulate()`](https://craig-hutton.github.io/illume/reference/ilm_simulate.md)
+[`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
 for the generator.
 
 ## Examples

@@ -23,7 +23,7 @@ ilm_adjust_sets(
 - g:
 
   An
-  [`ilm_dag()`](https://craig-hutton.github.io/illume/reference/ilm_dag.md).
+  [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md).
 
 - exposure, outcome:
 
@@ -51,7 +51,7 @@ adjustment is needed. A zero-length list means no admissible set exists.
 Several minimal sets are common and worth having. Adjusting for each in
 turn should give the same exposure effect if the graph is right, so the
 spread across them is a sensitivity analysis that costs only compute –
-[`ilm_dag_model()`](https://craig-hutton.github.io/illume/reference/ilm_dag_model.md)
+[`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
 runs it automatically.
 
 This is the back-door criterion, which is sufficient but not quite

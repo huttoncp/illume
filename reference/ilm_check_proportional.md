@@ -22,7 +22,7 @@ ilm_check_proportional(
 - object:
 
   A fitted
-  [`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md)
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   with an ordinal family.
 
 - B:
@@ -41,7 +41,7 @@ ilm_check_proportional(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://craig-hutton.github.io/illume/reference/ilm_progress_arg.md).
+  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
 
 ## Value
 
@@ -98,8 +98,8 @@ model for ordinal logistic regression. *Biometrics* 46, 1171-1178.
 
 ## See also
 
-[`ilm_thresholds()`](https://craig-hutton.github.io/illume/reference/ilm_thresholds.md),
-[`ilm_model()`](https://craig-hutton.github.io/illume/reference/ilm_model.md).
+[`ilm_thresholds()`](https://huttoncp.github.io/illume/reference/ilm_thresholds.md),
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
 
 ## Examples
 

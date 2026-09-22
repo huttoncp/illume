@@ -1,11 +1,11 @@
 # Profile which values are missing, and for whom
 
 The missingness counterpart to
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md):
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md):
 runs
-[`ilm_reduce_na()`](https://craig-hutton.github.io/illume/reference/ilm_reduce_na.md)
+[`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
 then
-[`ilm_cluster_na()`](https://craig-hutton.github.io/illume/reference/ilm_cluster_na.md),
+[`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md),
 and describes each cluster of rows by which columns' *missingness* sets
 it apart – "cluster 2 is characterised by dim 1 (missing: income,
 missing: age)" rather than by those columns' values.
@@ -34,7 +34,7 @@ ilm_profile_na(
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - ndim:
 
@@ -43,7 +43,7 @@ ilm_profile_na(
 - ...:
 
   Passed to
-  [`ilm_cluster_na()`](https://craig-hutton.github.io/illume/reference/ilm_cluster_na.md).
+  [`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md).
 
 - vtest_threshold:
 
@@ -63,14 +63,14 @@ This is how a structured gap shows itself: a block of variables that go
 missing together points at a shared cause, such as a section of a form
 everyone in one group skipped, which is a different problem from values
 going missing one at a time.
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md)
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
 then says whether any of it threatens the model you intend to fit.
 
 ## See also
 
-[`ilm_check_missing()`](https://craig-hutton.github.io/illume/reference/ilm_check_missing.md),
-[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md),
-[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md).
+[`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md),
+[`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md).
 
 ## Examples
 

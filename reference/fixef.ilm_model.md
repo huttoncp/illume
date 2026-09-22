@@ -1,13 +1,13 @@
 # Fixed effects as a matrix
 
 The same numbers as
-[`coef.ilm_model()`](https://craig-hutton.github.io/illume/reference/coef.ilm_model.md)
+[`coef.ilm_model()`](https://huttoncp.github.io/illume/reference/coef.ilm_model.md)
 but shaped as predictors by categories, which is usually easier to read
 for a multinomial model. `ilm_se_fixef()` returns matching standard
 errors.
 
 The same numbers as
-[`coef.ilm_model()`](https://craig-hutton.github.io/illume/reference/coef.ilm_model.md)
+[`coef.ilm_model()`](https://huttoncp.github.io/illume/reference/coef.ilm_model.md)
 but shaped as predictors by categories, which is usually easier to read
 for a multinomial model. `ilm_se_fixef()` returns matching standard
 errors.

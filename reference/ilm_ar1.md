@@ -3,7 +3,7 @@
 Observations of the same unit at adjacent time steps share a correlated
 latent value. Use this when the time index moves in equal steps: study
 visits, months, waves. For irregular times use
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md).
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md).
 
 ## Usage
 
@@ -40,9 +40,9 @@ sit on a common grid at all, because then "one step" has no meaning.
 
 ## See also
 
-[`ilm_car1()`](https://craig-hutton.github.io/illume/reference/ilm_car1.md)
+[`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
 for arbitrary gaps,
-[`ilm_check_ar()`](https://craig-hutton.github.io/illume/reference/ilm_check_ar.md)
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 to test whether the structure is needed.
 
 ## Examples

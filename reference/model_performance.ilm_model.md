@@ -5,7 +5,7 @@ A
 method. Returns AIC, AICc, BIC (both sample-size conventions), the
 log-likelihood, degrees of freedom, McFadden's R-squared, and the
 scoring rules from
-[`ilm_scores()`](https://craig-hutton.github.io/illume/reference/ilm_scores.md).
+[`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md).
 
 ## Usage
 

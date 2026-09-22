@@ -55,7 +55,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/craig-hutton/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -72,7 +72,7 @@
       <h1>The illume workflow</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/craig-hutton/illume/blob/main/vignettes/workflow.Rmd" class="external-link"><code>vignettes/workflow.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/vignettes/workflow.Rmd" class="external-link"><code>vignettes/workflow.Rmd</code></a></small>
       <div class="d-none name"><code>workflow.Rmd</code></div>
     </div>
 
@@ -87,7 +87,7 @@ few use only one. The point of the map is that when you do need a stage,
 the function for it is in the same package, speaks the same object, and
 names its own remedy when it finds a problem.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/craig-hutton/illume" class="external-link">illume</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/huttoncp/illume" class="external-link">illume</a></span><span class="op">)</span></span></code></pre></div>
 <hr>
 <div class="section level2">
 <h2 id="power">1. Power<a class="anchor" aria-label="anchor" href="#power"></a>
@@ -108,8 +108,25 @@ that curve is a range; and the <strong>convergence rate</strong>,
 because a replicate that failed to fit has not detected anything, and
 dividing only by the ones that worked gives power conditional on
 convergence, which is a different and more flattering quantity.</p>
-<p>See <code><a href="../reference/ilm_power.html">?ilm_power</a></code> and the <em>Effect size and power</em>
-vignette.</p>
+<p>With no pilot to fit, <code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code> takes the
+assumptions instead – the design, the expected cell means, the residual
+SD and the ICC – and <code><a href="../reference/ilm_scaffold.html">ilm_scaffold()</a></code> returns the assumed
+model on its own, so what it implies can be checked before a sample size
+is quoted from it.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span>, time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pre"</span>, <span class="st">"post"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">pw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_power_design.html">ilm_power_design</a></span><span class="op">(</span><span class="va">change</span> <span class="op">~</span> <span class="va">arm</span> <span class="op">*</span> <span class="va">time</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, design <span class="op">=</span> <span class="va">d</span>,</span>
+<span>                       within <span class="op">=</span> <span class="st">"time"</span>, n_unit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">60</span>, <span class="fl">120</span>, <span class="fl">240</span>, <span class="fl">400</span><span class="op">)</span>,</span>
+<span>                       cells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>control.pre <span class="op">=</span> <span class="fl">20</span>, control.post <span class="op">=</span> <span class="fl">21</span>,</span>
+<span>                                 treatment.pre <span class="op">=</span> <span class="fl">20</span>, treatment.post <span class="op">=</span> <span class="fl">25</span><span class="op">)</span>,</span>
+<span>                       sd <span class="op">=</span> <span class="fl">6</span>, icc <span class="op">=</span> <span class="fl">0.5</span>, term <span class="op">=</span> <span class="st">"arm:time"</span>, sims <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/ilm_power_n.html">ilm_power_n</a></span><span class="op">(</span><span class="va">pw</span>, target <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
+<span><span class="co">#&gt;  effect   n  n_lower n_upper n_unit n_unit_lower n_unit_upper</span></span>
+<span><span class="co">#&gt;       4 330 292.5298 365.872    165     146.2649      182.936</span></span></code></pre></div>
+<p><code>n_unit</code> is participants and <code>n</code> is rows: 165
+people measured twice.</p>
+<p>See <code><a href="../reference/ilm_power.html">?ilm_power</a></code>, <code><a href="../reference/ilm_scaffold.html">?ilm_scaffold</a></code> and the
+<em>Effect size and power</em> vignette.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -121,7 +138,7 @@ summarises every column at once; <code><a href="../reference/ilm_plot_all.html">
 sensible plot per variable; <code><a href="../reference/ilm_boot_ci.html">ilm_boot_ci()</a></code> and
 <code><a href="../reference/ilm_boot_diff.html">ilm_boot_diff()</a></code> put intervals on means, medians and
 differences between groups without assuming normality.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_describe_all.html">ilm_describe_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_plot_all.html">ilm_plot_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_boot_diff.html">ilm_boot_diff</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">arm</span>, data <span class="op">=</span> <span class="va">d</span><span class="op">)</span>        <span class="co"># every pair, simultaneous by default</span></span></code></pre></div>
@@ -137,7 +154,7 @@ types, or a generalized low rank model with a loss per column type –
 <code><a href="../reference/ilm_cluster.html">ilm_cluster()</a></code> groups the rows in that space, and
 <code><a href="../reference/ilm_profile.html">ilm_profile()</a></code> does both and describes what distinguishes
 each group.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_profile.html">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>               <span class="co"># closed-form FAMD</span></span>
 <span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_profile.html">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span>, method <span class="op">=</span> <span class="st">"glrm"</span><span class="op">)</span>   <span class="co"># a loss per column type</span></span>
 <span><span class="fu"><a href="../reference/ilm_plot_profile.html">ilm_plot_profile</a></span><span class="op">(</span><span class="va">pr</span><span class="op">)</span></span></code></pre></div>
@@ -153,7 +170,7 @@ whether a <strong>row</strong> is a plausible combination: someone 150
 cm tall is unremarkable, someone weighing 110 kg is unremarkable, and
 someone who is both is not, and nothing in either column’s distribution
 says so.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_outliers_all.html">ilm_outliers_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                          <span class="co"># one column at a time</span></span>
 <span><span class="fu"><a href="../reference/ilm_anomaly.html">ilm_anomaly</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                               <span class="co"># the combination</span></span></code></pre></div>
 <p><code><a href="../reference/ilm_anomaly.html">ilm_anomaly()</a></code> also names the column driving each flagged
@@ -170,7 +187,7 @@ biases the answer: complete cases stay unbiased when missingness is
 unrelated to the <strong>outcome given the predictors</strong>, which is
 weaker than missing-completely-at-random and is testable. When it is
 not, <code><a href="../reference/ilm_impute.html">ilm_impute()</a></code> is the remedy.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_missing.html">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span>
 <span><span class="va">im</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_impute.html">ilm_impute</a></span><span class="op">(</span><span class="va">d</span>, m <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>                  <span class="co"># chained equations by default</span></span>
 <span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">im</span><span class="op">$</span><span class="va">imputations</span>, <span class="kw">function</span><span class="op">(</span><span class="va">z</span><span class="op">)</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span>, data <span class="op">=</span> <span class="va">z</span><span class="op">)</span><span class="op">)</span></span>
@@ -189,7 +206,7 @@ causally. <code><a href="../reference/ilm_dag.html">ilm_dag()</a></code> records
 <code><a href="../reference/ilm_adjust_sets.html">ilm_adjust_sets()</a></code> finds the minimal sets of variables that
 close the back-door paths; <code><a href="../reference/ilm_dag_test.html">ilm_dag_test()</a></code> checks the
 conditional independencies the graph implies against the data.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_dag.html">ilm_dag</a></span><span class="op">(</span><span class="st">"treat -&gt; outcome; conf -&gt; treat; conf -&gt; outcome"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_adjust_sets.html">ilm_adjust_sets</a></span><span class="op">(</span><span class="va">g</span>, exposure <span class="op">=</span> <span class="st">"treat"</span>, outcome <span class="op">=</span> <span class="st">"outcome"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_dag_test.html">ilm_dag_test</a></span><span class="op">(</span><span class="va">g</span>, data <span class="op">=</span> <span class="va">d</span><span class="op">)</span>                    <span class="co"># does the data agree with it?</span></span>
@@ -205,7 +222,7 @@ implies, so the mean structure is not chosen by looking at p-values.</p>
 <p>One function. The formula is lme4’s, the families run from gaussian
 through counts, proportions, ordered and unordered categories, and
 survival times, and the same object comes back whatever you fit.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"multinomial"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span></span>
@@ -227,7 +244,7 @@ survival times, and the same object comes back whatever you fit.</p>
 remedy that exists in this package</strong>. That is the rule the
 diagnostics layer is built around; a check with no remedy is a
 complaint.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_appraise.html">ilm_appraise</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                            <span class="co"># the whole battery</span></span>
 <span><span class="fu"><a href="../reference/ilm_check_variance.html">ilm_check_variance</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                      <span class="co"># -&gt; dispformula =</span></span>
 <span><span class="fu"><a href="../reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                         <span class="co"># -&gt; ziformula =</span></span>
@@ -249,7 +266,7 @@ errors without needing to say what the right structure would be.</p>
 means and the comparisons between them, <code><a href="../reference/ilm_ame.html">ilm_ame()</a></code> for the
 average effect of a one-unit change, and <code><a href="../reference/ilm_plot_model.html">ilm_plot_model()</a></code>
 for partial dependence.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_anova.html">ilm_anova</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                               <span class="co"># Type II by default</span></span>
 <span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                             <span class="co"># odds ratios, rate ratios, ...</span></span>
 <span><span class="va">em</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_emmeans.html">ilm_emmeans</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"group"</span><span class="op">)</span></span>
@@ -266,7 +283,7 @@ covariate collapses the thing being asked about.
 <code><a href="../reference/ilm_trends.html">ilm_trends()</a></code> estimates the slope within each level instead,
 and answers the two questions separately: whether each slope differs
 from zero, and whether the slopes differ from each other.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_trends.html">ilm_trends</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"group"</span>, var <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span>
 <span><span class="va">tr</span>                                           <span class="co"># is each group's slope non-zero?</span></span>
 <span><span class="fu"><a href="../reference/ilm_contrast.html">ilm_contrast</a></span><span class="op">(</span><span class="va">tr</span><span class="op">)</span>                             <span class="co"># do the groups' slopes differ?</span></span></code></pre></div>
@@ -288,7 +305,7 @@ description of the columns. See <code><a href="../articles/anova.html">vignette(
 <code><a href="../reference/ilm_scenario.html">ilm_scenario()</a></code> sets predictors to values a stakeholder is
 considering and reports what the model says would happen, with intervals
 and with differences between scenarios.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, dose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span><span class="op">)</span>, contrast <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span></code></pre></div>
 <p>The default averages over <strong>the observed units</strong>: set
 the intervention for everyone, keep each unit’s own covariates, predict,
@@ -305,7 +322,7 @@ combination is one nobody occupies.</p>
 <p><code><a href="../reference/ilm_interpret.html">ilm_interpret()</a></code> writes the findings as prose from
 deterministic templates, so the same fit always produces the same words.
 Causal language appears only when a DAG has licensed it.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_interpret.html">ilm_interpret</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
@@ -361,6 +378,7 @@ multinomial</td>
 <td><em>Effect size and power</em></td>
 <td>
 <code><a href="../reference/ilm_effects.html">ilm_effects()</a></code>, <code><a href="../reference/ilm_power.html">ilm_power()</a></code>,
+<code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code>, <code><a href="../reference/ilm_scaffold.html">ilm_scaffold()</a></code>,
 <code><a href="../reference/ilm_scenario.html">ilm_scenario()</a></code>
 </td>
 </tr>

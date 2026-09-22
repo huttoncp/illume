@@ -1,6 +1,6 @@
 # Plot every column of a data frame
 
-[`ilm_plot_var()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var.md)
+[`ilm_plot_var()`](https://huttoncp.github.io/illume/reference/ilm_plot_var.md)
 once per column, arranged in a grid.
 
 ## Usage
@@ -37,7 +37,7 @@ ilm_plot_var_all(
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - nrow, ncol:
 
@@ -57,8 +57,8 @@ ilm_plot_var_all(
 
 ## See also
 
-[`ilm_plot_all()`](https://craig-hutton.github.io/illume/reference/ilm_plot_all.md),
-[`ilm_plot_var_pairs()`](https://craig-hutton.github.io/illume/reference/ilm_plot_var_pairs.md).
+[`ilm_plot_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_all.md),
+[`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md).
 
 ## Examples
 

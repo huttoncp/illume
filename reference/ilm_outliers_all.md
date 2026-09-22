@@ -1,7 +1,7 @@
 # Flag unusual values across a data frame
 
 Runs
-[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+[`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
 over every numeric column, optionally within groups, and returns one row
 per flagged value with the row it came from.
 
@@ -35,7 +35,7 @@ ilm_outliers_all(
   Columns to use. A character vector of names, a regular expression, a
   predicate function such as `is.numeric`, or `NULL` for all of them –
   see
-  [ilm_selection](https://craig-hutton.github.io/illume/reference/ilm_selection.md).
+  [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
 
 - method:
 
@@ -70,8 +70,8 @@ groups.
 
 ## See also
 
-[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md),
-[`ilm_plot_box()`](https://craig-hutton.github.io/illume/reference/ilm_plot_box.md)
+[`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md),
+[`ilm_plot_box()`](https://huttoncp.github.io/illume/reference/ilm_plot_box.md)
 to see them.
 
 ## Examples
