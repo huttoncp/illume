@@ -1,0 +1,164 @@
+# Profiling: reduce, cluster, characterise
+
+Three steps that are usually taken together: find the few directions a
+set of correlated columns shares, group the rows in that space, and say
+what distinguishes each group.
+
+``` r
+
+library(illume)
+```
+
+## The whole thing in one call
+
+``` r
+
+pr <- ilm_profile(d, ndim = 5)
+pr
+ilm_plot_profile(pr)
+```
+
+[`ilm_profile()`](https://craig-hutton.github.io/illume/reference/ilm_profile.md)
+runs
+[`ilm_reduce()`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
+then
+[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md)
+on the dimensions it produced, then characterises the clusters. The
+three are also available separately, which is what you want as soon as
+you disagree with one of its choices.
+
+## Reducing
+
+``` r
+
+rr <- ilm_reduce(d, ndim = 5)
+rr
+ilm_plot_reduce(rr)
+ilm_plot_reduce_scree(rr)
+ilm_plot_reduce_contrib(rr)
+```
+
+The method follows the column types without being told: PCA for
+all-numeric data, multiple correspondence analysis for all-categorical,
+and factor analysis of mixed data when both are present. All three are
+the same decomposition with different scaling, which is why one function
+covers them.
+
+The number of dimensions available is `min(n - 1, p)` for PCA and the
+mixed case, and the number of levels less the number of variables for
+MCA. Asking for more than exist is an error rather than a smaller
+answer, which is worth knowing because an earlier version computed that
+ceiling as `p - 1` and failed outright on any two-column selection.
+
+### A different loss per column
+
+FAMD reaches mixed data by one-hot encoding the categories, scaling the
+indicators and running PCA on the result. That is fast, has a closed
+form, and treats a category as though it were Gaussian – a
+reconstruction can come back at `-0.3`, which is not a category.
+
+``` r
+
+rr <- ilm_reduce(d, ndim = 5, method = "glrm")
+```
+
+A generalized low rank model keeps the low-rank structure and changes
+the loss: quadratic for a numeric column, logistic for a binary one,
+multinomial across the levels of a categorical one, Poisson for a count.
+Each column is then reconstructed on its own scale, and a category comes
+back as a category.
+
+It costs an iterative fit where FAMD has a decomposition, so it is an
+option rather than the default. On all-numeric data the two are the
+*same model* – with quadratic loss everywhere and no penalty a GLRM is
+principal components, verified against the SVD to 1e-16 – so there is
+nothing to gain there. What it adds is mixed data, and
+`ilm_impute(method = "glrm")` uses the same machinery to impute
+categorical columns.
+
+See
+[`?ilm_glrm`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md)
+for the ridge penalty, which is chosen by cross-validation because a
+fixed value is wrong across sizes and missingness rates.
+
+## Clustering
+
+``` r
+
+cl <- ilm_cluster(rr, k_max = 10)
+cl
+ilm_plot_cluster(cl)
+ilm_plot_cluster_gap(cl)
+```
+
+`k` is chosen by the gap statistic rather than by eye. The result also
+reports what a cluster solution usually hides: how stable each cluster
+is under resampling (bootstrap Jaccard), how many rows sit ambiguously
+between two of them (silhouette width), and whether any cluster is too
+small to be a finding.
+
+A cluster that appears in 45% of bootstrap resamples is not a group, and
+the output says so rather than leaving the reader to assume that
+everything printed is solid.
+
+## Characterising
+
+The step people usually do by hand, badly. For each cluster and each
+variable it asks whether that cluster’s mean (or its proportion in a
+category) differs from the overall one by more than sampling would
+explain, and reports a v-test.
+
+``` r
+
+pr$characterization
+pr$summary                    # in words
+```
+
+The summary lines name the two variables that most distinguish each
+cluster and the direction, which is what a cluster is for: “high on
+income and education, low on commute time” is a finding, and “cluster 3”
+is not.
+
+## What this is, and is not
+
+This is a lighter-weight reimplementation of the `FactoMineR::HCPC()`
+plus `catdes()` workflow, with the stability reporting that pipeline
+does not do, and without the dependency. It is exploratory. The groups
+it finds are descriptions of the sample rather than populations, and
+treating a cluster label as a variable in a subsequent model – then
+testing whether the clusters differ on the variables that defined them –
+is circular.
+
+If the question is whether a *known* grouping differs, that is a model:
+
+``` r
+
+ilm_model(y ~ group, data = d, family = "gaussian")
+```
+
+## Structure in the missingness
+
+The same three steps run on the missingness pattern rather than the
+values.
+
+``` r
+
+ilm_reduce_na(d)
+ilm_profile_na(d)
+ilm_plot_profile_na(pr_na)
+```
+
+A questionnaire where income and savings go missing together, and
+separately from the health block, has structure in its non-response.
+Knowing that before choosing an imputation strategy is worth more than
+most of what the imputation then does.
+
+## See also
+
+[`?ilm_reduce`](https://craig-hutton.github.io/illume/reference/ilm_reduce.md),
+[`?ilm_cluster`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
+[`?ilm_profile`](https://craig-hutton.github.io/illume/reference/ilm_profile.md),
+[`?ilm_glrm`](https://craig-hutton.github.io/illume/reference/ilm_glrm.md),
+[`vignette("anomaly-detection")`](https://craig-hutton.github.io/illume/articles/anomaly-detection.md)
+for rows that fit no group, and
+[`vignette("missing-data")`](https://craig-hutton.github.io/illume/articles/missing-data.md).

@@ -1,0 +1,156 @@
+# Anomaly detection
+
+Two functions ask different questions, and the difference is the whole
+point.
+
+``` r
+
+library(illume)
+```
+
+## One column, or the combination
+
+[`ilm_outliers()`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md)
+asks whether a **value** is extreme for its own column.
+
+``` r
+
+ilm_outliers(d, "height")
+ilm_outliers_all(d)            # every column at once
+```
+
+[`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+asks whether a **row** is a plausible combination.
+
+``` r
+
+ilm_anomaly(d)
+```
+
+Someone 150 cm tall is unremarkable. Someone weighing 110 kg is
+unremarkable. Someone who is both is not, and nothing in either column’s
+distribution says so. On simulated data with ten rows pushed off the
+correlation structure but inside every column’s range, the
+column-at-a-time scan caught **none** of them.
+
+The method: a set of correlated columns puts most of its variation in a
+few directions. Fit those directions, project each row onto them, and
+score how much of the row is left over. A row that respects the
+correlations needs only a few numbers to describe it; one that does not
+leaves a large remainder.
+
+``` r
+
+r <- ilm_anomaly(d)
+head(r)
+#>  row score        p  p_adj  flag driver
+#>    1 3.746 8.55e-05 0.0256  TRUE      a
+```
+
+`driver` is the column contributing most to that row’s score. An anomaly
+nobody can explain is not actionable, so it is reported alongside the
+score.
+
+## Three things that had to be measured
+
+This looks like a short function and is not. Two of the three decisions
+below overturned the first version of it.
+
+### The rank is not the imputation rank
+
+[`ilm_impute()`](https://craig-hutton.github.io/illume/reference/ilm_impute.md)
+chooses the number of directions by cross-validating held-out cells,
+which is exactly right for filling a value in and wrong here. On a
+rank-2 structure in eight columns it chose **6 or 7** – on clean data as
+well as contaminated – and those extra components span the very
+directions the anomalies depart along. Detection fell from 0.975 to
+0.560.
+
+[`ilm_anomaly()`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md)
+uses parallel analysis instead: permute each column independently, which
+destroys everything the columns share while leaving each one’s own
+distribution alone, and keep a component only when it beats what the
+permuted data produces. That chose 2 on every dataset tried,
+contaminated or not.
+
+The two functions answer different questions – what best predicts a
+missing cell, against how many directions are real shared structure – so
+they use different criteria, deliberately.
+
+### The fit is trimmed
+
+The anomalies sit in the same data the directions are estimated from, so
+they pull those directions towards themselves and are then reconstructed
+well. The method hides what it is looking for.
+
+`trim = 0.25` fits on the best-fitting three quarters of rows and
+refits, so a row is scored against a structure it did not help define.
+It earns its place only where the anomalies share a direction, which is
+where they can form a component between them:
+
+      anomalies along random directions      along ONE shared direction
+       2%   0.925  vs  0.917                  2%   0.950  vs  0.942
+       5%   0.967  vs  0.977                  5%   0.797  vs  0.887
+      10%   0.970  vs  0.978                 10%   0.587  vs  0.670
+
+Holding rows out in folds instead – which was the first design – does
+nothing, and is not offered. At four contamination levels it matched
+in-sample scoring to three decimals, because four fifths of the
+anomalies remain in every training fold.
+
+### The reference is simulated, and calibrated
+
+The score is not chi-squared: the noise scale is estimated, the rank
+came from the same data, and the residual is taken against an estimated
+subspace. Datasets with the same structure and no anomalies are
+simulated and scored through the identical pipeline.
+
+Getting that simulation right mattered twice. The noise has to be **per
+column** – standardising gives every column unit variance, so one that
+loads weakly on the shared directions keeps proportionally more of its
+variance off them – and its level has to be matched to the observed
+median rather than read off shrunken in-sample residuals. A first
+version got both wrong and flagged **38.9%** of the rows of data
+containing no anomalies at all.
+
+As it stands: across 100 clean datasets of 400 rows, 11 rows in 40,000
+were flagged, with 95 of the 100 producing none; with anomalies present,
+98% of the planted rows were found at 2% contamination and 99.7% at 5%.
+
+`B` defaults to 39 because a Benjamini-Hochberg adjusted p-value cannot
+fall much below `1 / B`. At `B = 19` a lone anomaly among 300 rows could
+not be flagged however extreme it was, and the function says so rather
+than returning an empty list.
+
+## What it cannot do
+
+When a large share of rows depart along the **same** direction, they are
+not anomalies – they are a subpopulation, and a rank-`k` fit of the
+whole data legitimately includes their direction. Detection degrades
+accordingly: 0.89 at 5% contamination, 0.67 at 10%, 0.41 at 20%.
+
+That is the method reaching its limit rather than failing quietly, and
+the tool for a second group is
+[`ilm_cluster()`](https://craig-hutton.github.io/illume/reference/ilm_cluster.md),
+which is looking for exactly that.
+
+``` r
+
+ilm_profile(d)                 # is it a group rather than a scattering?
+```
+
+## A flagged row is not an error
+
+It is a combination the other rows do not make. It may be a data-entry
+mistake, or a real and interesting case, or the most important
+observation in the dataset. Deleting it because a method said so is how
+real effects get removed, and the print says so every time.
+
+## See also
+
+[`?ilm_anomaly`](https://craig-hutton.github.io/illume/reference/ilm_anomaly.md),
+[`?ilm_outliers`](https://craig-hutton.github.io/illume/reference/ilm_outliers.md),
+[`vignette("profiling")`](https://craig-hutton.github.io/illume/articles/profiling.md)
+for the dimension reduction underneath, and
+[`vignette("workflow")`](https://craig-hutton.github.io/illume/articles/workflow.md)
+for where this sits.

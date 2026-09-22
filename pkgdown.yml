@@ -1,0 +1,18 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  anomaly-detection: anomaly-detection.html
+  anova: anova.html
+  causal-models: causal-models.html
+  effect-size-and-power: effect-size-and-power.html
+  exploring-data: exploring-data.html
+  illume: illume.html
+  missing-data: missing-data.html
+  profiling: profiling.html
+  regression-models: regression-models.html
+  workflow: workflow.html
+last_built: 2026-09-22T05:33Z
+urls:
+  reference: https://craig-hutton.github.io/illume/reference
+  article: https://craig-hutton.github.io/illume/articles
