@@ -207,6 +207,26 @@ ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
          "variogram. A variogram measures how correlation falls away with ",
          "separation, so it has to know what separates two observations ",
          "(the model has ", N, " rows).", call. = FALSE)
+  ## Line the columns up with the rows the fit kept, the same way
+  ## ilm_check_covariate() and ilm_check_omitted() do. Without it every call
+  ## fails as soon as the data has a missing value anywhere: the model frame
+  ## drops those rows and the column handed in still has all of them.
+  ##
+  ## Falling back to the column as given, rather than letting
+  ## ilm_align_rows() raise its own error, so that a column of a length that
+  ## matches neither the data nor the fit still gets the messages below --
+  ## which existing callers and tests rely on.
+  keep_as_is <- function(x) function(e) x
+  if (spatial) {
+    coords <- tryCatch(ilm_align_rows(object, coords, "coords"),
+                       error = keep_as_is(coords))
+  } else if (!missing(time) && !missing(group)) {
+    time  <- tryCatch(ilm_align_rows(object, time,  "time"),
+                      error = keep_as_is(time))
+    group <- tryCatch(ilm_align_rows(object, group, "group"),
+                      error = keep_as_is(group))
+  }
+
   if (spatial) {
     cm <- as.matrix(if (is.data.frame(coords)) coords else coords)
     if (!is.numeric(cm))
@@ -222,6 +242,8 @@ ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
       stop("`coords` cannot contain missing values", call. = FALSE)
     if (missing(group) || is.null(group)) group <- rep(1L, N)
   } else {
+    ## Still checked, because ilm_align_rows() returns the column untouched
+    ## when the fit kept no model frame to align against.
     if (length(time) != N || length(group) != N)
       stop("`time` has ", length(time), " values and `group` has ",
            length(group), ", but the model has ", N, " rows.", call. = FALSE)

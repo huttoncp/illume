@@ -272,6 +272,22 @@ ilm_ar_envelope <- function(object, time, group, maxlag = 8L, B = 30L,
          "between observations of the same unit at known time points. Supply ",
          "one value of each per observation (the model has ", N, " rows).",
          call. = FALSE)
+  ## Line the columns up with the rows the fit kept, the same way
+  ## ilm_check_covariate() and ilm_check_omitted() do. Without it every call
+  ## fails as soon as the data has a missing value anywhere: the model frame
+  ## drops those rows and the column handed in still has all of them. Telling
+  ## the caller to "subset `time` the same way" asks them to reconstruct
+  ## something the fit already knows.
+  ## Falling back to the column as given, rather than letting
+  ## ilm_align_rows() raise its own error, so that a column of a length that
+  ## matches neither the data nor the fit still gets the message below --
+  ## which existing callers and tests rely on.
+  time  <- tryCatch(ilm_align_rows(object, time,  "time"),
+                    error = function(e) time)
+  group <- tryCatch(ilm_align_rows(object, group, "group"),
+                    error = function(e) group)
+  ## Still checked, because ilm_align_rows() returns the column untouched when
+  ## the fit kept no model frame to align against.
   if (length(time) != N)
     stop("`time` has ", length(time), " values but the model has ", N,
          " rows. If the model dropped incomplete cases, subset `time` the ",
