@@ -22,8 +22,13 @@ ilm_power(
 For a model with a grouping factor this is the number of ROWS, and the
 number of clusters moves with it.}
 
-\item{term}{The fixed-effect coefficient to test. Defaults to the first
-that is not an intercept.}
+\item{term}{The fixed-effect coefficient to test, named either as the
+coefficient (\code{"armtreatment"}) or as the variable that produced it
+(\code{"arm"}). The variable form is resolved when it maps to a single
+coefficient, which covers continuous predictors and two-level factors; a
+term with more columns is refused, with its coefficients listed, because
+a power curve follows one effect size at a time. Defaults to the first
+coefficient that is not an intercept.}
 
 \item{effect}{Values for that coefficient on the LINK scale. Defaults to
 the fitted value. Supplying several traces power across effect sizes.}

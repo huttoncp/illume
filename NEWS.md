@@ -245,6 +245,46 @@ the **same answer** as subsetting by hand, not merely that it stops erroring:
 a wrong alignment also runs cleanly, and dropping the last rows rather than
 the right ones turns z = 23.5 into z = 0.41.
 
+## Parameters that were set and then ignored
+
+Same source, same method, one round later.
+
+* **`set_coef()` rebuilt the mean and the covariance structure and nothing
+  else.** Setting a dispersion changed the stored parameter vector and left
+  `$dispersion` at its fitted value, so `ilm_simulate()` went on drawing from
+  the fitted residual SD: `log_sigma` set to `log(4)` produced draws with SD
+  1.00. Nothing errored, and the number that came back was a perfectly
+  ordinary standard deviation. The same gap left ordinal thresholds,
+  zero-inflation parameters and a dispersion model stale, and it reached
+  further than `ilm_simulate()` -- `ilm_power()` draws its responses through
+  the same field, so a power curve run on an object with assumed parameters
+  used the fitted dispersion instead of the assumed one.
+* This is the failure the function's own documentation warns about, in the
+  places it was not actually guarded against: `marginaleffects` works by
+  nudging a parameter and re-predicting, so a parameter the rebuild ignores
+  contributes exactly zero uncertainty rather than an error.
+* **A rebuilt CAR(1) correlation used AR(1)'s transform.** AR(1) stores
+  `atanh(rho)`; CAR(1) stores `log(range)` and `rho` is `exp(-1/range)`. Both
+  return something inside (-1, 1), so the wrong one is invisible in the value:
+  on the test fit it gave 0.703 where the fit reported 0.659, and `$ar_range`
+  was not updated at all.
+* `get_coef()` deliberately returns the variance parameters beside the fixed
+  effects, so setting one and having it silently ignored was the worst of both
+  conventions.
+
+Every test in `test-set-coef.R` sets a parameter to a value whose correct
+consequence is known in closed form, because "it changed" is not "it changed
+to the right thing". Nine of them fail against the previous code.
+
+* **`ilm_power(term = )` now takes a variable name as well as a coefficient
+  name.** A researcher planning a trial thinks `"arm"`, not `"armtreatment"`.
+  The variable is resolved through the model matrix's `assign` attribute, not
+  by matching a name prefix, so an exposure `x` does not collect a covariate
+  called `xray`. A term with more than one column -- a three-level factor, a
+  spline -- is refused with its coefficients listed and `ilm_anova()` named,
+  because a power curve follows one effect size at a time and choosing a
+  column silently would report power for a comparison nobody asked for.
+
 ## Finite degrees of freedom for a mixed model
 
 * `ilm_denom_df()` adds Satterthwaite and Kenward-Roger. A Wald statistic

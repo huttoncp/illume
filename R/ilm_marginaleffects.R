@@ -41,6 +41,12 @@
 #' @noRd
 ilm_rebuild <- function(object, par) {
   pn <- object$pnames; C <- object$C; p <- ncol(object$X)
+  ## The TYPE labels -- "beta", "theta", "logdisp", "zeta_raw", "gzi" -- have
+  ## to be read before the next line replaces them with the descriptive names
+  ## the user sees. Everything below that asks "which parameter is this?" has
+  ## to ask `tl`, because `pn` cannot answer it: a dispersion parameter is
+  ## called "log_sigma" there, and nothing marks it as the dispersion.
+  tl <- names(object$opt$par)
   object$opt$par <- setNames(as.numeric(par), pn)
   nb <- p * C
   object$beta <- matrix(object$opt$par[seq_len(nb)], p, C)
@@ -66,9 +72,70 @@ ilm_rebuild <- function(object, par) {
   if (!is.null(object$ar)) {
     La <- ilm_mkL_num(object$opt$par[grepl("^ar:L\\[", pn)], C)   # pnames is in fill order
     Sig[["ar"]] <- La %*% t(La)
-    object$rho <- tanh(object$opt$par[pn == "ar:rho_raw"])
+    ## CAR(1) parameterises the RANGE, not the correlation, so the raw
+    ## parameter does not pass through tanh there. Both forms return something
+    ## inside (-1, 1), so using the wrong one is not visible in the value.
+    rr <- unname(object$opt$par[pn == "ar:rho_raw"])
+    if (identical(object$ar$type, "car1")) {
+      object$ar_range <- exp(rr)
+      object$rho <- exp(-1 / exp(rr))
+    } else object$rho <- tanh(rr)
   }
   object$Sigma <- Sig; object$Lambda <- Lam; object$Sigma_d <- Sd
+  ilm_rebuild_aux(object, tl)
+}
+
+## The parameters that are NOT the mean and NOT the covariance structure.
+##
+## `ilm_rebuild` used to stop after beta and Sigma, so setting a dispersion, an
+## ordinal threshold or a zero-inflation parameter changed the stored vector
+## and nothing else: `ilm_simulate()` went on drawing from the fitted residual
+## SD, and `marginaleffects` came back with exactly zero uncertainty
+## contribution from those parameters. That is the failure this file's own
+## documentation warns about, in the places it was not actually guarded
+## against -- a wrong answer that looks perfectly reasonable.
+##
+## Each field here is a TRANSFORM of the parameters rather than a copy, which
+## is why storing the vector is not enough on its own.
+#' @keywords internal
+#' @noRd
+ilm_rebuild_aux <- function(object, tl) {
+  pe <- object$opt$par                  # named by pnames; `tl` gives the types
+  fam <- object$family
+  has_dm <- !is.null(object$Zd) || isTRUE(object$disp_mu)
+
+  if (!is.null(fam) && fam$n_disp > 0L && !has_dm && any(tl == "logdisp")) {
+    d <- exp(unname(pe[tl == "logdisp"]))
+    ## the fit reports the residual SD on the unbiased (n - p) scale wherever
+    ## it can, so a rebuilt object has to use the same scale or the two are
+    ## not comparable
+    if (isTRUE(object$exact_df) && isTRUE(is.finite(object$resid_df)))
+      d <- d * sqrt(nrow(object$X) / object$resid_df)
+    object$dispersion <- stats::setNames(d, fam$disp_names)
+  } else if (has_dm && any(tl %in% c("gamma", "mu_pow"))) {
+    g  <- unname(pe[tl == "gamma"])
+    mp <- if (any(tl == "mu_pow")) unname(pe[tl == "mu_pow"]) else NA_real_
+    object$disp_gamma  <- g
+    object$disp_mu_pow <- mp
+    if (!is.null(object$disp_coef))
+      object$disp_coef <- stats::setNames(
+        unname(pe[tl %in% c("gamma", "mu_pow")]), names(object$disp_coef))
+    ## the dispersion is per-row here; the median stands for it, as in the fit
+    object$dispersion <- stats::setNames(
+      stats::median(ilm_disp_rows(object$Zd, g, mp, fam, object$X, object$beta)),
+      fam$disp_names[1])
+  }
+
+  ## ordinal cutpoints are built from increments so they stay increasing, so
+  ## the stored thresholds are not the parameters themselves
+  if (isTRUE(object$ordinal) && any(tl == "zeta_raw")) {
+    zr <- unname(pe[tl == "zeta_raw"])
+    object$zeta <- stats::setNames(zr[1] + c(0, cumsum(exp(zr[-1]))),
+                                   names(object$zeta))
+  }
+  if (!is.null(object$zi_gamma) && any(tl == "gzi"))
+    object$zi_gamma <- stats::setNames(unname(pe[tl == "gzi"]),
+                                       names(object$zi_gamma))
   object
 }
 

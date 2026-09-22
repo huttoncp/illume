@@ -92,8 +92,13 @@ ilm_power_resample <- function(mf, n, group = NULL) {
 #' @param n Sample sizes to try. Defaults to a spread around the fitted size.
 #'   For a model with a grouping factor this is the number of ROWS, and the
 #'   number of clusters moves with it.
-#' @param term The fixed-effect coefficient to test. Defaults to the first
-#'   that is not an intercept.
+#' @param term The fixed-effect coefficient to test, named either as the
+#'   coefficient (`"armtreatment"`) or as the variable that produced it
+#'   (`"arm"`). The variable form is resolved when it maps to a single
+#'   coefficient, which covers continuous predictors and two-level factors; a
+#'   term with more columns is refused, with its coefficients listed, because
+#'   a power curve follows one effect size at a time. Defaults to the first
+#'   coefficient that is not an intercept.
 #' @param effect Values for that coefficient on the LINK scale. Defaults to
 #'   the fitted value. Supplying several traces power across effect sizes.
 #' @param sims Replicates per cell.
@@ -129,9 +134,34 @@ ilm_power <- function(object, n = NULL, term = NULL, effect = NULL,
     stop("the model has no term to find: it is an intercept only.",
          call. = FALSE)
   if (is.null(term)) term <- cand[1L]
-  if (!term %in% names(b))
-    stop("`term` (", term, ") is not a coefficient. Available: ",
-         paste(cand, collapse = ", "), call. = FALSE)
+  if (!term %in% names(b)) {
+    ## A researcher designing a trial thinks "arm", not "armtreatment". Take
+    ## the VARIABLE name too, and resolve it to the coefficient it produced --
+    ## unambiguous for every continuous predictor and every two-level factor,
+    ## which is almost every term anyone runs a power curve for.
+    ##
+    ## Matching on the name prefix would be wrong (an exposure `x` would also
+    ## collect a covariate called `xray`), so this goes through the model
+    ## matrix's `assign` attribute like everything else in the package.
+    k <- ilm_term_cols(object, term)
+    if (length(k) == 1L) {
+      term <- names(b)[k]
+    } else if (length(k) > 1L) {
+      ## A term with more than one column has more than one effect size, and
+      ## this function walks a curve in ONE of them. Refusing is the honest
+      ## answer: picking a column silently would report power for a
+      ## comparison the user did not ask for.
+      stop("`", term, "` produced ", length(k), " coefficients, and a power ",
+           "curve follows one at a time. Name one of: ",
+           paste(names(b)[k], collapse = ", "),
+           ". For the term as a whole, use ilm_anova() on a fit at the size ",
+           "you are considering.", call. = FALSE)
+    } else {
+      stop("`term` (", term, ") is not a coefficient or a variable in this ",
+           "model. Available coefficients: ", paste(cand, collapse = ", "),
+           call. = FALSE)
+    }
+  }
   n0 <- nrow(object$model)
   if (is.null(n)) n <- unique(round(n0 * c(0.5, 1, 2)))
   n <- sort(unique(as.integer(n)))
