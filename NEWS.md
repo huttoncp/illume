@@ -291,6 +291,109 @@ when tibble's namespace is loaded, so without it `[` falls through to
 `[.data.frame`, which drops correctly and the bug vanishes. The first version
 of the test did it by hand and passed against the broken code.
 
+## Mixed data, measured rather than assumed
+
+`ilm_cluster()` and `ilm_anomaly()` both refused to use categorical columns.
+Deciding what to do about that meant comparing seven approaches against data
+with known structure, and three of the results overturned the plan they were
+meant to confirm.
+
+* **`ilm_cluster(data)` now takes raw mixed data**, reducing it through
+  `ilm_reduce()` (FAMD) and saying so. `ilm_profile()` remains the front door:
+  it is the same pipeline plus a description of each cluster, in one call.
+* **FAMD then k-means is the default because it is the only one that survives
+  correlated variables.** Adjusted Rand index against three known clusters:
+
+  ```
+                              FAMD+kmeans   Gower+PAM   RF proximity   VarSelLCM
+    balanced                     0.433        0.447        0.257         0.440
+    within-cluster r = 0.40      0.395          --           --          0.286
+    within-cluster r = 0.75      0.265          --           --          0.047
+    two irrelevant factors       0.006          --         0.093         0.397
+  ```
+
+  VarSelLCM is remarkable in its own regime -- it selects variables, and on the
+  irrelevant-factor case it scored 0.397 where everything else collapsed -- and
+  it assumes the variables are independent within a cluster. When that fails it
+  fails the other way, to 0.047. Real variables are correlated, so it is not
+  the default. Random-forest proximity was measured and is not offered: 0.257
+  against 0.433 on well-behaved data.
+* **Gaussian mixtures are not suitable here, for a structural reason.** On
+  elliptical clusters a GMM beats k-means on the numeric columns alone (0.547
+  against 0.452) and collapses to 0.253 on the FAMD coordinates, where k-means
+  reaches 0.620. The categorical part of an embedding takes only as many
+  distinct values as there are level combinations, so a Gaussian mixture spends
+  components modelling the lattice. Its strength is what breaks it.
+* **Every `k`-selector over-selects on mixed data**, and `ilm_cluster()` now
+  warns when the chosen `k` is the largest searched -- the curve had not
+  turned, so that is where the search stopped rather than where the evidence
+  pointed. With truth `k = 3`, the gap statistic recovered it in 25% of runs at
+  best, BIC in 0%, and average silhouette in 0% -- silhouette on a Gower
+  dissimilarity peaked at exactly the number of level combinations, finding the
+  lattice rather than the clusters.
+* **Both functions now report what the missing values will cost before they
+  cost it**, through `ilm_describe_na_all()`. Twelve per cent missing across
+  three columns leaves 68% of rows complete, and the other 32% are dropped
+  silently by any complete-case method. The note names `ilm_impute()` and says
+  which single column, if dropped, would recover the most rows.
+
+## Anomalies that live in the categories
+
+* **`ilm_anomaly(method = "iforest")`**, an isolation forest over every column.
+  AUC against planted anomalies:
+
+  ```
+                            reconstruction   iForest   MCD     LOF+Gower
+    extreme value                1.000        0.975    1.000     0.998
+    implausible combination      0.999        0.950    1.000     0.997
+    category contradicts numbers 0.771        0.961    0.937     0.990
+    category pairing never seen  0.505        0.886    0.487     0.363
+  ```
+
+  The reconstruction stays the default: unbeaten at what it was built for, and
+  the only method with a calibrated null and FDR-adjusted p-values. It is a
+  coin toss on the bottom row, which is what the forest is for.
+* `ndim = 1` deliberately. The extended isolation forest is better on numeric
+  combinations (0.965 against 0.950) and worse on rare category pairings (0.796
+  against 0.886) -- and the categories are the reason it is here.
+* A forest returns a score with no null behind it, so `p` and `p_adj` are `NA`
+  and `alpha` is the share of rows being called anomalous rather than an error
+  rate being controlled. The print method says so rather than letting two
+  columns of `NA` imply an oversight.
+* It keeps the `driver`. Replacing one column at a time with its median or
+  commonest level and taking the largest score drop recovered the planted
+  driver 100% of the time for an extreme value and 94% for a category
+  contradicting the numbers, at one extra prediction per column.
+* Not added: MCD (ties the reconstruction on numeric anomalies, blind to
+  categorical ones, loses the calibration) and LOF, which is **worse than
+  random** on rare category pairings at 0.363 -- a rare combination forms its
+  own small tight group, which looks locally dense.
+
+## Which variables are carrying a clustering
+
+`ilm_var_contrib()`. Nothing in the package selects variables, and an
+irrelevant one is not neutral: on three known clusters with two informative
+columns, adding two pure-noise factors took recovery from 0.301 to **0.006**.
+That is the largest single effect measured anywhere in this comparison --
+larger than the choice of method, of distance, or of `k`.
+
+It reports the between-cluster share of variance for each variable against a
+permutation reference, so a variable the clustering ignored can be seen and
+dropped.
+
+The interesting case is the other one. When a variable separates the clusters
+*almost perfectly* while nothing else does, the partition **is** its levels
+under another name -- and every informative variable then scores low against
+it, so the obvious reading of the table ("drop the ones at the bottom") is
+exactly backwards. That case is detected and reported separately, because from
+inside a clustering a variable that defines it looks like the best variable.
+The first draft of this function gave the backwards advice.
+
+What it cannot do is settle relevance: the clustering was fitted to these
+variables, so one it used separates the clusters it helped make whether or not
+it means anything. A pure-noise column scored 0.441 against 0.576 for a real
+one. The documentation says this rather than implying otherwise.
+
 ## Parameters that were set and then ignored
 
 Same source, same method, one round later.

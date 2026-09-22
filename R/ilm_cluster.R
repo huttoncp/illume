@@ -98,6 +98,44 @@ ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B,
   ifelse(jac_n > 0, jac_sum / jac_n, NA_real_)
 }
 
+## What the missing values are about to cost, said before they cost it.
+##
+## FAMD has no way to place a row with a gap in it, so every one of them is
+## dropped -- and the drop is silent, sized by the COMBINATION of columns
+## rather than by the worst one. Twelve per cent missing spread over three
+## columns removes about a third of the data, which nobody predicts from
+## "12% missing". So the complete-case rate is reported, not the column
+## percentages alone, and the two remedies that exist in the package are
+## named: impute, or drop the columns that are doing the damage.
+#' @keywords internal
+#' @noRd
+ilm_cluster_na_note <- function(data, fn) {
+  if (!is.data.frame(data) || !nrow(data)) return(invisible(NULL))
+  na_col <- vapply(data, function(v) mean(is.na(v)), 0)
+  if (!any(na_col > 0)) return(invisible(NULL))
+  cc <- mean(stats::complete.cases(data))
+  if (cc == 1) return(invisible(NULL))
+  hit <- sort(na_col[na_col > 0], decreasing = TRUE)
+  top <- utils::head(hit, 5L)
+  ## the columns whose removal would recover the most rows: a column with a
+  ## high rate is only worth dropping if its gaps are not shared with others
+  gain <- vapply(names(hit), function(v)
+    mean(stats::complete.cases(data[setdiff(names(data), v)])) - cc, 0)
+  best <- names(which.max(gain))
+  message(fn, "(): ", sum(na_col > 0), " of ", ncol(data),
+          " column(s) have missing values (",
+          paste(sprintf("%s %.0f%%", names(top), 100 * top), collapse = ", "),
+          if (length(hit) > 5L) ", ..." else "",
+          "), and only ", sprintf("%.0f%%", 100 * cc),
+          " of rows are complete -- the rest cannot be placed and will be ",
+          "dropped. ilm_impute() keeps them",
+          if (max(gain) > 0.01)
+            paste0("; dropping '", best, "' alone would take the complete rows to ",
+                   sprintf("%.0f%%", 100 * (cc + max(gain)))) else "",
+          ". ilm_describe_na_all() shows the whole picture.")
+  invisible(NULL)
+}
+
 #' Cluster observations, choosing the number of clusters
 #'
 #' Groups the rows of an [ilm_reduce()] result, or any numeric coordinates, by
@@ -164,44 +202,6 @@ ilm_cluster_stability <- function(coords, FUNcluster, k, orig_cluster, B,
 #' cl <- ilm_cluster(ilm_reduce(mtcars), k_max = 5, B = 25, seed = 1)
 #' cl
 #' @export
-## What the missing values are about to cost, said before they cost it.
-##
-## FAMD has no way to place a row with a gap in it, so every one of them is
-## dropped -- and the drop is silent, sized by the COMBINATION of columns
-## rather than by the worst one. Twelve per cent missing spread over three
-## columns removes about a third of the data, which nobody predicts from
-## "12% missing". So the complete-case rate is reported, not the column
-## percentages alone, and the two remedies that exist in the package are
-## named: impute, or drop the columns that are doing the damage.
-#' @keywords internal
-#' @noRd
-ilm_cluster_na_note <- function(data, fn) {
-  if (!is.data.frame(data) || !nrow(data)) return(invisible(NULL))
-  na_col <- vapply(data, function(v) mean(is.na(v)), 0)
-  if (!any(na_col > 0)) return(invisible(NULL))
-  cc <- mean(stats::complete.cases(data))
-  if (cc == 1) return(invisible(NULL))
-  hit <- sort(na_col[na_col > 0], decreasing = TRUE)
-  top <- utils::head(hit, 5L)
-  ## the columns whose removal would recover the most rows: a column with a
-  ## high rate is only worth dropping if its gaps are not shared with others
-  gain <- vapply(names(hit), function(v)
-    mean(stats::complete.cases(data[setdiff(names(data), v)])) - cc, 0)
-  best <- names(which.max(gain))
-  message(fn, "(): ", sum(na_col > 0), " of ", ncol(data),
-          " column(s) have missing values (",
-          paste(sprintf("%s %.0f%%", names(top), 100 * top), collapse = ", "),
-          if (length(hit) > 5L) ", ..." else "",
-          "), and only ", sprintf("%.0f%%", 100 * cc),
-          " of rows are complete -- the rest cannot be placed and will be ",
-          "dropped. ilm_impute() keeps them",
-          if (max(gain) > 0.01)
-            paste0("; dropping '", best, "' alone would take the complete rows to ",
-                   sprintf("%.0f%%", 100 * (cc + max(gain)))) else "",
-          ". ilm_describe_na_all() shows the whole picture.")
-  invisible(NULL)
-}
-
 ilm_cluster <- function(x, k = NULL, k_max = 10, method = c("kmeans", "hclust"),
                         dist_method = "euclidean", hclust_method = "ward.D2",
                         nstart = 25, B = 100, gap_method = "firstSEmax",

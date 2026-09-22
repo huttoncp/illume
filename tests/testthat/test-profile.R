@@ -93,7 +93,12 @@ test_that("well-separated clusters come back stable, and k is found", {
 test_that("clustering refuses bad input and handles k = 1", {
   skip_profile()
   expect_error(ilm_cluster("nope"), "must be an ilm_reduce")
-  expect_error(ilm_cluster(data.frame(a = letters[1:5])), "must be numeric")
+  ## A categorical column no longer refuses: it is reduced to coordinates on
+  ## the way through, because arriving with raw mixed data is the ordinary way
+  ## to reach this function rather than a mistake. A MATRIX still refuses --
+  ## a matrix has one type, so there is nothing to reduce.
+  expect_message(ilm_cluster(data.frame(a = letters[1:5])), "reduced to")
+  expect_error(ilm_cluster(matrix(letters[1:10], 5, 2)), "must be numeric")
   ## the silhouette is undefined for a single cluster and is not invented
   one <- ilm_cluster(ilm_reduce(mtcars), k = 1, B = 5, seed = 1)
   expect_equal(one$k, 1)

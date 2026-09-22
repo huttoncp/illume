@@ -7,8 +7,10 @@
 ilm_anomaly(
   data,
   cols = NULL,
+  method = c("reconstruction", "iforest"),
   rank = NULL,
   trim = 0.25,
+  ntrees = 500L,
   B = 39L,
   alpha = 0.05,
   seed = 1L,
@@ -18,15 +20,31 @@ ilm_anomaly(
 \arguments{
 \item{data}{A data frame or matrix.}
 
-\item{cols}{Columns to use; see \link{ilm_selection}. Numeric columns only --
-the reconstruction is a projection, and a category has no residual along a
-direction. Anything else is dropped with a note.}
+\item{cols}{Columns to use; see \link{ilm_selection}. Under the default method,
+numeric columns only -- the reconstruction is a projection, and a category
+has no residual along a direction. Anything else is dropped with a note.
+\code{method = "iforest"} uses every column.}
+
+\item{method}{\code{"reconstruction"} (the default) or \code{"iforest"}. The
+reconstruction is unbeaten at what it is for -- against planted anomalies
+it scores 1.000 for an extreme value and 0.999 for a jointly-implausible
+numeric combination -- and it is the only one here with a calibrated null,
+so it reports FDR-adjusted p-values. It is also blind to the categories:
+0.771 when a category contradicts the numbers, and 0.505, a coin toss, for
+a category pairing that never otherwise occurs. An isolation forest splits
+on factors directly and reaches 0.964 and 0.886 on those two, giving up
+little elsewhere (0.975, 0.950) -- but it returns a score with no null
+behind it, so \code{p} and \code{p_adj} are \code{NA} and \code{alpha} becomes the share of
+rows you are calling anomalous rather than an error rate being controlled.
+Needs the isotree package.}
 
 \item{rank}{Number of directions; \code{NULL} uses parallel analysis.}
 
 \item{trim}{Share of the worst-fitting rows held out of the fit. \code{0} fits
 every row, which lets the anomalies define the structure they are scored
 against.}
+
+\item{ntrees}{Trees in the isolation forest. Ignored by the default method.}
 
 \item{B}{Simulated null datasets for the reference. A Benjamini-Hochberg
 adjusted p-value cannot fall much below \code{1 / B}, so a single anomaly among

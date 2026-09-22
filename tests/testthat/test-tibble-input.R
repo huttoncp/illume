@@ -69,19 +69,19 @@ test_that("an integer column counts as numeric, not as a category", {
   expect_identical(r$method, "pca")
 })
 
-test_that("ilm_cluster() names the remedy when handed mixed columns", {
-  ## it clusters COORDINATES -- a centroid is not defined on a factor -- so
-  ## the refusal is right, but a bare "must be numeric" leaves the caller to
-  ## find ilm_reduce() themselves, which is not how anything else here behaves
-  tb <- mixed_tbl()
-  expect_error(ilm_cluster(tb), "must be numeric")
-  expect_error(ilm_cluster(tb), "fac1, fac2")        # says WHICH columns
-  expect_error(ilm_cluster(tb), "ilm_reduce")        # and names the remedy
-  ## and the route it names actually works, from a tibble
+test_that("ilm_cluster() reduces a mixed tibble rather than refusing it", {
+  ## It clusters COORDINATES -- a centroid is not defined on a factor -- but
+  ## arriving with raw mixed data is the ordinary way to reach this function,
+  ## so it goes through ilm_reduce() and says so instead of stopping.
   skip_if_not_installed("PCAmixdata")
-  cl <- ilm_cluster(ilm_reduce(tb), k_max = 3L, B = 10L, seed = 1)
+  tb <- mixed_tbl()
+  expect_message(cl <- ilm_cluster(tb, k = 2L, seed = 1), "reduced to")
   expect_s3_class(cl, "ilm_cluster")
-  expect_gte(cl$k, 1L)
+  ## and it is the same answer as doing the two steps by hand from a tibble,
+  ## which is what the routing replaces
+  by_hand <- ilm_cluster(ilm_reduce(tb), k = 2L, seed = 1)
+  expect_identical(as.integer(cl$ind_cluster$cluster),
+                   as.integer(by_hand$ind_cluster$cluster))
 })
 
 test_that("an all-numeric tibble still clusters directly", {

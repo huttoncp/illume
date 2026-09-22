@@ -79,7 +79,9 @@ Suggests:
     survey,
     ordinal,
     afex,
-    lmerTest
+    lmerTest,
+    isotree,
+    tibble
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/huttoncp/illume

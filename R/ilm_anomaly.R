@@ -96,6 +96,78 @@ ilm_anom_score <- function(Z, k, trim = 0.25, iter = 3L) {
   list(score = sc, residual = R, V = V)
 }
 
+## Isolation forest: the route for anomalies that live in the CATEGORIES.
+##
+## WHY IT EXISTS: the reconstruction is a projection, so a category has no
+## residual along a direction and the columns are dropped. Against planted
+## anomalies that costs nothing on the cases it is built for (AUC 1.000 for an
+## extreme value, 0.999 for a jointly-implausible numeric combination) and
+## everything on the cases it is not: 0.769 when a category contradicts the
+## numbers, 0.505 -- a coin toss -- for a category pairing that never
+## otherwise occurs. An isolation forest splits on factors directly, needs no
+## embedding and no distance matrix, and scored 0.964 and 0.886 on those two
+## while giving up little elsewhere (0.975, 0.950).
+##
+## `ndim = 1` deliberately. The extended form with oblique splits is better on
+## numeric combinations (0.965 against 0.950) and WORSE on rare category
+## pairings (0.796 against 0.886) -- and the categories are the reason this is
+## here at all.
+##
+## What it cannot do is the calibrated null. The reconstruction simulates its
+## own reference and reports FDR-adjusted p-values; a forest returns a score
+## with no null attached, so `p` is NA here and `flag` comes from the
+## contamination rate the user is prepared to assume. That is a real
+## difference in kind, not a detail, and the print method says so.
+#' @keywords internal
+#' @noRd
+ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
+  if (!requireNamespace("isotree", quietly = TRUE))
+    stop("method = \"iforest\" needs the isotree package. Install it with ",
+         'install.packages("isotree"), or use the default ',
+         'method = "reconstruction", which needs nothing beyond illume but ',
+         "uses the numeric columns only.", call. = FALSE)
+  d <- data[sel]
+  if (ncol(d) < 2L)
+    stop("at least 2 columns are needed to isolate a row against.", call. = FALSE)
+  keep <- rep(TRUE, nrow(d))                  # a forest tolerates gaps natively
+  fit <- isotree::isolation.forest(d, ntrees = as.integer(ntrees), ndim = 1L,
+                                   seed = seed, nthreads = 1L)
+  score <- as.numeric(stats::predict(fit, d))
+
+  ## WHICH column made the row odd. Replace one column at a time with its
+  ## median (or commonest level) and see how far the score falls; the column
+  ## whose replacement costs the most is the driver. Against planted anomalies
+  ## this recovered the true driver 100% of the time for an extreme value and
+  ## 94% for a category contradicting the numbers. It costs one extra
+  ## prediction per column, which is cheap because prediction is.
+  typ <- lapply(d, function(v) if (is.numeric(v))
+    stats::median(v, na.rm = TRUE) else
+      factor(names(sort(table(v), decreasing = TRUE))[1], levels = levels(factor(v))))
+  drop_mat <- vapply(names(d), function(v) {
+    dd <- d; dd[[v]] <- typ[[v]]
+    score - as.numeric(stats::predict(fit, dd))
+  }, numeric(nrow(d)))
+  if (nrow(d) == 1L) drop_mat <- matrix(drop_mat, 1L)
+  colnames(drop_mat) <- names(d)
+  drv <- colnames(drop_mat)[max.col(drop_mat, ties.method = "first")]
+
+  ## No null, so no p-value. `alpha` is read as the share of rows the user is
+  ## willing to call anomalous, which is what a forest's score can support.
+  cut <- stats::quantile(score, 1 - alpha, na.rm = TRUE)
+  out <- data.frame(row = which(keep), score = score, p = NA_real_,
+                    p_adj = NA_real_, flag = score > cut, driver = drv,
+                    stringsAsFactors = FALSE, row.names = NULL)
+  ## most anomalous first, as the reconstruction returns them -- the print
+  ## method shows the head, so an unsorted result would show whichever rows
+  ## happened to come first and none of the ones that matter
+  out <- out[order(-out$score), , drop = FALSE]
+  row.names(out) <- NULL
+  structure(out, class = c("ilm_anomaly", "data.frame"), method = "iforest",
+            ntrees = as.integer(ntrees), alpha = alpha, columns = sel,
+            rank = NA_integer_, trim = NA_real_, n_null = 0L,
+            dropped = character(0), calibrated = FALSE)
+}
+
 #' Rows that do not fit the pattern the other rows make
 #'
 #' Finds observations that are implausible as a **combination** of values, even
@@ -171,9 +243,23 @@ ilm_anom_score <- function(Z, k, trim = 0.25, iter = 3L) {
 #' them -- so read it as a ranking rather than as a test.
 #'
 #' @param data A data frame or matrix.
-#' @param cols Columns to use; see [ilm_selection]. Numeric columns only --
-#'   the reconstruction is a projection, and a category has no residual along a
-#'   direction. Anything else is dropped with a note.
+#' @param cols Columns to use; see [ilm_selection]. Under the default method,
+#'   numeric columns only -- the reconstruction is a projection, and a category
+#'   has no residual along a direction. Anything else is dropped with a note.
+#'   `method = "iforest"` uses every column.
+#' @param method `"reconstruction"` (the default) or `"iforest"`. The
+#'   reconstruction is unbeaten at what it is for -- against planted anomalies
+#'   it scores 1.000 for an extreme value and 0.999 for a jointly-implausible
+#'   numeric combination -- and it is the only one here with a calibrated null,
+#'   so it reports FDR-adjusted p-values. It is also blind to the categories:
+#'   0.771 when a category contradicts the numbers, and 0.505, a coin toss, for
+#'   a category pairing that never otherwise occurs. An isolation forest splits
+#'   on factors directly and reaches 0.964 and 0.886 on those two, giving up
+#'   little elsewhere (0.975, 0.950) -- but it returns a score with no null
+#'   behind it, so `p` and `p_adj` are `NA` and `alpha` becomes the share of
+#'   rows you are calling anomalous rather than an error rate being controlled.
+#'   Needs the isotree package.
+#' @param ntrees Trees in the isolation forest. Ignored by the default method.
 #' @param rank Number of directions; `NULL` uses parallel analysis.
 #' @param trim Share of the worst-fitting rows held out of the fit. `0` fits
 #'   every row, which lets the anomalies define the structure they are scored
@@ -208,78 +294,6 @@ ilm_anom_score <- function(Z, k, trim = 0.25, iter = 3L) {
 #' d[1, ] <- c(1.2, -2.4, 1.2)
 #' head(ilm_anomaly(d), 3)
 #' @export
-## Isolation forest: the route for anomalies that live in the CATEGORIES.
-##
-## WHY IT EXISTS: the reconstruction is a projection, so a category has no
-## residual along a direction and the columns are dropped. Against planted
-## anomalies that costs nothing on the cases it is built for (AUC 1.000 for an
-## extreme value, 0.999 for a jointly-implausible numeric combination) and
-## everything on the cases it is not: 0.769 when a category contradicts the
-## numbers, 0.505 -- a coin toss -- for a category pairing that never
-## otherwise occurs. An isolation forest splits on factors directly, needs no
-## embedding and no distance matrix, and scored 0.964 and 0.886 on those two
-## while giving up little elsewhere (0.975, 0.950).
-##
-## `ndim = 1` deliberately. The extended form with oblique splits is better on
-## numeric combinations (0.965 against 0.950) and WORSE on rare category
-## pairings (0.796 against 0.886) -- and the categories are the reason this is
-## here at all.
-##
-## What it cannot do is the calibrated null. The reconstruction simulates its
-## own reference and reports FDR-adjusted p-values; a forest returns a score
-## with no null attached, so `p` is NA here and `flag` comes from the
-## contamination rate the user is prepared to assume. That is a real
-## difference in kind, not a detail, and the print method says so.
-#' @keywords internal
-#' @noRd
-ilm_anomaly_iforest <- function(data, sel, ntrees, alpha, seed) {
-  if (!requireNamespace("isotree", quietly = TRUE))
-    stop("method = \"iforest\" needs the isotree package. Install it with ",
-         'install.packages("isotree"), or use the default ',
-         'method = "reconstruction", which needs nothing beyond illume but ',
-         "uses the numeric columns only.", call. = FALSE)
-  d <- data[sel]
-  if (ncol(d) < 2L)
-    stop("at least 2 columns are needed to isolate a row against.", call. = FALSE)
-  keep <- rep(TRUE, nrow(d))                  # a forest tolerates gaps natively
-  fit <- isotree::isolation.forest(d, ntrees = as.integer(ntrees), ndim = 1L,
-                                   seed = seed, nthreads = 1L)
-  score <- as.numeric(stats::predict(fit, d))
-
-  ## WHICH column made the row odd. Replace one column at a time with its
-  ## median (or commonest level) and see how far the score falls; the column
-  ## whose replacement costs the most is the driver. Against planted anomalies
-  ## this recovered the true driver 100% of the time for an extreme value and
-  ## 94% for a category contradicting the numbers. It costs one extra
-  ## prediction per column, which is cheap because prediction is.
-  typ <- lapply(d, function(v) if (is.numeric(v))
-    stats::median(v, na.rm = TRUE) else
-      factor(names(sort(table(v), decreasing = TRUE))[1], levels = levels(factor(v))))
-  drop_mat <- vapply(names(d), function(v) {
-    dd <- d; dd[[v]] <- typ[[v]]
-    score - as.numeric(stats::predict(fit, dd))
-  }, numeric(nrow(d)))
-  if (nrow(d) == 1L) drop_mat <- matrix(drop_mat, 1L)
-  colnames(drop_mat) <- names(d)
-  drv <- colnames(drop_mat)[max.col(drop_mat, ties.method = "first")]
-
-  ## No null, so no p-value. `alpha` is read as the share of rows the user is
-  ## willing to call anomalous, which is what a forest's score can support.
-  cut <- stats::quantile(score, 1 - alpha, na.rm = TRUE)
-  out <- data.frame(row = which(keep), score = score, p = NA_real_,
-                    p_adj = NA_real_, flag = score > cut, driver = drv,
-                    stringsAsFactors = FALSE, row.names = NULL)
-  ## most anomalous first, as the reconstruction returns them -- the print
-  ## method shows the head, so an unsorted result would show whichever rows
-  ## happened to come first and none of the ones that matter
-  out <- out[order(-out$score), , drop = FALSE]
-  row.names(out) <- NULL
-  structure(out, class = c("ilm_anomaly", "data.frame"), method = "iforest",
-            ntrees = as.integer(ntrees), alpha = alpha, columns = sel,
-            rank = NA_integer_, trim = NA_real_, n_null = 0L,
-            dropped = character(0), calibrated = FALSE)
-}
-
 ilm_anomaly <- function(data, cols = NULL, method = c("reconstruction", "iforest"),
                         rank = NULL, trim = 0.25, ntrees = 500L,
                         B = 39L, alpha = 0.05, seed = 1L, progress = NULL) {

@@ -146,16 +146,17 @@ reference:
   - ilm_anomaly
   - ilm_outliers
   - ilm_outliers_all
-- title: "Structure: reduce, cluster, profile"
+- title: "Structure: profile, cluster, reduce"
   desc: >
-    The few directions a set of correlated columns shares, the groups in that space, and what distinguishes them.
+    ilm_profile() is the front door: it reduces, clusters and describes the groups in one call, and handles mixed columns. The other two are the same pipeline taken a step at a time, for when you want the coordinates or the partition on their own.
   contents:
-  - ilm_cluster
-  - ilm_cluster_na
-  - ilm_glrm
   - ilm_profile
-  - ilm_profile_na
+  - ilm_var_contrib
+  - ilm_cluster
   - ilm_reduce
+  - ilm_glrm
+  - ilm_profile_na
+  - ilm_cluster_na
   - ilm_reduce_na
 - title: "Missing data"
   desc: >
