@@ -25,6 +25,36 @@ ilm_msqrt <- function(S) {
   e$vectors %*% diag(sqrt(v), nrow(S)) %*% t(e$vectors)
 }
 
+## One draw of the latent AR(1) or CAR(1) process, at the observed rows.
+##
+## Simulating must walk the same chain the likelihood scores, or every
+## envelope built on top of it is calibrated against the wrong process. Shared
+## by ilm_simulate(), which walks the fitted rows, and ilm_power(), which walks
+## a simulated study's -- so the two cannot drift apart.
+#' @keywords internal
+#' @noRd
+ilm_ar_draw <- function(ar, rho, Sar, C) {
+  La <- ilm_msqrt(Sar)
+  Ba <- matrix(0, ar$n_cell, C)
+  if (identical(ar$type, "car1")) {
+    Ba[ar$first, ] <- matrix(rnorm(length(ar$first) * C), ncol = C) %*% La
+    phi <- rho ^ ar$gap
+    ## transitions are in cell order, so the predecessor is always already
+    ## filled by the time its successor is reached
+    for (k in seq_along(ar$rest))
+      Ba[ar$rest[k], ] <- phi[k] * Ba[ar$prev[k], ] +
+        sqrt(1 - phi[k]^2) * (rnorm(C) %*% La)
+  } else {
+    for (g in seq_len(ar$n_group)) {
+      r0 <- (g - 1L) * ar$Tt
+      Ba[r0 + 1L, ] <- rnorm(C) %*% La
+      for (tt in 2:ar$Tt)
+        Ba[r0 + tt, ] <- rho * Ba[r0 + tt - 1L, ] + sqrt(1 - rho^2) * (rnorm(C) %*% La)
+    }
+  }
+  Ba[ar$idx, , drop = FALSE]
+}
+
 #' Rebuild the random-effects specification from a fitted model
 #' @param fit A fitted `"ilm_model"` object.
 #' @return A list suitable for passing back to [ilm_fit()].
@@ -102,27 +132,7 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
       }
     }
     if (!is.null(fit$ar)) {
-      ar <- fit$ar; La <- ilm_msqrt(fit$Sigma[["ar"]]); rho <- fit$rho
-      ## Simulating must walk the same chain the likelihood scores, or every
-      ## envelope built on top of it is calibrated against the wrong process.
-      Ba <- matrix(0, ar$n_cell, C)
-      if (identical(ar$type, "car1")) {
-        Ba[ar$first, ] <- matrix(rnorm(length(ar$first) * C), ncol = C) %*% La
-        phi <- rho ^ ar$gap
-        ## transitions are in cell order, so the predecessor is always already
-        ## filled by the time its successor is reached
-        for (k in seq_along(ar$rest))
-          Ba[ar$rest[k], ] <- phi[k] * Ba[ar$prev[k], ] +
-            sqrt(1 - phi[k]^2) * (rnorm(C) %*% La)
-      } else {
-        for (g in seq_len(ar$n_group)) {
-          r0 <- (g - 1L) * ar$Tt
-          Ba[r0 + 1L, ] <- rnorm(C) %*% La
-          for (tt in 2:ar$Tt)
-            Ba[r0 + tt, ] <- rho * Ba[r0 + tt - 1L, ] + sqrt(1 - rho^2) * (rnorm(C) %*% La)
-        }
-      }
-      eta <- eta + Ba[ar$idx, , drop = FALSE]
+      eta <- eta + ilm_ar_draw(fit$ar, fit$rho, fit$Sigma[["ar"]], C)
     }
     lsig_sim <- if (!is.null(fit$Zd) || isTRUE(fit$disp_mu))
       log(ilm_disp_vec(fit)) else NULL

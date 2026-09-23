@@ -156,3 +156,164 @@ test_that("it refuses what it cannot simulate", {
   fi <- ilm_model(y ~ 1, data = d, family = "gaussian", verbose = FALSE)
   expect_error(ilm_power(fi, sims = 5L), "intercept only")
 })
+
+test_that("the test counted is the one the analysis reports", {
+  skip_on_cran()
+  ## a gaussian fit with nothing integrated out reports t, not z; at 20 rows
+  ## the difference is the difference between 0.395 and 0.43
+  set.seed(21); d <- data.frame(g = factor(rep(c("a", "b"), 10)))
+  d$y <- 0.8 * (d$g == "b") + rnorm(20)
+  f <- ilm_model(y ~ g, data = d, family = "gaussian", verbose = FALSE)
+  p <- ilm_power(f, n = 20L, effect = 0.8, sims = 20L, progress = FALSE)
+  expect_identical(attr(p, "test"), "t")
+  expect_output(print(p), "counting the t test")
+  fb <- ilm_model(yb ~ x, family = "binomial", verbose = FALSE,
+                  data = transform(data.frame(x = rnorm(200)),
+                                   yb = rbinom(200, 1, 0.5)))
+  expect_identical(attr(ilm_power(fb, n = 100L, sims = 5L, progress = FALSE),
+                        "test"), "Wald z")
+})
+
+test_that("a term with several coefficients is tested jointly", {
+  skip_on_cran()
+  set.seed(22); d <- data.frame(g = factor(rep(c("a", "b", "c"), 40)))
+  d$y <- c(0, 0.4, 0.8)[as.integer(d$g)] + rnorm(120)
+  f <- ilm_model(y ~ g, data = d, family = "gaussian", verbose = FALSE)
+  p <- ilm_power(f, n = c(60L, 120L), term = "g", sims = 40L,
+                 progress = FALSE)
+  expect_identical(attr(p, "test"), "F")
+  expect_identical(attr(p, "coefs"), c("gb", "gc"))
+  expect_identical(attr(p, "effect_scale"), "multiple")
+  expect_equal(p$effect, c(1, 1))
+  expect_output(print(p), "MULTIPLE of the assumed")
+  ## one of its coefficients can still be followed on its own
+  p1 <- ilm_power(f, n = 60L, term = "gc", sims = 10L, progress = FALSE)
+  expect_identical(attr(p1, "coefs"), "gc")
+  expect_identical(attr(p1, "effect_scale"), "link")
+})
+
+test_that("contrasts survive the refit", {
+  skip_on_cran()
+  ## sum-to-zero coding names the coefficient g1, and a refit that dropped the
+  ## contrasts came back with gb instead: every replicate failed and the
+  ## power was exactly zero
+  set.seed(23); d <- data.frame(g = factor(rep(c("a", "b"), 50)))
+  d$y <- 0.5 * (d$g == "b") + rnorm(100)
+  f1 <- ilm_model(y ~ g, data = d, family = "gaussian", verbose = FALSE)
+  f2 <- ilm_model(y ~ g, data = d, family = "gaussian", verbose = FALSE,
+                  contrasts = list(g = "contr.sum"))
+  p1 <- ilm_power(f1, n = c(50L, 100L), sims = 60L, seed = 4L,
+                  progress = FALSE)
+  p2 <- ilm_power(f2, n = c(50L, 100L), sims = 60L, seed = 4L,
+                  progress = FALSE)
+  expect_true(all(p2$converged == 1))
+  ## the same study under either coding
+  expect_equal(p2$power, p1$power)
+})
+
+test_that("a transformed response or predictor is simulated on the model's scale", {
+  skip_on_cran()
+  ## the model frame holds log(yp) and log(x), not yp and x; a refit through
+  ## the formula found neither and failed on every replicate
+  set.seed(24); d <- data.frame(x = stats::rexp(150) + 0.1)
+  d$yp <- exp(0.2 + 0.3 * log(d$x) + rnorm(150, 0, 0.5))
+  f <- ilm_model(log(yp) ~ log(x), data = d, family = "gaussian",
+                 verbose = FALSE)
+  p <- ilm_power(f, n = c(50L, 150L), sims = 40L, progress = FALSE)
+  expect_true(all(p$converged == 1))
+  expect_gt(p$power[2], p$power[1])
+})
+
+test_that("a multinomial model is tested across its categories", {
+  skip_on_cran()
+  set.seed(25); n <- 300
+  d <- data.frame(x = rnorm(n))
+  eta <- cbind(0, 0.2 + 0.6 * d$x, -0.1 - 0.4 * d$x)
+  pr <- exp(eta) / rowSums(exp(eta))
+  d$y <- factor(apply(pr, 1, function(p) sample(c("a", "b", "c"), 1, prob = p)))
+  f <- ilm_model(y ~ x, data = d, family = "multinomial", verbose = FALSE)
+  ## by default the first TERM, across both of its categories -- the first
+  ## coefficient would have been a category's intercept
+  p <- ilm_power(f, n = c(60L, 150L), sims = 40L, progress = FALSE)
+  expect_identical(attr(p, "term"), "x")
+  expect_identical(attr(p, "coefs"), c("a:x", "b:x"))
+  expect_identical(attr(p, "test"), "Wald chi-square")
+  expect_true(all(p$converged > 0.9))
+  expect_gt(p$power[2], p$power[1])
+  ## and one category on its own
+  p1 <- ilm_power(f, n = 150L, term = "b:x", sims = 20L, progress = FALSE)
+  expect_identical(attr(p1, "test"), "Wald z")
+})
+
+test_that("frequency weights are drawn as the observations they stand for", {
+  skip_on_cran()
+  set.seed(26); d <- data.frame(x = rep(c(-1, 0, 1), each = 40))
+  d$y <- rpois(nrow(d), exp(0.5 + 0.25 * d$x))
+  agg <- stats::aggregate(list(w = rep(1, nrow(d))), by = list(x = d$x, y = d$y),
+                          FUN = sum)
+  fw <- ilm_model(y ~ x, data = agg, family = "poisson", weights = w,
+                  verbose = FALSE)
+  fe <- ilm_model(y ~ x, data = d, family = "poisson", verbose = FALSE)
+  pw <- ilm_power(fw, n = c(60L, 120L), effect = 0.25, sims = 300L,
+                  progress = FALSE)
+  pe <- ilm_power(fe, n = c(60L, 120L), effect = 0.25, sims = 300L,
+                  progress = FALSE)
+  ## one weighted row is several observations, and a study of 60 draws 60 of
+  ## them, not 60 rows of the aggregate
+  expect_lt(max(abs(pw$power - pe$power)), 0.1)
+})
+
+test_that("zero parts, censoring, serial correlation and survival come along", {
+  skip_on_cran()
+  set.seed(27); dz <- data.frame(x = rnorm(300))
+  dz$y <- ifelse(runif(300) < 0.25, 0, rpois(300, exp(0.6 + 0.3 * dz$x)))
+  fz <- ilm_model(y ~ x, data = dz, family = "poisson", ziformula = ~ 1,
+                  verbose = FALSE)
+  pz <- ilm_power(fz, n = 300L, sims = 20L, progress = FALSE)
+  expect_gt(pz$converged, 0.9)
+
+  dc <- data.frame(x = rnorm(300))
+  dc$y <- pmax(0.3 * dc$x + rnorm(300), -0.5)
+  fc <- ilm_model(y ~ x, data = dc, family = "gaussian", verbose = FALSE,
+                  censor = ilm_censor(dc$y, lower = -0.5))
+  pc <- ilm_power(fc, n = 300L, sims = 20L, progress = FALSE)
+  expect_gt(pc$converged, 0.9)
+
+  ## eight times per unit and a clear random intercept: with five times the
+  ## AR(1) absorbed the intercept, whose fitted SD went to 6e-5, and studies
+  ## drawn from a fit at that boundary fail as often as the analysis would --
+  ng <- 30L; nt <- 8L
+  da <- expand.grid(t = seq_len(nt), id = factor(seq_len(ng)))
+  da$x <- rep(rnorm(ng), each = nt)
+  ## and a residual of its own, which the model has alongside the AR(1): data
+  ## without one put the fitted residual SD at zero, where the likelihood is
+  ## flat and a sixth of the refits could not be inverted
+  da$y <- 0.3 * da$x + rep(rnorm(ng, 0, 0.8), each = nt) +
+    unlist(lapply(seq_len(ng), function(i) stats::arima.sim(list(ar = 0.6), nt))) +
+    rnorm(nrow(da), 0, 0.7)
+  fa <- ilm_model(y ~ x + (1 | id), data = da, family = "gaussian",
+                  ar = ilm_ar1(da$t, da$id, verbose = FALSE), verbose = FALSE)
+  pa <- ilm_power(fa, n = 240L, sims = 10L, progress = FALSE)
+  expect_gt(pa$converged, 0.8)
+  ## the replicate's AR(1) specification is rebuilt for the rows it drew
+  r <- ilm_power_rows(240L, ilm_ar_group(fa$ar), seq_len(nrow(da)))
+  a2 <- ilm_ar_rows(fa$ar, r$rows, r$copy)
+  expect_identical(a2$Tt, fa$ar$Tt)
+  expect_identical(a2$n_group, max(r$copy))
+
+  ds <- data.frame(x = rnorm(200))
+  tt <- stats::rweibull(200, 1.4, exp(1 - 0.4 * ds$x)); cs <- runif(200, 1, 6)
+  ds$time <- pmin(tt, cs); ds$event <- as.integer(tt <= cs)
+  fr <- ilm_model(time ~ x, data = ds, family = "rp", verbose = FALSE,
+                  censor = ilm_surv(ds$time, ds$event))
+  pr <- ilm_power(fr, n = 200L, sims = 10L, progress = FALSE)
+  expect_gt(pr$converged, 0.8)
+})
+
+test_that("a model fitted to a complex sample is refused, with the way round it", {
+  set.seed(28); d <- data.frame(x = rnorm(200), w = runif(200, 1, 3))
+  d$y <- 0.5 * d$x + rnorm(200)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE,
+                 design = ilm_design(d, weights = ~ w))
+  expect_error(ilm_power(f, sims = 5L), "design effect")
+})

@@ -263,6 +263,10 @@ ilm_sim_from_P <- function(P, B, seed = 1L) {
 #' The comparison band is simulated from the model itself rather than taken from
 #' a formula, so it reflects how much scatter is expected at this sample size.
 #'
+#' For a binomial, multinomial or ordinal fit -- every family whose prediction
+#' is a probability for each category. An ordinal fit is checked category by
+#' category, from the probabilities its thresholds imply.
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param nbins Integer. Number of bins of predicted probability.
 #' @param B Integer. Simulated datasets for the band.
@@ -276,13 +280,21 @@ ilm_calibration <- function(object, nbins = 10L, B = 200L, seed = 1L) {
   ## so it needs a model that predicts a probability. For gaussian, Poisson and
   ## negative binomial the honest analogue is not a calibration curve but the
   ## randomised quantile residuals, which ilm_rqr() already provides.
-  if (!fam %in% c("multinomial", "binomial"))
-    stop("ilm_calibration() applies to the binomial and multinomial families, ",
-         "which predict probabilities. For ", fam,
+  ord <- isTRUE(object$ordinal)
+  if (!(fam %in% c("multinomial", "binomial") || ord))
+    stop("ilm_calibration() applies to the binomial, multinomial and ordinal ",
+         "families, which predict probabilities. For ", fam,
          " use ilm_rqr() or the residual panels in ilm_appraise().",
          call. = FALSE)
 
-  P <- ilm_fitted(object, TRUE)
+  ## an ordinal fit's fitted values are its latent predictor; the category
+  ## probabilities are where the thresholds cut it
+  P <- if (ord) {
+    Pm <- ilm_ord_probs(ilm_eta_hat(object, TRUE)[, 1L], object$zeta,
+                        object$family$pfun)
+    colnames(Pm) <- object$ylevels
+    Pm
+  } else ilm_fitted(object, TRUE)
   ## A binomial fit predicts one probability, of the modelled outcome. Putting
   ## it in the two-column form the multinomial path already uses lets one
   ## implementation serve both, with the second column the complement.
@@ -428,7 +440,8 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
     if (length(have)) try(parallel::clusterExport(cl, have, envir = src), silent = TRUE)
   }
   one <- function(b) {
-    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = 1L), silent = TRUE)
+    f <- try(suppressWarnings(ilm_refit_like(stub, y = ys[, b], restarts = 1L)),
+             silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
     f$assign <- asg; f$term_labels <- tl
     stat(ilm_rqr(f, TRUE, seed = seed + 1000L + b))

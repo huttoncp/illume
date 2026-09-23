@@ -70,13 +70,40 @@ but it is not an adjusted comparison.
 \section{An ordered response}{
 
 
-For an ordinal fit these are marginal means of the \strong{latent scale} -- the
-linear predictor the thresholds cut up -- and not of the categories, which
-have no mean to take. A contrast between two of them is a difference in log
-odds of being in a higher category, constant across cuts by the same
-assumption \code{\link[=ilm_check_proportional]{ilm_check_proportional()}} tests. \code{type = "response"} is not
-available, because the inverse link of a marginal mean is not a category
-probability; use \code{\link[=predict]{predict()}} for those.
+For an ordinal fit the link-scale values are marginal means of the \strong{latent
+scale} -- the linear predictor the thresholds cut up -- and not of the
+categories, which have no mean to take. A contrast between two of them is a
+difference in log odds of being in a higher category, constant across cuts
+by the same assumption \code{\link[=ilm_check_proportional]{ilm_check_proportional()}} tests.
+
+\code{type = "response"} gives each category's PROBABILITY instead, computed in
+every cell of the grid and averaged over the cells, with a delta-method
+standard error that carries the thresholds' uncertainty as well as the
+slopes'. \code{\link[=ilm_contrast]{ilm_contrast()}} then compares groups within each category as
+differences in probability. This agrees with \code{emmeans} on a \code{MASS::polr()}
+fit with \code{mode = "prob"}.
+}
+
+\section{A multinomial response}{
+
+
+Every category gets its own row for every level of \code{specs}.
+
+On the \strong{link} scale the value is the category's centred log-odds: its
+log-probability less the average log-probability over all the categories,
+which is what the sum-to-zero coefficients describe. These are exact linear
+combinations, as for any other family, and a contrast between two groups
+within a category is a difference of log-odds against the same average.
+
+On the \strong{response} scale the value is the category's PROBABILITY, computed
+in every cell of the grid and then averaged over the cells with the chosen
+weights -- the probabilities of each group sum to 1 -- with a delta-method
+standard error and an interval formed on the logit scale, so it stays
+inside 0 and 1. \code{\link[=ilm_contrast]{ilm_contrast()}} then compares groups within each category
+as differences in probability. This is what \code{emmeans} computes for an
+\code{nnet::multinom()} fit with \code{mode = "prob"}, and the two agree; the
+coefficients differ between the packages, because \code{nnet} codes against a
+baseline category, but the probabilities do not.
 }
 
 \section{Which scale}{

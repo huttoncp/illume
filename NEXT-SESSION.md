@@ -1,8 +1,9 @@
 # Handoff — illume 0.0.7.9000
 
-Written 2026-09-22, at the end of a session that ran out of headroom. Craig is
-relaunching on Opus 5.5. Everything below is uncommitted intent or in-flight
-work; committed work is in the log.
+First written 2026-09-22 at the end of a session that ran out of headroom;
+rewritten at the end of the Opus 5.5 session that followed, the same day.
+Items 1 and 2 of the original queue are done and committed (`8986280`); what
+that session added, and what it left open, is below.
 
 Delete this file once the queue is empty.
 
@@ -60,115 +61,99 @@ Two traps that bit repeatedly this session, both now in memory:
 
 ## Queue, in Craig's stated order
 
-### 1. Messy-data study and benchmarking vignette  -- DONE
+### 1. Messy-data study and benchmarking vignette -- DONE (`a7f5cdb`, `8986280`)
 
-The run completed (400 reps x 6 regimes). `studies/findings/messy.md` is
-written, `vignettes/benchmarking.Rmd` is complete and renders at 35 KB, and
-NEWS has the summary note. Nothing left here except the two cross-references
-below, which were not done:
+Including the three leftovers (the significance paraphrase in the
+regression-models vignette, README/intro cross-references to the benchmarking
+vignette, a `summarise_run.R` branch for the study).
 
-- **The significance paraphrase still needs adding to the regression-models
-  vignette** (not README), with a link to the benchmarking vignette. Craig
-  approved the draft paraphrase in an earlier session.
-- **README and the intro vignette do not yet reference the benchmarking
-  vignette.** Check also that `benchmarking.Rmd` appears wherever the vignette
-  index or pkgdown config lists them.
-- `scripts/summarise_run.R` has no branch for this study, so `messy.md` was
-  written from the csv by hand -- the file says so. Adding a branch would keep
-  it consistent with the other findings files.
+**The headline is not a clean win and the vignette says so.** Do not let a
+later edit turn it into one. The boundary work below changed how many fits in
+the `flat_re` regime are *usable* (63.3% -> 97.5%), but the study's own tables
+still report what was measured at the time; the next run of
+`messy_compare.R` will count fits the new way.
 
-**The headline is not a clean win and the vignette says so.** illume covers
-better in all six regimes (0.931 vs 0.853 with a sparse category; 0.945 vs
-0.894 combined) and is 6-13x faster. But it *inflates* coefficients when a
-category is sparse (attenuation 1.46, and mean absolute bias 0.394 against
-mclogit's 0.271), it converged on only **63.3%** of replications when the true
-random-effect sd was 0.05 against mclogit's 100%, and mclogit's RMSE is lower
-in four of six regimes. Do not let a later edit quietly turn this into a
-clean win.
+### 2. `ilm_plot_anomaly()` -- DONE (`8986280`)
 
-A **brms agreement arm** against the messy regimes was never run. It would
-need to be small -- 20-30 reps, one chain per worker, ~45s a fit. The existing
-`studies/findings/brms.md` covers only the tidy case.
-
-### 2. `ilm_plot_anomaly()` — approved, not started
-
-Craig approved all four types this session ("yes, those all sound good to
-me"). Design agreed: **one exported function**, `ilm_plot_anomaly(x, type =
-c("scores", "drivers", "map", "row"), ...)`, default `"scores"`.
-
-- **`"scores"`** — sorted score against rank, with the null envelope drawn as
-  a ribbon and a vertical line at the number flagged. This is the point of the
-  whole function: it is the only thing that distinguishes "five genuine
-  outliers" from "the top 5% of a smooth continuum". When the curve is smooth,
-  the remedy to name is: say plainly you are taking a fixed share, or accept
-  the structure is not outlier structure and go to `ilm_profile()`.
-- **`"drivers"`** — bar chart of `driver` among flagged rows. Nearly free,
-  already computed. One column driving 90% of flags is a coding problem in
-  that column, not a multivariate anomaly.
-- **`"map"`** — first two `ilm_reduce()` dimensions, all rows grey, flagged
-  highlighted and sized by score. Needs `attr(x, "data")`.
-- **`"row"`** — for one flagged row, signed z-score *and* signed
-  reconstruction residual per column, side by side. Small |z| with large
-  |residual| means odd only in combination, which is the reconstruction
-  method's actual selling point and is currently invisible.
-
-**Groundwork is already committed.** `ilm_anomaly()` now stores `null_curve`,
-an n × 3 matrix (`lo`, `mid`, `hi` = 2.5/50/97.5 percentiles of the per-rank
-null score distribution across the B simulated datasets). Read it with
-`attr(x, "null_curve")`.
-
-**The honest constraint:** `method = "iforest"` sets `calibrated = FALSE` and
-`p = NA`; it has no null, and its `alpha` is an assumed contamination rate.
-`null_curve` is absent there. Do not draw the same reference band for both —
-under iforest, label the line as a quantile rather than a test, and for
-`type = "row"` say the combination view needs the reconstruction method.
-
-Conventions to match (see `R/ilm_plot_profile.R`): tinyplot; validate the
-class with an error naming the actual class; return `invisible(NULL)`; pass
-`legend = list(title = ...)` **explicitly** — tinyplot deparses arguments for
-legend titles and `do.call` has broken this twice. Use `ilm_pch()` for point
-symbols. Test with realistic factor labels (`"north"/"central"/"south"`), not
-`"a"/"b"/"c"` — the deparse bug hides behind short labels.
-
-### 3. Missingness comparison study
+### 3. Missingness comparison study -- NOT STARTED
 
 Separate run, results into the **missing-data vignette**. Craig explicitly
 wanted this kept apart from the messy-data study.
 
-### 4. Final pass
+### 4. brms vs illume on the messy suite -- REQUESTED, DESIGN NOT AGREED
 
-- Documentation and `NEWS.md` current.
-- `devtools::check()` (CRAN check).
-- Reinstall on this machine.
+Craig asked for it after the backtick/review/iml work, with a plan from Gemini
+and "we can discuss if you have other ideas or reason to believe gemini is
+wrong". Points to settle with him before building it:
 
-### 5. Open, not scheduled
+- **"0 warmup" is not workable.** HMC adapts its step size and metric during
+  warmup; without it the sampler is not calibrated and the comparison would be
+  of a mistuned sampler, not of brms. Compiling once and reusing with
+  `update(newdata = )` is right.
+- **Flat priors on the variance components** are improper and are what makes
+  brms struggle near a boundary -- which is exactly the regime of interest.
+  Better: brms defaults (half-t on the SDs), stated as a difference between
+  the methods, not hidden.
+- **Parameterisation:** brms codes against a baseline category, illume sum to
+  zero. Compare predicted probabilities, or transform coefficients with the
+  contrast matrix -- never raw coefficients.
+- **TOST** needs an equivalence margin agreed *before* the run.
+- **Cost:** about 45 s a fit, so 20-30 replications per regime, one chain per
+  worker. `studies/findings/brms.md` covers only the tidy case.
 
-- macOS CI: `___kmpc_for_static_fini` is an LLVM/Intel OpenMP symbol;
-  flat-namespace linking expects libomp pre-loaded. A macOS-only source-install
-  step for TMB/RTMB was added to `.github/workflows/R-CMD-check.yaml`; unverified.
-- Craig asked for "a succinct technical explanation plus accessible
-  non-technical language of how the multinomial mixed effects model fitting
-  works in illume". **This was only partially answered before an
-  interruption and was never completed.** Worth finishing.
+### 5. Plain-language explanation of multinomial mixed fitting -- OPEN
+
+Asked for long ago ("a succinct technical explanation plus accessible
+non-technical language"), partially answered, never finished.
+
+### 6. Open, not scheduled
+
+- macOS CI: `___kmpc_for_static_fini` (LLVM/Intel OpenMP). A macOS-only
+  source-install step for TMB/RTMB is in `.github/workflows/R-CMD-check.yaml`;
+  unverified.
+- **Version bump** -- 0.0.7.9000 has grown a lot; Craig's call whether this is
+  0.0.8.
+- Found this session, not done: `ilm_scenario()` refuses a multinomial fit
+  (it could report per-category probabilities); cluster-robust SEs are not
+  available for a multinomial fit.
+- **Recorded, worth a study:** with 60 clusters, the Wald test of a
+  between-cluster effect in a multinomial mixed model rejected a true null
+  5.8% (4 visits) and 7.8% (8 visits) of the time. The power functions count
+  that test, and `ilm_interpret()` names `ilm_pb_lrt()` for fewer than 100
+  groups. How size depends on the number of clusters is not yet measured.
 
 ---
 
-## State at handoff
+## What the 2026-09-22 (Opus 5.5) session did
 
-Working tree clean apart from `studies/runs/messy/` (gitignored `.rds`; the
-log and csv are not yet committed pending the run finishing).
+Committed in `8986280`: `ilm_plot_anomaly()`; column names needing backticks
+work everywhere (mgcv stand-ins); one refit list for every refit (the ZI LRT
+chi-square 68.8 vs 0.02 defect); boundary fits keep usable fixed effects
+(63.3% -> 97.5% in `flat_re`); per-category `ilm_ame()`/`ilm_interpret()`;
+`iml_*()` aliases (generated by `dev/make_iml_aliases.R`, enforced by a test);
+`family = "auto"`.
 
-Recent commits:
+After that commit (uncommitted until Craig says otherwise -- check `git
+status`):
 
-- `48c7725` Fix nested random effects, and let anomalies feed the explorers
-- `668e57a` Keep a null reference curve on an anomaly scan; draft benchmarking vignette
-
-Both features from Craig's lunch-break report are **done and tested**:
-
-- `(1 | higher/lower)` now fits. Validated against lme4 — coefficients agree
-  to 6.5e-07, RE sds to four decimals. `gapminder_unfiltered` fits 3,313 rows.
-  `tests/testthat/test-nested-re.R`, 18 assertions.
-- `ilm_anomaly()` keeps its data; `ilm_anomalous()` extracts the flagged rows;
-  `ilm_profile()`, `ilm_cluster()`, `ilm_reduce()`, `ilm_describe()` and
-  `ilm_describe_all()` all take the object directly.
-  `tests/testthat/test-anomalous.R`, 28 assertions.
+- **Power**: `ilm_power()` refits through the fit's own design (contrasts,
+  zero part, dispersion, censoring, AR, rp all kept); counts the test the
+  analysis reports (t/z, joint F/chi-square); multinomial and joint tests;
+  matrix-normal RE draws; frequency weights; pre-fit design failures reported
+  rather than counted. Scaffolds redraw the planned design per replicate,
+  balanced by CELL; multinomial and ordinal scaffolds; latent-scale ICC.
+  Validated: t-test power (0.387 vs 0.395 at n = 20), noncentral chi-square
+  for multinomial, Superpower/simr (see the effect-size vignette).
+- **rp refits** rebuilt the spline baseline from the new times (it kept the
+  observed times' columns in every bootstrap/envelope/consistency refit).
+- **Marginal means**: multinomial `ilm_emmeans()`/`ilm_contrast()` and
+  `ilm_trends()` (emmeans/nnet agreement 1e-6), ordinal response-scale
+  probabilities (emmeans/polr 1e-6).
+- Ordinal `ilm_scores()` (with RPS) and `ilm_calibration()`; `ilm_pb_lrt()`
+  verdict needs its Monte Carlo interval; clearer refusal messages;
+  `set_coef()` takes fixed effects alone; simulation refits quieter.
+- `ilm_interpret()`: inferred family, ordinal wording, BOUNDARY verdict,
+  few-groups caveat; new methods for `ilm_power()` and `ilm_contrast()`.
+- Docs: NEWS, README, regression-models (family auto; the stale "zero
+  inflation is out of scope" line), effect-size-and-power (re-measured),
+  package help title corrected to the standing title.

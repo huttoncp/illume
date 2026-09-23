@@ -229,15 +229,22 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' Accuracy is also returned, though it ignores how confident the predictions
 #' were and is the least informative of the three.
 #'
-#' Defined for a multinomial fit, and for a binomial one with a 0/1 response,
-#' whose single fitted probability is scored as the two categories it
-#' implies. Other families have no category probabilities to score; compare
+#' Defined for a multinomial fit, an ordinal one, and a binomial one with a 0/1
+#' response, whose single fitted probability is scored as the two categories
+#' it implies. Other families have no category probabilities to score; compare
 #' those fits with `AIC()` or [ilm_anova()], and check their predictions with
 #' [ilm_check_predictive()].
 #'
+#' An ordinal fit also gets the **ranked probability score**, which the other
+#' two do not provide: it compares the cumulative distributions, so a
+#' prediction that puts its weight one category away from the truth scores
+#' better than one that puts it three away. The log and Brier scores treat
+#' every miss alike, as they should for categories with no order.
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param conditional Logical, as in [ilm_fitted()].
-#' @return A named numeric vector: `log_score`, `brier`, `accuracy`.
+#' @return A named numeric vector: `log_score`, `brier`, `accuracy`, and for an
+#'   ordinal fit `rps`, on the 0 to 1 scale.
 #' @references
 #' Gneiting, T., & Raftery, A. E. (2007). Strictly proper scoring rules,
 #' prediction, and estimation. *Journal of the American Statistical
@@ -255,24 +262,43 @@ ilm_scores <- function(object, conditional = TRUE) {
   fam <- object$family$name
   y <- object$y
   bin <- identical(fam, "binomial")
-  if (!(identical(fam, "multinomial") || bin) ||
+  ord <- isTRUE(object$ordinal)
+  if (!(identical(fam, "multinomial") || bin || ord) ||
       (bin && !all(y %in% c(0, 1))))
     stop("the scoring rules compare predicted category probabilities with ",
          "the category observed, so they need a categorical outcome: a ",
-         "multinomial fit, or a binomial one with a 0/1 response. For a ",
-         fam, " fit, compare models with AIC() or ilm_anova(), and check ",
-         "what the model predicts with ilm_check_predictive().",
-         call. = FALSE)
-  P <- ilm_fitted(object, conditional)
+         "multinomial or ordinal fit, or a binomial one with a 0/1 response. ",
+         "For ", ilm_article(fam), " ", fam, " fit, compare models with AIC() ",
+         "or ilm_anova(), and check what the model predicts with ",
+         "ilm_check_predictive().", call. = FALSE)
+  ## An ordinal fit's fitted values are its latent predictor; the category
+  ## probabilities are where the thresholds cut it
+  P <- if (ord)
+    ilm_ord_probs(ilm_eta_hat(object, conditional)[, 1L], object$zeta,
+                  object$family$pfun)
+  else ilm_fitted(object, conditional)
   ## a binary fit returns the probability of the second level only
   if (bin) { P <- cbind(1 - P[, 1], P[, 1]); y <- y + 1 }
   N <- nrow(P)
   py <- P[cbind(seq_len(N), y)]
   Y <- matrix(0, N, ncol(P)); Y[cbind(seq_len(N), y)] <- 1
-  c(log_score = mean(-log(pmax(py, .Machine$double.eps))),
-    brier = mean(rowSums((P - Y)^2)),
-    accuracy = mean(max.col(P, ties.method = "first") == y))
+  out <- c(log_score = mean(-log(pmax(py, .Machine$double.eps))),
+           brier = mean(rowSums((P - Y)^2)),
+           accuracy = mean(max.col(P, ties.method = "first") == y))
+  if (ord) {
+    ## squared distance between the cumulative distributions, over the J - 1
+    ## cut points, so a near miss costs less than a far one
+    J <- ncol(P)
+    Fc <- t(apply(P, 1L, cumsum)); Oc <- t(apply(Y, 1L, cumsum))
+    out["rps"] <- mean(rowSums((Fc - Oc)[, -J, drop = FALSE]^2) / (J - 1L))
+  }
+  out
 }
+
+## "a" or "an", for a word in a message
+#' @keywords internal
+#' @noRd
+ilm_article <- function(w) if (grepl("^[aeiouAEIOU]", w)) "an" else "a"
 
 #' Log-likelihood of an intercept-only comparison model
 #'

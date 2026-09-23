@@ -90,3 +90,52 @@ test_that("fit indices work for every family, scoring only what can be scored", 
   expect_equal(unname(s["log_score"]),
                mean(-log(ifelse(d$b == 1, p, 1 - p))))
 })
+
+test_that("a flexible parametric refit rebuilds its baseline from the new times", {
+  ## the baseline's columns are a spline in log(time): refitting to simulated
+  ## times with the observed times' columns scored a baseline that did not
+  ## belong to the data, in every bootstrap, envelope and consistency check
+  set.seed(5); ns <- 300
+  ds <- data.frame(x = rnorm(ns))
+  tt <- stats::rweibull(ns, 1.4, exp(1 - 0.4 * ds$x)); cs <- runif(ns, 1, 6)
+  ds$time <- pmin(tt, cs); ds$event <- as.integer(tt <= cs)
+  fr <- ilm_model(time ~ x, data = ds, family = "rp", verbose = FALSE,
+                  censor = ilm_surv(ds$time, ds$event))
+  ysim <- ilm_simulate(fr, nsim = 1, seed = 2)[, 1]
+  f_like <- ilm_refit_like(ilm_refit_stub(fr), y = ysim)
+  ## the same model fitted afresh to the simulated times, at the same knots
+  ct <- attr(fr$censor, "ctime")
+  ds2 <- ds; ds2$time <- ysim
+  f_new <- ilm_model(time ~ x, data = ds2, family = "rp", verbose = FALSE,
+                     rp_knots = fr$rp$knots,
+                     censor = structure(as.integer(ysim >= ct), lower = NA_real_,
+                                        upper = NA_real_, ctime = ct,
+                                        class = "ilm_censor"))
+  expect_equal(coef(f_like), coef(f_new), tolerance = 1e-4)
+  expect_equal(as.numeric(logLik(f_like)), as.numeric(logLik(f_new)),
+               tolerance = 1e-6)
+})
+
+test_that("an ordinal fit is scored and calibrated as the categories it predicts", {
+  set.seed(8); n <- 400
+  d <- data.frame(x = rnorm(n))
+  d$yo <- cut(0.8 * d$x + stats::rlogis(n), c(-Inf, -0.7, 0.4, 1.3, Inf),
+              labels = c("w", "x2", "y2", "z"), ordered_result = TRUE)
+  f <- ilm_model(yo ~ x, data = d, family = "ordinal", verbose = FALSE)
+  s <- ilm_scores(f)
+  expect_named(s, c("log_score", "brier", "accuracy", "rps"))
+  ## the ranked probability score, by its definition
+  P <- ilm_ord_probs(ilm_eta_hat(f, TRUE)[, 1], f$zeta, f$family$pfun)
+  y <- as.integer(f$y)
+  rps <- mean(vapply(seq_len(n), function(i)
+    sum((cumsum(P[i, ]) - cumsum(seq_len(4) == y[i]))[-4]^2) / 3, 0))
+  expect_equal(unname(s["rps"]), rps, tolerance = 1e-12)
+  expect_equal(unname(s["log_score"]),
+               mean(-log(P[cbind(seq_len(n), y)])), tolerance = 1e-12)
+  grDevices::pdf(NULL); on.exit(grDevices::dev.off(), add = TRUE)
+  cal <- ilm_calibration(f, B = 150L)
+  expect_length(cal, 4L)
+  ## a categorical fit is pointed at calibration, not told it has a residual
+  ## variance it does not have
+  expect_error(ilm_check_dispersion(f), "ilm_calibration")
+})

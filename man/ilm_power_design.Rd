@@ -24,7 +24,10 @@ ilm_power_design(
   alpha = 0.05,
   seed = 1L,
   progress = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  categories = NULL,
+  thresholds = NULL,
+  reml = FALSE
 )
 }
 \arguments{
@@ -65,7 +68,11 @@ matrix. Defaults to zero.}
 
 \item{icc}{Intraclass correlation, as an alternative to \code{re_sd} for a random
 intercept: the random-effect variance becomes \code{icc / (1 - icc)} times the
-residual variance.}
+residual variance. A binomial or ordinal model has no residual variance of
+its own, and there \code{icc} is on the latent scale, by the usual convention:
+the residual variance is that of the standard logistic, \code{pi^2 / 3}, for a
+logit link and 1 for a probit (Snijders and Bosker 2012). A count or
+multinomial model has no such convention, and takes \code{re_sd}.}
 
 \item{within}{Character vector of design variables that vary within a unit.}
 
@@ -73,14 +80,28 @@ residual variance.}
 so the two always agree.}
 
 \item{term}{The term to test, named as the variable or as the coefficient;
-see \code{\link[=ilm_power]{ilm_power()}}.}
+see \code{\link[=ilm_power]{ilm_power()}}. A term with several coefficients -- a factor with three
+levels, or any term of a multinomial model -- is tested jointly.}
 
-\item{effect}{Values for that coefficient on the link scale. Defaults to
-whatever the assumptions imply for it.}
+\item{effect}{For a single coefficient, values for it on the link scale;
+for a term tested jointly, multiples of its assumed coefficients. Defaults
+to whatever the assumptions imply.}
 
 \item{sims, alpha, seed, progress}{Passed to \code{\link[=ilm_power]{ilm_power()}}.}
 
 \item{verbose}{Logical. Report what was built.}
+
+\item{categories}{For a multinomial or ordinal outcome, its categories in
+order. Taken from the columns of \code{cells} when it has them.}
+
+\item{thresholds}{For an ordinal outcome given by \code{coefs}, the \code{J - 1} cut
+points on the latent scale, increasing.}
+
+\item{reml}{Plan for an analysis fitted by restricted maximum likelihood,
+as \code{ilm_model(reml = TRUE)} fits one: every simulated study is then
+refitted by REML. For a gaussian mixed model that is the analysis most
+software reports, and its power is a little lower than that of the
+maximum-likelihood fit, whose variance components run small.}
 }
 \value{
 An \code{\link[=ilm_power]{ilm_power()}} result, with an extra \code{n_unit} column.
@@ -92,6 +113,11 @@ rows when it does not, so the numbers you give are the numbers you would
 write in a protocol.
 }
 \details{
+Every simulated study is a fresh draw of the design at its own size -- the
+allocation balanced as the protocol would balance it, any covariate given
+as a function drawn again -- and is analysed with the test the analysis
+will report; see \code{\link[=ilm_power]{ilm_power()}}.
+
 For anything beyond a power curve -- seeing what the assumptions imply,
 simulating a data set, checking marginal means -- build the scaffold with
 \code{\link[=ilm_scaffold]{ilm_scaffold()}} and use it directly.
@@ -101,6 +127,13 @@ simulating a data set, checking marginal means -- build the scaffold with
 ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
                  n_unit = c(60, 120, 200),
                  cells = c(control = 12, treatment = 14.5), sd = 4,
+                 term = "arm", sims = 50)
+
+## a three-category outcome: the test is of arm across all its categories
+ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+                 n_unit = c(100, 200), family = "multinomial",
+                 cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+                               treatment = c(none = 0.35, some = 0.35, full = 0.3)),
                  term = "arm", sims = 50)
 }
 }

@@ -138,13 +138,38 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 #'
 #' @section An ordered response:
 #'
-#' For an ordinal fit these are marginal means of the **latent scale** -- the
-#' linear predictor the thresholds cut up -- and not of the categories, which
-#' have no mean to take. A contrast between two of them is a difference in log
-#' odds of being in a higher category, constant across cuts by the same
-#' assumption [ilm_check_proportional()] tests. `type = "response"` is not
-#' available, because the inverse link of a marginal mean is not a category
-#' probability; use [predict()] for those.
+#' For an ordinal fit the link-scale values are marginal means of the **latent
+#' scale** -- the linear predictor the thresholds cut up -- and not of the
+#' categories, which have no mean to take. A contrast between two of them is a
+#' difference in log odds of being in a higher category, constant across cuts
+#' by the same assumption [ilm_check_proportional()] tests.
+#'
+#' `type = "response"` gives each category's PROBABILITY instead, computed in
+#' every cell of the grid and averaged over the cells, with a delta-method
+#' standard error that carries the thresholds' uncertainty as well as the
+#' slopes'. [ilm_contrast()] then compares groups within each category as
+#' differences in probability. This agrees with `emmeans` on a `MASS::polr()`
+#' fit with `mode = "prob"`.
+#'
+#' @section A multinomial response:
+#'
+#' Every category gets its own row for every level of `specs`.
+#'
+#' On the **link** scale the value is the category's centred log-odds: its
+#' log-probability less the average log-probability over all the categories,
+#' which is what the sum-to-zero coefficients describe. These are exact linear
+#' combinations, as for any other family, and a contrast between two groups
+#' within a category is a difference of log-odds against the same average.
+#'
+#' On the **response** scale the value is the category's PROBABILITY, computed
+#' in every cell of the grid and then averaged over the cells with the chosen
+#' weights -- the probabilities of each group sum to 1 -- with a delta-method
+#' standard error and an interval formed on the logit scale, so it stays
+#' inside 0 and 1. [ilm_contrast()] then compares groups within each category
+#' as differences in probability. This is what `emmeans` computes for an
+#' `nnet::multinom()` fit with `mode = "prob"`, and the two agree; the
+#' coefficients differ between the packages, because `nnet` codes against a
+#' baseline category, but the probabilities do not.
 #'
 #' @section Which scale:
 #'
@@ -182,23 +207,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
-  if (isTRUE(object$ordinal) && identical(type, "response"))
-    stop("an ordinal fit has no response scale to average onto: the inverse ",
-         "link of a marginal latent mean is not a category probability. Use ",
-         "type = \"link\" for the latent scale, or predict() for the ",
-         "category probabilities themselves.", call. = FALSE)
-  ## Said up front and plainly. A multinomial fit has one coefficient per
-  ## predictor PER CATEGORY, so the grid's model matrix never lines up with
-  ## coef(), and the check below used to report that as "a smooth or a matrix
-  ## column" -- on every multinomial fit there has ever been.
-  if (identical(object$family$name, "multinomial"))
-    stop("ilm_emmeans() does not yet average a multinomial fit: each ",
-         "category has its own linear predictor, and a marginal mean is a ",
-         "set of category probabilities rather than one number. For those ",
-         "probabilities at chosen predictor values, use predict(object, ",
-         "newdata = , type = \"response\") over a grid of them; for the ",
-         "average change in each category's probability as a predictor ",
-         "moves, use ilm_ame().", call. = FALSE)
+  mn <- is.null(object$family) || identical(object$family$name, "multinomial")
   mf <- object$model
   specs <- as.character(specs)
   miss <- setdiff(specs, names(mf))
@@ -207,6 +216,15 @@ ilm_emmeans <- function(object, specs, at = NULL,
          ". The model has: ",
          paste(setdiff(names(mf), names(mf)[1]), collapse = ", "),
          call. = FALSE)
+  ## The response is a column of the model frame too, so it passed the check
+  ## above and then failed inside the grid on "undefined columns selected".
+  if (names(mf)[1L] %in% specs)
+    stop("`", names(mf)[1L], "` is the response. Marginal means are taken ",
+         "over the levels of predictors: ",
+         paste(setdiff(names(mf), names(mf)[1L]), collapse = ", "),
+         if (identical(object$family$name, "multinomial") || isTRUE(object$ordinal))
+           ". Every category of the response gets its own row whatever is asked for."
+         else ".", call. = FALSE)
 
   g <- ilm_ref_grid(object, at)
   ## the model matrix of the grid, built with the FIT's terms and contrasts so
@@ -215,7 +233,9 @@ ilm_emmeans <- function(object, specs, at = NULL,
   mmg <- ilm_drop_intercept(
     stats::model.matrix(tt, data = g, contrasts.arg = object$contrasts), object)
   b <- stats::coef(object)
-  if (ncol(mmg) != length(b))
+  ## a multinomial fit has one coefficient per column PER CATEGORY
+  nC <- if (mn) object$C else 1L
+  if (ncol(mmg) * nC != length(b))
     stop("the reference grid does not match the fitted coefficients; a term ",
          "here is not a plain variable (a smooth or a matrix column), and a ",
          "marginal mean is not defined for it", call. = FALSE)
@@ -223,6 +243,11 @@ ilm_emmeans <- function(object, specs, at = NULL,
 
   w <- ilm_emm_cellw(g, mf, weights)
   av <- ilm_emm_avg(mmg, g, specs, w)
+  if (mn)
+    return(ilm_emm_multinom(object, g, mmg, av, specs, w, b, V, type, level,
+                            weights))
+  if (isTRUE(object$ordinal) && identical(type, "response"))
+    return(ilm_emm_ordinal(object, g, mmg, av, specs, w, level, weights))
   L <- av$L; lv <- av$lv
   est <- as.numeric(L %*% b)
   Vem <- L %*% V %*% t(L)
@@ -251,6 +276,145 @@ ilm_emmeans <- function(object, specs, at = NULL,
             family = fam, object = object)
 }
 
+## The multinomial case: a row for every category in every level of `specs`.
+##
+## On the link scale each row is a category's centred log-odds, T_c[j, ] B'
+## L_i -- exact and linear, so its gradient in vec(B) is kron(T_c[j, ], L_i).
+## On the response scale it is the category's probability in each grid cell,
+## averaged over the cells with the chosen weights, and the gradient is the
+## same average of each cell's softmax Jacobian:
+##
+##   dp/dvec(B) = ((diag(p) - p p') T_c) (x) x_cell'
+##
+## Contrasts are formed on whichever scale was asked for, from these gradients.
+#' @keywords internal
+#' @noRd
+ilm_emm_multinom <- function(object, g, mmg, av, specs, w, b, V, type, level,
+                             weights) {
+  J <- object$J; C <- object$C; p <- ncol(mmg)
+  Tc <- stats::contr.sum(J); cats <- object$ylevels
+  B <- matrix(b, p, C)
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  lv <- av$lv; nl <- length(lv)
+  keyspec <- if (length(specs)) interaction(g[specs], drop = TRUE, sep = "\r")
+             else factor(rep("", nrow(g)))
+  est <- numeric(nl * J); G <- matrix(0, nl * J, p * C)
+  for (i in seq_len(nl)) {
+    rows <- (i - 1L) * J + seq_len(J)
+    if (type == "link") {
+      Li <- av$L[i, , drop = FALSE]
+      est[rows] <- as.numeric(Li %*% B %*% t(Tc))
+      for (j in seq_len(J)) G[rows[j], ] <- kronecker(Tc[j, , drop = FALSE], Li)
+    } else {
+      k <- which(keyspec == lv[i]); ww <- w[k]
+      if (sum(ww) <= 0) ww <- rep(1, length(k))
+      ww <- ww / sum(ww)
+      for (m in seq_along(k)) {
+        x <- mmg[k[m], , drop = FALSE]
+        pr <- exp(as.numeric(x %*% B %*% t(Tc))); pr <- pr / sum(pr)
+        est[rows] <- est[rows] + ww[m] * pr
+        G[rows, ] <- G[rows, ] +
+          ww[m] * kronecker((diag(pr) - pr %o% pr) %*% Tc, x)
+      }
+    }
+  }
+  Vem <- G %*% V %*% t(G)
+  se <- sqrt(pmax(diag(Vem), 0))
+  if (type == "link") {
+    lo <- est - z * se; hi <- est + z * se
+  } else {
+    ## on the logit scale and back, so the interval cannot leave [0, 1]
+    pe <- pmin(pmax(est, 1e-12), 1 - 1e-12)
+    sl <- se / (pe * (1 - pe))
+    lo <- stats::plogis(stats::qlogis(pe) - z * sl)
+    hi <- stats::plogis(stats::qlogis(pe) + z * sl)
+  }
+  sp <- if (length(specs))
+    as.data.frame(do.call(rbind, strsplit(lv, "\r", fixed = TRUE)),
+                  stringsAsFactors = FALSE)
+  else data.frame(.all = "", stringsAsFactors = FALSE)
+  names(sp) <- if (length(specs)) specs else ".all"
+  out <- sp[rep(seq_len(nl), each = J), , drop = FALSE]
+  out$category <- factor(rep(cats, nl), levels = cats)
+  out$estimate <- est; out$se <- se; out$lower <- lo; out$upper <- hi
+  rownames(out) <- NULL
+  structure(out, class = c("ilm_emm", "data.frame"), L = G, V = Vem,
+            est_c = est, category = as.character(out$category),
+            specs = specs, weights = weights, type = type, level = level,
+            family = "multinomial", object = object)
+}
+
+## An ordinal fit on the response scale: each category's probability,
+##
+##   P(Y = j) = F(theta_j - eta) - F(theta_{j-1} - eta),
+##
+## in every grid cell, averaged over the cells as for a multinomial. The
+## thresholds are estimated too, so the gradient runs over them as well as the
+## slopes -- through the first-value-and-log-gaps form they are fitted in --
+## and the variance comes from the fit's full covariance.
+#' @keywords internal
+#' @noRd
+ilm_emm_ordinal <- function(object, g, mmg, av, specs, w, level, weights) {
+  fam <- object$family; zeta <- as.numeric(object$zeta)
+  K <- length(zeta); J <- K + 1L; cats <- object$ylevels
+  beta <- stats::coef(object); p <- length(beta)
+  tl <- names(object$opt$par)
+  ib <- seq_len(p); iz <- which(tl == "zeta_raw")
+  zr <- unname(object$opt$par[iz])
+  Vf <- suppressWarnings(as.matrix(stats::vcov(object, full = TRUE)))
+  ## d theta_k / d zeta_raw: theta_k = r_1 + sum_{m = 2..k} exp(r_m)
+  Dz <- matrix(0, K, K); Dz[, 1L] <- 1
+  if (K > 1L) for (k in 2:K) Dz[k, 2:k] <- exp(zr[2:k])
+  dens <- switch(fam$link, logit = stats::dlogis, probit = stats::dnorm,
+                 cloglog = function(z) exp(z - exp(z)))
+  z <- stats::qnorm(1 - (1 - level) / 2)
+  lv <- av$lv; nl <- length(lv)
+  keyspec <- if (length(specs)) interaction(g[specs], drop = TRUE, sep = "\r")
+             else factor(rep("", nrow(g)))
+  est <- numeric(nl * J); G <- matrix(0, nl * J, ncol(Vf))
+  for (i in seq_len(nl)) {
+    rows <- (i - 1L) * J + seq_len(J)
+    k <- which(keyspec == lv[i]); ww <- w[k]
+    if (sum(ww) <= 0) ww <- rep(1, length(k))
+    ww <- ww / sum(ww)
+    for (m in seq_along(k)) {
+      x <- mmg[k[m], ]
+      eta <- sum(x * beta)
+      pr <- diff(c(0, fam$pfun(zeta - eta), 1))
+      fz <- dens(zeta - eta)
+      ## dP_j/dbeta = -(f_j - f_{j-1}) x, with f_0 = f_J = 0
+      fe <- c(0, fz, 0)
+      gb <- -(fe[-1L] - fe[-(J + 1L)]) %o% x
+      ## dP_j/dtheta_k = f_k [j = k] - f_k [j = k + 1]
+      At <- matrix(0, J, K)
+      At[cbind(seq_len(K), seq_len(K))] <- fz
+      At[cbind(seq_len(K) + 1L, seq_len(K))] <- -fz
+      est[rows] <- est[rows] + ww[m] * pr
+      G[rows, ib] <- G[rows, ib] + ww[m] * gb
+      G[rows, iz] <- G[rows, iz] + ww[m] * (At %*% Dz)
+    }
+  }
+  Vem <- G %*% Vf %*% t(G)
+  se <- sqrt(pmax(diag(Vem), 0))
+  pe <- pmin(pmax(est, 1e-12), 1 - 1e-12)
+  sl <- se / (pe * (1 - pe))
+  sp <- if (length(specs))
+    as.data.frame(do.call(rbind, strsplit(lv, "\r", fixed = TRUE)),
+                  stringsAsFactors = FALSE)
+  else data.frame(.all = "", stringsAsFactors = FALSE)
+  names(sp) <- if (length(specs)) specs else ".all"
+  out <- sp[rep(seq_len(nl), each = J), , drop = FALSE]
+  out$category <- factor(rep(cats, nl), levels = cats)
+  out$estimate <- est; out$se <- se
+  out$lower <- stats::plogis(stats::qlogis(pe) - z * sl)
+  out$upper <- stats::plogis(stats::qlogis(pe) + z * sl)
+  rownames(out) <- NULL
+  structure(out, class = c("ilm_emm", "data.frame"), L = G, V = Vem,
+            est_c = est, category = as.character(out$category),
+            specs = specs, weights = weights, type = "response",
+            level = level, family = fam$name, object = object)
+}
+
 #' @keywords internal
 #' @noRd
 ilm_emm_linkinv <- function(fam)
@@ -267,9 +431,21 @@ print.ilm_emm <- function(x, ...) {
               attr(x, "weights")))
   print(as.data.frame(x), row.names = FALSE, digits = 4)
   ord <- startsWith(attr(x, "family"), "ordinal")
-  if (ord)
+  catg <- identical(attr(x, "family"), "multinomial") || ord
+  if (catg && attr(x, "type") == "response") {
+    cat("\n  Category probabilities, averaged over the grid; each group's sum\n",
+        "  to 1. Intervals are formed on the logit scale.",
+        if (length(attr(x, "object")$re))
+          "\n  They are conditional on the random effects at zero; ilm_ame() is\n  the population-averaged comparison."
+        else "", "\n", sep = "")
+  } else if (identical(attr(x, "family"), "multinomial")) {
+    cat("\n  Each category's CENTRED log-odds: its log-probability less the\n",
+        "  average over all the categories. A single value is not a\n",
+        "  probability; differences between groups within a category are\n",
+        "  comparable. type = \"response\" gives the probabilities.\n", sep = "")
+  } else if (ord)
     cat("\n  On the LATENT scale, whose origin the thresholds set, so a single\n",
-        " mean is not interpretable on its own -- the differences are.\n",
+        "  mean is not interpretable on its own -- the differences are.\n",
         sep = "")
   else if (attr(x, "type") == "link" && attr(x, "family") != "gaussian")
     cat("\n  On the link scale. type = \"response\" back-transforms.\n")
@@ -369,11 +545,29 @@ ilm_contrast <- function(object, method = c("pairwise", "trt.vs.ctrl", "poly"),
             "comparison. Use weights = \"equal\" or \"proportional\" for one.",
             call. = FALSE)
   lab <- if (length(sp))
-    apply(as.data.frame(object)[sp], 1L, paste, collapse = " ") else "overall"
-  C <- ilm_contrast_matrix(lab, method, ref)
+    apply(as.data.frame(object)[sp], 1L, paste, collapse = " ") else
+      rep("overall", nrow(object))
+  grp <- attr(object, "category")
+  C <- if (is.null(grp)) ilm_contrast_matrix(lab, method, ref) else {
+    ## a multinomial: the same comparisons among the groups, within each
+    ## category, and never across categories
+    do.call(rbind, lapply(unique(grp), function(k) {
+      r <- which(grp == k)
+      Ck <- ilm_contrast_matrix(lab[r], method, ref)
+      M <- matrix(0, nrow(Ck), length(grp))
+      M[, r] <- Ck
+      rownames(M) <- paste0(k, ": ", rownames(Ck))
+      M
+    }))
+  }
   Vem <- attr(object, "V")
-  ## the marginal means on the LINK scale, whatever the print showed
-  est0 <- as.numeric(attr(object, "L") %*% stats::coef(attr(object, "object")))
+  ## The marginal means on the LINK scale, whatever the print showed -- except
+  ## for a multinomial, whose means carry the scale they were asked for: a
+  ## difference in probability is what a comparison of categories is usually
+  ## wanted as, and its delta-method variance is exact to first order.
+  est0 <- attr(object, "est_c")
+  if (is.null(est0))
+    est0 <- as.numeric(attr(object, "L") %*% stats::coef(attr(object, "object")))
   est <- as.numeric(C %*% est0)
   Vc <- C %*% Vem %*% t(C)
   se <- sqrt(pmax(diag(Vc), 0))
@@ -417,7 +611,8 @@ ilm_contrast <- function(object, method = c("pairwise", "trt.vs.ctrl", "poly"),
                     n_contrasts = m, stringsAsFactors = FALSE)
   rownames(out) <- NULL
   structure(out, class = c("ilm_contrast", "data.frame"),
-            level = level, type = attr(object, "type"))
+            level = level, type = attr(object, "type"),
+            family = attr(object, "family"), weights = attr(object, "weights"))
 }
 
 #' @export

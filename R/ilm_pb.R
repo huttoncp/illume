@@ -98,10 +98,12 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
   one <- function(b) {
     yb <- ys[, b]
-    a <- try(ilm_refit_like(stub, y = yb, restarts = restarts), silent = TRUE)
+    a <- try(suppressWarnings(ilm_refit_like(stub, y = yb, restarts = restarts)),
+             silent = TRUE)
     if (inherits(a, "try-error") || a$opt$convergence != 0) return(NA_real_)
-    z <- try(ilm_refit_like(stub, X = X0, y = yb, keep = keep,
-                            restarts = restarts), silent = TRUE)
+    z <- try(suppressWarnings(ilm_refit_like(stub, X = X0, y = yb, keep = keep,
+                                             restarts = restarts)),
+             silent = TRUE)
     if (inherits(z, "try-error") || z$opt$convergence != 0) return(NA_real_)
     2 * ((-a$opt$objective) - (-z$opt$objective))
   }
@@ -134,10 +136,18 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
                 p_chisq))
     cat(sprintf("  null LR: mean %.3f (df %d) | 95th pct %.3f vs chi-square %.3f (ratio %.2f)\n",
                 mnull, df, q95, stats::qchisq(0.95, df), tail_ratio))
-    cat(sprintf("  implied type-I error of the asymptotic test at nominal 0.05: %.3f%s\n",
-                size05,
-                if (size05 > 0.075 || size05 < 0.03)
-                  "  <- asymptotic chi-square is MISCALIBRATED here; prefer p_boot" else ""))
+    ## The implied size is itself estimated from the replicates, and a verdict
+    ## drawn from five of them is noise: it called the chi-square
+    ## "MISCALIBRATED" on a model where it was fine. Judged only when the
+    ## Monte Carlo interval on the size excludes 0.05 as well as the size
+    ## being far enough off to matter.
+    ci05 <- ilm_wilson(sum(lr_null[ok] > stats::qchisq(0.95, df)), max(nok, 1L))
+    bad <- (size05 > 0.075 || size05 < 0.03) && (ci05[1] > 0.05 || ci05[2] < 0.05)
+    cat(sprintf("  implied type-I error of the asymptotic test at nominal 0.05: %.3f (%.3f to %.3f)%s\n",
+                size05, ci05[1], ci05[2],
+                if (bad) "  <- asymptotic chi-square is MISCALIBRATED here; prefer p_boot"
+                else if (ci05[1] <= 0.03 && ci05[2] >= 0.075)
+                  "  -- too few replicates to judge it" else ""))
     if (nok < 0.8 * B)
       cat(sprintf("  >> WARNING: %d of %d replicates failed to refit; the bootstrap\n     reference is conditioned on convergence and may be optimistic.\n",
                   B - nok, B))

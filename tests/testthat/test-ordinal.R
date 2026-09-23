@@ -139,7 +139,11 @@ test_that("marginal means work on the latent scale and refuse the response one",
                tolerance = 1e-6)
   expect_equal(cc$estimate[cc$contrast == "c - a"], unname(coef(f)["gc"]),
                tolerance = 1e-6)
-  expect_error(ilm_emmeans(f, "g", type = "response"), "no response scale")
+  ## on the response scale, a probability for every category in every group
+  er <- ilm_emmeans(f, "g", type = "response")
+  expect_equal(nrow(er), 9L)
+  expect_equal(as.numeric(tapply(er$estimate, er$g, sum)), c(1, 1, 1),
+               tolerance = 1e-10)
   ## and an average marginal effect still works -- one per category, since
   ## an ordered outcome has a probability for each. It used to report only
   ## the last column, unlabelled.

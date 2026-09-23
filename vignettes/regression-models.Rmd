@@ -309,6 +309,37 @@ ilm_model(hit   ~ x + (1 | site), data = dd, family = "binomial")
 ilm_model(score ~ x + (1 | site), data = dd, family = "gaussian")
 ```
 
+### Leaving the family to the response
+
+`family` defaults to `"auto"`, which reads the family off the response and
+says which it chose and on what evidence:
+
+```{r family-auto, eval = FALSE}
+ilm_model(visits ~ x + (1 | site), data = dd)
+#> ilm_model(): family = "poisson", inferred from `visits`: whole numbers from
+#> 0 to 14, a count. If the counts are more spread out than a Poisson allows
+#> (ilm_check_dispersion() tests it), use family = "nbinom"; if they are
+#> ratings rather than counts, an ordered factor with family = "ordinal".
+#> Pass `family` to choose another.
+```
+
+A factor with two levels, a logical or a 0/1 variable is binomial; an
+unordered factor with three or more levels is multinomial and an ordered one
+ordinal; values strictly between 0 and 1 are beta. Whole numbers are the hard
+case, because a count and a measurement recorded to the nearest unit look
+alike: whole numbers that reach down to 0 or 1 are read as a count, and ones
+that never come near zero -- a blood pressure, a height -- as a measurement.
+The range goes into the message either way, so a misreading shows at a glance.
+
+What the response cannot settle is asked about rather than guessed: a
+proportion that touches 0 or 1, or comes with weights that may be numbers of
+trials; a two-valued variable coded other than 0/1; a survival time, where the
+family is a modelling decision; a date. The choice is written into
+`fit$call`, so anything that refits the model keeps it instead of guessing
+again on simulated data, and `summary()` marks the family as inferred. It is
+a starting point, not a verdict -- a count that is overdispersed is still a
+count, and `family = "nbinom"` is a choice only the diagnostics can prompt.
+
 `summary()` reports a dispersion parameter where the family has one -- the
 residual standard deviation for gaussian, the overdispersion parameter for
 negative binomial -- and omits that section otherwise. Coefficients carry no
@@ -331,8 +362,13 @@ If your counts vary more than Poisson allows, `"nbinom"` adds one parameter `k`,
 giving variance `mu + mu^2/k`. Smaller `k` means more overdispersion; large `k`
 approaches the Poisson.
 
-Zero-inflation, hurdle models and Tweedie are deliberately out of scope.
-`glmmTMB` covers those well, and a weaker reimplementation would help nobody.
+Excess zeros have a part of their own: `ziformula = ~ 1` adds a zero-inflation
+probability, and `zi_type = "hurdle"` separates whether the response clears
+zero from how far past it goes -- see `?ilm_model` for which is which, and
+`ilm_check_zeros()` for whether either is needed. Proportions strictly
+between 0 and 1 take `family = "beta"`, ordered categories the ordinal
+families, and times to an event the survival families below. Tweedie is out
+of scope; `glmmTMB` covers it well.
 
 ## When there are many categories
 

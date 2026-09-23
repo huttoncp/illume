@@ -151,3 +151,16 @@ test_that("AR(1) is still rebuilt with tanh()", {
   g <- set_coef.ilm_model(f, get_coef.ilm_model(f))
   expect_equal(g$rho, f$rho, tolerance = 1e-10)
 })
+
+test_that("set_coef takes the fixed effects alone, and says what it wants otherwise", {
+  set.seed(1); d <- data.frame(x = rnorm(100))
+  d$y <- 1 + 0.5 * d$x + rnorm(100)
+  f <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
+  g <- set_coef.ilm_model(f, c(2, -1))
+  expect_equal(unname(coef(g)), c(2, -1))
+  ## everything else stays where the fit put it
+  expect_equal(unname(coef(g, full = TRUE)[-(1:2)]),
+               unname(coef(f, full = TRUE)[-(1:2)]))
+  expect_error(set_coef.ilm_model(f, 1:7), "coef(model, full = TRUE)",
+               fixed = TRUE)
+})

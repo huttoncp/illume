@@ -19,7 +19,10 @@ ilm_scaffold(
   within = NULL,
   contrasts = NULL,
   seed = 1L,
-  verbose = TRUE
+  verbose = TRUE,
+  categories = NULL,
+  thresholds = NULL,
+  reml = FALSE
 )
 }
 \arguments{
@@ -61,7 +64,11 @@ matrix. Defaults to zero.}
 
 \item{icc}{Intraclass correlation, as an alternative to \code{re_sd} for a random
 intercept: the random-effect variance becomes \code{icc / (1 - icc)} times the
-residual variance.}
+residual variance. A binomial or ordinal model has no residual variance of
+its own, and there \code{icc} is on the latent scale, by the usual convention:
+the residual variance is that of the standard logistic, \code{pi^2 / 3}, for a
+logit link and 1 for a probit (Snijders and Bosker 2012). A count or
+multinomial model has no such convention, and takes \code{re_sd}.}
 
 \item{within}{Character vector of design variables that vary within a unit.}
 
@@ -71,6 +78,18 @@ so the two always agree.}
 \item{seed}{Integer seed for the grid's own realisation.}
 
 \item{verbose}{Logical. Report what was built.}
+
+\item{categories}{For a multinomial or ordinal outcome, its categories in
+order. Taken from the columns of \code{cells} when it has them.}
+
+\item{thresholds}{For an ordinal outcome given by \code{coefs}, the \code{J - 1} cut
+points on the latent scale, increasing.}
+
+\item{reml}{Plan for an analysis fitted by restricted maximum likelihood,
+as \code{ilm_model(reml = TRUE)} fits one: every simulated study is then
+refitted by REML. For a gaussian mixed model that is the analysis most
+software reports, and its power is a little lower than that of the
+maximum-likelihood fit, whose variance components run small.}
 }
 \value{
 An \code{"ilm_model"} that also carries class \code{"ilm_scaffold"}.
@@ -99,6 +118,37 @@ coefficients. If the cell means you give cannot be produced by the formula
 you gave -- crossed means under an additive formula, say -- it says so and
 names the term that is missing, rather than quietly fitting the closest
 thing it can.
+}
+
+\section{A categorical outcome}{
+
+
+For \code{family = "multinomial"} or an ordinal family, \code{cells} gives the
+PROBABILITY of each outcome category in each cell: a data frame with one
+column per design factor and one per category, or a matrix with the cell
+names as row names and the categories as column names. Each row sums to 1.
+The categories are taken from those columns, in their order; give
+\code{categories} to set it.
+
+For a multinomial model, \code{coefs} is a matrix with one row per model-matrix
+column and one column per category but the last -- the layout
+\code{\link[=fixef.ilm_model]{fixef.ilm_model()}} prints -- or a vector named as \code{\link[=coef.ilm_model]{coef.ilm_model()}} names
+them, \code{"treatment:armtreatment"}. The coding is sum-to-zero across
+categories, so a coefficient is that category's deviation from the average
+of all of them, and \code{categories} is needed to know what they are.
+
+For an ordinal model, \code{coefs} holds the slopes -- there is no intercept, the
+thresholds take its place -- and \code{thresholds} the \code{J - 1} increasing cut
+points on the latent scale. Cell probabilities have to be ones proportional
+odds can produce: the same shift at every cut point between two cells. If
+they are not, the call stops and says so, because an ordinal model cannot
+give the study that was described; \code{family = "multinomial"} can.
+
+A random intercept in a multinomial model is a random shift in each
+category's log-odds, and \code{re_sd} is its standard deviation. A shift common
+to all categories changes no probability, so the model carries the part of
+each that differs from the average -- which is why a fitted multinomial's
+category standard deviations come out as \code{re_sd * sqrt(1 - 1/J)}.
 }
 
 \section{Saying how big the study is}{
@@ -138,7 +188,19 @@ s2 <- ilm_scaffold(y ~ arm * time + (1 | id),
                              treatment.pre = 12, treatment.post = 14.5),
                    sd = 4, icc = 0.5, verbose = FALSE)
 ilm_emmeans(s2, c("arm", "time"))
+
+## a three-category outcome, stated as the probabilities in each arm
+s3 <- ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
+                   n_unit = 200, family = "multinomial",
+                   cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+                                 treatment = c(none = 0.35, some = 0.35, full = 0.3)),
+                   verbose = FALSE)
+coef(s3)
 }
+}
+\references{
+Snijders, T. A. B. and Bosker, R. J. (2012). \emph{Multilevel
+Analysis}, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)
 }
 \seealso{
 \code{\link[=ilm_power_design]{ilm_power_design()}} for the common case in one call;

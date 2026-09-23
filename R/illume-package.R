@@ -1,9 +1,10 @@
-#' illume: Frequentist Regression and Mixed Models with Built-In Diagnostics
+#' illume: A Unified Engine for Exploration and Frequentist Inference
 #'
 #' A frequentist regression workflow aimed at **inference** rather than
-#' prediction. One engine fits gaussian, binomial, Poisson, negative binomial
-#' and multinomial models, so every model returns the same object and shares the
-#' same methods and diagnostics.
+#' prediction, together with the exploratory steps that precede it. One engine
+#' fits gaussian, binomial, Poisson, negative binomial, multinomial, beta,
+#' ordinal, zero-inflated, hurdle and survival models, so every model returns
+#' the same object and shares the same methods and diagnostics.
 #'
 #' @section What problem this solves:
 #' Fitting a range of models in R usually means a range of packages, each with
@@ -25,9 +26,13 @@
 #' question.
 #'
 #' @section Families:
-#' `"gaussian"`, `"binomial"`, `"poisson"`, `"nbinom"` and `"multinomial"`; see
-#' [ilm_family()]. Zero-inflation, hurdle models and Tweedie are deliberately out
-#' of scope, because `glmmTMB` covers those well.
+#' `"gaussian"`, `"binomial"`, `"poisson"`, `"nbinom"`, `"beta"`,
+#' `"multinomial"`, the ordinal families, and the survival families
+#' `"weibull"`, `"lognormal"`, `"loglogistic"` and the flexible `"rp"`; see
+#' [ilm_family()]. A count or a proportion can have a zero part, inflated or
+#' hurdle (`ziformula`). By default the family is read off the response, and
+#' the fit says which it chose and why. Tweedie is out of scope, because
+#' `glmmTMB` covers it well.
 #'
 #' @section How the model is written:
 #' With `J` outcome categories the model has `C = J - 1` free linear predictors.

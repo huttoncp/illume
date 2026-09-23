@@ -131,6 +131,9 @@ ilm_trends <- function(object, specs, var, at = NULL,
     stop("`var` (", var, ") is also in `specs`. The slope is computed WITHIN ",
          "the levels of `specs`, so the covariate cannot be one of them.",
          call. = FALSE)
+  if (names(mf)[1L] %in% c(specs, var))
+    stop("`", names(mf)[1L], "` is the response; slopes are taken along a ",
+         "predictor, within the levels of others.", call. = FALSE)
 
   ## the grid, and the same grid nudged along `var` in both directions
   g <- ilm_ref_grid(object, at)
@@ -150,7 +153,8 @@ ilm_trends <- function(object, specs, var, at = NULL,
   mmd <- (mmof(gp) - mmof(gm)) / h
 
   b <- stats::coef(object)
-  if (ncol(mmd) != length(b))
+  mn <- is.null(object$family) || identical(object$family$name, "multinomial")
+  if (ncol(mmd) * (if (mn) object$C else 1L) != length(b))
     stop("the reference grid does not match the fitted coefficients; a term ",
          "here is not a plain variable (a smooth or a matrix column), and a ",
          "marginal slope is not defined for it", call. = FALSE)
@@ -158,6 +162,8 @@ ilm_trends <- function(object, specs, var, at = NULL,
 
   w <- ilm_emm_cellw(g, mf, weights)
   av <- ilm_emm_avg(mmd, g, specs, w)
+  if (mn) return(ilm_trends_multinom(object, av, specs, V, b, level, weights,
+                                     var, h))
   L <- av$L; lv <- av$lv
   est <- as.numeric(L %*% b)
   Vem <- L %*% V %*% t(L)
@@ -189,6 +195,45 @@ ilm_trends <- function(object, specs, var, at = NULL,
             L = L, V = Vem, specs = specs, weights = weights, type = "link",
             level = level, family = fam, object = object, var = var,
             delta = h, df_method = attr(ddf, "method"))
+}
+
+## A multinomial fit's slopes: one per category in every level of `specs`, the
+## slope of the category's centred log-odds -- exact and linear, like its
+## marginal means, so ilm_contrast() compares them within a category. A slope
+## in PROBABILITY is not linear in the coefficients and depends on where it is
+## taken; ilm_ame() averages it over the sample, which is the usual question.
+#' @keywords internal
+#' @noRd
+ilm_trends_multinom <- function(object, av, specs, V, b, level, weights, var,
+                                h) {
+  J <- object$J; C <- object$C; p <- ncol(av$L)
+  Tc <- stats::contr.sum(J); cats <- object$ylevels
+  nl <- length(av$lv)
+  G <- matrix(0, nl * J, p * C)
+  for (i in seq_len(nl)) for (j in seq_len(J))
+    G[(i - 1L) * J + j, ] <- kronecker(Tc[j, , drop = FALSE],
+                                       av$L[i, , drop = FALSE])
+  est <- as.numeric(G %*% b)
+  Vem <- G %*% V %*% t(G)
+  se <- sqrt(pmax(diag(Vem), 0))
+  crit <- stats::qnorm(1 - (1 - level) / 2)
+  sp <- if (length(specs))
+    as.data.frame(do.call(rbind, strsplit(av$lv, "\r", fixed = TRUE)),
+                  stringsAsFactors = FALSE)
+  else data.frame(.all = "", stringsAsFactors = FALSE)
+  names(sp) <- if (length(specs)) specs else ".all"
+  out <- sp[rep(seq_len(nl), each = J), , drop = FALSE]
+  out$category <- factor(rep(cats, nl), levels = cats)
+  out$estimate <- est; out$se <- se; out$df <- Inf
+  out$statistic <- ifelse(se > 0, est / se, NA_real_)
+  out$p.value <- 2 * stats::pnorm(-abs(out$statistic))
+  out$lower <- est - crit * se; out$upper <- est + crit * se
+  rownames(out) <- NULL
+  structure(out, class = c("ilm_trends", "ilm_emm", "data.frame"),
+            L = G, V = Vem, est_c = est, category = as.character(out$category),
+            specs = specs, weights = weights, type = "link", level = level,
+            family = "multinomial", object = object, var = var, delta = h,
+            df_method = "asymptotic")
 }
 
 #' Degrees of freedom for each row of a trends table
@@ -235,6 +280,10 @@ print.ilm_trends <- function(x, digits = 4, ...) {
   num <- vapply(d, is.numeric, TRUE)
   d[num] <- lapply(d[num], function(z) round(z, digits))
   print(d, row.names = FALSE)
+  if (identical(attr(x, "family"), "multinomial"))
+    cat("\n  Slopes of each category's CENTRED log-odds -- its log-probability\n",
+        "  less the average over the categories. For the change in each\n",
+        "  category's probability, use ilm_ame().\n", sep = "")
   cat("\n  p-values above test each slope against ZERO. To test whether the\n",
       "  slopes DIFFER from one another, pass this to ilm_contrast().\n",
       sep = "")

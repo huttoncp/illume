@@ -181,3 +181,94 @@ test_that("a link-scale model reports on the link scale unless asked", {
   ## and the difference on the link scale is the coefficient
   expect_equal(diff(lk$estimate), unname(coef(f)["gb"]), tolerance = 1e-6)
 })
+
+test_that("a multinomial fit gets a mean for every category, matching emmeans", {
+  skip_if_not_installed("emmeans")
+  skip_if_not_installed("nnet")
+  set.seed(3); n <- 600
+  d <- data.frame(g = factor(sample(c("a", "b", "c"), n, TRUE, prob = c(.5, .3, .2))),
+                  h = factor(sample(c("u", "v"), n, TRUE)), x = rnorm(n))
+  eta <- cbind(0, 0.3 + 0.6 * d$x + 0.5 * (d$g == "b") - 0.3 * (d$h == "v"),
+               -0.2 - 0.4 * d$x + 0.8 * (d$g == "c"))
+  P <- exp(eta) / rowSums(exp(eta))
+  d$y <- factor(apply(P, 1, function(p) sample(c("lo", "mid", "hi"), 1, prob = p)),
+                levels = c("lo", "mid", "hi"))
+  f <- ilm_model(y ~ g + h + x, data = d, family = "multinomial", verbose = FALSE)
+  m <- nnet::multinom(y ~ g + h + x, data = d, trace = FALSE, reltol = 1e-12,
+                      maxit = 1000)
+  ## the coefficients differ, because nnet codes against a baseline category;
+  ## the probabilities and the centred log-odds do not
+  for (w in c("equal", "proportional", "cells")) for (ty in c("response", "link")) {
+    mine <- ilm_emmeans(f, "g", type = ty, weights = w)
+    th <- as.data.frame(emmeans::emmeans(m, ~ g | y, weights = w,
+                                         mode = if (ty == "response") "prob" else "latent"))
+    th <- th[order(match(th$g, levels(d$g)), match(th$y, levels(d$y))), ]
+    expect_equal(mine$estimate, th[[if (ty == "response") "prob" else "emmean"]],
+                 tolerance = 1e-4, info = paste(w, ty))
+    expect_equal(mine$se, th$SE, tolerance = 1e-4, info = paste(w, ty))
+  }
+  e <- ilm_emmeans(f, "g", type = "response")
+  expect_identical(levels(e$category), c("lo", "mid", "hi"))
+  expect_equal(as.numeric(tapply(e$estimate, e$g, sum)), c(1, 1, 1), tolerance = 1e-10)
+  expect_true(all(e$lower > 0 & e$upper < 1))
+  ## comparisons are made within a category, as differences in probability
+  cc <- ilm_contrast(e, method = "trt.vs.ctrl", adjust = "none")
+  ct <- as.data.frame(emmeans::contrast(emmeans::emmeans(m, ~ g | y, mode = "prob"),
+                                        "trt.vs.ctrl", adjust = "none"))
+  expect_identical(cc$contrast, paste0(ct$y, ": ", ct$contrast))
+  expect_equal(cc$estimate, ct$estimate, tolerance = 1e-4)
+  expect_equal(cc$se, ct$SE, tolerance = 1e-4)
+  expect_output(print(e), "each group's sum")
+})
+
+test_that("an ordinal fit gets category probabilities, matching emmeans on polr", {
+  skip_if_not_installed("emmeans")
+  skip_if_not_installed("MASS")
+  set.seed(8); n <- 500
+  d <- data.frame(g = factor(sample(c("a", "b", "c"), n, TRUE, prob = c(.5, .3, .2))),
+                  h = factor(sample(c("u", "v"), n, TRUE)), x = rnorm(n))
+  d$yo <- cut(0.6 * d$x + 0.5 * (d$g == "b") - 0.4 * (d$g == "c") +
+                0.3 * (d$h == "v") + stats::rlogis(n),
+              c(-Inf, -0.7, 0.4, 1.3, Inf), labels = c("w", "x2", "y2", "z"),
+              ordered_result = TRUE)
+  f <- ilm_model(yo ~ g + h + x, data = d, family = "ordinal", verbose = FALSE)
+  m <- MASS::polr(yo ~ g + h + x, data = d, Hess = TRUE, method = "logistic")
+  for (w in c("equal", "cells")) {
+    mine <- ilm_emmeans(f, "g", type = "response", weights = w)
+    th <- as.data.frame(emmeans::emmeans(m, ~ g | yo, mode = "prob", weights = w))
+    th <- th[order(match(th$g, levels(d$g)), match(th$yo, levels(d$yo))), ]
+    ## the standard errors carry the thresholds' uncertainty, as polr's do
+    expect_equal(mine$estimate, th$prob, tolerance = 1e-4, info = w)
+    expect_equal(mine$se, th$SE, tolerance = 1e-4, info = w)
+  }
+  e <- ilm_emmeans(f, "g", type = "response")
+  expect_equal(as.numeric(tapply(e$estimate, e$g, sum)), c(1, 1, 1), tolerance = 1e-10)
+  cc <- ilm_contrast(e, method = "trt.vs.ctrl", adjust = "none")
+  ct <- as.data.frame(emmeans::contrast(emmeans::emmeans(m, ~ g | yo, mode = "prob"),
+                                        "trt.vs.ctrl", adjust = "none"))
+  expect_equal(cc$estimate, ct$estimate, tolerance = 1e-4)
+  expect_equal(cc$se, ct$SE, tolerance = 1e-4)
+})
+
+test_that("a multinomial fit gets a slope for every category, matching emtrends", {
+  skip_if_not_installed("emmeans")
+  skip_if_not_installed("nnet")
+  set.seed(3); n <- 600
+  d <- data.frame(g = factor(sample(c("a", "b"), n, TRUE)), x = rnorm(n))
+  eta <- cbind(0, 0.3 + 0.6 * d$x + 0.5 * (d$g == "b") * d$x, -0.2 - 0.4 * d$x)
+  P <- exp(eta) / rowSums(exp(eta))
+  d$y <- factor(apply(P, 1, function(p) sample(c("lo", "mid", "hi"), 1, prob = p)),
+                levels = c("lo", "mid", "hi"))
+  f <- ilm_model(y ~ g * x, data = d, family = "multinomial", verbose = FALSE)
+  m <- nnet::multinom(y ~ g * x, data = d, trace = FALSE, reltol = 1e-12,
+                      maxit = 1000)
+  tr <- ilm_trends(f, "g", "x")
+  et <- as.data.frame(emmeans::emtrends(m, ~ g | y, var = "x", mode = "latent"))
+  et <- et[order(match(et$g, levels(d$g)), match(et$y, levels(d$y))), ]
+  expect_equal(tr$estimate, et$x.trend, tolerance = 1e-4)
+  expect_equal(tr$se, et$SE, tolerance = 1e-4)
+  ## compared within a category, never across
+  cc <- ilm_contrast(tr)
+  expect_identical(cc$contrast, c("lo: b - a", "mid: b - a", "hi: b - a"))
+  expect_output(print(tr), "CENTRED log-odds")
+})

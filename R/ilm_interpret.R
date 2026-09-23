@@ -202,6 +202,16 @@ ilm_scale_words <- function(fam) {
     nbinom = list(unit = "counts", link = "log", ratio = "rate ratio"),
     multinomial = list(unit = "percentage points of probability",
                        link = "logit", ratio = "odds ratio"),
+    ## an ordered outcome's coefficients shift the latent scale the thresholds
+    ## cut up; exp() of a logit one is the odds of a HIGHER category
+    ordinal = list(unit = "percentage points of probability",
+                   link = "cumulative logit", ratio = "cumulative odds ratio"),
+    ordinal_probit = list(unit = "percentage points of probability",
+                          link = "cumulative probit", ratio = NULL),
+    ordinal_cloglog = list(unit = "percentage points of probability",
+                           link = "cumulative complementary log-log",
+                           ratio = NULL),
+    beta = list(unit = "units of the proportion", link = "logit", ratio = NULL),
     weibull = , lognormal = , loglogistic =
       list(unit = "units of log time", link = "log", ratio = "time ratio"),
     rp = , rp_odds = , rp_normal =
@@ -237,7 +247,9 @@ ilm_scale_words <- function(fam) {
 #' The prose is templated. The same fit gives the same words every time.
 #'
 #' @param object An [ilm_model()], [ilm_dag_model()], [ilm_did()] or
-#'   [ilm_rdd()].
+#'   [ilm_rdd()]; or the result of [ilm_power()] or [ilm_power_design()], which
+#'   is written up as a power analysis, or of [ilm_contrast()], written up as
+#'   the comparisons it makes.
 #' @param causal Force causal or associational language. `NULL` decides from
 #'   the design, which is what you want.
 #' @param ame Report average marginal effects on the response scale. Costs a
@@ -271,8 +283,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   sec <- list()
 
   ## ---- what was fitted -----------------------------------------------------
-  hdr <- sprintf("A %s model of %s, fitted to %s observations.", fam,
-                 deparse(object$formula[[2]]),
+  hdr <- sprintf("%s %s model of %s, fitted to %s observations.",
+                 ilm_cap(ilm_article(fam)), fam, deparse(object$formula[[2]]),
                  if (is.na(n)) "an unknown number of" else format(n, big.mark = ","))
   re <- names(object$re)
   if (length(re))
@@ -283,6 +295,11 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     hdr <- paste(hdr, sprintf(
       "The model works on the %s scale, so its coefficients are not in %s; the effects below are converted.",
       sw$link, sw$unit))
+  ## a likelihood the user did not choose is worth saying they did not
+  if (!is.null(object$family_inferred))
+    hdr <- paste(hdr, sprintf(
+      "The %s family was read off the response (%s) rather than specified; if that is not how %s arises, refit with `family` set.",
+      fam, object$family_inferred, deparse(object$formula[[2]])))
   sec$model <- hdr
 
   ## ---- the effects ---------------------------------------------------------
@@ -333,15 +350,20 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
                 ilm_fmt(est, digits), ilm_fmt(lo, digits),
                 ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
       else
-        sprintf("%s: %s that %s %s a %s value of %s (estimate %s, 95%% interval %s to %s, p = %s).",
+        sprintf("%s: %s that %s %s a %s %s of %s (estimate %s, 95%% interval %s to %s, p = %s).",
                 nm, ev, subj, link_word,
-                if (est >= 0) "higher" else "lower", respname,
+                if (est >= 0) "higher" else "lower",
+                if (isTRUE(object$ordinal)) "category" else "value", respname,
                 ilm_fmt(est, digits), ilm_fmt(lo, digits),
                 ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
       ## and what it means where the response lives
       if (!is.null(sw$ratio) && fam %in% c("binomial", "poisson", "nbinom"))
         s <- paste(s, sprintf("On the %s scale that is %s.", sw$ratio,
                               ilm_fmt(exp(est), digits)))
+      if (identical(fam, "ordinal"))
+        s <- paste(s, sprintf(
+          "As a cumulative odds ratio that is %s: the odds of being in a higher category rather than a lower one, at every cut point, are multiplied by it.",
+          ilm_fmt(exp(est), digits)))
       if (!is.null(am)) {
         ## match on the term AND the level, not on a name prefix: a vectorised
         ## grepl here silently used only the first level and dropped the rest
@@ -382,12 +404,14 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   ck <- object$checks
   dl <- character()
   if (!is.null(ck) && nrow(ck)) {
-    bad <- ck[ck$status %in% c("WARN", "FAIL"), , drop = FALSE]
-    if (!nrow(bad)) {
+    ## a check that could not reach a verdict is not one that passed
+    bad <- ck[ck$status %in% c("WARN", "FAIL", "INCONCLUSIVE"), , drop = FALSE]
+    bnd <- any(ck$status == "BOUNDARY")
+    if (!nrow(bad) && !bnd) {
       dl <- c(dl, sprintf(
         "All %d fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().",
         nrow(ck)))
-    } else {
+    } else if (nrow(bad)) {
       for (i in seq_len(nrow(bad))) {
         s <- sprintf("%s -- %s: %s.", bad$status[i], bad$check[i],
                      bad$detail[i])
@@ -402,6 +426,11 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
           "on the model being adequate, so treat them as provisional until",
           "that is resolved."))
     }
+    ## a covariance at its boundary: which parts of the fit stand, in the same
+    ## words summary() uses
+    if (bnd)
+      dl <- c(dl, paste("BOUNDARY --",
+                        ilm_trust_text(object$hessian_held, ilm_boundary_at(object))))
   }
   sec$diagnostics <- dl
 
@@ -423,6 +452,20 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     cav <- c(cav, paste(
       "This model has no random or smooth terms, so its t and F tests are",
       "exact rather than large-sample approximations."))
+  ## Few groups: the Wald tests' reference is a large-sample one, and for an
+  ## effect that varies between groups it is the NUMBER of groups that counts.
+  ## Measured on multinomial designs with 60 groups, a nominal 5% test of a
+  ## between-group effect rejected a true null 5.8% and 7.8% of the time.
+  gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
+  if (length(gk) && !isTRUE(object$exact_df)) {
+    ng <- min(object$nlk[gk])
+    if (is.finite(ng) && ng < 100L)
+      cav <- c(cav, sprintf(
+        "The tests above use a large-sample reference, and with %d groups of `%s` one for an effect that varies between groups can run somewhat liberal. For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value by simulation%s.",
+        ng, names(object$re)[gk][which.min(object$nlk[gk])],
+        if (identical(fam, "gaussian"))
+          ", and ilm_denom_df() gives finite degrees of freedom" else ""))
+  }
   sec$caveats <- cav
 
   structure(list(sections = sec, family = fam, causal = is_causal,
@@ -619,6 +662,146 @@ ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
                  object_class = "ilm_rdd"), class = "ilm_interpretation")
 }
 
+#' @rdname ilm_interpret
+#' @param target For a power analysis, the power a study is to reach.
+#' @export
+ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
+                                    digits = 2, target = 0.8, ...) {
+  d <- as.data.frame(object); class(d) <- "data.frame"
+  unit <- attr(object, "unit")
+  scol <- if (!is.null(d$n_unit)) "n_unit" else "n"
+  who <- if (!is.null(d$n_unit) && !is.null(unit) && !identical(unit, "row"))
+    paste0(unit, "s") else "observations"
+  test <- attr(object, "test"); if (is.null(test)) test <- "Wald z"
+  joint <- identical(attr(object, "effect_scale"), "multiple")
+  pct <- function(v) paste0(ilm_fmt(100 * v, 0), "%")
+  sec <- list()
+  sec$model <- paste(
+    sprintf("Power for %s, estimated by simulating %d studies at each size and analysing each the way the analysis will be: %s, at a two-sided level of %s.",
+            attr(object, "term"), d$sims[1L],
+            if (joint) sprintf("a joint %s test of its %d coefficients", test,
+                               length(attr(object, "coefs")))
+            else sprintf("a %s test", test),
+            format(attr(object, "alpha"))),
+    if (isTRUE(attr(object, "redrawn")))
+      "Each study is a fresh draw of the planned design: the allocation balanced as the protocol would balance it, and new participants every time."
+    else if (isTRUE(attr(object, "grouped")))
+      "Each study resamples the fitted data's clusters whole, so the number of groups moves with the size."
+    else "Each study resamples the fitted data's rows.")
+  lines <- character()
+  pn <- if (length(unique(d$n)) >= 2L)
+    tryCatch(ilm_power_n(object, target), error = function(e) NULL) else NULL
+  for (e in unique(d$effect)) {
+    z <- d[d$effect == e, , drop = FALSE]; z <- z[order(z[[scol]]), , drop = FALSE]
+    s <- sprintf("%s, the chance of detecting it is %s.",
+                 if (joint) sprintf("At %s times the assumed effect", ilm_fmt(e, digits))
+                 else sprintf("At an effect of %s on the link scale", ilm_fmt(e, 3)),
+                 paste(sprintf("%s with %s %s (%s to %s)", pct(z$power),
+                               format(z[[scol]]), who, pct(z$mc_lower),
+                               pct(z$mc_upper)), collapse = "; "))
+    r <- if (is.null(pn)) NULL else pn[pn$effect == e, , drop = FALSE]
+    if (!is.null(r) && nrow(r)) {
+      v <- if (!is.null(r$n_unit)) c(r$n_unit, r$n_unit_lower, r$n_unit_upper)
+           else c(r$n, r$n_lower, r$n_upper)
+      s <- paste(s, if (!is.finite(v[1]))
+        sprintf("The sizes tried do not bracket %s power, so the size that reaches it lies outside them.",
+                pct(target))
+      else sprintf("Reaching %s power takes about %s %s%s.", pct(target),
+                   format(round(v[1])), who,
+                   if (all(is.finite(v[2:3])))
+                     sprintf(" -- somewhere between %s and %s, given the Monte Carlo error",
+                             format(round(min(v[2:3]))), format(round(max(v[2:3]))))
+                   else if (is.finite(v[2]))
+                     sprintf(" -- at least %s given the Monte Carlo error, and the upper end of that range lies beyond the sizes tried",
+                             format(round(v[2])))
+                   else if (is.finite(v[3]))
+                     sprintf(" -- at most %s given the Monte Carlo error, and the lower end lies below the sizes tried",
+                             format(round(v[3])))
+                   else ""))
+    }
+    lines <- c(lines, s)
+  }
+  sec$effects <- lines
+  dl <- character()
+  if (any(d$converged < 1, na.rm = TRUE))
+    dl <- c(dl, sprintf(
+      "Up to %s of the simulated studies failed to fit, and they count as missed detections: a study that will not fit has detected nothing. Dividing by the ones that did gives the more flattering power_converged column.",
+      pct(max(1 - d$converged, na.rm = TRUE))))
+  dft <- attr(object, "design_fails")
+  if (!is.null(dft) && nrow(dft))
+    for (i in seq_len(nrow(dft)))
+      dl <- c(dl, sprintf(
+        "FAIL -- %s: %s, in %s of the simulated studies. Every analysis of a study like this will report it.%s",
+        dft$check[i], dft$detail[i], pct(dft$share[i]),
+        if (nzchar(dft$suggestion[i])) paste0(" What to do: ", dft$suggestion[i], ".") else ""))
+  sec$diagnostics <- dl
+  cav <- c(
+    "A simulated power is itself an estimate. The intervals above are its Monte Carlo error, which more replicates narrow and nothing else does.",
+    if (joint)
+      "The effect is a multiple of the assumed coefficients, and the power at 1 is only as good as the assumptions behind them; smaller multiples show how fast it falls if the effect is smaller than hoped."
+    else
+      "The power holds for the effect assumed. A smaller true effect needs a larger study; smaller values of `effect` show how fast the power falls.")
+  if (isTRUE(attr(object, "grouped")) && !test %in% c("t", "F"))
+    cav <- c(cav, paste(
+      "The test counted uses a large-sample reference, which with few groups",
+      "can run somewhat liberal for an effect that varies between them -- and",
+      "flatter the power a little by the same amount."))
+  sec$caveats <- cav
+  structure(list(sections = sec, family = attr(object, "family"),
+                 causal = FALSE, object_class = "ilm_power"),
+            class = "ilm_interpretation")
+}
+
+#' @rdname ilm_interpret
+#' @export
+ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
+                                       digits = 3, ...) {
+  d <- as.data.frame(object); class(d) <- "data.frame"
+  adj <- d$adjust[1L]; lev <- attr(object, "level"); if (is.null(lev)) lev <- 0.95
+  fam <- attr(object, "family"); if (is.null(fam)) fam <- "gaussian"
+  catg <- identical(fam, "multinomial") || startsWith(fam, "ordinal")
+  pp <- catg && identical(attr(object, "type"), "response")
+  sc <- if (pp) 100 else 1
+  unit <- if (pp) " percentage points of probability"
+          else if (startsWith(fam, "ordinal")) " on the latent scale"
+          else if (identical(attr(object, "type"), "link") && fam != "gaussian")
+            " on the link scale" else ""
+  sec <- list()
+  sec$model <- sprintf("%d comparison%s of marginal means%s, %s.", nrow(d),
+    if (nrow(d) == 1L) "" else "s",
+    if (pp) ", as differences in the probability of each category" else "",
+    switch(adj,
+      max_t = sprintf("with intervals and p-values adjusted so that all %d hold together at %s (the single-step studentized maximum)",
+                      nrow(d), paste0(100 * lev, "%")),
+      bonferroni = "adjusted by Bonferroni, which is conservative",
+      "unadjusted, which suits comparisons chosen before the data were seen"))
+  sec$effects <- sprintf("%s: a difference of %s%s (%s%% interval %s to %s, %sp = %s) -- %s.",
+    d$contrast, ilm_fmt(sc * d$estimate, digits), unit, 100 * lev,
+    ilm_fmt(sc * d$lower, digits), ilm_fmt(sc * d$upper, digits),
+    if (adj == "none") "" else "adjusted ",
+    format.pval(d$p_adj, digits = 2, eps = 1e-4),
+    ## the graded phrase is written for the middle of a sentence
+    sub(",$", "", vapply(d$p_adj, ilm_evidence, "")))
+  cav <- character()
+  if (identical(attr(object, "weights"), "cells"))
+    cav <- c(cav, paste(
+      "The means were averaged with cell weights, so each group carries its",
+      "own mix of the other variables and a difference includes whatever that",
+      "difference in composition contributes -- it is not an adjusted",
+      "comparison."))
+  if (catg && pp)
+    cav <- c(cav, paste(
+      "Within a group the probabilities sum to one, so a rise in one category",
+      "is a fall somewhere else: the differences for a pair of groups sum to",
+      "zero across the categories."))
+  cav <- c(cav, paste(
+    "An interval that includes zero means the data are consistent with no",
+    "difference -- not that there is none."))
+  sec$caveats <- cav
+  structure(list(sections = sec, family = fam, causal = FALSE,
+                 object_class = "ilm_contrast"), class = "ilm_interpretation")
+}
+
 #' @export
 print.ilm_interpretation <- function(x, width = 76L, ...) {
   s <- x$sections
@@ -626,6 +809,8 @@ print.ilm_interpretation <- function(x, width = 76L, ...) {
     ilm_dag_model = "INTERPRETATION (DAG-identified effect)",
     ilm_did = "INTERPRETATION (difference in differences)",
     ilm_rdd = "INTERPRETATION (regression discontinuity)",
+    ilm_power = "INTERPRETATION (power analysis)",
+    ilm_contrast = "INTERPRETATION (comparisons)",
     "INTERPRETATION")
   cat(head, "\n", strrep("=", nchar(head)), "\n\n", sep = "")
   blk <- function(title, txt) {

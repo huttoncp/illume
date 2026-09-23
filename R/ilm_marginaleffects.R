@@ -199,7 +199,24 @@ get_coef.ilm_model <- function(model, ...) coef(model, full = TRUE)
 #' Statistical Software*, 111(9), 1--32.
 #' @rdname marginaleffects-methods
 #' @export
-set_coef.ilm_model <- function(model, coefs, ...) ilm_rebuild(model, coefs)
+set_coef.ilm_model <- function(model, coefs, ...) {
+  full <- stats::coef(model, full = TRUE)
+  k <- ilm_n_fixed(model)
+  ## The fixed effects alone -- what coef() returns -- are taken too, with
+  ## every other parameter left where the fit put it. Anything else used to
+  ## reach the rebuild and stop on "'names' attribute must be the same length
+  ## as the vector", which says nothing about what was wanted.
+  if (length(coefs) == k && length(full) > k) {
+    full[seq_len(k)] <- as.numeric(coefs)
+    coefs <- full
+  } else if (length(coefs) != length(full)) {
+    stop("`coefs` has ", length(coefs), " value(s); this model has ", k,
+         " fixed effect(s), as coef() gives them, and ", length(full),
+         " parameters in all, as coef(model, full = TRUE) gives them. Pass ",
+         "either.", call. = FALSE)
+  }
+  ilm_rebuild(model, coefs)
+}
 
 #' marginaleffects interface
 #'

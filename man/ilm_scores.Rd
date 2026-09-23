@@ -13,7 +13,8 @@ ilm_scores(object, conditional = TRUE)
 \item{conditional}{Logical, as in \code{\link[=ilm_fitted]{ilm_fitted()}}.}
 }
 \value{
-A named numeric vector: \code{log_score}, \code{brier}, \code{accuracy}.
+A named numeric vector: \code{log_score}, \code{brier}, \code{accuracy}, and for an
+ordinal fit \code{rps}, on the 0 to 1 scale.
 }
 \description{
 R-squared has no agreed definition for a nominal outcome, but \strong{proper scoring
@@ -29,11 +30,17 @@ ranging from 0 to 2. Lower is better for both.
 Accuracy is also returned, though it ignores how confident the predictions
 were and is the least informative of the three.
 
-Defined for a multinomial fit, and for a binomial one with a 0/1 response,
-whose single fitted probability is scored as the two categories it
-implies. Other families have no category probabilities to score; compare
+Defined for a multinomial fit, an ordinal one, and a binomial one with a 0/1
+response, whose single fitted probability is scored as the two categories
+it implies. Other families have no category probabilities to score; compare
 those fits with \code{AIC()} or \code{\link[=ilm_anova]{ilm_anova()}}, and check their predictions with
 \code{\link[=ilm_check_predictive]{ilm_check_predictive()}}.
+
+An ordinal fit also gets the \strong{ranked probability score}, which the other
+two do not provide: it compares the cumulative distributions, so a
+prediction that puts its weight one category away from the truth scores
+better than one that puts it three away. The log and Brier scores treat
+every miss alike, as they should for categories with no order.
 }
 \references{
 Gneiting, T., & Raftery, A. E. (2007). Strictly proper scoring rules,

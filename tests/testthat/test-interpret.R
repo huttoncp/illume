@@ -150,3 +150,46 @@ test_that("insight methods let the easystats stack read an ilm_model", {
   expect_equal(unname(diag(insight::get_varcov(f))),
                unname(diag(vcov(f))), tolerance = 1e-10)
 })
+
+test_that("an inferred family, an ordinal fit and the new objects are written up", {
+  set.seed(8); n <- 400
+  d <- data.frame(x = rnorm(n), g = factor(sample(c("a", "b", "c"), n, TRUE)))
+  d$yc <- rpois(n, exp(0.3 + 0.4 * d$x))
+  f1 <- suppressMessages(ilm_model(yc ~ x + g, data = d, verbose = FALSE))
+  it1 <- ilm_interpret(f1, ame = FALSE)
+  expect_match(it1$sections$model, "read off the response", fixed = TRUE)
+  d$yo <- cut(0.8 * d$x + stats::rlogis(n), c(-Inf, -0.7, 0.4, 1.3, Inf),
+              labels = c("w", "x2", "y2", "z"), ordered_result = TRUE)
+  f2 <- ilm_model(yo ~ x, data = d, family = "ordinal", verbose = FALSE)
+  it2 <- ilm_interpret(f2, ame = FALSE)
+  expect_match(it2$sections$model, "^An ordinal model")
+  expect_match(it2$sections$model, "cumulative logit", fixed = TRUE)
+  expect_match(it2$sections$effects[1], "higher category", fixed = TRUE)
+  expect_match(it2$sections$effects[1], "cumulative odds ratio", fixed = TRUE)
+  ## comparisons, in percentage points when they are probabilities
+  d$h <- factor(sample(c("u", "v"), n, TRUE))
+  fm <- ilm_model(g ~ h + x, data = d, family = "multinomial", verbose = FALSE)
+  itc <- ilm_interpret(ilm_contrast(ilm_emmeans(fm, "h", type = "response")))
+  expect_length(itc$sections$effects, 3L)
+  expect_match(itc$sections$effects[1], "percentage points", fixed = TRUE)
+  expect_false(any(grepl(",.", itc$sections$effects, fixed = TRUE)))
+  expect_output(print(itc), "INTERPRETATION (comparisons)", fixed = TRUE)
+})
+
+test_that("a power analysis is written up with its size and its uncertainty", {
+  skip_on_cran()
+  p <- ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+                        n_unit = c(40, 80, 160),
+                        cells = c(control = 0, treatment = 0.5), sd = 1,
+                        term = "arm", sims = 60, verbose = FALSE,
+                        progress = FALSE)
+  it <- ilm_interpret(p)
+  expect_match(it$sections$model, "a t test", fixed = TRUE)
+  expect_match(it$sections$model, "fresh draw of the planned design",
+               fixed = TRUE)
+  expect_match(it$sections$effects[1], "Reaching 80% power takes about",
+               fixed = TRUE)
+  expect_match(paste(it$sections$caveats, collapse = " "), "Monte Carlo",
+               fixed = TRUE)
+  expect_output(print(it), "INTERPRETATION (power analysis)", fixed = TRUE)
+})

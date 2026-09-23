@@ -91,3 +91,19 @@ test_that("the recomputed Hessian agrees with the exact one where both exist", {
   H <- ilm_hessian(function(p) as.numeric(f$obj$gr(p)), f$opt$par)
   expect_equal(H, unname(f$obj$he(f$opt$par)), tolerance = 1e-6)
 })
+
+test_that("the interpretation says which parts of a boundary fit stand", {
+  d <- bnd_data(4)
+  f <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+                 verbose = FALSE)
+  it <- ilm_interpret(f, ame = FALSE)
+  dg <- paste(it$sections$diagnostics, collapse = " ")
+  ## not "all checks passed": the covariance of site is not to be read
+  expect_false(grepl("fitting checks passed", dg, fixed = TRUE))
+  expect_match(dg, "BOUNDARY --", fixed = TRUE)
+  expect_match(dg, "`site`", fixed = TRUE)
+  expect_match(dg, "still usable", fixed = TRUE)
+  ## and a caveat about few groups, with the calibrated alternative
+  expect_match(paste(it$sections$caveats, collapse = " "), "ilm_pb_lrt()",
+               fixed = TRUE)
+})

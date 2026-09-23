@@ -148,7 +148,7 @@ test_that("a continuous zero part simulates and residualises correctly", {
   ## but not to a plain beta fit, which could not hold a zero anyway
   fb <- ilm_model(y ~ x + g, data = beta_data(300L), family = "beta",
                   verbose = FALSE)
-  expect_error(ilm_check_zeros(fb), "no special meaning")
+  expect_error(ilm_check_zeros(fb), "cannot contain a zero")
 })
 
 test_that("zero-inflated beta agrees with glmmTMB", {

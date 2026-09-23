@@ -2048,6 +2048,11 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     sdr$cov.fixed <- Vfull
   }
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
+                 ## how many of those rows were checks of the DESIGN, made
+                 ## before fitting: the same for every study of this design,
+                 ## so a power simulation reports them rather than counting
+                 ## each replicate that repeats them as a failed fit
+                 n_precheck = nrow(pre),
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
@@ -2188,6 +2193,17 @@ ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
     if (anyNA(rp$cols))
       stop("internal: a baseline spline column was dropped from a refit",
            call. = FALSE)
+  }
+  ## A flexible baseline's columns are a spline in log(TIME) -- functions of
+  ## the response, not of the covariates -- so a refit to a different
+  ## response needs them rebuilt from it, at the same knots. Kept as they
+  ## were, every refit to simulated times scored the baseline at the observed
+  ## ones: the parametric bootstrap, the envelopes and the consistency check
+  ## all refitted a model whose baseline did not belong to its data.
+  if (!is.null(rp) && !identical(y, object$y)) {
+    lt <- log(as.numeric(y))
+    X[, rp$cols] <- ilm_rcs(lt, rp$knots)
+    rp$D[, rp$cols] <- ilm_rcs(lt, rp$knots, deriv = TRUE)
   }
   Zd <- object$Zd
   ## `reml` too: a refit of a REML fit by maximum likelihood is a different

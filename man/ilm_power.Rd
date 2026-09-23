@@ -17,22 +17,25 @@ ilm_power(
 )
 }
 \arguments{
-\item{object}{A fitted \code{\link[=ilm_model]{ilm_model()}} to treat as the truth.}
+\item{object}{A fitted \code{\link[=ilm_model]{ilm_model()}}, or an \code{\link[=ilm_scaffold]{ilm_scaffold()}}, to treat as
+the truth.}
 
 \item{n}{Sample sizes to try. Defaults to a spread around the fitted size.
 For a model with a grouping factor this is the number of ROWS, and the
 number of clusters moves with it.}
 
-\item{term}{The fixed-effect coefficient to test, named either as the
-coefficient (\code{"armtreatment"}) or as the variable that produced it
-(\code{"arm"}). The variable form is resolved when it maps to a single
-coefficient, which covers continuous predictors and two-level factors; a
-term with more columns is refused, with its coefficients listed, because
-a power curve follows one effect size at a time. Defaults to the first
-coefficient that is not an intercept.}
+\item{term}{What to test: one coefficient, named as the coefficient
+(\code{"armtreatment"}, or \code{"b:x"} in a multinomial model), or a whole term,
+named as the variable or term that produced it (\code{"arm"}, \code{"x"}). A term
+that produced a single coefficient is that coefficient; one that produced
+several is tested jointly. Defaults to the first coefficient that is not
+an intercept, and in a multinomial model to the first term.}
 
-\item{effect}{Values for that coefficient on the LINK scale. Defaults to
-the fitted value. Supplying several traces power across effect sizes.}
+\item{effect}{For a single coefficient, values for it on the LINK scale;
+defaults to the fitted value. For a term tested jointly, MULTIPLES of its
+fitted coefficients -- \code{c(0.5, 1)} asks what happens if the effect is half
+what was assumed; defaults to 1. Several values trace power across effect
+sizes.}
 
 \item{sims}{Replicates per cell.}
 
@@ -52,6 +55,33 @@ sizes, refits each, and counts how often the named term is detected. It
 works for any family \code{\link[=ilm_model]{ilm_model()}} fits, because it never needs a
 closed-form variance.
 }
+\section{The studies that are simulated}{
+
+
+From a model fitted to data, each replicate resamples the fitted rows --
+whole clusters at a time when the model has a grouping factor, so the number
+of groups moves with \code{n} -- and draws a new response from the model: fresh
+random effects for the new groups, fresh serial correlation, the fitted
+smooths, the zero part, the dispersion model and the censoring. It is then
+refitted as the same model, contrasts and all.
+
+From an \code{\link[=ilm_scaffold]{ilm_scaffold()}}, which has no data behind it, each replicate is a
+fresh draw of the planned design instead: the allocation balanced as the
+protocol would balance it, and any covariate given as a function drawn
+again, because a new study recruits new people.
+}
+
+\section{The test that is counted}{
+
+
+The one the analysis will report. A single coefficient gets \code{summary()}'s
+test: t on the residual degrees of freedom when nothing is integrated out,
+the Wald z otherwise. A term with several coefficients -- a factor with
+three levels, or any term of a multinomial model, which has one coefficient
+per category -- is tested jointly, F or chi-square, as \code{\link[=ilm_anova]{ilm_anova()}} tests
+it. Name one coefficient (\code{"b:x"}) to follow a single category instead.
+}
+
 \section{The estimate has a standard error}{
 
 
@@ -71,6 +101,12 @@ worked, which is the number most software reports and is \strong{power
 conditional on convergence} -- a different and more flattering quantity.
 When \code{converged} is below one the two differ, and the gap is the size of the
 problem rather than something to smooth over.
+
+A check the analysis makes BEFORE fitting -- too few observations per random
+effect, say -- is a verdict on the design, the same for every study drawn
+from it, and is not counted against each replicate. The result reports it
+instead, with its remedy, because every analysis of such a study will print
+it as a failure and the plan should hear it first.
 }
 
 \examples{
@@ -87,5 +123,6 @@ Methodology} 11, 94.
 }
 \seealso{
 \code{\link[=ilm_power_n]{ilm_power_n()}} to read off the size for a target power,
-\code{\link[=plot.ilm_power]{plot.ilm_power()}} for the curve, \code{\link[=ilm_simulate]{ilm_simulate()}} for the generator.
+\code{\link[=plot.ilm_power]{plot.ilm_power()}} for the curve, \code{\link[=ilm_power_design]{ilm_power_design()}} for a study with no
+data yet, \code{\link[=ilm_simulate]{ilm_simulate()}} for the generator.
 }

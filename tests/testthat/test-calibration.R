@@ -84,6 +84,6 @@ test_that("families without a predicted probability are refused clearly", {
   d$y <- 1 + d$x + stats::rnorm(n)
   f <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
                  verbose = FALSE)
-  expect_error(ilm_calibration(f), "binomial and multinomial")
+  expect_error(ilm_calibration(f), "binomial, multinomial and ordinal")
   expect_error(ilm_calibration(f), "ilm_rqr")
 })

@@ -6,6 +6,8 @@
 \alias{ilm_interpret.ilm_dag_model}
 \alias{ilm_interpret.ilm_did}
 \alias{ilm_interpret.ilm_rdd}
+\alias{ilm_interpret.ilm_power}
+\alias{ilm_interpret.ilm_contrast}
 \alias{iml_interpret}
 \title{Interpret a fitted model in words}
 \usage{
@@ -18,10 +20,23 @@ ilm_interpret(object, ...)
 \method{ilm_interpret}{ilm_did}(object, causal = NULL, ame = FALSE, digits = 3, ...)
 
 \method{ilm_interpret}{ilm_rdd}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+
+\method{ilm_interpret}{ilm_power}(
+  object,
+  causal = NULL,
+  ame = FALSE,
+  digits = 2,
+  target = 0.8,
+  ...
+)
+
+\method{ilm_interpret}{ilm_contrast}(object, causal = NULL, ame = FALSE, digits = 3, ...)
 }
 \arguments{
 \item{object}{An \code{\link[=ilm_model]{ilm_model()}}, \code{\link[=ilm_dag_model]{ilm_dag_model()}}, \code{\link[=ilm_did]{ilm_did()}} or
-\code{\link[=ilm_rdd]{ilm_rdd()}}.}
+\code{\link[=ilm_rdd]{ilm_rdd()}}; or the result of \code{\link[=ilm_power]{ilm_power()}} or \code{\link[=ilm_power_design]{ilm_power_design()}}, which
+is written up as a power analysis, or of \code{\link[=ilm_contrast]{ilm_contrast()}}, written up as
+the comparisons it makes.}
 
 \item{...}{Unused.}
 
@@ -32,6 +47,8 @@ the design, which is what you want.}
 delta-method calculation; worth it for anything with a link function.}
 
 \item{digits}{Rounding.}
+
+\item{target}{For a power analysis, the power a study is to reach.}
 }
 \value{
 An object of class \code{"ilm_interpretation"}: a list of sections, which

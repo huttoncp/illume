@@ -204,9 +204,20 @@ ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
          call. = FALSE)
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   if (!fam %in% c("poisson", "nbinom", "binomial"))
-    stop("a dispersion check applies to poisson, nbinom and binomial models; ",
-         "for ", fam, " the residual variance is estimated rather than fixed, ",
-         "so there is nothing to test", call. = FALSE)
+    stop("a dispersion check applies to poisson, nbinom and binomial models. ",
+         if (fam == "multinomial" || isTRUE(object$ordinal))
+           paste0("A categorical response's variance follows from its ",
+                  "probabilities, and a misfit there shows as ",
+                  "miscalibration rather than as a dispersion ratio: use ",
+                  "ilm_calibration()",
+                  if (isTRUE(object$ordinal))
+                    ", and ilm_check_proportional() for the thresholds" else "",
+                  ".")
+         else paste0("For ", ilm_article(fam), " ", fam, " model the spread ",
+                     "is a parameter estimated from the data rather than ",
+                     "fixed by the mean, so there is nothing to test; ",
+                     "ilm_check_variance() asks whether it is constant."),
+         call. = FALSE)
 
   ## A simulated p-value cannot fall below 1 / (B + 1). At B = 60 the floor is
   ## 0.016, so the FAIL threshold of 0.01 is unreachable and even gross
@@ -278,9 +289,14 @@ ilm_check_zeros <- function(object, B = 200L, seed = 1L) {
   ## containing a zero in the first place.
   if (!fam %in% c("poisson", "nbinom") && is.null(object$Zzi))
     stop("a zero-inflation check applies to count models (poisson, nbinom), ",
-         "or to any fit with a zero part. For a ", fam, " model without one, ",
-         "a zero carries no special meaning -- and a beta fit cannot contain ",
-         "one at all, since its density has no mass there.", call. = FALSE)
+         "or to any fit with a zero part. ",
+         if (identical(fam, "beta"))
+           paste0("A beta fit cannot contain a zero at all, since its density ",
+                  "has no mass there; ilm_model(ziformula = ~ 1, zi_type = ",
+                  "\"hurdle\") models the zeros as a process of their own.")
+         else paste0("For ", ilm_article(fam), " ", fam, " model without ",
+                     "one, a zero carries no special meaning."),
+         call. = FALSE)
   ## A simulated p-value cannot fall below 1 / (B + 1). At B = 60 the floor is
   ## 0.016, so the FAIL threshold of 0.01 is unreachable and even gross
   ## misspecification can only ever report WARN.
@@ -481,7 +497,10 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
   if (!is.null(cl)) try(parallel::clusterExport(cl, "by_vec", envir = environment()),
                         silent = TRUE)
   one <- function(b) {
-    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = 1L), silent = TRUE)
+    ## a replicate's optimiser warnings are noise here: the ones that fail
+    ## are counted, which is what they are worth
+    f <- try(suppressWarnings(ilm_refit_like(stub, y = ys[, b], restarts = 1L)),
+             silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0)
       return(c(trend = NA_real_, ratio = NA_real_))
     f$assign <- asg; f$term_labels <- tl

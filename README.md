@@ -17,7 +17,9 @@ through counts, proportions, ordered and unordered categories, and survival
 times. All of them are fitted by approximate maximum likelihood using the
 Laplace approximation via [RTMB](https://github.com/kaskr/RTMB). Because a
 single engine fits them all, `summary()`, `ilm_anova()`, `predict()` and every
-diagnostic stay the same as the model gets harder.
+diagnostic stay the same as the model gets harder. Leave `family` off and it is
+read off the response, with the choice and the evidence for it stated; what
+the response cannot settle is asked about rather than guessed.
 
 **Every check names a remedy that exists in this package.** A diagnostic that
 tells you an assumption fails and leaves you to find the fix elsewhere is a
@@ -84,7 +86,7 @@ is the shape of the whole package.
 | **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
 | **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
-| **Design and decision** | `ilm_power()`, `ilm_scenario()`, `ilm_interpret()` |
+| **Design and decision** | `ilm_power()` from a fit, `ilm_power_design()` and `ilm_scaffold()` from assumptions alone -- for every family, multinomial included, each simulated study analysed with the test the analysis will report; `ilm_scenario()`, `ilm_interpret()` |
 
 ## The multinomial claim, stated carefully
 

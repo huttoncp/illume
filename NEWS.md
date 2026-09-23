@@ -42,6 +42,113 @@ remain the only things that have ever found a defect here.
   that fails to fit is now reported; it used to be dropped without a word, and
   the draw that made the model hardest to fit is not a random one to lose.
 
+## Power that is the power of the analysis you will run
+
+* `ilm_power()` refitted each simulated study with `ilm_model(formula, data,
+  family)` rebuilt by hand. That dropped the contrasts -- a model fitted with
+  sum-to-zero coding came back with differently named coefficients and a
+  power of exactly **zero** -- along with the zero part, the dispersion model
+  and the censoring, and it failed outright on a transformed response or
+  predictor, which the model frame holds only transformed. Each replicate is
+  now the fitted model's own design restricted to the rows the study drew,
+  refitted through the machinery every other test in the package uses.
+* It counts the test the analysis will report: t on the residual degrees of
+  freedom where nothing is integrated out, the Wald z otherwise, and for a
+  term with several coefficients the joint F or chi-square `ilm_anova()`
+  reports. A z test in place of the t put the power of a 20-person two-arm
+  trial at 0.43 where the exact value is 0.395; it is now 0.387 (0.374 to
+  0.399 over 6,000 replicates).
+* A multinomial model used to fail with "non-conformable arguments". A term
+  is now tested across all its categories -- or one category at a time, by
+  naming the coefficient -- and `effect` is then a multiple of the assumed
+  coefficients. Against the asymptotic noncentral chi-square it gives 0.818
+  where theory says 0.813 at 400 rows. At 100 and 200 rows it runs 3 to 4
+  points lower, as the Wald test's conservative size there (4.2% and 4.5% at
+  a nominal 5%) predicts: that is the test the analysis reports.
+* Random effects are drawn as the matrix normal the model fits, with a
+  multinomial term's covariance across categories and a random slope's own
+  variance, and serial correlation, dispersion models, zero parts, censoring
+  and flexible survival baselines are simulated and refitted as themselves.
+  Frequency weights are drawn as the observations they stand for.
+* A check made before fitting is a verdict on the design, the same for every
+  study drawn from it. It is now reported with its remedy rather than counted
+  against each replicate: a three-category multinomial with four visits per
+  participant fails the latent-budget check whatever the data, and counting
+  it put the power at exactly zero.
+* Recorded rather than smoothed: with 60 clusters, the Wald test of a
+  between-cluster effect in a multinomial mixed model rejected a true null
+  5.8% of the time with four visits per cluster and 7.8% with eight. The
+  power reported is the power of that test, and `ilm_interpret()` says so.
+  `ilm_pb_lrt()` is the calibrated alternative for the analysis itself.
+
+## Planning a study with no data behind it
+
+* `ilm_scaffold()` and `ilm_power_design()` take multinomial and ordinal
+  outcomes, stated as the probability of each category in each cell or as
+  coefficients (with thresholds, for an ordinal one). Probabilities no
+  proportional-odds model can produce are refused, and the model that can
+  produce them is named. Both used to fail, one of them with a message
+  calling it a bug in `ilm_scaffold()`.
+* An ICC for a binary or ordinal outcome is taken on the latent scale, the
+  usual convention (`pi^2 / 3` for a logit link). It used to demand an `sd`
+  such a model does not have.
+* `reml = TRUE` plans for an analysis fitted by REML. On a 2 x 2 design with
+  an ICC of 0.5 the maximum-likelihood analysis's power ran about 1.5 points
+  above the REML one (0.358 against 0.342 at 20 per arm), because its
+  variance components run small; the REML figure is within Monte Carlo error
+  of `simr`, which also uses REML.
+* Each simulated study draws the planned design afresh, instead of
+  resampling the scaffold's own grid: the allocation is balanced the way a
+  protocol randomises a factorial, and a covariate given as a function is
+  drawn again. Resampling left cells of a small factorial empty, so 18
+  participants in a 3 x 3 design converged 28.5% of the time. They now
+  converge every time.
+* Allocation itself was balanced factor by factor, which left the CELLS to
+  chance, even in the scaffold's own grid. It is now balanced by cell, with
+  any remainder spread so that each factor's own levels stay within one of
+  each other.
+
+## Marginal means for categorical outcomes
+
+* `ilm_emmeans()` gives a multinomial fit a row for every category. On the
+  link scale that row is the category's centred log-odds. On the response
+  scale it is the probability, averaged over the grid, with a delta-method
+  standard error. `ilm_contrast()` compares groups within each category, as
+  differences in probability. Estimates and standard errors agree with
+  `emmeans` on `nnet::multinom()` to 1e-6 under all three weightings, and so
+  do the contrasts.
+* An ordinal fit's `type = "response"` gives each category's probability,
+  with standard errors that carry the thresholds' uncertainty as well as the
+  slopes'. It agrees with `emmeans` on `MASS::polr()` to 1e-6, logit and
+  probit.
+* `ilm_trends()` gives a multinomial fit a slope for every category, and
+  agrees with `emtrends`.
+* Naming the response among the variables to average over now says so. It
+  used to fail on "undefined columns selected".
+
+## A survival model's refits had the wrong baseline
+
+* A flexible parametric (`rp`) model's baseline is a spline in log time, so
+  its columns are built from the response. Every refit to a simulated
+  response kept the columns built from the observed times: the parametric
+  bootstrap, the simulation envelopes and the consistency check all refitted
+  a model whose baseline did not belong to its data. The columns are now
+  rebuilt from the new times at the same knots, and such a refit matches a
+  fresh fit to the same times exactly.
+
+## Writing it up
+
+* `ilm_interpret()` says when the family was read off the response, and
+  describes an ordinal fit in categories and cumulative odds ratios rather
+  than as an identity-link model. A covariance at its boundary gets the same
+  verdict `summary()` gives; the interpretation used to say that all fitting
+  checks had passed. With fewer than 100 groups it notes that the tests are
+  large-sample ones and names `ilm_pb_lrt()`.
+* It also writes up an `ilm_power()` result: the power at each size with its
+  Monte Carlo interval, the size that reaches 80% with the range the
+  simulation supports, and any verdict on the design. An `ilm_contrast()`
+  result is written up as the comparisons it makes.
+
 ## A variance at its boundary no longer takes the fixed effects with it
 
 * When a random-effect variance sits at zero, or a correlation at +/-1, the
@@ -176,6 +283,21 @@ remain the only things that have ever found a defect here.
 * `ilm_aov_ez()` matched an `observed` factor as a regular expression.
 * Asking for censoring on a family without a censored form said only the
   gaussian had one; the survival families have one too, and it says so.
+* `ilm_scores()` and `ilm_calibration()` take an ordinal fit, which predicts
+  category probabilities as a multinomial one does, and `ilm_scores()` adds
+  the ranked probability score for it, which charges a near miss less than a
+  far one.
+* `ilm_pb_lrt()` called the chi-square reference "MISCALIBRATED" on however
+  few replicates were run -- five were enough. The verdict now needs the
+  Monte Carlo interval on the implied size to exclude 0.05, and says when
+  there are too few replicates to judge.
+* The dispersion and zero-inflation checks gave a reason for declining a
+  categorical family that was wrong for it ("the residual variance is
+  estimated"); they now point to the check that does apply.
+* `set_coef()` takes the fixed effects alone, as `coef()` returns them. It
+  used to stop on an unexplained "'names' attribute" error.
+* Refits inside a simulation no longer pass each replicate's optimiser
+  warnings through; the replicates that fail are counted, as before.
 * The pkgdown reference index is generated, and hand edits to `_pkgdown.yml`
   had drifted from the generator; they are in the generator now.
   `ilm_anomalous()` is indexed, and the `benchmarking` and `moderation`

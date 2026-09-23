@@ -44,6 +44,35 @@
 #' names the term that is missing, rather than quietly fitting the closest
 #' thing it can.
 #'
+#' @section A categorical outcome:
+#'
+#' For `family = "multinomial"` or an ordinal family, `cells` gives the
+#' PROBABILITY of each outcome category in each cell: a data frame with one
+#' column per design factor and one per category, or a matrix with the cell
+#' names as row names and the categories as column names. Each row sums to 1.
+#' The categories are taken from those columns, in their order; give
+#' `categories` to set it.
+#'
+#' For a multinomial model, `coefs` is a matrix with one row per model-matrix
+#' column and one column per category but the last -- the layout
+#' [fixef.ilm_model()] prints -- or a vector named as [coef.ilm_model()] names
+#' them, `"treatment:armtreatment"`. The coding is sum-to-zero across
+#' categories, so a coefficient is that category's deviation from the average
+#' of all of them, and `categories` is needed to know what they are.
+#'
+#' For an ordinal model, `coefs` holds the slopes -- there is no intercept, the
+#' thresholds take its place -- and `thresholds` the `J - 1` increasing cut
+#' points on the latent scale. Cell probabilities have to be ones proportional
+#' odds can produce: the same shift at every cut point between two cells. If
+#' they are not, the call stops and says so, because an ordinal model cannot
+#' give the study that was described; `family = "multinomial"` can.
+#'
+#' A random intercept in a multinomial model is a random shift in each
+#' category's log-odds, and `re_sd` is its standard deviation. A shift common
+#' to all categories changes no probability, so the model carries the part of
+#' each that differs from the average -- which is why a fitted multinomial's
+#' category standard deviations come out as `re_sd * sqrt(1 - 1/J)`.
+#'
 #' @section Saying how big the study is:
 #'
 #' `n_unit` counts **independent units**: participants when the formula has a
@@ -89,13 +118,28 @@
 #'   matrix. Defaults to zero.
 #' @param icc Intraclass correlation, as an alternative to `re_sd` for a random
 #'   intercept: the random-effect variance becomes `icc / (1 - icc)` times the
-#'   residual variance.
+#'   residual variance. A binomial or ordinal model has no residual variance of
+#'   its own, and there `icc` is on the latent scale, by the usual convention:
+#'   the residual variance is that of the standard logistic, `pi^2 / 3`, for a
+#'   logit link and 1 for a probit (Snijders and Bosker 2012). A count or
+#'   multinomial model has no such convention, and takes `re_sd`.
 #' @param within Character vector of design variables that vary within a unit.
 #' @param contrasts Passed to [ilm_model()]; also used when solving `cells`,
 #'   so the two always agree.
 #' @param seed Integer seed for the grid's own realisation.
 #' @param verbose Logical. Report what was built.
+#' @param categories For a multinomial or ordinal outcome, its categories in
+#'   order. Taken from the columns of `cells` when it has them.
+#' @param thresholds For an ordinal outcome given by `coefs`, the `J - 1` cut
+#'   points on the latent scale, increasing.
+#' @param reml Plan for an analysis fitted by restricted maximum likelihood,
+#'   as `ilm_model(reml = TRUE)` fits one: every simulated study is then
+#'   refitted by REML. For a gaussian mixed model that is the analysis most
+#'   software reports, and its power is a little lower than that of the
+#'   maximum-likelihood fit, whose variance components run small.
 #' @return An `"ilm_model"` that also carries class `"ilm_scaffold"`.
+#' @references Snijders, T. A. B. and Bosker, R. J. (2012). *Multilevel
+#'   Analysis*, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)
 #' @seealso [ilm_power_design()] for the common case in one call;
 #'   [ilm_power()], [ilm_simulate()], [ilm_emmeans()], [ilm_trends()].
 #' @examples
@@ -115,13 +159,22 @@
 #'                              treatment.pre = 12, treatment.post = 14.5),
 #'                    sd = 4, icc = 0.5, verbose = FALSE)
 #' ilm_emmeans(s2, c("arm", "time"))
+#'
+#' ## a three-category outcome, stated as the probabilities in each arm
+#' s3 <- ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
+#'                    n_unit = 200, family = "multinomial",
+#'                    cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+#'                                  treatment = c(none = 0.35, some = 0.35, full = 0.3)),
+#'                    verbose = FALSE)
+#' coef(s3)
 #' }
 #' @export
 ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
                          coefs = NULL, cells = NULL, sd = NULL,
                          re_sd = NULL, re_cor = NULL, icc = NULL,
                          within = NULL, contrasts = NULL, seed = 1L,
-                         verbose = TRUE) {
+                         verbose = TRUE, categories = NULL,
+                         thresholds = NULL, reml = FALSE) {
   if (!inherits(formula, "formula"))
     stop("`formula` must be a formula, not ", class(formula)[1], call. = FALSE)
   if (!is.list(design) || !length(design) || is.null(names(design)) ||
@@ -138,6 +191,16 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   if (!requireNamespace("lme4", quietly = TRUE))
     stop("the formula interface needs lme4 to read random-effect bars; ",
          "install.packages(\"lme4\")", call. = FALSE)
+  ## A categorical outcome has categories to name, and an ordinal one cut
+  ## points; nothing else has either, and quietly ignoring them would plan a
+  ## study other than the one described.
+  catg <- identical(fam$name, "multinomial") || isTRUE(fam$ordinal)
+  if (catg) {
+    categories <- ilm_scaffold_categories(categories, cells, names(design))
+  } else if (!is.null(categories) || !is.null(thresholds)) {
+    stop("`categories` and `thresholds` describe a multinomial or ordinal ",
+         "outcome, and this is a ", fam$name, " model.", call. = FALSE)
+  }
 
   bars  <- lme4::findbars(formula)
   fform <- lme4::nobars(formula)
@@ -167,19 +230,25 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   mtr <- stats::delete.response(mt)
   Xf <- stats::model.matrix(mtr, stats::model.frame(mtr, grid),
                             contrasts.arg = contrasts)
-  bet <- ilm_scaffold_beta(coefs, cells, Xf, design, grid, fam, contrasts, mt)
+  ## an ordinal model has no intercept: its thresholds are where one would be
+  if (isTRUE(fam$ordinal)) Xf <- Xf[, colnames(Xf) != "(Intercept)", drop = FALSE]
+  bet <- if (catg)
+    ilm_scaffold_catbeta(coefs, cells, Xf, design, grid, fam, contrasts, mt,
+                         categories, thresholds)
+  else ilm_scaffold_beta(coefs, cells, Xf, design, grid, fam, contrasts, mt)
 
   ## ---- the variance parameters --------------------------------------------
   sdv <- ilm_scaffold_sd(sd, fam)
-  rev <- ilm_scaffold_resd(re_sd, re_cor, icc, sdv, bars, group)
+  rev <- ilm_scaffold_resd(re_sd, re_cor, icc, sdv, bars, group, fam)
 
   ## ---- a first fit, only to get an object of the right shape ---------------
   ## It is fitted to data drawn crudely from the assumptions rather than to
   ## noise, because a mixed model fitted to noise lands on the boundary and a
   ## boundary fit is a bad thing to start rebuilding from.
-  grid[[resp]] <- ilm_scaffold_y0(Xf, bet, grid, group, rev, sdv, fam)
+  grid[[resp]] <- ilm_scaffold_y0(Xf, bet, grid, group, rev, sdv, fam, categories)
   fit <- suppressWarnings(suppressMessages(
     ilm_model(formula, data = grid, family = fam$name, contrasts = contrasts,
+              reml = reml,
               verbose = FALSE, restarts = 1L)))
   fit <- ilm_scaffold_impose(fit, bet, rev, sdv, fam)
 
@@ -188,11 +257,35 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   ## claims. Refit and impose again: the refit is only there to give every
   ## downstream field a consistent object, and the second impose is what makes
   ## the parameters exact.
-  grid[[resp]] <- ilm_power_draw(fit, grid, bet)
-  fit2 <- try(suppressWarnings(suppressMessages(
-    ilm_model(formula, data = grid, family = fam$name, contrasts = contrasts,
-              verbose = FALSE, restarts = 1L))), silent = TRUE)
-  if (inherits(fit2, "try-error"))
+  ##
+  ## A category the draw never produced would make the refit a model with
+  ## fewer categories, so the draw is repeated a few times first; one that
+  ## still does not appear is a finding about the design, and said as one.
+  ydraw <- ilm_power_draw(fit, grid, bet)
+  if (catg) {
+    tries <- 1L
+    while (length(unique(ydraw)) < length(categories) && tries < 20L) {
+      ydraw <- ilm_power_draw(fit, grid, bet); tries <- tries + 1L
+    }
+    gone <- setdiff(categories, as.character(ydraw))
+    if (length(gone))
+      warning("category '", paste(gone, collapse = "', '"), "' did not occur ",
+              "in 20 simulated studies of this size: what is assumed for it ",
+              "is too rare for this design to observe reliably, and ",
+              "ilm_power() will count the studies that miss it as failures. ",
+              "The scaffold keeps its parameters but not a draw of its own.",
+              call. = FALSE)
+  } else gone <- character(0)
+  fit2 <- if (length(gone)) NULL else {
+    grid[[resp]] <- ydraw
+    try(suppressWarnings(suppressMessages(
+      ilm_model(formula, data = grid, family = fam$name, contrasts = contrasts,
+              reml = reml,
+                verbose = FALSE, restarts = 1L))), silent = TRUE)
+  }
+  if (is.null(fit2)) {
+    ## kept as it was: the first fit, with the parameters imposed
+  } else if (inherits(fit2, "try-error"))
     ## the PARAMETERS are still exactly what was asked for, because the impose
     ## above set them; it is the grid's response column that is the cruder
     ## draw. Worth saying, because a model this design cannot fit once is a
@@ -207,7 +300,9 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   fit$scaffold <- list(design = design, within = within, n_unit = n_unit,
                        rows_per_unit = if (is.null(group)) 1L else N %/% n_unit,
                        group = group, cells = cells, coefs = bet,
-                       re_sd = rev, sd = sdv, seed = seed)
+                       re_sd = rev, sd = sdv, seed = seed,
+                       categories = if (catg) categories else NULL,
+                       thresholds = attr(bet, "zeta"))
   class(fit) <- c("ilm_scaffold", class(fit))
   if (verbose) print(fit)
   fit
@@ -240,22 +335,52 @@ ilm_scaffold_grid <- function(design, n_unit, within, group) {
   } else NULL
   per <- if (is.null(wgrid)) 1L else nrow(wgrid)
 
-  ## between-unit variables are allocated across units, balanced and shuffled
+  ## Between-unit variables are allocated across units by CELL, the way a
+  ## protocol randomises a factorial: every combination of their values
+  ## equally often, and the remainder spread so that each variable's own
+  ## levels stay balanced too. Allocating each variable separately balanced
+  ## the margins and left the cells to chance -- 18 participants in a 3 x 3
+  ## design came out with an empty cell more often than not, which is a study
+  ## nobody would run and one whose model cannot be fitted.
   ub <- data.frame(.unit = seq_len(n_unit))
-  for (v in bv) {
-    x <- design[[v]]
-    ub[[v]] <- if (is.function(x)) {
-      val <- x(n_unit)
-      if (length(val) != n_unit)
-        stop("`design$", v, "` returned ", length(val), " value(s) for ",
-             n_unit, " unit(s); a design function must return as many values ",
-             "as it is asked for.", call. = FALSE)
-      val
-    } else {
-      l <- lev(x)
-      sample(rep_len(l, n_unit))          # balanced to within one unit
+  fixedb <- bv[!vapply(design[bv], is.function, TRUE)]
+  if (length(fixedb)) {
+    levs <- lapply(design[fixedb], lev)
+    nl <- lengths(levs)
+    cg <- as.matrix(expand.grid(lapply(nl, seq_len)))  # the first varies fastest
+    idx <- rep(seq_len(nrow(cg)), n_unit %/% nrow(cg))
+    r <- n_unit %% nrow(cg)
+    if (r > 0L) {
+      ## The remainder goes to distinct cells, so no cell is more than one
+      ## ahead of another, chosen one at a time where the levels involved
+      ## have been used least -- which keeps each variable's own levels
+      ## balanced as well. Ties are broken at random.
+      used <- logical(nrow(cg))
+      cnt <- lapply(nl, function(k) integer(k))
+      for (i in seq_len(r)) {
+        free <- which(!used)
+        score <- vapply(free, function(cc)
+          sum(vapply(seq_along(nl), function(j) cnt[[j]][cg[cc, j]], 1L)), 1L)
+        best <- free[score == min(score)]
+        cc <- best[sample.int(length(best), 1L)]
+        used[cc] <- TRUE; idx <- c(idx, cc)
+        for (j in seq_along(nl)) cnt[[j]][cg[cc, j]] <- cnt[[j]][cg[cc, j]] + 1L
+      }
     }
+    idx <- idx[sample.int(length(idx))]
+    for (j in seq_along(fixedb)) ub[[fixedb[j]]] <- levs[[j]][cg[idx, j]]
   }
+  ## a design function is called for as many values as there are units: the
+  ## escape hatch for a covariate drawn from any distribution
+  for (v in setdiff(bv, fixedb)) {
+    val <- design[[v]](n_unit)
+    if (length(val) != n_unit)
+      stop("`design$", v, "` returned ", length(val), " value(s) for ",
+           n_unit, " unit(s); a design function must return as many values ",
+           "as it is asked for.", call. = FALSE)
+    ub[[v]] <- val
+  }
+  ub <- ub[c(".unit", intersect(bv, names(ub)))]
 
   out <- if (is.null(wgrid)) ub else
     cbind(ub[rep(seq_len(n_unit), each = per), , drop = FALSE],
@@ -298,24 +423,8 @@ ilm_scaffold_beta <- function(coefs, cells, Xf, design, grid, fam, contrasts,
   }
 
   ## ---- cell means ----------------------------------------------------------
-  fv <- names(design)[vapply(design, function(x)
-    !is.function(x) && (is.character(x) || is.factor(x)), TRUE)]
-  fv <- intersect(fv, all.vars(mt))
-  if (!length(fv))
-    stop("`cells` needs at least one factor in the design to have cells; ",
-         "give `coefs` instead.", call. = FALSE)
-  cg <- expand.grid(lapply(grid[fv], function(x) levels(factor(x))),
-                    stringsAsFactors = FALSE, KEEP.OUT.ATTRS = FALSE)
-  names(cg) <- fv
-  ## anything else in the model sits at its average, so the cells describe the
-  ## factors alone rather than the factors at one arbitrary covariate value
-  for (v in setdiff(all.vars(mt), c(fv, all.vars(mt)[1L])))
-    if (v %in% names(grid))
-      cg[[v]] <- if (is.numeric(grid[[v]])) mean(grid[[v]]) else
-        factor(levels(factor(grid[[v]]))[1L], levels = levels(factor(grid[[v]])))
-  for (v in fv) cg[[v]] <- factor(cg[[v]], levels = levels(factor(grid[[v]])))
-
-  key <- do.call(paste, c(cg[fv], list(sep = ".")))
+  cgr <- ilm_scaffold_cellgrid(design, grid, mt)
+  fv <- cgr$fv; cg <- cgr$cg; key <- cgr$key
   mu <- ilm_scaffold_cellvec(cells, cg, fv, key)
   lf <- ilm_scaffold_link(fam)
   bad <- which(!is.finite(suppressWarnings(lf(mu))))
@@ -348,6 +457,253 @@ ilm_scaffold_beta <- function(coefs, cells, Xf, design, grid, fam, contrasts,
          " rather than ", paste(fv, collapse = " + "), ".", call. = FALSE)
   }
   stats::setNames(as.numeric(b), colnames(Xc))
+}
+
+## The cells of a design: one row per combination of its factors, with
+## anything else in the model at its average, so the cells describe the
+## factors alone rather than the factors at one arbitrary covariate value.
+#' @keywords internal
+#' @noRd
+ilm_scaffold_cellgrid <- function(design, grid, mt) {
+  fv <- names(design)[vapply(design, function(x)
+    !is.function(x) && (is.character(x) || is.factor(x)), TRUE)]
+  fv <- intersect(fv, all.vars(mt))
+  if (!length(fv))
+    stop("`cells` needs at least one factor in the design to have cells; ",
+         "give `coefs` instead.", call. = FALSE)
+  cg <- expand.grid(lapply(grid[fv], function(x) levels(factor(x))),
+                    stringsAsFactors = FALSE, KEEP.OUT.ATTRS = FALSE)
+  names(cg) <- fv
+  for (v in setdiff(all.vars(mt), c(fv, all.vars(mt)[1L])))
+    if (v %in% names(grid))
+      cg[[v]] <- if (is.numeric(grid[[v]])) mean(grid[[v]]) else
+        factor(levels(factor(grid[[v]]))[1L], levels = levels(factor(grid[[v]])))
+  for (v in fv) cg[[v]] <- factor(cg[[v]], levels = levels(factor(grid[[v]])))
+  list(fv = fv, cg = cg, key = do.call(paste, c(cg[fv], list(sep = "."))))
+}
+
+## The categories of a categorical outcome, from `categories` or from the
+## columns of `cells` -- those that are not design factors.
+#' @keywords internal
+#' @noRd
+ilm_scaffold_categories <- function(categories, cells, dnames) {
+  if (is.null(categories) && !is.null(cells))
+    categories <- if (is.data.frame(cells) && any(dnames %in% names(cells)))
+      setdiff(names(cells), dnames) else colnames(cells)
+  if (is.null(categories))
+    stop("a multinomial or ordinal scaffold needs `categories`, the outcome's ",
+         "categories in order; `cells` can carry them as its column names ",
+         "instead.", call. = FALSE)
+  categories <- as.character(categories)
+  if (length(categories) < 3L)
+    stop("a multinomial or ordinal outcome has at least 3 categories. With ",
+         "2 it is binomial: family = \"binomial\", with the probability of ",
+         "the second category as `cells`, is the same study.", call. = FALSE)
+  if (anyDuplicated(categories))
+    stop("`categories` names '", categories[anyDuplicated(categories)],
+         "' twice.", call. = FALSE)
+  categories
+}
+
+## Coefficients for a categorical outcome, from `coefs` or from the category
+## probabilities in `cells`: a p x C matrix for a multinomial model, slopes and
+## thresholds for an ordinal one. Returned as the coefficient vector the fit
+## stores, category by category, with an ordinal model's thresholds attached
+## as "zeta".
+#' @keywords internal
+#' @noRd
+ilm_scaffold_catbeta <- function(coefs, cells, Xf, design, grid, fam,
+                                 contrasts, mt, categories, thresholds) {
+  nmX <- colnames(Xf); p <- length(nmX); J <- length(categories)
+  ord <- isTRUE(fam$ordinal)
+  if (!ord && !is.null(thresholds))
+    stop("`thresholds` belong to an ordinal model; a multinomial model has an ",
+         "intercept for each category instead.", call. = FALSE)
+  if (!is.null(coefs)) {
+    if (ord) {
+      if ("(Intercept)" %in% names(coefs))
+        stop("an ordinal model has no intercept: its thresholds are where one ",
+             "would be. Give them as `thresholds`.", call. = FALSE)
+      if (is.null(thresholds))
+        stop("an ordinal scaffold given by `coefs` needs `thresholds` too: the ",
+             J - 1L, " cut points on the latent scale where the ", J,
+             " categories divide.", call. = FALSE)
+      th <- as.numeric(thresholds)
+      if (length(th) != J - 1L || any(!is.finite(th)) || any(diff(th) <= 0))
+        stop("`thresholds` must be ", J - 1L, " increasing numbers, one for ",
+             "each boundary between the ", J, " categories.", call. = FALSE)
+      b <- ilm_scaffold_beta(coefs, NULL, Xf, design, grid, fam, contrasts, mt)
+      attr(b, "zeta") <- th
+      return(b)
+    }
+    B <- ilm_scaffold_coefmat(coefs, nmX, categories)
+    return(stats::setNames(as.vector(B),
+                           paste0(rep(categories[seq_len(J - 1L)], each = p),
+                                  ":", nmX)))
+  }
+
+  cgr <- ilm_scaffold_cellgrid(design, grid, mt)
+  P <- ilm_scaffold_cellprob(cells, cgr$cg, cgr$fv, cgr$key, categories)
+  mtr <- stats::delete.response(mt)
+  Xc <- stats::model.matrix(mtr, stats::model.frame(mtr, cgr$cg),
+                            contrasts.arg = contrasts)
+  inter <- if (length(cgr$fv) > 1L)
+    paste0(" -- ", paste(cgr$fv, collapse = " * "), " rather than ",
+           paste(cgr$fv, collapse = " + ")) else ""
+  if (ord) {
+    Xc <- Xc[, colnames(Xc) != "(Intercept)", drop = FALSE]
+    ## P(Y <= j) = F(theta_j - x'beta): every cell and every cut point is one
+    ## equation in the thresholds and the slopes, stacked cut point by cut
+    ## point, and solved together
+    q <- fam$qfun(t(apply(P, 1L, cumsum))[, -J, drop = FALSE])
+    nc <- nrow(Xc)
+    A <- cbind(kronecker(diag(J - 1L), matrix(1, nc, 1L)),
+               kronecker(matrix(1, J - 1L, 1L), -Xc))
+    sol <- qr.solve(A, as.vector(q))
+    gap <- max(abs(as.numeric(A %*% sol) - as.vector(q)))
+    if (gap > 1e-6 * max(1, max(abs(q))))
+      stop("these cell probabilities are not ones proportional odds can ",
+           "produce: between cells, the cumulative log-odds shift by ",
+           "different amounts at different cut points (off by ",
+           format(gap, digits = 3), "). An ordinal model would plan a ",
+           "different study from the one described. family = ",
+           "\"multinomial\" reproduces these probabilities exactly",
+           if (nzchar(inter))
+             paste0("; or, if the cells differ by more than the formula's ",
+                    "terms allow, it needs the interaction", inter) else "",
+           ".", call. = FALSE)
+    th <- sol[seq_len(J - 1L)]
+    if (any(diff(th) <= 0))
+      stop("the thresholds these probabilities imply are not increasing.",
+           call. = FALSE)
+    b <- stats::setNames(sol[-seq_len(J - 1L)], colnames(Xc))
+    attr(b, "zeta") <- th
+    return(b)
+  }
+  ## sum-to-zero coding: each category's log-probability less the average of
+  ## all of them, which leaves the normalising constant behind
+  L <- log(P)
+  eta <- (L - rowMeans(L))[, seq_len(J - 1L), drop = FALSE]
+  B <- qr.solve(Xc, eta)
+  gap <- max(abs(Xc %*% B - eta))
+  if (gap > 1e-6 * max(1, max(abs(eta)))) {
+    worst <- cgr$key[which.max(apply(abs(Xc %*% B - eta), 1L, max))]
+    stop("this formula cannot produce the cell probabilities given: cell '",
+         worst, "' is off by ", format(gap, digits = 3), " on the log-odds ",
+         "scale. Cells that differ by more than the terms in the formula ",
+         "allow need the interaction between them",
+         if (nzchar(inter)) inter else "", ".", call. = FALSE)
+  }
+  stats::setNames(as.vector(B),
+                  paste0(rep(categories[seq_len(J - 1L)], each = ncol(Xc)),
+                         ":", colnames(Xc)))
+}
+
+## A multinomial model's coefficients as a p x C matrix, from either layout
+## `coefs` can take: the matrix fixef() prints, or coef()'s category:column
+## names. The last category has no column -- under sum-to-zero coding its
+## coefficients are minus the sum of the others.
+#' @keywords internal
+#' @noRd
+ilm_scaffold_coefmat <- function(coefs, nmX, categories) {
+  J <- length(categories); C <- J - 1L; cats <- categories[seq_len(C)]
+  last <- paste0(" The last category, '", categories[J], "', has none: under ",
+                 "sum-to-zero coding its coefficients are minus the sum of the ",
+                 "others.")
+  B <- matrix(0, length(nmX), C, dimnames = list(nmX, cats))
+  if (is.matrix(coefs)) {
+    if (is.null(rownames(coefs)))
+      stop("a `coefs` matrix needs row names, the model-matrix columns: ",
+           paste(nmX, collapse = ", "), call. = FALSE)
+    cn <- colnames(coefs)
+    if (is.null(cn)) {
+      if (ncol(coefs) != C)
+        stop("a `coefs` matrix has one column per category but the last: ",
+             C, " here.", last, call. = FALSE)
+      cn <- cats
+    }
+    bad <- setdiff(cn, cats)
+    if (length(bad))
+      stop("`coefs` has column(s) '", paste(bad, collapse = "', '"), "', which ",
+           "are not among the categories that carry coefficients (",
+           paste(cats, collapse = ", "), ").", last, call. = FALSE)
+    extra <- setdiff(rownames(coefs), nmX)
+    if (length(extra))
+      stop("`coefs` names this model does not have: ",
+           paste(extra, collapse = ", "), ". It has: ",
+           paste(nmX, collapse = ", "), call. = FALSE)
+    B[rownames(coefs), cn] <- coefs
+    return(B)
+  }
+  if (is.null(names(coefs)))
+    stop("`coefs` must be named as coef() names a multinomial model's ",
+         "coefficients -- category:column, such as '", cats[1L], ":",
+         nmX[min(2L, length(nmX))], "' -- or be a matrix with a column per ",
+         "category.", call. = FALSE)
+  for (i in seq_along(coefs)) {
+    nm <- names(coefs)[i]
+    hit <- which(startsWith(nm, paste0(cats, ":")))
+    if (!length(hit))
+      stop("`coefs` name '", nm, "' does not start with a category that ",
+           "carries coefficients (", paste(cats, collapse = ", "),
+           ") followed by ':'.",
+           if (startsWith(nm, paste0(categories[J], ":"))) last else "",
+           call. = FALSE)
+    h <- hit[which.max(nchar(cats[hit]))]
+    cf <- substring(nm, nchar(cats[h]) + 2L)
+    if (!cf %in% nmX)
+      stop("`coefs` name '", nm, "' refers to '", cf, "', which this model ",
+           "does not have. It has: ", paste(nmX, collapse = ", "),
+           call. = FALSE)
+    B[cf, cats[h]] <- as.numeric(coefs[[i]])
+  }
+  B
+}
+
+## Category probabilities per cell, as a cells x J matrix in the order of
+## `key` and `categories`. Two layouts: a data frame with a column per design
+## factor and one per category, or a matrix with the cell names as row names.
+#' @keywords internal
+#' @noRd
+ilm_scaffold_cellprob <- function(cells, cg, fv, key, categories) {
+  if (is.data.frame(cells) && all(fv %in% names(cells))) {
+    miss <- setdiff(categories, names(cells))
+    if (length(miss))
+      stop("`cells` needs a column for every category; missing: ",
+           paste(miss, collapse = ", "), call. = FALSE)
+    k <- do.call(paste, c(lapply(cells[fv], as.character), list(sep = ".")))
+    i <- match(key, k)
+    if (anyNA(i))
+      stop("`cells` does not cover every cell of the design. Missing: ",
+           paste(key[is.na(i)], collapse = ", "), call. = FALSE)
+    P <- as.matrix(cells[i, categories, drop = FALSE])
+  } else {
+    M <- as.matrix(cells)
+    if (is.null(rownames(M)))
+      stop("`cells` needs the cells as row names -- ",
+           paste(key, collapse = ", "), " -- or a column for each design ",
+           "factor.", call. = FALSE)
+    miss <- setdiff(categories, colnames(M))
+    if (length(miss))
+      stop("`cells` needs a column for every category; missing: ",
+           paste(miss, collapse = ", "), call. = FALSE)
+    i <- match(key, rownames(M))
+    if (anyNA(i))
+      stop("`cells` is missing ", sum(is.na(i)), " cell(s) of the design. ",
+           "Expected row names: ", paste(key, collapse = ", "), ". Got: ",
+           paste(rownames(M), collapse = ", "), call. = FALSE)
+    P <- M[i, categories, drop = FALSE]
+  }
+  P <- matrix(as.numeric(P), nrow(P), ncol(P))
+  if (any(!is.finite(P)) || any(P <= 0) || any(P >= 1))
+    stop("`cells` probabilities must be strictly between 0 and 1: a category ",
+         "with probability 0 has no log-odds, and no finite coefficient ",
+         "produces it.", call. = FALSE)
+  s <- rowSums(P); bad <- which(abs(s - 1) > 1e-6)
+  if (length(bad))
+    stop("each cell's probabilities must sum to 1; cell '", key[bad[1L]],
+         "' sums to ", format(s[bad[1L]], digits = 4), ".", call. = FALSE)
+  P
 }
 
 ## The forward link. The family objects carry `linkinv` because that is what
@@ -423,7 +779,8 @@ ilm_scaffold_sd <- function(sd, fam) {
 ## Random-effect covariances, one per bar, as plain covariance matrices.
 #' @keywords internal
 #' @noRd
-ilm_scaffold_resd <- function(re_sd, re_cor, icc, sdv, bars, group) {
+ilm_scaffold_resd <- function(re_sd, re_cor, icc, sdv, bars, group,
+                              fam = NULL) {
   if (!length(bars)) {
     if (!is.null(re_sd) || !is.null(icc))
       stop("`re_sd`/`icc` describe a grouping factor, and this formula has ",
@@ -434,12 +791,25 @@ ilm_scaffold_resd <- function(re_sd, re_cor, icc, sdv, bars, group) {
     if (!is.null(re_sd))
       stop("give `icc` or `re_sd`, not both: they set the same thing.",
            call. = FALSE)
-    if (is.null(sdv))
-      stop("`icc` is a ratio to the residual variance, so it needs `sd` too.",
-           call. = FALSE)
     if (icc <= 0 || icc >= 1)
       stop("`icc` must be strictly between 0 and 1; it is ", icc, call. = FALSE)
-    re_sd <- stats::setNames(list(sdv * sqrt(icc / (1 - icc))), group)
+    ## the residual variance an ICC is a share of: the model's own when it
+    ## has one, and for a binary or ordinal outcome that of the latent
+    ## variable's error, by the usual convention
+    lat <- if (!is.null(sdv)) sdv^2 else if (!is.null(fam) &&
+      (identical(fam$name, "binomial") || isTRUE(fam$ordinal)))
+      switch(fam$link, logit = pi^2 / 3, probit = 1, cloglog = pi^2 / 6,
+             NULL) else NULL
+    if (is.null(lat))
+      stop("`icc` is a share of the residual variance, and ",
+           if (is.null(fam) || fam$n_disp > 0L) "it needs `sd` too."
+           else paste0("a ", fam$name, " model has none to take it from. ",
+                       "Give `re_sd`, the random-effect standard deviation ",
+                       "on the link scale",
+                       if (identical(fam$name, "multinomial"))
+                         " -- for a multinomial, of each category's own shift in log-odds"
+                       else "", "."), call. = FALSE)
+    re_sd <- stats::setNames(list(sqrt(lat * icc / (1 - icc))), group)
   }
   if (is.null(re_sd))
     stop("`re_sd` or `icc` is needed: this formula has a random-effect bar, ",
@@ -485,8 +855,27 @@ ilm_scaffold_resd <- function(re_sd, re_cor, icc, sdv, bars, group) {
 ## Crude draw, used only so the first fit starts somewhere sensible.
 #' @keywords internal
 #' @noRd
-ilm_scaffold_y0 <- function(Xf, bet, grid, group, rev, sdv, fam) {
+ilm_scaffold_y0 <- function(Xf, bet, grid, group, rev, sdv, fam,
+                            categories = NULL) {
   N <- nrow(Xf)
+  if (!is.null(categories)) {
+    J <- length(categories)
+    yi <- if (isTRUE(fam$ordinal)) {
+      z <- as.numeric(Xf %*% bet) + fam$qfun(stats::runif(N))
+      as.integer(rowSums(outer(z, attr(bet, "zeta"), `>`))) + 1L
+    } else {
+      P <- exp(Xf %*% matrix(bet, ncol(Xf), J - 1L) %*% t(stats::contr.sum(J)))
+      apply(P / rowSums(P), 1L, function(pr) sample.int(J, 1L, prob = pr))
+    }
+    ## the first fit has the right shape only if every category is in it, so
+    ## any the draw missed are planted, on rows whose category is not alone
+    for (m in setdiff(seq_len(J), yi)) {
+      cand <- which(yi %in% which(tabulate(yi, J) > 1L))
+      yi[cand[sample.int(length(cand), 1L)]] <- m
+    }
+    return(factor(categories[yi], levels = categories,
+                  ordered = isTRUE(fam$ordinal)))
+  }
   eta <- as.numeric(Xf %*% bet)
   if (!is.null(group) && !is.null(rev) && group %in% names(grid)) {
     g <- factor(grid[[group]])
@@ -518,13 +907,21 @@ ilm_scaffold_y0 <- function(Xf, bet, grid, group, rev, sdv, fam) {
 ilm_scaffold_impose <- function(fit, bet, rev, sdv, fam) {
   tl <- names(fit$opt$par)
   par <- as.numeric(fit$opt$par)
-  nmX <- colnames(fit$X)
+  C <- if (is.null(fit$C)) 1L else fit$C
   ib <- which(tl == "beta")
-  if (length(ib) != length(nmX))
-    stop("the scaffold fit has ", length(ib), " fixed effects and the design ",
-         "has ", length(nmX), "; this is a bug in ilm_scaffold().",
+  ## by name, so a multinomial's category:column coefficients land where the
+  ## fit keeps them whatever order they were given in
+  at <- match(fit$pnames[ib], names(bet))
+  if (length(ib) != length(bet) || anyNA(at))
+    stop("the scaffold fit has ", length(ib), " fixed effects and the ",
+         "assumptions give ", length(bet), "; this is a bug in ilm_scaffold().",
          call. = FALSE)
-  par[ib] <- bet[match(nmX, names(bet))]
+  par[ib] <- as.numeric(bet)[at]
+  ## an ordinal model's thresholds are stored as the first and the log gaps,
+  ## which keeps them increasing whatever the optimiser does
+  zt <- attr(bet, "zeta")
+  if (!is.null(zt) && any(tl == "zeta_raw"))
+    par[tl == "zeta_raw"] <- c(zt[1L], log(diff(zt)))
   if (!is.null(sdv) && any(tl == "logdisp")) {
     ## `sd` is the spread the DATA are to be generated with, and that is what
     ## $dispersion has to end up holding, because that is the field the
@@ -539,8 +936,14 @@ ilm_scaffold_impose <- function(fit, bet, rev, sdv, fam) {
   }
 
   if (!is.null(rev) && any(tl == "theta")) {
-    th <- numeric(0)
+    thpos <- which(tl == "theta")
+    ## Across categories, a multinomial's shifts are exchangeable: each
+    ## category gets its own, and what the model can carry is its deviation
+    ## from their average, whose covariance is s2 * (I - 1/J). A single
+    ## equation has one dimension and this is just s2.
+    base <- if (C > 1L) diag(C) - matrix(1 / fit$J, C, C) else matrix(1, 1L, 1L)
     for (k in seq_along(fit$re)) {
+      ## a smooth's penalty keeps whatever the fit gave it
       if (identical(fit$re[[k]]$kind, "basis")) next
       V <- rev[[names(fit$re)[k]]]
       if (is.null(V)) V <- rev[[k]]
@@ -549,22 +952,24 @@ ilm_scaffold_impose <- function(fit, bet, rev, sdv, fam) {
       ## whose leading entry is fixed at 1 for identifiability -- so the first
       ## random effect's variance IS the scale
       s2 <- V[1L, 1L]
-      th <- c(th, log(sqrt(s2)))               # npc = 1 when C = 1
+      L <- t(chol(s2 * base))
+      v <- numeric(0)
+      for (j in seq_len(C)) for (i in j:C)
+        v <- c(v, if (i == j) log(L[i, j]) else L[i, j])
       if (dk > 1L) {
         Ld <- t(chol(V / s2))
-        v <- numeric(0)
         for (j in 1:dk) for (i in j:dk) {
           if (i == 1L && j == 1L) next
           v <- c(v, if (i == j) log(Ld[i, j]) else Ld[i, j])
         }
-        th <- c(th, v)
       }
+      blk <- thpos[(fit$toff[k] + 1L):fit$toff[k + 1L]]
+      if (length(blk) == length(v)) par[blk] <- v
+      else warning("the scaffold could not match ", length(v), " variance ",
+                   "parameter(s) to the ", length(blk), " the term '",
+                   names(fit$re)[k], "' has; its random-effect assumptions ",
+                   "were not imposed.", call. = FALSE)
     }
-    if (length(th) == sum(tl == "theta")) par[tl == "theta"] <- th
-    else warning("the scaffold could not match ", length(th), " variance ",
-                 "parameter(s) to the ", sum(tl == "theta"), " this fit has; ",
-                 "the random-effect assumptions were not imposed.",
-                 call. = FALSE)
   }
   ilm_rebuild(fit, par)
 }
@@ -585,8 +990,23 @@ print.ilm_scaffold <- function(x, ...) {
     cat("  between    : ", paste(bw, collapse = ", "), "\n", sep = "")
   if (length(s$within))
     cat("  within     : ", paste(s$within, collapse = ", "), "\n", sep = "")
-  cat("\n  assumed coefficients\n")
-  print(round(stats::coef(x), 4))
+  if (!is.null(s$categories))
+    cat("  categories : ", paste(s$categories,
+                                 collapse = if (isTRUE(x$ordinal)) " < " else ", "),
+        "\n", sep = "")
+  if (!is.null(x$C) && x$C > 1L) {
+    ## the layout the assumptions were most likely written in
+    cat("\n  assumed coefficients (sum-to-zero across categories; the last,\n",
+        "  '", s$categories[length(s$categories)],
+        "', is minus the sum of the others)\n", sep = "")
+    print(round(fixef(x), 4))
+  } else {
+    cat("\n  assumed coefficients\n")
+    print(round(stats::coef(x), 4))
+  }
+  if (!is.null(s$thresholds))
+    cat("\n  assumed thresholds: ",
+        paste(format(s$thresholds, digits = 4), collapse = ", "), "\n", sep = "")
   lab <- function(t) sprintf("  %-12s: ", t)
   if (!is.null(s$sd))
     cat("\n", lab("residual sd"), format(s$sd, digits = 4), "\n", sep = "")
@@ -626,6 +1046,11 @@ print.ilm_scaffold <- function(x, ...) {
 #' rows when it does not, so the numbers you give are the numbers you would
 #' write in a protocol.
 #'
+#' Every simulated study is a fresh draw of the design at its own size -- the
+#' allocation balanced as the protocol would balance it, any covariate given
+#' as a function drawn again -- and is analysed with the test the analysis
+#' will report; see [ilm_power()].
+#'
 #' For anything beyond a power curve -- seeing what the assumptions imply,
 #' simulating a data set, checking marginal means -- build the scaffold with
 #' [ilm_scaffold()] and use it directly.
@@ -633,9 +1058,11 @@ print.ilm_scaffold <- function(x, ...) {
 #' @inheritParams ilm_scaffold
 #' @param n_unit Integer vector of unit counts to trace power across.
 #' @param term The term to test, named as the variable or as the coefficient;
-#'   see [ilm_power()].
-#' @param effect Values for that coefficient on the link scale. Defaults to
-#'   whatever the assumptions imply for it.
+#'   see [ilm_power()]. A term with several coefficients -- a factor with three
+#'   levels, or any term of a multinomial model -- is tested jointly.
+#' @param effect For a single coefficient, values for it on the link scale;
+#'   for a term tested jointly, multiples of its assumed coefficients. Defaults
+#'   to whatever the assumptions imply.
 #' @param sims,alpha,seed,progress Passed to [ilm_power()].
 #' @return An [ilm_power()] result, with an extra `n_unit` column.
 #' @seealso [ilm_scaffold()], [ilm_power()], [ilm_power_n()].
@@ -645,6 +1072,13 @@ print.ilm_scaffold <- function(x, ...) {
 #'                  n_unit = c(60, 120, 200),
 #'                  cells = c(control = 12, treatment = 14.5), sd = 4,
 #'                  term = "arm", sims = 50)
+#'
+#' ## a three-category outcome: the test is of arm across all its categories
+#' ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+#'                  n_unit = c(100, 200), family = "multinomial",
+#'                  cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+#'                                treatment = c(none = 0.35, some = 0.35, full = 0.3)),
+#'                  term = "arm", sims = 50)
 #' }
 #' @export
 ilm_power_design <- function(formula, design, n_unit, family = "gaussian",
@@ -652,16 +1086,21 @@ ilm_power_design <- function(formula, design, n_unit, family = "gaussian",
                              re_sd = NULL, re_cor = NULL, icc = NULL,
                              within = NULL, contrasts = NULL, term = NULL,
                              effect = NULL, sims = 200L, alpha = 0.05,
-                             seed = 1L, progress = NULL, verbose = TRUE) {
+                             seed = 1L, progress = NULL, verbose = TRUE,
+                             categories = NULL, thresholds = NULL,
+                             reml = FALSE) {
   n_unit <- sort(unique(as.integer(n_unit)))
   if (any(is.na(n_unit)) || any(n_unit < 4L))
     stop("`n_unit` below 4 is not a study", call. = FALSE)
-  ## the scaffold is built at the LARGEST size asked for, so every smaller one
-  ## is a subsample of a grid that really contains every cell
+  ## Built at the largest size asked for. The replicates do not come from its
+  ## grid -- each is drawn afresh at its own size -- but the scaffold's own
+  ## realisation is the one the printed summary describes.
   s <- ilm_scaffold(formula, design, n_unit = max(n_unit), family = family,
                     coefs = coefs, cells = cells, sd = sd, re_sd = re_sd,
                     re_cor = re_cor, icc = icc, within = within,
-                    contrasts = contrasts, seed = seed, verbose = FALSE)
+                    contrasts = contrasts, seed = seed, verbose = FALSE,
+                    categories = categories, thresholds = thresholds,
+                    reml = reml)
   rpu <- s$scaffold$rows_per_unit
   ## shown BEFORE the curve is simulated, not after: the simulation is the
   ## slow part, and what it assumes is what the user needs to see while it runs

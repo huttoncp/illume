@@ -301,6 +301,30 @@ ilm_boundary_at <- function(o) {
   setdiff(union(o$hessian_held, o$boundary_terms), basis)
 }
 
+## The same verdict as ilm_trust_note(), as sentences for ilm_interpret(), so
+## the printed summary and the prose cannot say different things.
+#' @keywords internal
+#' @noRd
+ilm_trust_text <- function(held, boundary = character(0)) {
+  at <- union(held, boundary)
+  if (!length(at))
+    return(paste("A smooth is penalised all the way to its unpenalised part,",
+                 "which is how penalisation works; the fixed effects, their",
+                 "standard errors and tests are usable."))
+  hq <- paste(sprintf("`%s`", at), collapse = ", ")
+  paste0("The covariance of ", hq, " sits at the edge of its range -- a ",
+         "variance of zero or a correlation of +/-1 -- so its estimate says ",
+         "the data cannot resolve it, not what it is, and it should not be ",
+         "interpreted. The fixed effects, their standard errors and tests are ",
+         "still usable",
+         if (length(held))
+           ": they are computed with that covariance held at its estimate, as lme4 does when the full Hessian fails"
+         else ": the Hessian behind them is positive definite",
+         ". If the term is not needed, drop it; if it is, a simpler structure ",
+         "for it (re_struct \"diag\", or \"rr\" with a lower rank) may be ",
+         "supported.")
+}
+
 ## What can be trusted in a fit with a covariance at its boundary. Said in
 ## words where the numbers are read, because the table above looks exactly
 ## like the table of a fit with nothing unusual about it.

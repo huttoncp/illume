@@ -4,12 +4,13 @@
 \name{illume-package}
 \alias{illume}
 \alias{illume-package}
-\title{illume: Frequentist Regression and Mixed Models with Built-In Diagnostics}
+\title{illume: A Unified Engine for Exploration and Frequentist Inference}
 \description{
 A frequentist regression workflow aimed at \strong{inference} rather than
-prediction. One engine fits gaussian, binomial, Poisson, negative binomial
-and multinomial models, so every model returns the same object and shares the
-same methods and diagnostics.
+prediction, together with the exploratory steps that precede it. One engine
+fits gaussian, binomial, Poisson, negative binomial, multinomial, beta,
+ordinal, zero-inflated, hurdle and survival models, so every model returns
+the same object and shares the same methods and diagnostics.
 }
 \section{What problem this solves}{
 
@@ -34,9 +35,13 @@ question.
 
 \section{Families}{
 
-\code{"gaussian"}, \code{"binomial"}, \code{"poisson"}, \code{"nbinom"} and \code{"multinomial"}; see
-\code{\link[=ilm_family]{ilm_family()}}. Zero-inflation, hurdle models and Tweedie are deliberately out
-of scope, because \code{glmmTMB} covers those well.
+\code{"gaussian"}, \code{"binomial"}, \code{"poisson"}, \code{"nbinom"}, \code{"beta"},
+\code{"multinomial"}, the ordinal families, and the survival families
+\code{"weibull"}, \code{"lognormal"}, \code{"loglogistic"} and the flexible \code{"rp"}; see
+\code{\link[=ilm_family]{ilm_family()}}. A count or a proportion can have a zero part, inflated or
+hurdle (\code{ziformula}). By default the family is read off the response, and
+the fit says which it chose and why. Tweedie is out of scope, because
+\code{glmmTMB} covers it well.
 }
 
 \section{How the model is written}{

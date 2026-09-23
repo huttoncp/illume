@@ -29,4 +29,8 @@ this is often more informative than any residual plot.
 \details{
 The comparison band is simulated from the model itself rather than taken from
 a formula, so it reflects how much scatter is expected at this sample size.
+
+For a binomial, multinomial or ordinal fit -- every family whose prediction
+is a probability for each category. An ordinal fit is checked category by
+category, from the probabilities its thresholds imply.
 }

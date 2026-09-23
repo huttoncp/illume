@@ -107,7 +107,8 @@ ilm_refit_many <- function(fit, ys, ncores = 1L, restarts = 2L, verbose = FALSE)
     cat(sprintf("refitting %d replicates on %d core(s)\n", ncol(ys),
                 if (is.null(cl)) 1L else length(cl)))
   one <- function(b) {
-    f <- try(ilm_refit_like(stub, y = ys[, b], restarts = restarts),
+    f <- try(suppressWarnings(ilm_refit_like(stub, y = ys[, b],
+                                             restarts = restarts)),
              silent = TRUE)
     if (inherits(f, "try-error")) return(NULL)
     if (f$opt$convergence != 0 || !isTRUE(f$sdr$pdHess)) return(NULL)
