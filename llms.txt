@@ -104,9 +104,9 @@ package.
 | **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
 | **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md) |
 | **ANOVA** | [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
-| **Exploration** (illumex) | [`ilm_describe_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_all.html), the data plots, [`ilm_boot_ci()`](https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html), [`ilm_outliers()`](https://rdrr.io/pkg/illumex/man/ilm_outliers.html), [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) and [`ilm_plot_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html) |
-| **Structure** (illumex) | [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html), [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html), [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html), [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html) |
-| **Missing data** | [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html) (illumex) to describe it; [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md) and [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) to fill it in and pool |
+| **Exploration** (illumex) | [`ilm_describe_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_all.html), the data plots, [`ilm_boot_ci()`](https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html), [`ilm_outliers()`](https://huttoncp.github.io/illumex/reference/ilm_outliers.html), [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html) and [`ilm_plot_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html) |
+| **Structure** (illumex) | [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html), [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html), [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html), [`ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html) |
+| **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html) (illumex) to describe it; [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md) and [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) to fill it in and pool |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
 | **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md) from a fit, [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md) and [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md) from assumptions alone – for every family, multinomial included, each simulated study analysed with the test the analysis will report; [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
 
@@ -215,7 +215,8 @@ vignette("workflow", package = "illume")
 ```
 
 Exploring data, profiling and anomaly detection are `illumex`’s
-vignettes: `vignette("exploring-data", package = "illumex")`.
+vignettes:
+[`vignette("exploring-data", package = "illumex")`](https://huttoncp.github.io/illumex/articles/exploring-data.html).
 
 ## How this package was built
 
@@ -317,17 +318,17 @@ author for the BC Public Service. The lineage is visible in the function
 names: `describe()`, `describe_all()`, `counts()`, `counts_tb()`,
 `dupes()`, `copies()`, `wash_df()`, `recode_errors()`, `translate()` and
 the whole `plot_*()` family became
-[`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html),
-[`ilm_counts()`](https://rdrr.io/pkg/illumex/man/ilm_counts.html),
-[`ilm_dupes()`](https://rdrr.io/pkg/illumex/man/ilm_dupes.html) and the
-rest, with the same idea behind them – that the routine work before a
-model should be one call with a consistent interface, rather than six
-lines of [`sapply()`](https://rdrr.io/r/base/lapply.html) reassembled
-from memory every time. `illumex` reimplements that on a different
-backend and extends it – elucidate is built on `data.table`, `dplyr` and
-`ggplot2`, this on `collapse` and `tinyplot`, and the two share an
-interface rather than an implementation – but the design is elucidate’s
-and it would be poor form to pretend otherwise.
+[`ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html),
+[`ilm_counts()`](https://huttoncp.github.io/illumex/reference/ilm_counts.html),
+[`ilm_dupes()`](https://huttoncp.github.io/illumex/reference/ilm_dupes.html)
+and the rest, with the same idea behind them – that the routine work
+before a model should be one call with a consistent interface, rather
+than six lines of [`sapply()`](https://rdrr.io/r/base/lapply.html)
+reassembled from memory every time. `illumex` reimplements that on a
+different backend and extends it – elucidate is built on `data.table`,
+`dplyr` and `ggplot2`, this on `collapse` and `tinyplot`, and the two
+share an interface rather than an implementation – but the design is
+elucidate’s and it would be poor form to pretend otherwise.
 
 Where a method has a name attached to it in the documentation, that is
 deliberate. It should be possible to find out whose idea any part of

@@ -111,7 +111,7 @@ identifier.</p></dd>
 <dd><p><code>"auto"</code> uses chained equations and falls back to the
 <code>"glrm"</code> fits a generalized low rank model instead, which uses a loss
 suited to each column's type and so can impute CATEGORICAL columns,
-which <code>"lowrank"</code> leaves alone – see <code><a href="https://rdrr.io/pkg/illumex/man/ilm_glrm.html" class="external-link">illumex::ilm_glrm()</a></code>.
+which <code>"lowrank"</code> leaves alone – see <code><a href="https://huttoncp.github.io/illumex/reference/ilm_glrm.html">illumex::ilm_glrm()</a></code>.
 low-rank route when they cannot be fitted; <code>"fcs"</code> and <code>"lowrank"</code> force
 one. See the section below for what each costs.</p></dd>
 
@@ -136,7 +136,7 @@ cross-validation over held-out observed cells.</p></dd>
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Show a progress bar. Defaults to <code><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive()</a></code>, so a
 bar appears when someone is watching and nothing is written in a
-script or a knitted document. See <a href="https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html" class="external-link">illumex::ilm_progress_arg</a>.</p></dd>
+script or a knitted document. See <a href="https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html">illumex::ilm_progress_arg</a>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -173,7 +173,7 @@ inference computed from it will be overconfident.</p>
 <p>That the data are missing at random given the variables supplied: the chance
 a value is missing may depend on what is observed, but not on the missing
 value itself once the observed variables are accounted for. That assumption
-is <strong>not testable</strong> (<code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">illumex::ilm_check_missing()</a></code> explains why), and imputation does
+is <strong>not testable</strong> (<code><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">illumex::ilm_check_missing()</a></code> explains why), and imputation does
 not make it true. Including variables that predict both the missingness and
 the missing value makes it more plausible.</p>
 <p>Imputing an outcome from nothing but the predictors of the model you intend
@@ -230,7 +230,7 @@ Carlo error 0.015:</p>
 <span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>    coverage          <span class="fl">0.955</span>      <span class="fl">0.615</span>       <span class="fl">0.955</span>      <span class="fl">0.790</span></span></code></pre><p></p></div>
 <p>Three things to read off it. Complete cases are <strong>unbiased</strong> when missingness
 depends on a covariate, even at 40% missing – which is why
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">illumex::ilm_check_missing()</a></code> distinguishes that case and tells you not to bother
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">illumex::ilm_check_missing()</a></code> distinguishes that case and tells you not to bother
 imputing. Complete cases <strong>fail badly</strong> when missingness depends on the
 outcome: a bias of -0.099 is a fifth of the effect, and coverage collapses to
 0.615. Multiple imputation repairs exactly that case, 0.955.</p>
@@ -256,7 +256,7 @@ iterative fit, bootstrapped so the imputations differ, then pooled.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="ilm_mi_pool.html">ilm_mi_pool()</a></code> to analyse them, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">illumex::ilm_check_missing()</a></code> to decide
+    <div class="dont-index"><p><code><a href="ilm_mi_pool.html">ilm_mi_pool()</a></code> to analyse them, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">illumex::ilm_check_missing()</a></code> to decide
 whether you need to.</p></div>
     </div>
 

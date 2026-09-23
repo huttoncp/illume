@@ -137,47 +137,47 @@ people measured twice.</p>
 <p>Stages 2 to 4 use <code>illumex</code>, the exploration package
 <code>illume</code> attaches, so nothing extra needs loading.
 Descriptive statistics, plots, and bootstrap intervals for the
-quantities you are about to model. <code><a href="https://rdrr.io/pkg/illumex/man/ilm_describe_all.html" class="external-link">ilm_describe_all()</a></code>
-summarises every column at once; <code><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_all.html" class="external-link">ilm_plot_all()</a></code> picks a
-sensible plot per variable; <code><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html" class="external-link">ilm_boot_ci()</a></code> and
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html" class="external-link">ilm_boot_diff()</a></code> put intervals on means, medians and
+quantities you are about to model. <code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe_all.html">ilm_describe_all()</a></code>
+summarises every column at once; <code><a href="https://huttoncp.github.io/illumex/reference/ilm_plot_all.html">ilm_plot_all()</a></code> picks a
+sensible plot per variable; <code><a href="https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html">ilm_boot_ci()</a></code> and
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html">ilm_boot_diff()</a></code> put intervals on means, medians and
 differences between groups without assuming normality.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_describe_all.html" class="external-link">ilm_describe_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_all.html" class="external-link">ilm_plot_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html" class="external-link">ilm_boot_diff</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">arm</span>, data <span class="op">=</span> <span class="va">d</span><span class="op">)</span>        <span class="co"># every pair, simultaneous by default</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_describe_all.html">ilm_describe_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_plot_all.html">ilm_plot_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html">ilm_boot_diff</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">arm</span>, data <span class="op">=</span> <span class="va">d</span><span class="op">)</span>        <span class="co"># every pair, simultaneous by default</span></span></code></pre></div>
 <p>See the <em>Exploring data</em> vignette.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="structure-and-profiling">3. Structure and profiling<a class="anchor" aria-label="anchor" href="#structure-and-profiling"></a>
 </h2>
-<p>When the columns are many and correlated, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce.html" class="external-link">ilm_reduce()</a></code>
+<p>When the columns are many and correlated, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_reduce.html">ilm_reduce()</a></code>
 finds the few directions they share – PCA, MCA or FAMD depending on the
 types, or a generalized low rank model with a loss per column type –
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_cluster.html" class="external-link">ilm_cluster()</a></code> groups the rows in that space, and
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile()</a></code> does both and describes what distinguishes
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_cluster.html">ilm_cluster()</a></code> groups the rows in that space, and
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile()</a></code> does both and describes what distinguishes
 each group.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>               <span class="co"># closed-form FAMD</span></span>
-<span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span>, method <span class="op">=</span> <span class="st">"glrm"</span><span class="op">)</span>   <span class="co"># a loss per column type</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_profile.html" class="external-link">ilm_plot_profile</a></span><span class="op">(</span><span class="va">pr</span><span class="op">)</span></span></code></pre></div>
-<p>See the <em>Profiling</em> vignette and <code><a href="https://rdrr.io/pkg/illumex/man/ilm_glrm.html" class="external-link">?ilm_glrm</a></code>.</p>
+<code class="sourceCode R"><span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>               <span class="co"># closed-form FAMD</span></span>
+<span><span class="va">pr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile</a></span><span class="op">(</span><span class="va">d</span>, ndim <span class="op">=</span> <span class="fl">5</span>, method <span class="op">=</span> <span class="st">"glrm"</span><span class="op">)</span>   <span class="co"># a loss per column type</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_plot_profile.html">ilm_plot_profile</a></span><span class="op">(</span><span class="va">pr</span><span class="op">)</span></span></code></pre></div>
+<p>See the <em>Profiling</em> vignette and <code><a href="https://huttoncp.github.io/illumex/reference/ilm_glrm.html">?ilm_glrm</a></code>.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="outliers-and-anomalies">4. Outliers and anomalies<a class="anchor" aria-label="anchor" href="#outliers-and-anomalies"></a>
 </h2>
-<p>Two different questions. <code><a href="https://rdrr.io/pkg/illumex/man/ilm_outliers.html" class="external-link">ilm_outliers()</a></code> asks whether a
-value is extreme in its own column. <code><a href="https://rdrr.io/pkg/illumex/man/ilm_anomaly.html" class="external-link">ilm_anomaly()</a></code> asks
+<p>Two different questions. <code><a href="https://huttoncp.github.io/illumex/reference/ilm_outliers.html">ilm_outliers()</a></code> asks whether a
+value is extreme in its own column. <code><a href="https://huttoncp.github.io/illumex/reference/ilm_anomaly.html">ilm_anomaly()</a></code> asks
 whether a <strong>row</strong> is a plausible combination: someone 150
 cm tall is unremarkable, someone weighing 110 kg is unremarkable, and
 someone who is both is not, and nothing in either column’s distribution
 says so.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_outliers_all.html" class="external-link">ilm_outliers_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                          <span class="co"># one column at a time</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_anomaly.html" class="external-link">ilm_anomaly</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                               <span class="co"># the combination</span></span></code></pre></div>
-<p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_anomaly.html" class="external-link">ilm_anomaly()</a></code> also names the column driving each flagged
+<code class="sourceCode R"><span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_outliers_all.html">ilm_outliers_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                          <span class="co"># one column at a time</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_anomaly.html">ilm_anomaly</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                               <span class="co"># the combination</span></span></code></pre></div>
+<p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_anomaly.html">ilm_anomaly()</a></code> also names the column driving each flagged
 row, because an anomaly nobody can explain is not actionable.</p>
 <p>See the <em>Anomaly detection</em> vignette.</p>
 <hr>
@@ -185,14 +185,14 @@ row, because an anomaly nobody can explain is not actionable.</p>
 <div class="section level2">
 <h2 id="missing-data">5. Missing data<a class="anchor" aria-label="anchor" href="#missing-data"></a>
 </h2>
-<p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">ilm_check_missing()</a></code> asks the question that matters,
+<p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">ilm_check_missing()</a></code> asks the question that matters,
 which is not how much is missing but whether it is missing in a way that
 biases the answer: complete cases stay unbiased when missingness is
 unrelated to the <strong>outcome given the predictors</strong>, which is
 weaker than missing-completely-at-random and is testable. When it is
 not, <code><a href="../reference/ilm_impute.html">ilm_impute()</a></code> is the remedy.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span>
 <span><span class="va">im</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_impute.html">ilm_impute</a></span><span class="op">(</span><span class="va">d</span>, m <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>                  <span class="co"># chained equations by default</span></span>
 <span><span class="fu"><a href="../reference/ilm_mi_pool.html">ilm_mi_pool</a></span><span class="op">(</span><span class="va">im</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span>                   <span class="co"># fit each; Rubin's rules</span></span></code></pre></div>
 <p><code>method = "glrm"</code> imputes categorical columns as
@@ -361,16 +361,16 @@ multinomial</td>
 <td>
 <em>Profiling</em> (illumex)</td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce.html" class="external-link">ilm_reduce()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_cluster.html" class="external-link">ilm_cluster()</a></code>,
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile()</a></code>
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_reduce.html">ilm_reduce()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_cluster.html">ilm_cluster()</a></code>,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile()</a></code>
 </td>
 </tr>
 <tr class="odd">
 <td>
 <em>Anomaly detection</em> (illumex)</td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_anomaly.html" class="external-link">ilm_anomaly()</a></code> against <code><a href="https://rdrr.io/pkg/illumex/man/ilm_outliers.html" class="external-link">ilm_outliers()</a></code>;
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html" class="external-link">ilm_plot_anomaly()</a></code> to see whether the flagged rows stand
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_anomaly.html">ilm_anomaly()</a></code> against <code><a href="https://huttoncp.github.io/illumex/reference/ilm_outliers.html">ilm_outliers()</a></code>;
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code> to see whether the flagged rows stand
 apart</td>
 </tr>
 <tr class="even">

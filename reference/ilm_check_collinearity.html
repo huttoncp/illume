@@ -54,7 +54,7 @@ what variance inflation measures."><meta property="og:image" content="https://hu
     </div>
 
     <div class="ref-description section level2">
-    <p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_frame_issues.html" class="external-link">illumex::ilm_frame_issues()</a></code> catches pairs of columns that are nearly identical, but
+    <p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_frame_issues.html">illumex::ilm_frame_issues()</a></code> catches pairs of columns that are nearly identical, but
 the case that actually breaks a model is a predictor collinear with a
 <em>combination</em> of the others, which no pairwise correlation reveals. That is
 what variance inflation measures.</p>
@@ -97,13 +97,13 @@ Journal of the American Statistical Association, 87(417), 178-183.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_frame_issues.html" class="external-link">illumex::ilm_frame_issues()</a></code> for collinearity in the raw data.</p></div>
+    <div class="dont-index"><p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_frame_issues.html">illumex::ilm_frame_issues()</a></code> for collinearity in the raw data.</p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_sim.html" class="external-link">ilm_sim</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_sim.html">ilm_sim</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">grp</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span></span>
 <span class="r-in"><span>               family <span class="op">=</span> <span class="st">"gaussian"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ilm_check_collinearity</span><span class="op">(</span><span class="va">f</span><span class="op">)</span></span></span>

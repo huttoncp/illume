@@ -77,12 +77,13 @@ and the *Effect size and power* vignette.
 Stages 2 to 4 use `illumex`, the exploration package `illume` attaches,
 so nothing extra needs loading. Descriptive statistics, plots, and
 bootstrap intervals for the quantities you are about to model.
-[`ilm_describe_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_all.html)
+[`ilm_describe_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_all.html)
 summarises every column at once;
-[`ilm_plot_all()`](https://rdrr.io/pkg/illumex/man/ilm_plot_all.html)
+[`ilm_plot_all()`](https://huttoncp.github.io/illumex/reference/ilm_plot_all.html)
 picks a sensible plot per variable;
-[`ilm_boot_ci()`](https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html) and
-[`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
+[`ilm_boot_ci()`](https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html)
+and
+[`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html)
 put intervals on means, medians and differences between groups without
 assuming normality.
 
@@ -100,13 +101,13 @@ See the *Exploring data* vignette.
 ## 3. Structure and profiling
 
 When the columns are many and correlated,
-[`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html) finds
-the few directions they share – PCA, MCA or FAMD depending on the types,
-or a generalized low rank model with a loss per column type –
-[`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html)
+[`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
+finds the few directions they share – PCA, MCA or FAMD depending on the
+types, or a generalized low rank model with a loss per column type –
+[`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
 groups the rows in that space, and
-[`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html) does
-both and describes what distinguishes each group.
+[`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
+does both and describes what distinguishes each group.
 
 ``` r
 
@@ -116,19 +117,19 @@ ilm_plot_profile(pr)
 ```
 
 See the *Profiling* vignette and
-[`?ilm_glrm`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html).
+[`?ilm_glrm`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html).
 
 ------------------------------------------------------------------------
 
 ## 4. Outliers and anomalies
 
 Two different questions.
-[`ilm_outliers()`](https://rdrr.io/pkg/illumex/man/ilm_outliers.html)
+[`ilm_outliers()`](https://huttoncp.github.io/illumex/reference/ilm_outliers.html)
 asks whether a value is extreme in its own column.
-[`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) asks
-whether a **row** is a plausible combination: someone 150 cm tall is
-unremarkable, someone weighing 110 kg is unremarkable, and someone who
-is both is not, and nothing in either column’s distribution says so.
+[`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
+asks whether a **row** is a plausible combination: someone 150 cm tall
+is unremarkable, someone weighing 110 kg is unremarkable, and someone
+who is both is not, and nothing in either column’s distribution says so.
 
 ``` r
 
@@ -136,9 +137,9 @@ ilm_outliers_all(d)                          # one column at a time
 ilm_anomaly(d)                               # the combination
 ```
 
-[`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) also
-names the column driving each flagged row, because an anomaly nobody can
-explain is not actionable.
+[`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
+also names the column driving each flagged row, because an anomaly
+nobody can explain is not actionable.
 
 See the *Anomaly detection* vignette.
 
@@ -146,7 +147,7 @@ See the *Anomaly detection* vignette.
 
 ## 5. Missing data
 
-[`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+[`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
 asks the question that matters, which is not how much is missing but
 whether it is missing in a way that biases the answer: complete cases
 stay unbiased when missingness is unrelated to the **outcome given the
@@ -354,8 +355,8 @@ ilm_interpret(fit)
 | *Introduction to illume* | orientation and one worked example |
 | *Regression models* | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
 | *Exploring data* (illumex) | descriptives, plots, bootstrap intervals |
-| *Profiling* (illumex) | [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html), [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html), [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html) |
-| *Anomaly detection* (illumex) | [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) against [`ilm_outliers()`](https://rdrr.io/pkg/illumex/man/ilm_outliers.html); [`ilm_plot_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html) to see whether the flagged rows stand apart |
+| *Profiling* (illumex) | [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html), [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html), [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html) |
+| *Anomaly detection* (illumex) | [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html) against [`ilm_outliers()`](https://huttoncp.github.io/illumex/reference/ilm_outliers.html); [`ilm_plot_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html) to see whether the flagged rows stand apart |
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md), [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md) |

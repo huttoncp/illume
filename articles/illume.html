@@ -111,11 +111,11 @@ was built – which is most of what this package is.</p>
 <h2 id="a-worked-example-end-to-end">A worked example, end to end<a class="anchor" aria-label="anchor" href="#a-worked-example-end-to-end"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_sim.html" class="external-link">ilm_sim</a></span><span class="op">(</span><span class="op">)</span>                       <span class="co"># a grouped dataset with a known structure</span></span>
+<code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_sim.html">ilm_sim</a></span><span class="op">(</span><span class="op">)</span>                       <span class="co"># a grouped dataset with a known structure</span></span>
 <span></span>
 <span><span class="co">## what is in it</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_describe_all.html" class="external-link">ilm_describe_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">downtime</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">region</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_describe_all.html">ilm_describe_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">downtime</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">region</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co">## a model: a count outcome, repeated within worker</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">downtime</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">region</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span>
@@ -177,8 +177,7 @@ each naming its remedy</td>
 <code><a href="../reference/ilm_emmeans.html">ilm_emmeans()</a></code>/<code><a href="../reference/ilm_contrast.html">ilm_contrast()</a></code>,
 <code><a href="../reference/ilm_trends.html">ilm_trends()</a></code>, <code><a href="../reference/ilm_moderation.html">ilm_moderation()</a></code>,
 <code><a href="../reference/ilm_ame.html">ilm_ame()</a></code>, <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code>,
-<code><a href="../reference/ilm_denom_df.html">ilm_denom_df()</a></code>, <code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code>,
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html" class="external-link">ilm_boot_ci()</a></code>
+<code><a href="../reference/ilm_denom_df.html">ilm_denom_df()</a></code>, <code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code>
 </td>
 </tr>
 <tr class="odd">
@@ -189,26 +188,28 @@ naming columns, with generalized eta squared and sphericity
 corrections</td>
 </tr>
 <tr class="even">
-<td><strong>Exploration</strong></td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_describe_all.html" class="external-link">ilm_describe_all()</a></code>, fifteen <code>ilm_plot_*()</code>
-functions, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_outliers.html" class="external-link">ilm_outliers()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_anomaly.html" class="external-link">ilm_anomaly()</a></code> and
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html" class="external-link">ilm_plot_anomaly()</a></code>
+<strong>Exploration</strong> (illumex)</td>
+<td>
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe_all.html">ilm_describe_all()</a></code>, the data plots,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html">ilm_boot_ci()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_outliers.html">ilm_outliers()</a></code>,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_anomaly.html">ilm_anomaly()</a></code> and <code><a href="https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code>
 </td>
 </tr>
 <tr class="odd">
-<td><strong>Structure</strong></td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce.html" class="external-link">ilm_reduce()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_cluster.html" class="external-link">ilm_cluster()</a></code>,
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_glrm.html" class="external-link">ilm_glrm()</a></code>
+<strong>Structure</strong> (illumex)</td>
+<td>
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_reduce.html">ilm_reduce()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_cluster.html">ilm_cluster()</a></code>,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_glrm.html">ilm_glrm()</a></code>
 </td>
 </tr>
 <tr class="even">
 <td><strong>Missing data</strong></td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">ilm_check_missing()</a></code>, <code><a href="../reference/ilm_impute.html">ilm_impute()</a></code>,
-<code><a href="../reference/ilm_mi_pool.html">ilm_mi_pool()</a></code>
-</td>
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_check_missing.html">ilm_check_missing()</a></code> (illumex) to describe it;
+<code><a href="../reference/ilm_impute.html">ilm_impute()</a></code> and <code><a href="../reference/ilm_mi_pool.html">ilm_mi_pool()</a></code> to fill it in
+and pool</td>
 </tr>
 <tr class="odd">
 <td><strong>Causal</strong></td>
@@ -326,8 +327,8 @@ multinomial</td>
 <td>
 <code>profiling</code> (illumex)</td>
 <td>
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce.html" class="external-link">ilm_reduce()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_cluster.html" class="external-link">ilm_cluster()</a></code>,
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_profile.html" class="external-link">ilm_profile()</a></code>
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_reduce.html">ilm_reduce()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_cluster.html">ilm_cluster()</a></code>,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile()</a></code>
 </td>
 </tr>
 <tr class="even">
@@ -362,7 +363,7 @@ are taught in</td>
 </table>
 <p>The three marked (illumex) belong to <code>illumex</code>, the
 exploration package <code>illume</code> attaches:
-<code>vignette("exploring-data", package = "illumex")</code>.</p>
+<code><a href="https://huttoncp.github.io/illumex/articles/exploring-data.html">vignette("exploring-data", package = "illumex")</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="how-this-package-was-built">How this package was built<a class="anchor" aria-label="anchor" href="#how-this-package-was-built"></a>
@@ -416,8 +417,8 @@ else.</p>
 <p>The exploratory half is a direct descendant of <a href="https://github.com/bcgov/elucidate" class="external-link"><code>elucidate</code></a>, by
 the same author: <code>describe()</code>, <code>counts()</code>,
 <code>dupes()</code>, <code>wash_df()</code> and the
-<code>plot_*()</code> family are where <code><a href="https://rdrr.io/pkg/illumex/man/ilm_describe.html" class="external-link">ilm_describe()</a></code>,
-<code><a href="https://rdrr.io/pkg/illumex/man/ilm_counts.html" class="external-link">ilm_counts()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_dupes.html" class="external-link">ilm_dupes()</a></code> and the rest came
+<code>plot_*()</code> family are where <code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">ilm_describe()</a></code>,
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_counts.html">ilm_counts()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_dupes.html">ilm_dupes()</a></code> and the rest came
 from, along with the idea that the routine work before a model should be
 one call with a consistent interface.</p>
 <p>And some of it was read straight out of their source: the sphericity

@@ -180,7 +180,7 @@ head(fit$checks[, c("check", "status", "detail")], 8)
 #> 4                                                       20.0 observations per level
 #> 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)
 #> 6                                          nlminb code 0 (relative convergence (4))
-#> 7                                                         max |gradient| = 1.64e-04
+#> 7                                                         max |gradient| = 1.62e-04
 #> 8              positive definite: TRUE; non-finite or non-positive variances: FALSE
 ```
 
@@ -806,7 +806,7 @@ zero. It means “somewhere at or below the limit”, and fitting it as a
 zero pulls the mean down and the variance in. Same for a scale that tops
 out, a score capped at 100, a measurement beyond an instrument’s range.
 
-[`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html)
+[`ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html)
 names the pile-up before you model it:
 
 ``` r

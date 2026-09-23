@@ -48,7 +48,7 @@ replicates rather than re-drawing it, which is stated where it matters.
 ## See also
 
 [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
-[`illumex::ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html),
+[`illumex::ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html),
 whose `p_zero` column is often the first sign of a floor.
 
 ## Examples

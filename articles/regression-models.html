@@ -240,7 +240,7 @@ meaningless even though nothing in the output looks wrong.</p>
 <span><span class="co">#&gt; 4                                                       20.0 observations per level</span></span>
 <span><span class="co">#&gt; 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)</span></span>
 <span><span class="co">#&gt; 6                                          nlminb code 0 (relative convergence (4))</span></span>
-<span><span class="co">#&gt; 7                                                         max |gradient| = 1.64e-04</span></span>
+<span><span class="co">#&gt; 7                                                         max |gradient| = 1.62e-04</span></span>
 <span><span class="co">#&gt; 8              positive definite: TRUE; non-finite or non-positive variances: FALSE</span></span></code></pre></div>
 <p>Each check has one of five statuses. <code>OK</code> and
 <code>FAIL</code> are self-explanatory. <code>WARN</code> means
@@ -789,13 +789,13 @@ does not mean zero. It means “somewhere at or below the limit”, and
 fitting it as a zero pulls the mean down and the variance in. Same for a
 scale that tops out, a score capped at 100, a measurement beyond an
 instrument’s range.</p>
-<p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_describe.html" class="external-link">ilm_describe()</a></code> names the pile-up before you model
+<p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">ilm_describe()</a></code> names the pile-up before you model
 it:</p>
 <div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">1500</span>, <span class="fl">0</span>, <span class="fl">1.4</span><span class="op">)</span></span>
 <span><span class="va">d0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>unbounded <span class="op">=</span> <span class="va">y</span>, capped <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmin</a></span><span class="op">(</span><span class="va">y</span>, <span class="fl">1.2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_describe.html" class="external-link">ilm_describe</a></span><span class="op">(</span><span class="va">d0</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"gauss"</span>, <span class="st">"gauss_note"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">ilm_describe</a></span><span class="op">(</span><span class="va">d0</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"variable"</span>, <span class="st">"gauss"</span>, <span class="st">"gauss_note"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    variable gauss</span></span>
 <span><span class="co">#&gt; 1 unbounded     1</span></span>
 <span><span class="co">#&gt; 2    capped     0</span></span>

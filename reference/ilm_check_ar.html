@@ -117,7 +117,7 @@ is missing temporal structure.</p>
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Show a progress bar. Defaults to <code><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive()</a></code>, so a
 bar appears when someone is watching and nothing is written in a
-script or a knitted document. See <a href="https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html" class="external-link">illumex::ilm_progress_arg</a>.</p></dd>
+script or a knitted document. See <a href="https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html">illumex::ilm_progress_arg</a>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -174,17 +174,17 @@ structures.)</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_sim.html" class="external-link">ilm_sim</a></span><span class="op">(</span>n_id <span class="op">=</span> <span class="fl">20</span>, n_period <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_sim.html">ilm_sim</a></span><span class="op">(</span>n_id <span class="op">=</span> <span class="fl">20</span>, n_period <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span></span>
 <span class="r-in"><span>               verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ilm_check_ar</span><span class="op">(</span><span class="va">f</span>, time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">date</span><span class="op">)</span><span class="op">)</span>, group <span class="op">=</span> <span class="va">d</span><span class="op">$</span><span class="va">id</span>,</span></span>
 <span class="r-in"><span>             maxlag <span class="op">=</span> <span class="fl">3</span>, B <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> residual autocorrelation vs simulated envelope (12 refits)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> residual autocorrelation vs simulated envelope (11 refits)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  lag component estimate null_mean      lo     hi  maxz      p status n_pairs</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    1  residual  -0.1768   -0.1278 -0.3871 0.1315 -0.57 0.4615     OK     140</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    2  residual  -0.1317   -0.0836 -0.2908 0.1236 -0.44 0.9231     OK     120</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    3  residual  -0.0654   -0.1369 -0.3296 0.0558  0.83 0.5385     OK     100</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    1  residual  -0.1768   -0.1248 -0.3982 0.1486 -0.58 0.5000     OK     140</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    2  residual  -0.1317   -0.0701 -0.2851 0.1450 -0.59 0.7500     OK     120</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    3  residual  -0.0654   -0.1330 -0.3326 0.0667  0.76 0.5833     OK     100</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; residual autocorrelation is consistent with the fitted model.</span>
 </code></pre></div>

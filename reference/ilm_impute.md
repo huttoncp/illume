@@ -55,7 +55,7 @@ ilm_impute(
   generalized low rank model instead, which uses a loss suited to each
   column's type and so can impute CATEGORICAL columns, which `"lowrank"`
   leaves alone – see
-  [`illumex::ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html).
+  [`illumex::ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html).
   low-rank route when they cannot be fitted; `"fcs"` and `"lowrank"`
   force one. See the section below for what each costs.
 
@@ -82,7 +82,7 @@ ilm_impute(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [illumex::ilm_progress_arg](https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html).
+  [illumex::ilm_progress_arg](https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html).
 
 ## Value
 
@@ -117,7 +117,7 @@ That the data are missing at random given the variables supplied: the
 chance a value is missing may depend on what is observed, but not on the
 missing value itself once the observed variables are accounted for. That
 assumption is **not testable**
-([`illumex::ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+([`illumex::ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
 explains why), and imputation does not make it true. Including variables
 that predict both the missingness and the missing value makes it more
 plausible.
@@ -177,7 +177,7 @@ three ways. Coverage of a nominal 95% interval for the coefficient on
 
 Three things to read off it. Complete cases are **unbiased** when
 missingness depends on a covariate, even at 40% missing – which is why
-[`illumex::ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+[`illumex::ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
 distinguishes that case and tells you not to bother imputing. Complete
 cases **fail badly** when missingness depends on the outcome: a bias of
 -0.099 is a fifth of the effect, and coverage collapses to 0.615.
@@ -213,7 +213,7 @@ pooled.
 
 [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
 to analyse them,
-[`illumex::ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+[`illumex::ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
 to decide whether you need to.
 
 ## Examples

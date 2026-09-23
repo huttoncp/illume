@@ -70,7 +70,7 @@ ilm_power(
 - progress:
 
   Show a progress bar; see
-  [illumex::ilm_progress_arg](https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html).
+  [illumex::ilm_progress_arg](https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html).
 
 ## Value
 

@@ -24,25 +24,27 @@ it, which remain the only things that have ever found a defect here.
   never fitted or read a model: the call graph was checked before the
   line was drawn, and the only call across it is
   [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)’s
-  use of [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html).
+  use of
+  [`ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html).
 - What moved: `ilm_describe*()`, `ilm_counts*()`,
-  [`ilm_dupes()`](https://rdrr.io/pkg/illumex/man/ilm_dupes.html),
-  [`ilm_copies()`](https://rdrr.io/pkg/illumex/man/ilm_copies.html),
-  [`ilm_wash_df()`](https://rdrr.io/pkg/illumex/man/ilm_wash_df.html),
+  [`ilm_dupes()`](https://huttoncp.github.io/illumex/reference/ilm_dupes.html),
+  [`ilm_copies()`](https://huttoncp.github.io/illumex/reference/ilm_copies.html),
+  [`ilm_wash_df()`](https://huttoncp.github.io/illumex/reference/ilm_wash_df.html),
   `ilm_recode_errors*()`,
-  [`ilm_translate()`](https://rdrr.io/pkg/illumex/man/ilm_translate.html),
-  [`ilm_frame_issues()`](https://rdrr.io/pkg/illumex/man/ilm_frame_issues.html),
-  [`ilm_gauss_check()`](https://rdrr.io/pkg/illumex/man/ilm_gauss_check.html),
-  [`ilm_boot_ci()`](https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html),
-  [`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html),
+  [`ilm_translate()`](https://huttoncp.github.io/illumex/reference/ilm_translate.html),
+  [`ilm_frame_issues()`](https://huttoncp.github.io/illumex/reference/ilm_frame_issues.html),
+  [`ilm_gauss_check()`](https://huttoncp.github.io/illumex/reference/ilm_gauss_check.html),
+  [`ilm_boot_ci()`](https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html),
+  [`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html),
   outliers and anomalies,
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html),
-  [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html),
-  [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html),
-  [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html),
-  [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html),
+  [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html),
+  [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html),
+  [`ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html),
+  [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
   and the `*_na()` functions, the plots of data (as against those of a
-  model), [`ilm_sim()`](https://rdrr.io/pkg/illumex/man/ilm_sim.html),
+  model),
+  [`ilm_sim()`](https://huttoncp.github.io/illumex/reference/ilm_sim.html),
   and the `progress` argument’s help page. So did the vignettes on
   exploring data, profiling and anomaly detection. Imputing and pooling
   stay here, because pooling needs a model.
@@ -394,7 +396,7 @@ it, which remain the only things that have ever found a defect here.
   [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md),
   [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),
   [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
-  [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html),
+  [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html),
   [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md),
   [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
   and
@@ -412,14 +414,14 @@ it, which remain the only things that have ever found a defect here.
 
 ### Seeing an anomaly scan
 
-- [`ilm_plot_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html):
+- [`ilm_plot_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html):
   `"scores"`, the default, plots every row’s score against its rank
   beside the band the scan simulated. It is the one view that tells five
   genuine outliers from the top 5% of a smooth continuum. `"drivers"`
   counts which column drives the flags, `"map"` places the rows on the
   first two dimensions of
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html), and
-  `"row"` shows one row’s z-scores beside its residuals.
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html),
+  and `"row"` shows one row’s z-scores beside its residuals.
 - The band **restarts at the line**. Setting the flagged rows aside
   moves every other row up that many ranks, so against the band as
   simulated a clean remainder sits above it for a long stretch: over 60
@@ -471,7 +473,7 @@ it, which remain the only things that have ever found a defect here.
 - The pkgdown reference index is generated, and hand edits to
   `_pkgdown.yml` had drifted from the generator; they are in the
   generator now.
-  [`ilm_anomalous()`](https://rdrr.io/pkg/illumex/man/ilm_anomalous.html)
+  [`ilm_anomalous()`](https://huttoncp.github.io/illumex/reference/ilm_anomalous.html)
   is indexed, and the `benchmarking` and `moderation` articles are
   listed, without which a pkgdown build stops.
 - The benchmarking vignette said 1000 replications where the agreement
@@ -653,7 +655,7 @@ it, which remain the only things that have ever found a defect here.
 
 ### Multivariate anomaly detection
 
-- [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html)
+- [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
   finds rows implausible as a COMBINATION. On test data with ten rows
   pushed off the correlation structure, the column-at-a-time scan caught
   none of them.
@@ -671,10 +673,10 @@ it, which remain the only things that have ever found a defect here.
 
 ### Generalized low rank models
 
-- [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html), and
-  `method = "glrm"` on
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html),
-  [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html)
+- [`ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html),
+  and `method = "glrm"` on
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html),
+  [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
   and
   [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md).
   A loss per column type rather than squared error on one-hot
@@ -800,13 +802,13 @@ last rows rather than the right ones turns z = 23.5 into z = 0.41.
 
 ### A tibble is a data frame and has to behave like one
 
-- **[`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+- **[`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   and
-  [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html)
+  [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
   failed on any tibble with a numeric column**, which is to say on most
   real data: on `gapminder::gapminder` they stopped with
   `All variables in X.quanti must be numeric`.
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   handed its numeric half straight to
   [`PCAmixdata::PCAmix()`](https://rdrr.io/pkg/PCAmixdata/man/PCAmix.html),
   which checks columns with `is.numeric(X.quanti[, j])` – and `[` on a
@@ -817,29 +819,29 @@ last rows rather than the right ones turns z = 23.5 into z = 0.41.
   gets from readr, dplyr or gapminder, so this closed the most ordinary
   route into the function while looking like a complaint about the data.
 - The mixed-data handling itself was never the problem.
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   picks PCA, MCA or FAMD by column type and `gapminder` takes the FAMD
   branch, as intended, once the frame reaches PCAmix in a shape it
   accepts.
 - The rest of the package was swept for the same fault and is clean:
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
   [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),
-  [`ilm_describe_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_all.html),
-  [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html),
+  [`ilm_describe_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_all.html),
+  [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html),
   [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
-  [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html),
-  [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+  [`ilm_glrm()`](https://huttoncp.github.io/illumex/reference/ilm_glrm.html),
+  [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
   and the plotting functions all give a tibble and a data frame the same
   answer.
-- **[`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html)
+- **[`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
   refused mixed columns without naming the remedy.** It clusters
   coordinates – a k-means centroid is not defined on a factor – so
   refusing is right, but `the coordinates to cluster must be numeric`
   left the caller to discover
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html) for
-  themselves, which is not how anything else in the package behaves. It
-  now names the offending columns and the call that fixes it, as
-  [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html)
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
+  for themselves, which is not how anything else in the package behaves.
+  It now names the offending columns and the call that fixes it, as
+  [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
   already did for the same situation.
 
 The regression test builds its tibble with
@@ -927,16 +929,17 @@ time this exact mechanism has bitten.
 
 ### Mixed data, measured rather than assumed
 
-[`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html) and
-[`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) both
-refused to use categorical columns. Deciding what to do about that meant
-comparing seven approaches against data with known structure, and three
-of the results overturned the plan they were meant to confirm.
+[`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
+and
+[`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
+both refused to use categorical columns. Deciding what to do about that
+meant comparing seven approaches against data with known structure, and
+three of the results overturned the plan they were meant to confirm.
 
 - **`ilm_cluster(data)` now takes raw mixed data**, reducing it through
-  [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+  [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   (FAMD) and saying so.
-  [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html)
+  [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
   remains the front door: it is the same pipeline plus a description of
   each cluster, in one call.
 
@@ -967,7 +970,7 @@ of the results overturned the plan they were meant to confirm.
   lattice. Its strength is what breaks it.
 
 - **Every `k`-selector over-selects on mixed data**, and
-  [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html)
+  [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
   now warns when the chosen `k` is the largest searched – the curve had
   not turned, so that is where the search stopped rather than where the
   evidence pointed. With truth `k = 3`, the gap statistic recovered it
@@ -977,7 +980,7 @@ of the results overturned the plan they were meant to confirm.
 
 - **Both functions now report what the missing values will cost before
   they cost it**, through
-  [`ilm_describe_na_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_na_all.html).
+  [`ilm_describe_na_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_na_all.html).
   Twelve per cent missing across three columns leaves 68% of rows
   complete, and the other 32% are dropped silently by any complete-case
   method. The note names
@@ -1023,7 +1026,7 @@ of the results overturned the plan they were meant to confirm.
 
 ### Which variables are carrying a clustering
 
-[`ilm_var_contrib()`](https://rdrr.io/pkg/illumex/man/ilm_var_contrib.html).
+[`ilm_var_contrib()`](https://huttoncp.github.io/illumex/reference/ilm_var_contrib.html).
 Nothing in the package selects variables, and an irrelevant one is not
 neutral: on three known clusters with two informative columns, adding
 two pure-noise factors took recovery from 0.301 to **0.006**. That is
@@ -1049,7 +1052,7 @@ whether or not it means anything. A pure-noise column scored 0.441
 against 0.576 for a real one. The documentation says this rather than
 implying otherwise.
 
-**[`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html)
+**[`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
 runs it, rather than leaving it for the user to find.** A diagnostic in
 a function nobody calls produces exactly the analyses this package
 exists to prevent, so the check is in the path: the result is stored on
@@ -1224,13 +1227,13 @@ treatment-by-time design is what that is mostly for.
 - A single character is left alone, because base R draws it literally –
   translating `pch = "x"` would silently turn the plot into crosses.
 - `pch` is now a documented argument of
-  [`ilm_plot()`](https://rdrr.io/pkg/illumex/man/ilm_plot.html),
-  [`ilm_plot_scatter()`](https://rdrr.io/pkg/illumex/man/ilm_plot_scatter.html),
-  [`ilm_plot_line()`](https://rdrr.io/pkg/illumex/man/ilm_plot_line.html),
-  [`ilm_plot_stat_error()`](https://rdrr.io/pkg/illumex/man/ilm_plot_stat_error.html),
-  [`ilm_plot_box()`](https://rdrr.io/pkg/illumex/man/ilm_plot_box.html)
+  [`ilm_plot()`](https://huttoncp.github.io/illumex/reference/ilm_plot.html),
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illumex/reference/ilm_plot_scatter.html),
+  [`ilm_plot_line()`](https://huttoncp.github.io/illumex/reference/ilm_plot_line.html),
+  [`ilm_plot_stat_error()`](https://huttoncp.github.io/illumex/reference/ilm_plot_stat_error.html),
+  [`ilm_plot_box()`](https://huttoncp.github.io/illumex/reference/ilm_plot_box.html)
   and
-  [`ilm_plot_violin()`](https://rdrr.io/pkg/illumex/man/ilm_plot_violin.html)
+  [`ilm_plot_violin()`](https://huttoncp.github.io/illumex/reference/ilm_plot_violin.html)
   rather than something to be discovered inside `...`. It sits after
   `...`, so no existing positional call can be matched to it.
 
@@ -1467,7 +1470,7 @@ example that had been in the package, working, for months.
   0.475 on the design with the most data and the clearest structure,
   where there are enough held-out cells to choose well. Neither
   criterion dominates, so neither is imposed.
-  [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html)
+  [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html)
   continues to use parallel analysis for its own reason: it needs the
   directions that are real shared structure, not the rank that best
   predicts a cell.
@@ -1524,12 +1527,12 @@ example that had been in the package, working, for months.
   0.6.x. The shape of `theme` is now always checked, the names are
   enumerated when the helper exists, and otherwise tinyplot is left to
   object. Themes work again on 0.6.1.
-- [`ilm_plot_var_pairs()`](https://rdrr.io/pkg/illumex/man/ilm_plot_var_pairs.html)
+- [`ilm_plot_var_pairs()`](https://huttoncp.github.io/illumex/reference/ilm_plot_var_pairs.html)
   genuinely needs `tinypairs()`, which is 0.7.0-only. It now says so and
   names
-  [`ilm_plot_scatter()`](https://rdrr.io/pkg/illumex/man/ilm_plot_scatter.html)
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illumex/reference/ilm_plot_scatter.html)
   and
-  [`ilm_plot_var_all()`](https://rdrr.io/pkg/illumex/man/ilm_plot_var_all.html)
+  [`ilm_plot_var_all()`](https://huttoncp.github.io/illumex/reference/ilm_plot_var_all.html)
   as the alternatives, rather than failing with “not an exported
   object”.
 - Measured on tinyplot 0.6.1: twelve of thirteen plotting paths work,
@@ -1569,7 +1572,7 @@ worth showing, and an imputation route for data too wide to regress.
 
 - `progress` on the bootstrap functions,
   [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
-  [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html)
+  [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
   and the refit-based diagnostics. It defaults to \[interactive()\], so
   a bar appears when a person is watching and nothing is written into a
   script, a test or a knitted document.
@@ -1633,7 +1636,7 @@ worth showing, and an imputation route for data too wide to regress.
 
 ### Fixes
 
-- [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+- [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   failed outright on any two-column selection. The number of dimensions
   available from p columns is min(n - 1, p), not p - 1 – two columns
   have two components, and asking PCAmix for one is an error rather than
@@ -1656,11 +1659,11 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Flagging unusual values
 
-- [`ilm_outliers()`](https://rdrr.io/pkg/illumex/man/ilm_outliers.html)
+- [`ilm_outliers()`](https://huttoncp.github.io/illumex/reference/ilm_outliers.html)
   scores every value by how far it sits from the centre and flags those
   past a threshold, by Tukey fence (`"iqr"`), modified z-score (`"mad"`)
   or ordinary z-score.
-  [`ilm_outliers_all()`](https://rdrr.io/pkg/illumex/man/ilm_outliers_all.html)
+  [`ilm_outliers_all()`](https://huttoncp.github.io/illumex/reference/ilm_outliers_all.html)
   runs it over every numeric column, optionally within groups, and
   returns the row each flagged value came from.
 - Grouping is not a detail. A value can be ordinary for its own group
@@ -1674,32 +1677,32 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Named plots
 
-- [`ilm_plot_histogram()`](https://rdrr.io/pkg/illumex/man/ilm_plot_histogram.html),
-  [`ilm_plot_density()`](https://rdrr.io/pkg/illumex/man/ilm_plot_density.html),
-  [`ilm_plot_box()`](https://rdrr.io/pkg/illumex/man/ilm_plot_box.html),
-  [`ilm_plot_violin()`](https://rdrr.io/pkg/illumex/man/ilm_plot_violin.html),
-  [`ilm_plot_scatter()`](https://rdrr.io/pkg/illumex/man/ilm_plot_scatter.html),
-  [`ilm_plot_bar()`](https://rdrr.io/pkg/illumex/man/ilm_plot_bar.html),
-  [`ilm_plot_line()`](https://rdrr.io/pkg/illumex/man/ilm_plot_line.html)
+- [`ilm_plot_histogram()`](https://huttoncp.github.io/illumex/reference/ilm_plot_histogram.html),
+  [`ilm_plot_density()`](https://huttoncp.github.io/illumex/reference/ilm_plot_density.html),
+  [`ilm_plot_box()`](https://huttoncp.github.io/illumex/reference/ilm_plot_box.html),
+  [`ilm_plot_violin()`](https://huttoncp.github.io/illumex/reference/ilm_plot_violin.html),
+  [`ilm_plot_scatter()`](https://huttoncp.github.io/illumex/reference/ilm_plot_scatter.html),
+  [`ilm_plot_bar()`](https://huttoncp.github.io/illumex/reference/ilm_plot_bar.html),
+  [`ilm_plot_line()`](https://huttoncp.github.io/illumex/reference/ilm_plot_line.html)
   and
-  [`ilm_plot_stat_error()`](https://rdrr.io/pkg/illumex/man/ilm_plot_stat_error.html).
-  [`ilm_plot()`](https://rdrr.io/pkg/illumex/man/ilm_plot.html) picks a
-  geometry for you; these are the same drawing done by naming the plot
-  you want.
-- [`ilm_plot_var()`](https://rdrr.io/pkg/illumex/man/ilm_plot_var.html)
+  [`ilm_plot_stat_error()`](https://huttoncp.github.io/illumex/reference/ilm_plot_stat_error.html).
+  [`ilm_plot()`](https://huttoncp.github.io/illumex/reference/ilm_plot.html)
+  picks a geometry for you; these are the same drawing done by naming
+  the plot you want.
+- [`ilm_plot_var()`](https://huttoncp.github.io/illumex/reference/ilm_plot_var.html)
   and
-  [`ilm_plot_var_all()`](https://rdrr.io/pkg/illumex/man/ilm_plot_var_all.html)
+  [`ilm_plot_var_all()`](https://huttoncp.github.io/illumex/reference/ilm_plot_var_all.html)
   choose from the column types;
-  [`ilm_plot_var_pairs()`](https://rdrr.io/pkg/illumex/man/ilm_plot_var_pairs.html)
+  [`ilm_plot_var_pairs()`](https://huttoncp.github.io/illumex/reference/ilm_plot_var_pairs.html)
   plots every pair, handling mixed numeric and categorical columns
   rather than only numeric ones;
-  [`ilm_plot_c()`](https://rdrr.io/pkg/illumex/man/ilm_plot_c.html)
+  [`ilm_plot_c()`](https://huttoncp.github.io/illumex/reference/ilm_plot_c.html)
   composes several plots into one figure.
-- [`ilm_plot_na_all()`](https://rdrr.io/pkg/illumex/man/ilm_plot_na_all.html)
+- [`ilm_plot_na_all()`](https://huttoncp.github.io/illumex/reference/ilm_plot_na_all.html)
   and
-  [`ilm_plot_na()`](https://rdrr.io/pkg/illumex/man/ilm_plot_na.html)
+  [`ilm_plot_na()`](https://huttoncp.github.io/illumex/reference/ilm_plot_na.html)
   show missingness across columns and across groups.
-  [`ilm_plot_missing()`](https://rdrr.io/pkg/illumex/man/ilm_plot_missing.html)
+  [`ilm_plot_missing()`](https://huttoncp.github.io/illumex/reference/ilm_plot_missing.html)
   now draws through the first of these, so there is one implementation.
 - Everything is on tinyplot. That was the last base-graphics plot in the
   package, and columns are named as strings throughout, the way the rest
@@ -1707,10 +1710,10 @@ The rest of the exploration layer: unusual values, and named plots.
 
 ### Bootstrap differences can be seen, not just summarised
 
-- [`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html)
   keeps the replicate differences, labelled by comparison, and reports
   `p_superiority` – the share of replicates above zero.
-- [`ilm_plot_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_plot_boot_diff.html)
+- [`ilm_plot_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_plot_boot_diff.html)
   draws them for any comparison in the result, with zero and the
   interval marked. The interval says where the difference is; this says
   what the resampling produced, which is whether it is symmetric,
@@ -1749,7 +1752,7 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Deciding whether it matters
 
-- [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+- [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
   reports how much is missing, which columns go missing together,
   whether the pattern is monotone, and what missingness is related to –
   then says what that implies.
@@ -1784,37 +1787,37 @@ Missing data, and the profiling set that reads its patterns.
 
 ### Profiling: dimension reduction, clustering, and what the clusters are
 
-- [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html)
+- [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   reduces a frame’s columns to a few dimensions, choosing PCA, MCA or a
   mixed method from the column types rather than making the user name
   it.
-- [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html)
+- [`ilm_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_cluster.html)
   groups the rows, choosing `k` by the gap statistic, and reports two
   different things a bare assignment does not: per-cluster **stability**
   by bootstrap Jaccard, and per-observation **ambiguity** from the
   silhouette width. A point can sit on a boundary inside a large, stable
   cluster, and a size-based flag alone would never show it.
-- [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html)
+- [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
   runs both and says what each cluster *is* – “cluster 4 is
   characterised by dim 1 (high disp, cyl)” – by v-test, the device
   FactoMineR’s `catdes()` uses. It is documented as a threshold rather
   than a test, because the clusters were found from the coordinates
   being tested.
-- [`ilm_reduce_na()`](https://rdrr.io/pkg/illumex/man/ilm_reduce_na.html),
-  [`ilm_cluster_na()`](https://rdrr.io/pkg/illumex/man/ilm_cluster_na.html)
+- [`ilm_reduce_na()`](https://huttoncp.github.io/illumex/reference/ilm_reduce_na.html),
+  [`ilm_cluster_na()`](https://huttoncp.github.io/illumex/reference/ilm_cluster_na.html)
   and
-  [`ilm_profile_na()`](https://rdrr.io/pkg/illumex/man/ilm_profile_na.html)
+  [`ilm_profile_na()`](https://huttoncp.github.io/illumex/reference/ilm_profile_na.html)
   do the same to the *pattern of missingness*: which columns go missing
   together, and for whom. A block of variables lost as one points at a
   shared cause, which is a different problem from values going one at a
   time.
-- [`ilm_plot_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_plot_reduce.html),
-  [`ilm_plot_reduce_scree()`](https://rdrr.io/pkg/illumex/man/ilm_plot_reduce_scree.html),
-  [`ilm_plot_reduce_contrib()`](https://rdrr.io/pkg/illumex/man/ilm_plot_reduce_contrib.html),
-  [`ilm_plot_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_plot_cluster.html),
-  [`ilm_plot_cluster_gap()`](https://rdrr.io/pkg/illumex/man/ilm_plot_cluster_gap.html)
+- [`ilm_plot_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_plot_reduce.html),
+  [`ilm_plot_reduce_scree()`](https://huttoncp.github.io/illumex/reference/ilm_plot_reduce_scree.html),
+  [`ilm_plot_reduce_contrib()`](https://huttoncp.github.io/illumex/reference/ilm_plot_reduce_contrib.html),
+  [`ilm_plot_cluster()`](https://huttoncp.github.io/illumex/reference/ilm_plot_cluster.html),
+  [`ilm_plot_cluster_gap()`](https://huttoncp.github.io/illumex/reference/ilm_plot_cluster_gap.html)
   and
-  [`ilm_plot_profile()`](https://rdrr.io/pkg/illumex/man/ilm_plot_profile.html),
+  [`ilm_plot_profile()`](https://huttoncp.github.io/illumex/reference/ilm_plot_profile.html),
   each with an `_na` counterpart.
 - `PCAmixdata` and `cluster` join Suggests behind require-guards.
   Neither is a hard dependency and no new Imports were added.
@@ -1856,7 +1859,7 @@ Missing data, and the profiling set that reads its patterns.
 
 - **A marginal test answers the wrong question, and looks right doing
   it.** The first version of
-  [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html)
+  [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
   asked whether missingness was associated with the outcome, full stop.
   But when missingness follows a covariate the outcome also depends on,
   the two are marginally associated while carrying no information about
@@ -2009,7 +2012,7 @@ new sits on top of it.
 
 ### Comparing more than two groups
 
-- [`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html)
   compares every pair of levels rather than exactly two, takes a
   formula, and is simultaneous by default. See the 0.0.2.9000 notes.
 
@@ -2198,7 +2201,7 @@ they can now also fit.
   or above a ceiling – and `ilm_model(censor = )` fits them as the
   probability of that interval. With no random effects this is the Tobit
   model.
-- [`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html)
+- [`ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html)
   names a pile-up at either extreme of a continuous variable, and points
   at
   [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md),
@@ -2237,7 +2240,7 @@ they can now also fit.
 
 ### Comparing more than two groups
 
-- [`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html)
   compares every pair of levels, not just two, and takes a formula:
   `ilm_boot_diff(score ~ grp, data = d)` as well as
   `ilm_boot_diff(d, "score", "grp")`. `ref =` compares every level
@@ -2254,7 +2257,7 @@ they can now also fit.
 - Each row now carries `p_value` and `p_adj` alongside the interval,
   read off the same bootstrap maximum, so the test and the interval
   agree.
-- [`ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
+- [`ilm_boot_diff()`](https://huttoncp.github.io/illumex/reference/ilm_boot_diff.html)
   is now generic, and its first argument is `x` rather than `data`.
   Positional calls are unaffected; a call naming `data =` for the data
   frame needs the formula form.
@@ -2395,7 +2398,7 @@ Summary notes; the full tables belong with the methods paper.
   uniform (Kolmogorov-Smirnov p = 0.18), because the fitted means vary
   from row to row and spread the pile-up out. The pile-up is visible in
   the data, not in the residuals, which is why
-  [`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html)
+  [`ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html)
   now names it.
 
 - **All three AFT families match
@@ -2503,13 +2506,13 @@ Summary notes; the full tables belong with the methods paper.
   [`poly()`](https://rdrr.io/r/stats/poly.html) and
   [`scale()`](https://rdrr.io/r/base/scale.html) returned quietly wrong
   numbers.
-- [`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html)
+- [`ilm_describe()`](https://huttoncp.github.io/illumex/reference/ilm_describe.html)
   accepts a data frame again. With no `y` it handed the whole frame to
   the categorical branch, which failed with “the condition has length \>
   1” for any frame of more than one column, and returned nonsense rather
   than failing for a frame of exactly one. It now describes every column
   when they are all of a kind, takes several column names, and names
-  [`ilm_describe_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_all.html)
+  [`ilm_describe_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_all.html)
   when the kinds are mixed.
 - `ilm_plot_model(what = "effect")` draws one curve per interaction
   partner. It previously held the partner at its most common level, drew
