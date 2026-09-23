@@ -136,7 +136,9 @@
 </ul></div>
 <div class="section level3">
 <h3 id="id_6-open-not-scheduled">6. Open, not scheduled<a class="anchor" aria-label="anchor" href="#id_6-open-not-scheduled"></a></h3>
-<ul><li>macOS CI: <code>___kmpc_for_static_fini</code> (LLVM/Intel OpenMP). The macOS-only source-install step for TMB/RTMB in <code>.github/workflows/R-CMD-check.yaml</code> works: the 2026-09-23 run loaded RTMB and got as far as the tests, where it failed the same boundary test as Linux and Windows (fixed, see below).</li>
+<ul><li>
+<strong>Python versions of both packages – agreed 2026-09-23, AFTER both are on CRAN.</strong> The R packages are the reference implementation: every Python function gets an agreement test against them, run through rpy2 in CI (as pyfixest does with fixest). illumex first (polars for collapse; it builds the cross-language harness), then a JAX prototype of illume’s engine – the multinomial GLMM first, benchmarked against R – before committing to a full port. The hard part is TMB’s sparse Laplace approximation (dense Hessians are fine up to a few thousand random effects; crossed designs need sparse Cholesky with hand-written derivatives); JAX’s vmap/jit would most speed up power, the parametric bootstrap and the envelopes. API: same formulas, names and arguments, <code>import pyillume as ilm</code> -&gt; <code>ilm.model()</code>. Names: <code>illume</code> is taken on PyPI (an unrelated placeholder); pyillume and pyillumex proposed, not yet chosen.</li>
+<li>macOS CI: <code>___kmpc_for_static_fini</code> (LLVM/Intel OpenMP). The macOS-only source-install step for TMB/RTMB in <code>.github/workflows/R-CMD-check.yaml</code> works: the 2026-09-23 run loaded RTMB and got as far as the tests, where it failed the same boundary test as Linux and Windows (fixed, see below).</li>
 <li>
 <strong>Version bump</strong> – 0.0.7.9000 has grown a lot; Craig’s call whether this is 0.0.8.</li>
 <li>Found this session, not done: <code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code> refuses a multinomial fit (it could report per-category probabilities); cluster-robust SEs are not available for a multinomial fit.</li>
