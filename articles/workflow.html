@@ -255,6 +255,25 @@ complaint.</p>
 <span><span class="fu"><a href="../reference/ilm_check_ar.html">ilm_check_ar</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                            <span class="co"># -&gt; ar = ilm_ar1(...)</span></span>
 <span><span class="fu"><a href="../reference/ilm_variogram.html">ilm_variogram</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                           <span class="co"># spatial or temporal correlation</span></span>
 <span><span class="fu"><a href="../reference/ilm_rqr_test.html">ilm_rqr_test</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                            <span class="co"># residuals, calibrated by simulation</span></span></code></pre></div>
+<p>Most remedies are a change to one argument of
+<code><a href="../reference/ilm_model.html">ilm_model()</a></code>, and <code><a href="../reference/ilm_remedies.html">ilm_remedies()</a></code> writes each
+one out as that change. Each carries a tier:</p>
+<ul>
+<li>
+<code>numerical</code>: the same model fitted harder;</li>
+<li>
+<code>structural</code>: a different random-effect or variance
+structure, with fixed effects that mean what they did;</li>
+<li>
+<code>estimand</code>: a change to what the model estimates, to be
+made by choice, not because a check asked.</li>
+</ul>
+<p><code><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> refits with the one you pick.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_remedies.html">ilm_remedies</a></span><span class="op">(</span><span class="va">fit</span>, zeros <span class="op">=</span> <span class="fu"><a href="../reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">rem</span>                                          <span class="co"># tier, remedy, and the change</span></span>
+<span><span class="va">fit2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">rem</span>, <span class="fl">1</span><span class="op">)</span>        <span class="co"># refit with remedy 1</span></span>
+<span><span class="va">fit2</span><span class="op">$</span><span class="va">remedy_log</span>                              <span class="co"># how fit2 was reached</span></span></code></pre></div>
 <p>If the variance structure is the worry rather than the mean
 structure, <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> gives cluster-robust standard
 errors without needing to say what the right structure would be.</p>
@@ -269,7 +288,7 @@ errors without needing to say what the right structure would be.</p>
 means and the comparisons between them, <code><a href="../reference/ilm_ame.html">ilm_ame()</a></code> for the
 average effect of a one-unit change, and <code><a href="../reference/ilm_plot_model.html">ilm_plot_model()</a></code>
 for partial dependence.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_anova.html">ilm_anova</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                               <span class="co"># Type II by default</span></span>
 <span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                             <span class="co"># odds ratios, rate ratios, ...</span></span>
 <span><span class="va">em</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_emmeans.html">ilm_emmeans</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"group"</span><span class="op">)</span></span>
@@ -286,7 +305,7 @@ covariate collapses the thing being asked about.
 <code><a href="../reference/ilm_trends.html">ilm_trends()</a></code> estimates the slope within each level instead,
 and answers the two questions separately: whether each slope differs
 from zero, and whether the slopes differ from each other.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_trends.html">ilm_trends</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"group"</span>, var <span class="op">=</span> <span class="st">"time"</span><span class="op">)</span></span>
 <span><span class="va">tr</span>                                           <span class="co"># is each group's slope non-zero?</span></span>
 <span><span class="fu"><a href="../reference/ilm_contrast.html">ilm_contrast</a></span><span class="op">(</span><span class="va">tr</span><span class="op">)</span>                             <span class="co"># do the groups' slopes differ?</span></span></code></pre></div>
@@ -308,7 +327,7 @@ description of the columns. See <code><a href="../articles/anova.html">vignette(
 <code><a href="../reference/ilm_scenario.html">ilm_scenario()</a></code> sets predictors to values a stakeholder is
 considering and reports what the model says would happen, with intervals
 and with differences between scenarios.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, dose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span><span class="op">)</span>, contrast <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span></code></pre></div>
 <p>The default averages over <strong>the observed units</strong>: set
 the intervention for everyone, keep each unit’s own covariates, predict,
@@ -325,7 +344,7 @@ combination is one nobody occupies.</p>
 <p><code><a href="../reference/ilm_interpret.html">ilm_interpret()</a></code> writes the findings as prose from
 deterministic templates, so the same fit always produces the same words.
 Causal language appears only when a DAG has licensed it.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_interpret.html">ilm_interpret</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>

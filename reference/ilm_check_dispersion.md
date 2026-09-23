@@ -36,7 +36,10 @@ p-value and a `status`.
 ## See also
 
 [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
-when the excess variance is concentrated at zero.
+when the excess variance is concentrated at zero;
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md),
+given this result as `dispersion`, writes the remedy out as the change
+to make.
 
 ## Examples
 

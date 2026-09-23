@@ -41,6 +41,12 @@ that should be a mixture (`zi_type = "inflated"`) or two processes
 (`"hurdle"`) is a question about what the zeros mean rather than one
 this check can answer.
 
+## See also
+
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md),
+given this result as `zeros`, writes the zero part out as the change to
+make.
+
 ## Examples
 
 ``` r

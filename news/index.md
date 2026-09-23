@@ -59,6 +59,77 @@ it, which remain the only things that have ever found a defect here.
   the copies differ. Until `illumex` is on CRAN, `illume` finds it on
   GitHub through `Remotes:`.
 
+### Remedies the code can make
+
+- `ilm_remedies(fit)` lists a remedy for every check that is not OK.
+  Each one is written as the change to
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  that makes it –
+  `re_struct = list(site = list(type = "rr", rank = 1L))`,
+  `formula = y ~ x + (1 | g)`, `family = "nbinom"` – and
+  `ilm_apply_remedy(fit, remedies, id)` makes it. The refit goes through
+  the model’s own call, so the family, weights, zero part, dispersion
+  model and REML all come along. It then says what the checks that asked
+  for the remedy say now. The new fit’s call is the one a person would
+  have written, ready for
+  [`update()`](https://rdrr.io/r/stats/update.html) or a further remedy,
+  and `fit$remedy_log` records every remedy that led to it.
+- The checks that simulate –
+  [`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md),
+  [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
+  and
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
+  – are passed in rather than run, since running them is a choice:
+  `ilm_remedies(fit, dispersion = ilm_check_dispersion(fit))`.
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md)
+  now returns the column its groups came from, so the dispersion formula
+  can be written in it.
+- Every remedy has a tier.
+  - `numerical`: the same model fitted harder.
+  - `structural`: a different random-effect or variance structure, whose
+    fixed effects mean what they meant before. Examples are a term whose
+    variance is estimated at zero removed, a covariance of lower rank, a
+    dispersion model, a zero part, or the boundary-avoiding penalty with
+    its measured costs.
+  - `estimand`: changes what the fixed effects estimate or what their
+    standard errors account for. Apply one only because the question
+    calls for it.
+
+  Whether a variance is at zero is read off the fit, so “drop the term”
+  is structural where the fit is the same without it, and estimand
+  everywhere else. Some remedies can only be made by hand, such as which
+  categories to merge or which levels to pool; they are listed with no
+  change, and applying one is refused.
+- A remedy is a candidate, not a cure. The tests hold it to what it
+  claims:
+  - dropping a random intercept at zero leaves the fixed effects at lm’s
+    to 1e-5;
+  - a smooth shrunk to a line, replaced by the line, reaches the same
+    log-likelihood with one parameter fewer;
+  - a category covariance at its edge given rank 1 passes the check it
+    failed.
+
+  `test-remedies.R` also fails if any check the package can report has
+  no rule.
+- Writing the rules out found five remedies that were wrong:
+  - `re_struct` naming only some of a model’s terms stopped with an
+    error about `re_struct$NA`. The argument reads as if a term left out
+    keeps the default, and now it does. A name that is not a term of the
+    model now stops, listing the terms, instead of being ignored.
+  - For any family but the multinomial, a random-effect term with too
+    few levels was told to use `rr(1)` – “1 parameters instead of 1”,
+    which is the structure already fitted. It now names what can come
+    down: the intercept-slope correlation, the random slope, the levels,
+    the term. The latent-budget check had the same fault and the same
+    fix.
+  - A smooth penalised to nothing was told “drop term ‘s(x)’”, but its
+    unpenalised part – for `s(x)`, a straight line in `x` – is still
+    fitted, and dropping the term takes the line out too. The remedy is
+    now to put `x` in its place.
+  - Two remedies named things the package does not have: “fix one of the
+    two parameters” for aliased parameters, and “a reduced-rank AR” for
+    a thin AR grid. Both are gone.
+
 ### The family is read off the response
 
 - [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)

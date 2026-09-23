@@ -244,6 +244,29 @@ ilm_variogram(fit)                           # spatial or temporal correlation
 ilm_rqr_test(fit)                            # residuals, calibrated by simulation
 ```
 
+Most remedies are a change to one argument of
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+and
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+writes each one out as that change. Each carries a tier:
+
+- `numerical`: the same model fitted harder;
+- `structural`: a different random-effect or variance structure, with
+  fixed effects that mean what they did;
+- `estimand`: a change to what the model estimates, to be made by
+  choice, not because a check asked.
+
+[`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+refits with the one you pick.
+
+``` r
+
+rem <- ilm_remedies(fit, zeros = ilm_check_zeros(fit))
+rem                                          # tier, remedy, and the change
+fit2 <- ilm_apply_remedy(fit, rem, 1)        # refit with remedy 1
+fit2$remedy_log                              # how fit2 was reached
+```
+
 If the variance structure is the worry rather than the mean structure,
 [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
 gives cluster-robust standard errors without needing to say what the

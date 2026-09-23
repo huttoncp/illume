@@ -129,7 +129,8 @@ written into <code>fit$call</code>, so a refit uses it rather than guessing agai
 
 <dt id="arg-re-struct">re_struct<a class="anchor" aria-label="anchor" href="#arg-re-struct"></a></dt>
 <dd><p>Optional named list of category covariance structures, named
-by grouping variable. See <code><a href="ilm_fit.html">ilm_fit()</a></code>.</p></dd>
+by grouping variable, e.g. <code>list(site = list(type = "rr", rank = 1))</code>.
+Terms it leaves out keep the default, <code>"us"</code>. See <code><a href="ilm_fit.html">ilm_fit()</a></code>.</p></dd>
 
 
 <dt id="arg-ar">ar<a class="anchor" aria-label="anchor" href="#arg-ar"></a></dt>

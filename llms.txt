@@ -426,6 +426,8 @@ regression.
 Each check reports whether an assumption is consistent with the data,
 and names a remedy that exists in this package when it is not.
 
+- [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+  : Refit a model with one of its remedies
 - [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)
   : Diagnostic plots for a fitted model
 - [`ilm_binned_residuals()`](https://huttoncp.github.io/illume/reference/ilm_binned_residuals.md)
@@ -454,6 +456,9 @@ and names a remedy that exists in this package when it is not.
   : Check whether the model can recover itself
 - [`ilm_re_mahalanobis()`](https://huttoncp.github.io/illume/reference/ilm_re_mahalanobis.md)
   : Distances of the fitted random effects from zero
+- [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  [`print(`*`<ilm_remedies>`*`)`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  : Remedies for what a model's checks found
 - [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
   : Randomised quantile residuals for a nominal outcome
 - [`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md)

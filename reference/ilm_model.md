@@ -77,7 +77,8 @@ ilm_model_formula(
 - re_struct:
 
   Optional named list of category covariance structures, named by
-  grouping variable. See
+  grouping variable, e.g. `list(site = list(type = "rr", rank = 1))`.
+  Terms it leaves out keep the default, `"us"`. See
   [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md).
 
 - ar:

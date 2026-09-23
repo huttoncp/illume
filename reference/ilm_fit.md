@@ -56,9 +56,10 @@ ilm_fit(
 
 - re_struct:
 
-  Optional named list of category covariance structures, parallel to
-  `re_list`. Defaults to `"us"` for every term. Set `d_cor = FALSE`
-  within an element to drop an intercept-slope correlation.
+  Optional named list of category covariance structures, named by term
+  as `re_list` is. A term it leaves out gets `"us"`, so only the terms
+  that differ need naming. Set `d_cor = FALSE` within an element to drop
+  an intercept-slope correlation.
 
 - ar:
 

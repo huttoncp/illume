@@ -63,7 +63,11 @@ ilm_check_variance(
 ## Value
 
 Invisibly, a list with the observed statistics, their simulated nulls,
-p-values, a `status` and a suggested remedy.
+p-values, a `status`, a suggested remedy, and `by`: the column the
+groups were taken from, or `NA` when `by` was a vector or not given.
+Pass the list to
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+to have the remedy written out.
 
 ## Details
 

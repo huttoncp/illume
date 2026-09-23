@@ -109,7 +109,9 @@ only; <code>NULL</code> for every other family.</p></dd>
 
 <dt id="arg-re-struct">re_struct<a class="anchor" aria-label="anchor" href="#arg-re-struct"></a></dt>
 <dd><p>Optional named list of category covariance structures,
-parallel to <code>re_list</code>. Defaults to <code>"us"</code> for every term. Set <code>d_cor = FALSE</code> within an element to drop an intercept-slope correlation.</p></dd>
+named by term as <code>re_list</code> is. A term it leaves out gets <code>"us"</code>, so only
+the terms that differ need naming. Set <code>d_cor = FALSE</code> within an element
+to drop an intercept-slope correlation.</p></dd>
 
 
 <dt id="arg-ar">ar<a class="anchor" aria-label="anchor" href="#arg-ar"></a></dt>
