@@ -34,7 +34,7 @@ grp <- list(
 
   list("Diagnostics",
        "Each check reports whether an assumption is consistent with the data, and names a remedy that exists in this package when it is not.",
-       function(x) grepl("^ilm_(check_|appraise|rqr|binned|calibration|consistency|variogram|re_mahalanobis|scores|gauss_check)", x)),
+       function(x) grepl("^ilm_(check_|appraise|rqr|binned|calibration|consistency|variogram|re_mahalanobis|scores)", x)),
 
   list("ANOVA",
        "Factorial and repeated-measures designs, specified by naming columns rather than by writing a formula with an error term.",
@@ -42,7 +42,7 @@ grp <- list(
 
   list("Inference and interpretation",
        "What the model says, on a scale someone can read.",
-       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|trends|ame|robust|vcov_cluster|denom_df|pb_lrt|rp_lrt|boot_|coef_table|se_fixef|zi_|scenario|interpret|translate|moderation)", x) ||
+       function(x) grepl("^ilm_(anova|effects|emmeans|contrast|trends|ame|robust|vcov_cluster|denom_df|pb_lrt|rp_lrt|coef_table|se_fixef|zi_|scenario|interpret|moderation)", x) ||
                    x == "ilm_plot_moderation"),
 
   list("Design and power",
@@ -51,37 +51,24 @@ grp <- list(
        c("ilm_scaffold", "ilm_power_design", "ilm_power", "ilm_power_n",
          "plot.ilm_power")),
 
-  list("Describing data",
-       "Descriptive statistics, counts, and the things that are wrong with a data frame before any model sees it.",
-       function(x) grepl("^ilm_(describe|counts|dupes|copies|wash_df|recode_errors|frame_issues)", x) &&
-                   !grepl("_na", x)),
-
-  list("Outliers and anomalies",
-       "A value extreme for its own column, against a row implausible as a combination.",
-       function(x) grepl("^ilm_(outliers|anomal)", x) || x == "ilm_plot_anomaly",
-       c("ilm_anomaly", "ilm_anomalous", "ilm_plot_anomaly")),
-
-  list("Structure: profile, cluster, reduce",
-       "ilm_profile() is the front door: it reduces, clusters and describes the groups in one call, and handles mixed columns. The other two are the same pipeline taken a step at a time, for when you want the coordinates or the partition on their own.",
-       function(x) grepl("^ilm_(reduce|cluster|profile|glrm|var_contrib)", x),
-       c("ilm_profile", "ilm_var_contrib", "ilm_cluster", "ilm_reduce",
-         "ilm_glrm", "ilm_profile_na", "ilm_cluster_na", "ilm_reduce_na")),
+  ## Describing data, outliers and anomalies, and structure (profile,
+  ## cluster, reduce) are illumex's, and indexed on its site.
 
   list("Missing data",
-       "Diagnosing it, filling it in honestly, and pooling across the imputations.",
-       function(x) grepl("^ilm_(impute|mi_pool)", x) || grepl("_na$|_na_all$", x)),
+       "Filling it in honestly, and pooling across the imputations. Describing it is illumex's: ilm_check_missing().",
+       function(x) grepl("^ilm_(impute|mi_pool)", x)),
 
   list("Causal models",
        "A DAG, what it implies, and what it licenses you to say.",
        function(x) grepl("^ilm_(dag|adjust_sets|dsep)", x)),
 
   list("Plots",
-       "Built on tinyplot, named for what they show.",
-       function(x) grepl("^ilm_(plot|pick_geom|geom_spec)", x)),
+       "Plots of a fitted model, built on tinyplot. Plots of the data themselves are illumex's.",
+       function(x) grepl("^ilm_plot", x)),
 
   list("Simulation",
-       "Data with a known structure, and draws from a fitted model.",
-       function(x) grepl("^ilm_(sim|simulate|fitted|survival)$", x)),
+       "Draws from a fitted model. Example data with a known structure, ilm_sim(), is illumex's.",
+       function(x) grepl("^ilm_(simulate|fitted|survival)$", x)),
 
   list("Working with other packages",
        "Registration shims and the methods that let the wider ecosystem dispatch on an illume fit.",
@@ -126,8 +113,12 @@ head <- c(
   "",
   "navbar:",
   "  structure:",
-  "    left:  [intro, reference, articles, news]",
+  "    left:  [intro, reference, articles, news, illumex]",
   "    right: [search, github]",
+  "  components:",
+  "    illumex:",
+  "      text: Exploration (illumex)",
+  "      href: https://huttoncp.github.io/illumex/",
   "",
   "articles:",
   "- title: Start here",
@@ -144,12 +135,6 @@ head <- c(
   "  - effect-size-and-power",
   "  - anova",
   "  - moderation",
-  "- title: Exploration",
-  "  navbar: Exploration",
-  "  contents:",
-  "  - exploring-data",
-  "  - profiling",
-  "  - anomaly-detection",
   "  - missing-data",
   "")
 

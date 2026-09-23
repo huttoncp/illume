@@ -11,6 +11,34 @@ the test suite. They came from comparing against something outside, from
 widening a simulation, or from someone calling illume from outside it, which
 remain the only things that have ever found a defect here.
 
+## The exploratory half is its own package: illumex
+
+* Describing, cleaning, plotting and profiling data before a model -- 65 of
+  the 147 exported functions -- moved to a new package, `illumex`, which
+  `illume` attaches (`Depends`). Every function keeps its name, arguments and
+  behaviour, and `library(illume)` makes them available as before, so no code
+  that uses them changes. What moved never fitted or read a model: the call
+  graph was checked before the line was drawn, and the only call across it is
+  `ilm_impute()`'s use of `ilm_glrm()`.
+* What moved: `ilm_describe*()`, `ilm_counts*()`, `ilm_dupes()`, `ilm_copies()`,
+  `ilm_wash_df()`, `ilm_recode_errors*()`, `ilm_translate()`,
+  `ilm_frame_issues()`, `ilm_gauss_check()`, `ilm_boot_ci()`, `ilm_boot_diff()`,
+  outliers and anomalies, `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`,
+  `ilm_glrm()`, `ilm_check_missing()` and the `*_na()` functions, the plots of
+  data (as against those of a model), `ilm_sim()`, and the `progress` argument's
+  help page. So did the vignettes on exploring data, profiling and anomaly
+  detection. Imputing and pooling stay here, because pooling needs a model.
+* Why: the package had grown to span five fields, each a package elsewhere.
+  The split moves 44% of the functions but only about 20% of the code -- the
+  engine, where the hard maintenance is, stays -- and it gives the exploratory
+  half an install with no compiled dependency, a faster check, and a release
+  cycle of its own. `cluster`, `isotree`, `PCAmixdata`, `boot` and `tibble`
+  are no longer suggested here.
+* A handful of small helpers exist in both packages rather than one reaching
+  into the other's internals; `test-shared-helpers.R` fails if the copies
+  differ. Until `illumex` is on CRAN, `illume` finds it on GitHub through
+  `Remotes:`.
+
 ## The family is read off the response
 
 * `ilm_model()` defaulted to `family = "gaussian"`, so leaving the family off

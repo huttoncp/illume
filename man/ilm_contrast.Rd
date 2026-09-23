@@ -47,7 +47,7 @@ nominally 95\% do not jointly cover at 95\%. The default is the single-step
 studentized maximum: the contrasts' joint covariance is known exactly here,
 \verb{C L V L' C'}, so the reference distribution is simulated from it directly
 rather than bootstrapped. This is the same construction
-\code{\link[=ilm_boot_diff]{ilm_boot_diff()}} uses on raw data, where it reproduced \code{TukeyHSD()} to
+\code{\link[illumex:ilm_boot_diff]{illumex::ilm_boot_diff()}} uses on raw data, where it reproduced \code{TukeyHSD()} to
 0.006 on the design Tukey is exact for.
 
 \code{"bonferroni"} is the conservative fallback and \code{"none"} is there for
@@ -63,6 +63,6 @@ fit <- ilm_model(y ~ g + x, data = d, family = "gaussian", verbose = FALSE)
 ilm_contrast(ilm_emmeans(fit, "g"))
 }
 \seealso{
-\code{\link[=ilm_emmeans]{ilm_emmeans()}}, \code{\link[=ilm_boot_diff]{ilm_boot_diff()}} for the same comparison made
+\code{\link[=ilm_emmeans]{ilm_emmeans()}}, \code{\link[illumex:ilm_boot_diff]{illumex::ilm_boot_diff()}} for the same comparison made
 without a model.
 }

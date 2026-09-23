@@ -18,6 +18,7 @@
 ## Names as they must be written in R code: backticked when not syntactic,
 ## untouched when they are. deparse() of a symbol knows the rules, reserved
 ## words included, which a comparison against make.names() gets subtly wrong.
+## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
 #' @keywords internal
 #' @noRd
 ilm_bq <- function(x) {

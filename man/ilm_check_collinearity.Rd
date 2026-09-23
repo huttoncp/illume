@@ -18,7 +18,7 @@ A data frame with one row per fixed-effect term: \code{gvif}, \code{df},
 \code{se_inflation}, and a \code{status} of \code{"OK"}, \code{"WARN"} or \code{"FAIL"}.
 }
 \description{
-\code{\link[=ilm_frame_issues]{ilm_frame_issues()}} catches pairs of columns that are nearly identical, but
+\code{\link[illumex:ilm_frame_issues]{illumex::ilm_frame_issues()}} catches pairs of columns that are nearly identical, but
 the case that actually breaks a model is a predictor collinear with a
 \emph{combination} of the others, which no pairwise correlation reveals. That is
 what variance inflation measures.
@@ -41,5 +41,5 @@ Fox, J. and Monette, G. (1992). Generalized collinearity diagnostics.
 Journal of the American Statistical Association, 87(417), 178-183.
 }
 \seealso{
-\code{\link[=ilm_frame_issues]{ilm_frame_issues()}} for collinearity in the raw data.
+\code{\link[illumex:ilm_frame_issues]{illumex::ilm_frame_issues()}} for collinearity in the raw data.
 }

@@ -21,16 +21,6 @@ iml_adjust_sets <- ilm_adjust_sets
 #' @export
 iml_ame <- ilm_ame
 
-#' @rdname ilm_anomalous
-#' @usage NULL
-#' @export
-iml_anomalous <- ilm_anomalous
-
-#' @rdname ilm_anomaly
-#' @usage NULL
-#' @export
-iml_anomaly <- ilm_anomaly
-
 #' @rdname ilm_anova
 #' @usage NULL
 #' @export
@@ -55,16 +45,6 @@ iml_ar1 <- ilm_ar1
 #' @usage NULL
 #' @export
 iml_binned_residuals <- ilm_binned_residuals
-
-#' @rdname ilm_boot_ci
-#' @usage NULL
-#' @export
-iml_boot_ci <- ilm_boot_ci
-
-#' @rdname ilm_boot_diff
-#' @usage NULL
-#' @export
-iml_boot_diff <- ilm_boot_diff
 
 #' @rdname ilm_calibration
 #' @usage NULL
@@ -101,11 +81,6 @@ iml_check_covariate <- ilm_check_covariate
 #' @export
 iml_check_dispersion <- ilm_check_dispersion
 
-#' @rdname ilm_check_missing
-#' @usage NULL
-#' @export
-iml_check_missing <- ilm_check_missing
-
 #' @rdname ilm_check_omitted
 #' @usage NULL
 #' @export
@@ -131,16 +106,6 @@ iml_check_variance <- ilm_check_variance
 #' @export
 iml_check_zeros <- ilm_check_zeros
 
-#' @rdname ilm_cluster
-#' @usage NULL
-#' @export
-iml_cluster <- ilm_cluster
-
-#' @rdname ilm_cluster_na
-#' @usage NULL
-#' @export
-iml_cluster_na <- ilm_cluster_na
-
 #' @rdname ilm_coef_table
 #' @usage NULL
 #' @export
@@ -155,31 +120,6 @@ iml_consistency <- ilm_consistency
 #' @usage NULL
 #' @export
 iml_contrast <- ilm_contrast
-
-#' @rdname ilm_copies
-#' @usage NULL
-#' @export
-iml_copies <- ilm_copies
-
-#' @rdname ilm_counts
-#' @usage NULL
-#' @export
-iml_counts <- ilm_counts
-
-#' @rdname ilm_counts_all
-#' @usage NULL
-#' @export
-iml_counts_all <- ilm_counts_all
-
-#' @rdname ilm_counts_tb
-#' @usage NULL
-#' @export
-iml_counts_tb <- ilm_counts_tb
-
-#' @rdname ilm_counts_tb_all
-#' @usage NULL
-#' @export
-iml_counts_tb_all <- ilm_counts_tb_all
 
 #' @rdname ilm_cyclic
 #' @usage NULL
@@ -211,26 +151,6 @@ iml_dag_test <- ilm_dag_test
 #' @export
 iml_denom_df <- ilm_denom_df
 
-#' @rdname ilm_describe
-#' @usage NULL
-#' @export
-iml_describe <- ilm_describe
-
-#' @rdname ilm_describe_all
-#' @usage NULL
-#' @export
-iml_describe_all <- ilm_describe_all
-
-#' @rdname ilm_describe_na
-#' @usage NULL
-#' @export
-iml_describe_na <- ilm_describe_na
-
-#' @rdname ilm_describe_na_all
-#' @usage NULL
-#' @export
-iml_describe_na_all <- ilm_describe_na_all
-
 #' @rdname ilm_design
 #' @usage NULL
 #' @export
@@ -245,11 +165,6 @@ iml_did <- ilm_did
 #' @usage NULL
 #' @export
 iml_dsep <- ilm_dsep
-
-#' @rdname ilm_dupes
-#' @usage NULL
-#' @export
-iml_dupes <- ilm_dupes
 
 #' @rdname ilm_effects
 #' @usage NULL
@@ -280,26 +195,6 @@ iml_fitted <- ilm_fitted
 #' @usage NULL
 #' @export
 iml_fourier <- ilm_fourier
-
-#' @rdname ilm_frame_issues
-#' @usage NULL
-#' @export
-iml_frame_issues <- ilm_frame_issues
-
-#' @rdname ilm_gauss_check
-#' @usage NULL
-#' @export
-iml_gauss_check <- ilm_gauss_check
-
-#' @rdname ilm_geom_spec
-#' @usage NULL
-#' @export
-iml_geom_spec <- ilm_geom_spec
-
-#' @rdname ilm_glrm
-#' @usage NULL
-#' @export
-iml_glrm <- ilm_glrm
 
 #' @rdname ilm_impute
 #' @usage NULL
@@ -351,110 +246,20 @@ iml_model_formula <- ilm_model_formula
 #' @export
 iml_moderation <- ilm_moderation
 
-#' @rdname ilm_outliers
-#' @usage NULL
-#' @export
-iml_outliers <- ilm_outliers
-
-#' @rdname ilm_outliers_all
-#' @usage NULL
-#' @export
-iml_outliers_all <- ilm_outliers_all
-
 #' @rdname ilm_pb_lrt
 #' @usage NULL
 #' @export
 iml_pb_lrt <- ilm_pb_lrt
-
-#' @rdname ilm_pick_geom
-#' @usage NULL
-#' @export
-iml_pick_geom <- ilm_pick_geom
-
-#' @rdname ilm_plot
-#' @usage NULL
-#' @export
-iml_plot <- ilm_plot
 
 #' @rdname ilm_plot_acf
 #' @usage NULL
 #' @export
 iml_plot_acf <- ilm_plot_acf
 
-#' @rdname ilm_plot_all
-#' @usage NULL
-#' @export
-iml_plot_all <- ilm_plot_all
-
-#' @rdname ilm_plot_anomaly
-#' @usage NULL
-#' @export
-iml_plot_anomaly <- ilm_plot_anomaly
-
-#' @rdname ilm_plot_bar
-#' @usage NULL
-#' @export
-iml_plot_bar <- ilm_plot_bar
-
-#' @rdname ilm_plot_boot_diff
-#' @usage NULL
-#' @export
-iml_plot_boot_diff <- ilm_plot_boot_diff
-
-#' @rdname ilm_plot_box
-#' @usage NULL
-#' @export
-iml_plot_box <- ilm_plot_box
-
-#' @rdname ilm_plot_c
-#' @usage NULL
-#' @export
-iml_plot_c <- ilm_plot_c
-
-#' @rdname ilm_plot_cluster
-#' @usage NULL
-#' @export
-iml_plot_cluster <- ilm_plot_cluster
-
-#' @rdname ilm_plot_cluster_gap
-#' @usage NULL
-#' @export
-iml_plot_cluster_gap <- ilm_plot_cluster_gap
-
-#' @rdname ilm_plot_cluster_gap
-#' @usage NULL
-#' @export
-iml_plot_cluster_gap_na <- ilm_plot_cluster_gap_na
-
-#' @rdname ilm_plot_cluster
-#' @usage NULL
-#' @export
-iml_plot_cluster_na <- ilm_plot_cluster_na
-
-#' @rdname ilm_plot_density
-#' @usage NULL
-#' @export
-iml_plot_density <- ilm_plot_density
-
 #' @rdname ilm_plot_did
 #' @usage NULL
 #' @export
 iml_plot_did <- ilm_plot_did
-
-#' @rdname ilm_plot_histogram
-#' @usage NULL
-#' @export
-iml_plot_histogram <- ilm_plot_histogram
-
-#' @rdname ilm_plot_line
-#' @usage NULL
-#' @export
-iml_plot_line <- ilm_plot_line
-
-#' @rdname ilm_plot_missing
-#' @usage NULL
-#' @export
-iml_plot_missing <- ilm_plot_missing
 
 #' @rdname ilm_plot_model
 #' @usage NULL
@@ -466,100 +271,20 @@ iml_plot_model <- ilm_plot_model
 #' @export
 iml_plot_moderation <- ilm_plot_moderation
 
-#' @rdname ilm_plot_na
-#' @usage NULL
-#' @export
-iml_plot_na <- ilm_plot_na
-
-#' @rdname ilm_plot_na_all
-#' @usage NULL
-#' @export
-iml_plot_na_all <- ilm_plot_na_all
-
-#' @rdname ilm_plot_profile
-#' @usage NULL
-#' @export
-iml_plot_profile <- ilm_plot_profile
-
-#' @rdname ilm_plot_profile
-#' @usage NULL
-#' @export
-iml_plot_profile_na <- ilm_plot_profile_na
-
 #' @rdname ilm_plot_rdd
 #' @usage NULL
 #' @export
 iml_plot_rdd <- ilm_plot_rdd
-
-#' @rdname ilm_plot_reduce
-#' @usage NULL
-#' @export
-iml_plot_reduce <- ilm_plot_reduce
-
-#' @rdname ilm_plot_reduce_contrib
-#' @usage NULL
-#' @export
-iml_plot_reduce_contrib <- ilm_plot_reduce_contrib
-
-#' @rdname ilm_plot_reduce_contrib
-#' @usage NULL
-#' @export
-iml_plot_reduce_contrib_na <- ilm_plot_reduce_contrib_na
-
-#' @rdname ilm_plot_reduce
-#' @usage NULL
-#' @export
-iml_plot_reduce_na <- ilm_plot_reduce_na
-
-#' @rdname ilm_plot_reduce_scree
-#' @usage NULL
-#' @export
-iml_plot_reduce_scree <- ilm_plot_reduce_scree
-
-#' @rdname ilm_plot_reduce_scree
-#' @usage NULL
-#' @export
-iml_plot_reduce_scree_na <- ilm_plot_reduce_scree_na
-
-#' @rdname ilm_plot_scatter
-#' @usage NULL
-#' @export
-iml_plot_scatter <- ilm_plot_scatter
-
-#' @rdname ilm_plot_stat_error
-#' @usage NULL
-#' @export
-iml_plot_stat_error <- ilm_plot_stat_error
 
 #' @rdname ilm_plot_survival
 #' @usage NULL
 #' @export
 iml_plot_survival <- ilm_plot_survival
 
-#' @rdname ilm_plot_var
-#' @usage NULL
-#' @export
-iml_plot_var <- ilm_plot_var
-
-#' @rdname ilm_plot_var_all
-#' @usage NULL
-#' @export
-iml_plot_var_all <- ilm_plot_var_all
-
-#' @rdname ilm_plot_var_pairs
-#' @usage NULL
-#' @export
-iml_plot_var_pairs <- ilm_plot_var_pairs
-
 #' @rdname ilm_plot_variogram
 #' @usage NULL
 #' @export
 iml_plot_variogram <- ilm_plot_variogram
-
-#' @rdname ilm_plot_violin
-#' @usage NULL
-#' @export
-iml_plot_violin <- ilm_plot_violin
 
 #' @rdname ilm_power
 #' @usage NULL
@@ -576,16 +301,6 @@ iml_power_design <- ilm_power_design
 #' @export
 iml_power_n <- ilm_power_n
 
-#' @rdname ilm_profile
-#' @usage NULL
-#' @export
-iml_profile <- ilm_profile
-
-#' @rdname ilm_profile_na
-#' @usage NULL
-#' @export
-iml_profile_na <- ilm_profile_na
-
 #' @rdname ilm_rdd
 #' @usage NULL
 #' @export
@@ -595,26 +310,6 @@ iml_rdd <- ilm_rdd
 #' @usage NULL
 #' @export
 iml_re_mahalanobis <- ilm_re_mahalanobis
-
-#' @rdname ilm_recode_errors
-#' @usage NULL
-#' @export
-iml_recode_errors <- ilm_recode_errors
-
-#' @rdname ilm_recode_errors_vec
-#' @usage NULL
-#' @export
-iml_recode_errors_vec <- ilm_recode_errors_vec
-
-#' @rdname ilm_reduce
-#' @usage NULL
-#' @export
-iml_reduce <- ilm_reduce
-
-#' @rdname ilm_reduce_na
-#' @usage NULL
-#' @export
-iml_reduce_na <- ilm_reduce_na
 
 #' @rdname ilm_register_insight
 #' @usage NULL
@@ -666,11 +361,6 @@ iml_scores <- ilm_scores
 #' @export
 iml_se_fixef <- ilm_se_fixef
 
-#' @rdname ilm_sim
-#' @usage NULL
-#' @export
-iml_sim <- ilm_sim
-
 #' @rdname ilm_simulate
 #' @usage NULL
 #' @export
@@ -706,20 +396,10 @@ iml_svy_vcov <- ilm_svy_vcov
 #' @export
 iml_thresholds <- ilm_thresholds
 
-#' @rdname ilm_translate
-#' @usage NULL
-#' @export
-iml_translate <- ilm_translate
-
 #' @rdname ilm_trends
 #' @usage NULL
 #' @export
 iml_trends <- ilm_trends
-
-#' @rdname ilm_var_contrib
-#' @usage NULL
-#' @export
-iml_var_contrib <- ilm_var_contrib
 
 #' @rdname ilm_variogram
 #' @usage NULL
@@ -730,11 +410,6 @@ iml_variogram <- ilm_variogram
 #' @usage NULL
 #' @export
 iml_vcov_cluster <- ilm_vcov_cluster
-
-#' @rdname ilm_wash_df
-#' @usage NULL
-#' @export
-iml_wash_df <- ilm_wash_df
 
 #' @rdname ilm_zi_coef
 #' @usage NULL

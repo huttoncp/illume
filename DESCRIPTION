@@ -28,10 +28,11 @@ Description: A frequentist regression workflow built around inference rather
     participant, the outcome and which factors vary between or within
     participants, reporting F tests, generalized eta squared and sphericity
     corrections in the form those designs are usually reported in. The
-    exploratory half covers
-    description, outlier and multivariate anomaly detection, dimension
-    reduction, clustering and profiling, and evaluation and imputation of
-    missing values. Mixed models for nominal categorical outcomes are fitted by
+    exploratory half -- description, outlier and multivariate anomaly
+    detection, dimension reduction, clustering and profiling -- is the
+    companion package 'illumex', which 'illume' attaches; imputing missing
+    values and pooling across the imputations are here. Mixed models for
+    nominal categorical outcomes are fitted by
     maximising the Laplace-approximated marginal likelihood rather than by
     penalised quasi-likelihood. Methods of Kristensen, Nielsen, Berg, Skaug and
     Bell (2016) <doi:10.18637/jss.v070.i05> and Halekoh and Hojsgaard (2014)
@@ -41,7 +42,9 @@ Encoding: UTF-8
 Language: en-GB
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
-Depends: R (>= 4.1)
+Depends:
+    R (>= 4.1),
+    illumex
 Imports:
     RTMB (>= 1.7),
     TMB (>= 1.9.7),
@@ -71,8 +74,6 @@ Suggests:
     rmarkdown,
     dagitty,
     insight,
-    PCAmixdata,
-    cluster,
     mice,
     emmeans,
     pscl,
@@ -81,10 +82,9 @@ Suggests:
     ordinal,
     afex,
     lmerTest,
-    isotree,
-    tibble,
     MASS,
     nnet
+Remotes: huttoncp/illumex
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/huttoncp/illume

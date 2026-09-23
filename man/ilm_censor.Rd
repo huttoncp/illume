@@ -41,6 +41,6 @@ ilm_censor(y, lower = 0, upper = 5)
 table(ilm_censor(y, lower = 0))
 }
 \seealso{
-\code{\link[=ilm_model]{ilm_model()}}, \code{\link[=ilm_describe]{ilm_describe()}}, whose \code{p_zero} column is often the
+\code{\link[=ilm_model]{ilm_model()}}, \code{\link[illumex:ilm_describe]{illumex::ilm_describe()}}, whose \code{p_zero} column is often the
 first sign of a floor.
 }

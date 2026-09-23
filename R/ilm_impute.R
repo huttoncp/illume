@@ -124,7 +124,7 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' That the data are missing at random given the variables supplied: the chance
 #' a value is missing may depend on what is observed, but not on the missing
 #' value itself once the observed variables are accounted for. That assumption
-#' is **not testable** ([ilm_check_missing()] explains why), and imputation does
+#' is **not testable** ([illumex::ilm_check_missing()] explains why), and imputation does
 #' not make it true. Including variables that predict both the missingness and
 #' the missing value makes it more plausible.
 #'
@@ -186,7 +186,7 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #'
 #' Three things to read off it. Complete cases are **unbiased** when missingness
 #' depends on a covariate, even at 40% missing -- which is why
-#' [ilm_check_missing()] distinguishes that case and tells you not to bother
+#' [illumex::ilm_check_missing()] distinguishes that case and tells you not to bother
 #' imputing. Complete cases **fail badly** when missingness depends on the
 #' outcome: a bias of -0.099 is a fifth of the effect, and coverage collapses to
 #' 0.615. Multiple imputation repairs exactly that case, 0.955.
@@ -213,7 +213,7 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' @param method `"auto"` uses chained equations and falls back to the
 #'   `"glrm"` fits a generalized low rank model instead, which uses a loss
 #'   suited to each column's type and so can impute CATEGORICAL columns,
-#'   which `"lowrank"` leaves alone -- see [ilm_glrm()].
+#'   which `"lowrank"` leaves alone -- see [illumex::ilm_glrm()].
 #'   low-rank route when they cannot be fitted; `"fcs"` and `"lowrank"` force
 #'   one. See the section below for what each costs.
 #' @param ncp Rank for the low-rank route. `NULL` chooses it by
@@ -223,10 +223,10 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' @param verbose Narrate progress.
 #' @param progress Show a progress bar. Defaults to [interactive()], so a
 #'   bar appears when someone is watching and nothing is written in a
-#'   script or a knitted document. See [ilm_progress_arg].
+#'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return An object of class `"ilm_mids"` holding the `m` completed data sets,
 #'   or a data frame when `single = TRUE`.
-#' @seealso [ilm_mi_pool()] to analyse them, [ilm_check_missing()] to decide
+#' @seealso [ilm_mi_pool()] to analyse them, [illumex::ilm_check_missing()] to decide
 #'   whether you need to.
 #' @references
 #' Rubin, D. B. (1987). Multiple Imputation for Nonresponse in Surveys. Wiley.
@@ -723,4 +723,42 @@ ilm_lowrank_ncp <- function(X, miss, ncp_max = NULL, folds = 3L, seed = NULL) {
   ## means -- measured at 3.581 against 2.739 on full-rank data.
   structure(k, beats_mean = nb > 0 && err[k] < base / nb,
             cv_error = err[k], mean_error = if (nb) base / nb else NA_real_)
+}
+
+#' Draw imputed values from a fitted generalized low rank model
+#'
+#' The reconstruction is a fitted value; an imputation has to be a DRAW around
+#' it, or every one of the m datasets is identical and the pooled variance is
+#' the variance of a single fit. A numeric cell gets Gaussian noise at the
+#' block's residual scale; a category is SAMPLED from its fitted probabilities
+#' rather than set to the most likely level, which would make the imputations
+#' agree with each other far more than the data support.
+#'
+#' @keywords internal
+#' @noRd
+ilm_glrm_draw <- function(fit, data, which_cols) {
+  out <- data
+  U <- fit$linear_predictor
+  for (v in which_cols) {
+    b <- fit$encoding$blocks[[v]]
+    if (is.null(b)) next
+    mi <- is.na(data[[v]])
+    if (!any(mi)) next
+    if (b$loss == "quadratic") {
+      pred <- U[mi, b$cols] * b$scale + b$centre
+      sg <- fit$sigma[[v]]
+      out[[v]][mi] <- pred + stats::rnorm(sum(mi), 0, if (is.na(sg)) 0 else sg)
+    } else if (b$loss == "poisson") {
+      out[[v]][mi] <- stats::rpois(sum(mi), exp(pmin(U[mi, b$cols], 30)))
+    } else if (b$loss == "logistic") {
+      p <- stats::plogis(U[mi, b$cols])
+      out[[v]][mi] <- b$levels[stats::rbinom(sum(mi), 1L, p) + 1L]
+    } else {
+      Ub <- U[mi, b$cols, drop = FALSE]
+      P <- exp(Ub - apply(Ub, 1L, max)); P <- P / rowSums(P)
+      pick <- apply(P, 1L, function(pr) sample.int(length(pr), 1L, prob = pr))
+      out[[v]][mi] <- b$levels[pick]
+    }
+  }
+  out
 }

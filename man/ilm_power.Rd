@@ -43,7 +43,7 @@ sizes.}
 
 \item{seed}{Random seed.}
 
-\item{progress}{Show a progress bar; see \link{ilm_progress_arg}.}
+\item{progress}{Show a progress bar; see \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_power"}: one row per \code{n} by \code{effect} cell

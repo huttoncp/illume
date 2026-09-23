@@ -157,14 +157,17 @@ pointer for each.
 | `workflow` | the whole path, stage by stage |
 | `benchmarking` | what was measured, against what, and where illume comes off worse |
 | `regression-models` | `ilm_model()` in depth, every family, mixed multinomial |
-| `exploring-data` | descriptives, plots, bootstrap intervals |
-| `profiling` | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
-| `anomaly-detection` | rows that are implausible as combinations |
+| `exploring-data` (illumex) | descriptives, plots, bootstrap intervals |
+| `profiling` (illumex) | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
+| `anomaly-detection` (illumex) | rows that are implausible as combinations |
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power with or without a pilot, scenario projection |
 | `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
+
+The three marked (illumex) belong to `illumex`, the exploration package
+`illume` attaches: `vignette("exploring-data", package = "illumex")`.
 
 ## How this package was built
 

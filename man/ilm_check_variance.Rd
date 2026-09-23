@@ -36,7 +36,7 @@ reachable.}
 
 \item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
 bar appears when someone is watching and nothing is written in a
-script or a knitted document. See \link{ilm_progress_arg}.}
+script or a knitted document. See \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 Invisibly, a list with the observed statistics, their simulated

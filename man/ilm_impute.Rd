@@ -36,7 +36,7 @@ identifier.}
 \item{method}{\code{"auto"} uses chained equations and falls back to the
 \code{"glrm"} fits a generalized low rank model instead, which uses a loss
 suited to each column's type and so can impute CATEGORICAL columns,
-which \code{"lowrank"} leaves alone -- see \code{\link[=ilm_glrm]{ilm_glrm()}}.
+which \code{"lowrank"} leaves alone -- see \code{\link[illumex:ilm_glrm]{illumex::ilm_glrm()}}.
 low-rank route when they cannot be fitted; \code{"fcs"} and \code{"lowrank"} force
 one. See the section below for what each costs.}
 
@@ -51,7 +51,7 @@ cross-validation over held-out observed cells.}
 
 \item{progress}{Show a progress bar. Defaults to \code{\link[=interactive]{interactive()}}, so a
 bar appears when someone is watching and nothing is written in a
-script or a knitted document. See \link{ilm_progress_arg}.}
+script or a knitted document. See \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_mids"} holding the \code{m} completed data sets,
@@ -92,7 +92,7 @@ inference computed from it will be overconfident.
 That the data are missing at random given the variables supplied: the chance
 a value is missing may depend on what is observed, but not on the missing
 value itself once the observed variables are accounted for. That assumption
-is \strong{not testable} (\code{\link[=ilm_check_missing]{ilm_check_missing()}} explains why), and imputation does
+is \strong{not testable} (\code{\link[illumex:ilm_check_missing]{illumex::ilm_check_missing()}} explains why), and imputation does
 not make it true. Including variables that predict both the missingness and
 the missing value makes it more plausible.
 
@@ -156,7 +156,7 @@ Carlo error 0.015:
 
 Three things to read off it. Complete cases are \strong{unbiased} when missingness
 depends on a covariate, even at 40\% missing -- which is why
-\code{\link[=ilm_check_missing]{ilm_check_missing()}} distinguishes that case and tells you not to bother
+\code{\link[illumex:ilm_check_missing]{illumex::ilm_check_missing()}} distinguishes that case and tells you not to bother
 imputing. Complete cases \strong{fail badly} when missingness depends on the
 outcome: a bias of -0.099 is a fifth of the effect, and coverage collapses to
 0.615. Multiple imputation repairs exactly that case, 0.955.
@@ -193,6 +193,6 @@ The low-rank route follows their multiple imputation PCA: a regularised
 iterative fit, bootstrapped so the imputations differ, then pooled.
 }
 \seealso{
-\code{\link[=ilm_mi_pool]{ilm_mi_pool()}} to analyse them, \code{\link[=ilm_check_missing]{ilm_check_missing()}} to decide
+\code{\link[=ilm_mi_pool]{ilm_mi_pool()}} to analyse them, \code{\link[illumex:ilm_check_missing]{illumex::ilm_check_missing()}} to decide
 whether you need to.
 }

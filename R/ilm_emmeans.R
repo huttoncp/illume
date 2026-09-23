@@ -500,7 +500,7 @@ ilm_contrast_matrix <- function(lab, method, ref = NULL) {
 #' studentized maximum: the contrasts' joint covariance is known exactly here,
 #' `C L V L' C'`, so the reference distribution is simulated from it directly
 #' rather than bootstrapped. This is the same construction
-#' [ilm_boot_diff()] uses on raw data, where it reproduced `TukeyHSD()` to
+#' [illumex::ilm_boot_diff()] uses on raw data, where it reproduced `TukeyHSD()` to
 #' 0.006 on the design Tukey is exact for.
 #'
 #' `"bonferroni"` is the conservative fallback and `"none"` is there for
@@ -517,7 +517,7 @@ ilm_contrast_matrix <- function(lab, method, ref = NULL) {
 #' @param seed Random seed for that simulation.
 #' @return A data frame with `contrast`, `estimate`, `se`, `lower`, `upper`,
 #'   `p_value`, `p_adj` and `adjust`.
-#' @seealso [ilm_emmeans()], [ilm_boot_diff()] for the same comparison made
+#' @seealso [ilm_emmeans()], [illumex::ilm_boot_diff()] for the same comparison made
 #'   without a model.
 #' @examples
 #' set.seed(1); n <- 200

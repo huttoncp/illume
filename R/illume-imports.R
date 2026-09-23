@@ -23,6 +23,7 @@
 #' @importFrom utils head tail
 #' @importFrom collapse fcount fmatch fmean fndistinct fnobs fquantile
 #'   fsd fsum fvar group
+#' @importFrom illumex ilm_glrm
 #' @name illume-imports
 #' @noRd
 NULL

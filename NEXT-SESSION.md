@@ -65,6 +65,38 @@ Two traps that bit repeatedly this session, both now in memory:
 
 ## Queue, in Craig's stated order
 
+### 0. Agreed on 2026-09-23, after the split (see the section at the end)
+
+1. **Publishing the split -- in progress.** Craig created
+   `https://github.com/huttoncp/illumex` (public, MIT licence commit) and asked
+   for pull requests to review: one on illumex (the package), one on illume
+   (the split). **Merge illumex's first**: illume's CI installs `Depends:
+   illumex` through `Remotes: huttoncp/illumex`, i.e. from illumex's `main`.
+   Then enable GitHub Pages for illumex (gh-pages branch) as for illume.
+2. **Remedies the code can act on.** Each check's remedy is free text in
+   `suggestion` (`ilm_add_check()`, R/ilm_fit.R). Give each a structured action
+   and a tier: numerical (always automatic), structural (automatic only if a
+   plan allows: RE simplification at a boundary, dispersion model, negbin, ZI),
+   estimand-changing (never automatic, only flagged: transforming y, splines,
+   dropping predictors or outliers). Worth doing on its own merits.
+3. **A design document for the conductor (`ilm_analysis()`)**, to come back
+   to when the package is more mature -- not to build now. Its shape as
+   agreed: a plan fixed before fitting (`ilm_plan()`: focal terms, which
+   remedy tiers may run, follow-ups, multiplicity), fed by
+   `ilm_scaffold()`/`ilm_power()`; the actionable remedies above; a decision
+   log plus a pre-specified-vs-final sensitivity table; `ilm_report()` writing
+   a .qmd/.Rmd that holds the code for every step (HTML by default, PDF only
+   with LaTeX); validation by simulation on the messy regimes before release.
+   Rules that must survive: REML only for gaussian; follow-ups declared, not
+   chosen by significance, and multiplicity-adjusted; on the DAG route only
+   the exposure is causal (no Table 2 fallacy).
+4. **Gaps, all worth filling** (Craig agreed): Firth-type bias reduction for
+   sparse multinomial categories; small-sample inference for GLMM Wald tests
+   with few clusters; multinomial parity (cluster-robust SEs,
+   `ilm_scenario()`); the imputation argument on `ilm_model()` (5a below);
+   unmeasured-confounding sensitivity (E-values) for `ilm_dag_model()`; a
+   reporting function.
+
 ### 1. Messy-data study and benchmarking vignette -- DONE (`a7f5cdb`, `8986280`)
 
 Including the three leftovers (the significance paraphrase in the
@@ -266,3 +298,49 @@ where the same fit stops at -9.9 and is fine.
 - blme's `wishart(common.scale = FALSE)` fails inside blme
   (`repackageMerMod`, lme4 1.1.35.3); `common.scale = TRUE` plus a gamma(3)
   residual prior does not reproduce the same objective. Not worth more time.
+
+---
+
+## The split into illume + illumex (2026-09-23)
+
+Craig's decision, after asking what a split would move. The exploratory half is
+now **`illumex`**, a sibling folder: `...\AI experiments\illumex` (the name
+went illumeda -> illumex mid-split; nothing of the first name survives). A full
+copy of illume from just before the split, `.git` included, is in
+`...\AI experiments\Illume-pre-split`.
+
+- **The line**: data in (illumex) against model in (illume). Measured with a
+  call graph before it was drawn: nothing that moved fits or reads a model, and
+  the one call across is `ilm_impute()` -> `ilm_glrm()` (imported by name).
+  65 of 147 exports moved (the 64 planned plus `ilm_sim()`), ~20% of the code.
+- **Wiring**: illume `Depends: illumex`, so `library(illume)` gives both and
+  nothing downstream changed. `Remotes: huttoncp/illumex` until illumex is on
+  CRAN; that field must go before illume's CRAN submission, and illumex must be
+  accepted first.
+- **illumex must never depend on illume.** Its vignettes mention illume code in
+  `eval = FALSE` chunks and its docs name illume functions as `illume::f()`
+  text, never as links. A circular Suggests was considered and rejected.
+- **Shared helpers are copied, not imported**: `%||%`, `ilm_bq()`,
+  `ilm_wrap()`, `ilm_progress()` and the four `ilm_pch*()` helpers.
+  illume's `tests/testthat/test-shared-helpers.R` fails if a copy drifts.
+  The `ilm_progress_arg` help page lives in illumex only.
+- **Tests split by block**, not by file: the imputation blocks of
+  test-missing.R became illume's test-impute.R, the model-plot blocks of
+  test-boot-and-plots.R became test-model-plots.R, the GLRM-imputation block
+  became test-impute-glrm.R, and the anomaly-vs-imputation rank comparison
+  became test-anomaly-rank.R (reaching `illumex:::ilm_anom_rank`).
+- **Each package has its own** `dev/make_iml_aliases.R`,
+  `pkgdown/make_reference_index.R` (navbars link each site to the other),
+  workflows (illumex's has no TMB step), README, NEWS, CONTRIBUTING and AI
+  disclosure (the "review in progress" paragraph copied unchanged -- Craig's
+  to update).
+- **To work on illume locally, illumex has to be installed**
+  (`R CMD INSTALL ../illumex`, or `devtools::install("../illumex")`), since
+  `load_all()` resolves `Depends`. A change to illumex needs reinstalling
+  before illume sees it.
+- illumex's git history starts fresh, on top of the licence commit GitHub
+  made when Craig created the repo; the moved files' history stays in
+  illume's. Its `LICENSE` is the two-line form CRAN needs, and GitHub's full
+  MIT text is `LICENSE.md` (build-ignored).
+- Both packages were installed into Craig's main library after the split
+  (with vignettes), so `library(illume)` there is the post-split version.

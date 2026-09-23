@@ -47,7 +47,7 @@
 #'   observed, `1` right-censored.
 #' @return An integer vector of codes, classed `"ilm_censor"`, carrying the
 #'   limits it was built from.
-#' @seealso [ilm_model()], [ilm_describe()], whose `p_zero` column is often the
+#' @seealso [ilm_model()], [illumex::ilm_describe()], whose `p_zero` column is often the
 #'   first sign of a floor.
 #' @examples
 #' y <- c(0, 0, 1.4, 2.9, 5, 5)

@@ -561,7 +561,7 @@ ilm_ar_report <- function(spec, which = "acf") {
 #' @param plot Logical. Draw the autocorrelation and its band.
 #' @param progress Show a progress bar. Defaults to [interactive()], so a
 #'   bar appears when someone is watching and nothing is written in a
-#'   script or a knitted document. See [ilm_progress_arg].
+#'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return Invisibly, a list with the per-lag `table`, the matching `pacf`
 #'   table, the observed values and per-component z scores, the simulated null
 #'   and the number of replicates that refitted. The whole thing can be handed

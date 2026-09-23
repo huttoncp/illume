@@ -7,6 +7,10 @@ prediction. It covers the path from a sample-size calculation, through
 exploration and missing data, to a model, its diagnostics, and a scenario a
 stakeholder can act on -- with one object and one vocabulary the whole way.
 
+The exploratory half -- describing, cleaning, plotting and profiling data before
+a model -- is the companion package [`illumex`](https://github.com/huttoncp/illumex).
+`illume` attaches it, so `library(illume)` gives you both.
+
 > Not on CRAN yet. This is pre-release software under active development.
 
 ## Two commitments
@@ -35,7 +39,8 @@ most of what this package is.
 remotes::install_github("huttoncp/illume")
 ```
 
-R >= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.
+This installs `illumex` from GitHub along with it. R >= 4.1. The only compiled
+dependency is RTMB/TMB, which is on CRAN.
 
 ## A worked example, end to end
 
@@ -80,11 +85,11 @@ is the shape of the whole package.
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
-| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()` |
 | **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
-| **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |
-| **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
-| **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
+| **Exploration** (illumex) | `ilm_describe_all()`, the data plots, `ilm_boot_ci()`, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |
+| **Structure** (illumex) | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
+| **Missing data** | `ilm_check_missing()` (illumex) to describe it; `ilm_impute()` and `ilm_mi_pool()` to fill it in and pool |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
 | **Design and decision** | `ilm_power()` from a fit, `ilm_power_design()` and `ilm_scaffold()` from assumptions alone -- for every family, multinomial included, each simulated study analysed with the test the analysis will report; `ilm_scenario()`, `ilm_interpret()` |
 
@@ -171,9 +176,6 @@ parameters::model_parameters(fit)
 | `workflow` | the whole path, eleven stages |
 | `benchmarking` | what was measured, against what, and where illume comes off worse |
 | `regression-models` | `ilm_model()` in depth, every family, mixed multinomial |
-| `exploring-data` | descriptives, plots, bootstrap intervals |
-| `profiling` | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
-| `anomaly-detection` | rows that are implausible as combinations |
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power, scenario projection |
@@ -183,6 +185,9 @@ parameters::model_parameters(fit)
 ```r
 vignette("workflow", package = "illume")
 ```
+
+Exploring data, profiling and anomaly detection are `illumex`'s vignettes:
+`vignette("exploring-data", package = "illumex")`.
 
 ## How this package was built
 
@@ -269,15 +274,16 @@ multiple-imputation-by-PCA route follows Josse and Husson; the chained-equations
 default is the approach `mice` established; the profiling workflow is a
 lighter-weight rebuild of `FactoMineR`'s `HCPC()` and `catdes()`.
 
-**And one predecessor.** The exploratory half of this package is a direct
-descendant of [`elucidate`](https://github.com/bcgov/elucidate), written by the
+**And one predecessor.** The exploratory half, now the companion package
+`illumex`, is a direct descendant of
+[`elucidate`](https://github.com/bcgov/elucidate), written by the
 same author for the BC Public Service. The lineage is visible in the function
 names: `describe()`, `describe_all()`, `counts()`, `counts_tb()`, `dupes()`,
 `copies()`, `wash_df()`, `recode_errors()`, `translate()` and the whole
 `plot_*()` family became `ilm_describe()`, `ilm_counts()`, `ilm_dupes()` and
 the rest, with the same idea behind them -- that the routine work before a
 model should be one call with a consistent interface, rather than six lines of
-`sapply()` reassembled from memory every time. `illume` reimplements that on a
+`sapply()` reassembled from memory every time. `illumex` reimplements that on a
 different backend and extends it -- elucidate is built on `data.table`, `dplyr`
 and `ggplot2`, this on `collapse` and `tinyplot`, and the two share an
 interface rather than an implementation -- but the design is elucidate's and it
