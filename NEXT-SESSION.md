@@ -251,6 +251,20 @@ where the same fit stops at -9.9 and is fine.
   is verified on mechanism -- the hand-placed -18 test, seed 8, the 144 pilot
   fits -- but not yet under the conditions that failed: the next CI run is
   the test.
+  **What CI then said** (read from the raw job log Craig supplied, R 4.6.1):
+  the seed-1 test the floor was for PASSES; the failure moved to the seed-4
+  test, which asserted the hold path specifically. On R 4.6.1 that fit reaches
+  the same optimum (logLik -311.3, correlation 1) but TMB's own Hessian is
+  positive definite there, so it takes the "tmb" route -- the coin toss noted
+  below, now seen in the wild. Fixed in the tests, not the package: the seed-4
+  test accepts either route and asserts what holds on both (SEs 1.004-1.035 x
+  the no-RE model's on CI), and a new test forces the hold directly so it is
+  exercised on every platform. oldrel (R 4.5) started failing at the same
+  commit, presumably the same way; not seen in a log.
+  **Lesson:** a WebFetch summary of the Actions page reported that failed run
+  as a success, and it was relayed to Craig as a pass. Read CI status from the
+  API (`/repos/{owner}/{repo}/actions/runs` and `.../jobs`), never from a page
+  summary. Job logs need admin rights; Craig can supply the raw-log link.
 - **R CMD check** (as CI: `--no-manual --as-cran`), final sources: 0 errors,
   0 warnings, 2 NOTEs, both environmental (new submission; unable to verify
   the time). An earlier run caught `pen_re`/`pen_k` missing from
