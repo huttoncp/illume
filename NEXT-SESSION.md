@@ -2,8 +2,10 @@
 
 First written 2026-09-22 at the end of a session that ran out of
 headroom; rewritten at the end of the Opus 5.5 session that followed,
-the same day. Items 1 and 2 of the original queue are done and committed
-(`8986280`); what that session added, and what it left open, is below.
+the same day, and updated on 2026-09-23 after the CI failure on R
+release (see “What the 2026-09-23 session did” at the end). Items 1 and
+2 of the original queue are done and committed (`8986280`); the power
+and marginal-means work is committed in `3f6e368`.
 
 Delete this file once the queue is empty.
 
@@ -12,9 +14,10 @@ Delete this file once the queue is empty.
 ## Standing constraints (do not re-derive, do not violate)
 
 - **No GitHub repo creation, no pushing.** Craig reviews everything
-  himself before anything is published. The two private remotes already
-  exist: `https://github.com/huttoncp/illume`,
-  `https://github.com/huttoncp/illuminator`.
+  himself before anything is published. The two remotes already exist:
+  `https://github.com/huttoncp/illume` (public since 2026-09-23, so its
+  Actions pages can be read without signing in),
+  `https://github.com/huttoncp/illuminator` (private).
 - **No git history rewrites** without per-instance approval. One was
   approved on 2026-09-19; that approval covered only that one.
 - **Do not list Claude as a package author or contributor.** The
@@ -86,38 +89,74 @@ run of `messy_compare.R` will count fits the new way.
 Separate run, results into the **missing-data vignette**. Craig
 explicitly wanted this kept apart from the messy-data study.
 
-### 4. brms vs illume on the messy suite – REQUESTED, DESIGN NOT AGREED
+### 4. brms vs illume on the messy suite – REQUESTED, DESIGN MOSTLY AGREED
 
 Craig asked for it after the backtick/review/iml work, with a plan from
-Gemini and “we can discuss if you have other ideas or reason to believe
-gemini is wrong”. Points to settle with him before building it:
+Gemini. Settled on 2026-09-22: **no R-INLA arm** (Craig’s decision), and
+the zero-warmup suggestion is dropped – warmup stays as normal. Still to
+settle with him before building it:
 
-- **“0 warmup” is not workable.** HMC adapts its step size and metric
-  during warmup; without it the sampler is not calibrated and the
-  comparison would be of a mistuned sampler, not of brms. Compiling once
-  and reusing with `update(newdata = )` is right.
-- **Flat priors on the variance components** are improper and are what
-  makes brms struggle near a boundary – which is exactly the regime of
-  interest. Better: brms defaults (half-t on the SDs), stated as a
-  difference between the methods, not hidden.
+- **Priors on the variance components.** Flat ones are improper and are
+  what makes brms struggle near a boundary, the regime of interest. brms
+  defaults (half-t on the SDs), stated as a difference between the
+  methods.
 - **Parameterisation:** brms codes against a baseline category, illume
   sum to zero. Compare predicted probabilities, or transform
   coefficients with the contrast matrix – never raw coefficients.
 - **TOST** needs an equivalence margin agreed *before* the run.
-- **Cost:** about 45 s a fit, so 20-30 replications per regime, one
-  chain per worker. `studies/findings/brms.md` covers only the tidy
-  case.
+- **Cost:** about 45 s a fit, so 20-30 replications per regime: an
+  AGREEMENT study on the same datasets, not a coverage study.
+  `studies/findings/brms.md` covers only the tidy case.
 
-### 5. Plain-language explanation of multinomial mixed fitting – OPEN
+### 5. Plain-language explanation of multinomial mixed fitting – FOR THE PAPER
 
-Asked for long ago (“a succinct technical explanation plus accessible
-non-technical language”), partially answered, never finished.
+Craig, 2026-09-22: save it for the eventual paper rather than write it
+now.
+
+### 5a. Proposed, Craig interested – design before building
+
+- **Multilevel imputation.**
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)’s
+  chained equations are single-level (checked: no grouping argument).
+  Each conditional model could carry the analysis model’s random
+  effects, for every family – few tools do nominal variables well, and
+  illume fits multinomial mixed models natively.
+- **An imputation argument on
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)**
+  (not
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md),
+  which has no formula), so the analysis formula doubles as the
+  imputation model with no extra work from the user. The principled form
+  is substantive-model- compatible FCS (Bartlett et al. 2015, `smcfcs`):
+  covariates imputed compatibly with the analysis model, interactions
+  and random effects included; the outcome drawn from the model’s
+  predictive; m fits pooled by Rubin’s rules. Open design question: what
+  it returns, and which methods need pooling (summary and Wald tests
+  from pooled coef/vcov; multi-df terms by the D1 statistic; emmeans is
+  linear, so pooled coef/vcov suffice). Deterministic regression
+  imputation (fill with the prediction) is the version NOT to build – it
+  understates variance and overstates precision.
+- **A boundary-avoiding penalty, opt-in – BUILT 2026-09-23,
+  uncommitted.** `boundary = "avoid"` (Chung et al. 2013, 2015).
+  Measured, not as expected: on the messy regimes (400 each, paired) it
+  made every flat_re fit usable with coverage no worse (0.949 vs 0.946),
+  but it inflates the SD (0.05 true: median 0.21 vs 0.10) and, through
+  it, the fixed effects: x1.009-1.014 in four regimes, x1.11 with a rare
+  category (coverage 0.930 -\> 0.916), x1.20 combined. So `"hold"` stays
+  the default and the docs/message say what `"avoid"` costs. The pilot
+  script and results are not in the repo (scratch). The same idea for
+  fixed effects is Firth’s penalty (Kosmidis & Firth 2011, multinomial),
+  the principled fix for the sparse-category inflation (1.46) the messy
+  study found – still open, and the rare-category inflation above is one
+  more reason for it.
 
 ### 6. Open, not scheduled
 
-- macOS CI: `___kmpc_for_static_fini` (LLVM/Intel OpenMP). A macOS-only
-  source-install step for TMB/RTMB is in
-  `.github/workflows/R-CMD-check.yaml`; unverified.
+- macOS CI: `___kmpc_for_static_fini` (LLVM/Intel OpenMP). The
+  macOS-only source-install step for TMB/RTMB in
+  `.github/workflows/R-CMD-check.yaml` works: the 2026-09-23 run loaded
+  RTMB and got as far as the tests, where it failed the same boundary
+  test as Linux and Windows (fixed, see below).
 - **Version bump** – 0.0.7.9000 has grown a lot; Craig’s call whether
   this is 0.0.8.
 - Found this session, not done:
@@ -149,8 +188,7 @@ per-category
 `iml_*()` aliases (generated by `dev/make_iml_aliases.R`, enforced by a
 test); `family = "auto"`.
 
-After that commit (uncommitted until Craig says otherwise – check
-`git status`):
+After that commit, and committed since in `3f6e368`:
 
 - **Power**:
   [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
@@ -188,3 +226,93 @@ After that commit (uncommitted until Craig says otherwise – check
 - Docs: NEWS, README, regression-models (family auto; the stale “zero
   inflation is out of scope” line), effect-size-and-power (re-measured),
   package help title corrected to the standing title.
+
+------------------------------------------------------------------------
+
+## What the 2026-09-23 session did (uncommitted until Craig says otherwise)
+
+**CI on R release failed after `3f6e368`** (macOS, Windows, Ubuntu), all
+in `test-boundary.R`: a multinomial `(1 | site)` fit at a correlation of
+-1 ended in false convergence, gradient 1.08, standard errors 0. Release
+is R 4.6.1 with **RTMB 2.0**, TMB 1.9.25, lme4 2.0-6; this machine has
+RTMB 1.x, where the same fit stops at -9.9 and is fine.
+
+- **Cause:** a correlation of +/-1 is a log-Cholesky diagonal at -Inf,
+  and the RE density goes through `solve(t(L))` (centred
+  parameterisation), so the inner Hessian’s Cholesky cancels e^(-2c)
+  terms: the objective is noise below about -12 (C = 3) to -15 (C = 2),
+  and RTMB 2.0’s optimiser walked in and found a spurious maximum.
+  Scalar variances are exact to -20; rr is non-centred; diag has no
+  correlation. So only `us` with C \>= 2 (multinomial only) and the AR
+  innovation covariance.
+- **Fix:** `ilm_logsd_floor = -10`, `ilm_floor_pos()`,
+  `ilm_floor_refit()` in `R/ilm_fit.R`: a bounded refit only when the
+  first pass went below it; the hold step respects it;
+  `ilm_hess_recover()` refuses a non-stationary point (max \|grad\| \>
+  1e-2, the gradient check’s FAIL line). Checked on the 2400 pilot fits:
+  engaged in 144 (137 in flat_re!), coefficients moved \<= 2e-5, and 2
+  fits that had SEs of exactly 0 *here too* are now fine. **RTMB 2.0 is
+  not the trigger by itself.** With Craig’s go-ahead, RTMB 2.0 and TMB
+  1.9.25 were compiled into a scratch library (gone with the session):
+  the COMMITTED code passes there too, with the RTMB 1.9 answer to the
+  digit. What still differs from CI is R 4.6.1 (local: 4.4.3) and Matrix
+  1.7-5 (local: 1.7-2; TMB’s inner sparse Cholesky is Matrix’s CHOLMOD).
+  So the fix is verified on mechanism – the hand-placed -18 test, seed
+  8, the 144 pilot fits – but not yet under the conditions that failed:
+  the next CI run is the test.
+- **R CMD check** (as CI: `--no-manual --as-cran`), final sources: 0
+  errors, 0 warnings, 2 NOTEs, both environmental (new submission;
+  unable to verify the time). An earlier run caught `pen_re`/`pen_k`
+  missing from
+  [`globalVariables()`](https://rdrr.io/r/utils/globalVariables.html);
+  fixed.
+- **lme4 2.0** warns that `findbars`/`nobars` moved to reformulas: now
+  `ilm_findbars()`/`ilm_nobars()` (reformulas first, lme4 fallback),
+  reformulas in Suggests.
+- **pkgdown’s warning** was the Node 20 deprecation:
+  `actions/checkout@v6` and the Pages deploy action at v4.8.0 (pinned by
+  SHA, as r-lib’s examples do). Its notice (ubuntu-latest -\> Ubuntu 26
+  on 2026-10-19) needs nothing.
+- **Hex sticker** (Craig’s artwork): `man/figures/logo.png`, 480 px
+  wide, outside of the hex transparent and the ring’s edge un-matted so
+  it has no dark fringe on white; made by `dev/logo/make_logo.R` from
+  `dev/logo/illume-hex-source.jpg`. README header links it to the site;
+  pkgdown puts it in the home-page header and uses it as og:image.
+  `pkgdown/favicon/` came from pkgdown’s automatic favicon step (which
+  sent the logo to realfavicongenerator.net – unintended, noted to
+  Craig); keep it committed, and see make_logo.R for the two edits made
+  to it. Local pkgdown is 2.0.9, whose template links the OLD favicon
+  names; CI’s 2.2.1 links exactly the files present. Worth updating
+  pkgdown locally.
+- `boundary = "avoid"` finished: message at fit time naming its cost,
+  docs with the pilot numbers, NEWS, and `test-boundary-avoid.R`
+  (penalty against a brute-force exact penalised likelihood, unpenalised
+  [`logLik()`](https://rdrr.io/r/stats/logLik.html), message, refits).
+  `blme` was installed locally for the comparison only; it is not a
+  dependency.
+
+**Open, found this session:**
+
+- **Non-centred parameterisation** (u = L z, as lme4 does) would remove
+  the boundary numerics at the root instead of flooring them: the
+  density of z never involves L’s inverse. A large change (objective,
+  REML, the penalty, Sigma_d, AR, `set_coef()`), so only worth it if the
+  floor proves not enough.
+- **Sigma_d has the same structure** (`A <- solve(Ld)`): an
+  intercept-slope correlation of +/-1 in ANY family reaches the same
+  cancellation. No floor there, because Ld is in the slope’s units
+  relative to the intercept’s, so any fixed floor is scale-dependent.
+  Not seen failing yet.
+- **tmb vs boundary is a coin toss for boundary fits.** Whether TMB’s
+  own Hessian is positive definite at a boundary decides whether the
+  fixed effects’ SEs carry the covariance’s uncertainty (“tmb”) or are
+  conditional on it (“boundary”, as lme4). The floor flipped 42 of 144
+  fits each way, and the SEs moved by up to 5% (10% in one). Worth
+  deciding one rule.
+- The pilot’s “usable” (convergence code 0) is stricter than illume’s
+  `ok`, which grades code 8 with a small gradient WARN; the messy study
+  should count fits the illume way when it is next run.
+- blme’s `wishart(common.scale = FALSE)` fails inside blme
+  (`repackageMerMod`, lme4 1.1.35.3); `common.scale = TRUE` plus a
+  gamma(3) residual prior does not reproduce the same objective. Not
+  worth more time.

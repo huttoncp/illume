@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Regression models • illume</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -70,8 +75,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Regression models</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Regression models</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/vignettes/regression-models.Rmd" class="external-link"><code>vignettes/regression-models.Rmd</code></a></small>
@@ -123,7 +127,7 @@ than mclogit’s; and in the study, with a random-effect SD near zero,
 only 63.3% of its fits counted as converged against mclogit’s 100%.
 (That study required a positive definite Hessian. illume has since
 reported the fixed effects when a variance sits at its boundary, and on
-the same datasets 97.5% of fits now give them.) The whole account,
+the same datasets 395 of 400 fits now give them.) The whole account,
 including where illume comes off worse, is in
 <code><a href="../articles/benchmarking.html">vignette("benchmarking")</a></code>.</p>
 </div>
@@ -159,10 +163,6 @@ on a continuous predictor <code>x1</code> and a grouping factor
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">grp</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>,</span>
 <span>                 family <span class="op">=</span> <span class="st">"multinomial"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: the 'findbars' function has moved to the reformulas package. Please</span></span>
-<span><span class="co">#&gt; update your imports, or ask an upstream package maintainer to do so.</span></span>
-<span><span class="co">#&gt; Warning: the 'nobars' function has moved to the reformulas package. Please</span></span>
-<span><span class="co">#&gt; update your imports, or ask an upstream package maintainer to do so.</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ilm_model fit: 3 categories (multinomial), 800 obs, 8 fixed + 3 covariance parameters</span></span>
 <span><span class="co">#&gt;   logLik -549.45 | AIC 1267.9</span></span></code></pre></div>
@@ -248,10 +248,12 @@ meaningless even though nothing in the output looks wrong.</p>
 <p>Each check has one of five statuses. <code>OK</code> and
 <code>FAIL</code> are self-explanatory. <code>WARN</code> means
 something is worth a look. <code>BOUNDARY</code> means a variance sits
-at zero, where the usual tests do not apply. And
-<code>INCONCLUSIVE</code> means there is not enough information to judge
-– which is reported honestly rather than being passed off as a clean
-bill of health.</p>
+at zero, where the usual tests do not apply; the fit says so as it
+happens, and names <code>boundary = "avoid"</code>, a small penalty that
+keeps the variance off zero at a cost in bias that
+<code><a href="../reference/ilm_model.html">?ilm_model</a></code> spells out. And <code>INCONCLUSIVE</code> means
+there is not enough information to judge – which is reported honestly
+rather than being passed off as a clean bill of health.</p>
 <p>Anything that is not <code>OK</code> also carries a reason and a
 suggested remedy:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">

@@ -63,8 +63,6 @@ set.seed(1); n <- 400
 d <- data.frame(x = rnorm(n), g = factor(sample(c("a", "b"), n, TRUE)))
 d$y <- rbinom(n, 1, plogis(0.4 * d$x + 0.6 * (d$g == "b")))
 fit <- ilm_model(y ~ x + g, data = d, family = "binomial", verbose = FALSE)
-#> Warning: the ‘findbars’ function has moved to the reformulas package. Please update your imports, or ask an upstream package maintainer to do so.
-#> Warning: the ‘nobars’ function has moved to the reformulas package. Please update your imports, or ask an upstream package maintainer to do so.
 ilm_ame(fit)
 #>   term level     kind   estimate         se      lower     upper
 #> 1    x  <NA>    slope 0.09084394 0.02377348 0.04424877 0.1374391

@@ -27,7 +27,8 @@ ilm_fit(
   rp = NULL,
   Zzi = NULL,
   zi_type = c("inflated", "hurdle"),
-  reml = FALSE
+  reml = FALSE,
+  boundary = c("hold", "avoid")
 )
 ```
 
@@ -161,6 +162,14 @@ ilm_fit(
   refused. See
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for when to switch it on.
+
+- boundary:
+
+  `"hold"` (maximum likelihood; a covariance that reaches the edge of
+  its range is held there) or `"avoid"` (the boundary-avoiding penalty
+  of Chung et al. 2013, 2015). See
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  for what each implies.
 
 ## Value
 

@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Benchmarking and validation • illume</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -70,8 +75,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Benchmarking and validation</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Benchmarking and validation</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/vignettes/benchmarking.Rmd" class="external-link"><code>vignettes/benchmarking.Rmd</code></a></small>
@@ -906,6 +910,18 @@ combined regime the share rises from 91.0% to 99.0%, and the 30 fits
 recovered there cover at 0.908 – a little under nominal, which is the
 price of holding a variance fixed where there is least to say about it.
 The other findings in this section are unchanged.</p>
+<p>Two later changes bear on this regime. A few of those fits ran along
+the ridge that a variance at zero leaves, past the point where the
+Laplace approximation’s arithmetic holds, and two of them reported
+standard errors of exactly zero. With that fixed, 395 of the 400 give
+usable fixed effects. And <code>ilm_model(boundary = "avoid")</code> now
+offers the other answer to a boundary: a small penalty (Chung et
+al. 2013, 2015) that keeps the variance off zero. On these datasets it
+made all 400 fits usable, covering at 0.949. Its price is bias: its
+median estimate of that 0.05 SD is 0.21, and the larger variance moves
+the fixed effects further from zero. The shift is about 1% here and in
+three other regimes, 11% with a rare category and 20% in the combined
+regime. That is why it is offered rather than the default.</p>
 <p><strong>mclogit’s RMSE is lower in four of six regimes</strong>, by
 3% (<code>flat_re</code>) to 14%. illume wins on RMSE only in the two
 sparse-cell regimes, and narrowly.</p>

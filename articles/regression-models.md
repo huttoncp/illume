@@ -51,7 +51,7 @@ mclogit’s; and in the study, with a random-effect SD near zero, only
 63.3% of its fits counted as converged against mclogit’s 100%. (That
 study required a positive definite Hessian. illume has since reported
 the fixed effects when a variance sits at its boundary, and on the same
-datasets 97.5% of fits now give them.) The whole account, including
+datasets 395 of 400 fits now give them.) The whole account, including
 where illume comes off worse, is in
 [`vignette("benchmarking")`](https://huttoncp.github.io/illume/articles/benchmarking.md).
 
@@ -91,10 +91,6 @@ The model is written the way you would write it in `lme4`:
 
 fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd,
                  family = "multinomial", verbose = FALSE)
-#> Warning: the 'findbars' function has moved to the reformulas package. Please
-#> update your imports, or ask an upstream package maintainer to do so.
-#> Warning: the 'nobars' function has moved to the reformulas package. Please
-#> update your imports, or ask an upstream package maintainer to do so.
 fit
 #> ilm_model fit: 3 categories (multinomial), 800 obs, 8 fixed + 3 covariance parameters
 #>   logLik -549.45 | AIC 1267.9
@@ -189,10 +185,13 @@ head(fit$checks[, c("check", "status", "detail")], 8)
 
 Each check has one of five statuses. `OK` and `FAIL` are
 self-explanatory. `WARN` means something is worth a look. `BOUNDARY`
-means a variance sits at zero, where the usual tests do not apply. And
-`INCONCLUSIVE` means there is not enough information to judge – which is
-reported honestly rather than being passed off as a clean bill of
-health.
+means a variance sits at zero, where the usual tests do not apply; the
+fit says so as it happens, and names `boundary = "avoid"`, a small
+penalty that keeps the variance off zero at a cost in bias that
+[`?ilm_model`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+spells out. And `INCONCLUSIVE` means there is not enough information to
+judge – which is reported honestly rather than being passed off as a
+clean bill of health.
 
 Anything that is not `OK` also carries a reason and a suggested remedy:
 
