@@ -20,12 +20,14 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -453,10 +455,24 @@
 
         <dt>
 
+          <code><a href="ilm_moderation.html">ilm_moderation()</a></code>
+
+        </dt>
+        <dd>Does the effect of X depend on something else?</dd>
+
+        <dt>
+
           <code><a href="ilm_pb_lrt.html">ilm_pb_lrt()</a></code>
 
         </dt>
         <dd>Parametric-bootstrap likelihood-ratio test</dd>
+
+        <dt>
+
+          <code><a href="ilm_plot_moderation.html">ilm_plot_moderation()</a></code>
+
+        </dt>
+        <dd>See a moderation</dd>
 
         <dt>
 
@@ -669,6 +685,20 @@
 
         <dt>
 
+          <code><a href="ilm_anomalous.html">ilm_anomalous()</a></code>
+
+        </dt>
+        <dd>The rows an anomaly scan flagged</dd>
+
+        <dt>
+
+          <code><a href="ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code>
+
+        </dt>
+        <dd>See an anomaly scan</dd>
+
+        <dt>
+
           <code><a href="ilm_outliers.html">ilm_outliers()</a></code>
 
         </dt>
@@ -681,9 +711,9 @@
         </dt>
         <dd>Flag unusual values across a data frame</dd>
       </dl></div><div class="section level2">
-      <h2 id="structure-reduce-cluster-profile">Structure: reduce, cluster, profile<a class="anchor" aria-label="anchor" href="#structure-reduce-cluster-profile"></a></h2>
+      <h2 id="structure-profile-cluster-reduce">Structure: profile, cluster, reduce<a class="anchor" aria-label="anchor" href="#structure-profile-cluster-reduce"></a></h2>
 
-      <div class="section-desc"><p>The few directions a set of correlated columns shares, the groups in that space, and what distinguishes them.</p></div>
+      <div class="section-desc"><p>ilm_profile() is the front door: it reduces, clusters and describes the groups in one call, and handles mixed columns. The other two are the same pipeline taken a step at a time, for when you want the coordinates or the partition on their own.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -692,6 +722,20 @@
 
       <dl><dt>
 
+          <code><a href="ilm_profile.html">ilm_profile()</a></code>
+
+        </dt>
+        <dd>Profile a data set: reduce, cluster, and describe the clusters</dd>
+
+        <dt>
+
+          <code><a href="ilm_var_contrib.html">ilm_var_contrib()</a></code>
+
+        </dt>
+        <dd>What each variable contributes to a clustering</dd>
+
+        <dt>
+
           <code><a href="ilm_cluster.html">ilm_cluster()</a></code>
 
         </dt>
@@ -699,10 +743,10 @@
 
         <dt>
 
-          <code><a href="ilm_cluster_na.html">ilm_cluster_na()</a></code>
+          <code><a href="ilm_reduce.html">ilm_reduce()</a></code>
 
         </dt>
-        <dd>Cluster observations by which values they are missing</dd>
+        <dd>Reduce a data frame's variables to a few dimensions</dd>
 
         <dt>
 
@@ -713,13 +757,6 @@
 
         <dt>
 
-          <code><a href="ilm_profile.html">ilm_profile()</a></code>
-
-        </dt>
-        <dd>Profile a data set: reduce, cluster, and describe the clusters</dd>
-
-        <dt>
-
           <code><a href="ilm_profile_na.html">ilm_profile_na()</a></code>
 
         </dt>
@@ -727,10 +764,10 @@
 
         <dt>
 
-          <code><a href="ilm_reduce.html">ilm_reduce()</a></code>
+          <code><a href="ilm_cluster_na.html">ilm_cluster_na()</a></code>
 
         </dt>
-        <dd>Reduce a data frame's variables to a few dimensions</dd>
+        <dd>Cluster observations by which values they are missing</dd>
 
         <dt>
 

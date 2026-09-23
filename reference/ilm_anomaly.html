@@ -26,12 +26,14 @@ the columns share."></head><body>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -52,7 +54,7 @@ the columns share."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Rows that do not fit the pattern the other rows make</h1>
-      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_anomaly.R" class="external-link"><code>R/ilm_anomaly.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_anomaly.R" class="external-link"><code>R/ilm_anomaly.R</code></a>, <a href="https://github.com/huttoncp/illume/blob/main/R/zzz-iml-aliases.R" class="external-link"><code>R/zzz-iml-aliases.R</code></a></small>
       <div class="d-none name"><code>ilm_anomaly.Rd</code></div>
     </div>
 
@@ -68,11 +70,14 @@ the columns share.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_anomaly</span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,</span>
 <span>  cols <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"reconstruction"</span>, <span class="st">"iforest"</span><span class="op">)</span>,</span>
 <span>  rank <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  trim <span class="op">=</span> <span class="fl">0.25</span>,</span>
+<span>  ntrees <span class="op">=</span> <span class="fl">500L</span>,</span>
 <span>  B <span class="op">=</span> <span class="fl">39L</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  keep_data <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -86,9 +91,25 @@ the columns share.</p>
 
 
 <dt id="arg-cols">cols<a class="anchor" aria-label="anchor" href="#arg-cols"></a></dt>
-<dd><p>Columns to use; see <a href="ilm_selection.html">ilm_selection</a>. Numeric columns only –
-the reconstruction is a projection, and a category has no residual along a
-direction. Anything else is dropped with a note.</p></dd>
+<dd><p>Columns to use; see <a href="ilm_selection.html">ilm_selection</a>. Under the default method,
+numeric columns only – the reconstruction is a projection, and a category
+has no residual along a direction. Anything else is dropped with a note.
+<code>method = "iforest"</code> uses every column.</p></dd>
+
+
+<dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
+<dd><p><code>"reconstruction"</code> (the default) or <code>"iforest"</code>. The
+reconstruction is unbeaten at what it is for – against planted anomalies
+it scores 1.000 for an extreme value and 0.999 for a jointly-implausible
+numeric combination – and it is the only one here with a calibrated null,
+so it reports FDR-adjusted p-values. It is also blind to the categories:
+0.771 when a category contradicts the numbers, and 0.505, a coin toss, for
+a category pairing that never otherwise occurs. An isolation forest splits
+on factors directly and reaches 0.964 and 0.886 on those two, giving up
+little elsewhere (0.975, 0.950) – but it returns a score with no null
+behind it, so <code>p</code> and <code>p_adj</code> are <code>NA</code> and <code>alpha</code> becomes the share of
+rows you are calling anomalous rather than an error rate being controlled.
+Needs the isotree package.</p></dd>
 
 
 <dt id="arg-rank">rank<a class="anchor" aria-label="anchor" href="#arg-rank"></a></dt>
@@ -99,6 +120,10 @@ direction. Anything else is dropped with a note.</p></dd>
 <dd><p>Share of the worst-fitting rows held out of the fit. <code>0</code> fits
 every row, which lets the anomalies define the structure they are scored
 against.</p></dd>
+
+
+<dt id="arg-ntrees">ntrees<a class="anchor" aria-label="anchor" href="#arg-ntrees"></a></dt>
+<dd><p>Trees in the isolation forest. Ignored by the default method.</p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
@@ -115,6 +140,13 @@ a list nobody reads.</p></dd>
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p>Random seed.</p></dd>
+
+
+<dt id="arg-keep-data">keep_data<a class="anchor" aria-label="anchor" href="#arg-keep-data"></a></dt>
+<dd><p>Keep the scanned data on the result, so that
+<code><a href="ilm_anomalous.html">ilm_anomalous()</a></code>, <code><a href="ilm_profile.html">ilm_profile()</a></code>, <code><a href="ilm_cluster.html">ilm_cluster()</a></code> and the describe
+functions can take the object directly. Set <code>FALSE</code> if the frame is
+large and you only want the scores.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>

@@ -29,6 +29,10 @@ ilm_mi_pool(object, formula = NULL, ...)
 
   Passed to
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
+  Without a `family` there, it is inferred from the first imputation, as
+  `family = "auto"` does, and then held for the rest, so every
+  imputation is fitted with the same likelihood. An imputation that
+  fails to fit is left out with a warning.
 
 ## Value
 

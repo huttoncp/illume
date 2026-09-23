@@ -58,6 +58,15 @@ status, a plain-language reason, and a suggested remedy.
 [`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)
 prints them.
 
+## Two spellings
+
+Every exported function whose name starts `ilm_` also answers to `iml_`,
+an easy transposition to type:
+[`iml_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+is
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+itself, not a wrapper, and opens the same help page.
+
 ## Main entry points
 
 - [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md):

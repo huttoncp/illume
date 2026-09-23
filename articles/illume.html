@@ -35,12 +35,14 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -173,9 +175,10 @@ each naming its remedy</td>
 <td>
 <code><a href="../reference/ilm_anova.html">ilm_anova()</a></code>, <code><a href="../reference/ilm_effects.html">ilm_effects()</a></code>,
 <code><a href="../reference/ilm_emmeans.html">ilm_emmeans()</a></code>/<code><a href="../reference/ilm_contrast.html">ilm_contrast()</a></code>,
-<code><a href="../reference/ilm_trends.html">ilm_trends()</a></code>, <code><a href="../reference/ilm_ame.html">ilm_ame()</a></code>,
-<code><a href="../reference/ilm_robust.html">ilm_robust()</a></code>, <code><a href="../reference/ilm_denom_df.html">ilm_denom_df()</a></code>,
-<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code>, <code><a href="../reference/ilm_boot_ci.html">ilm_boot_ci()</a></code>
+<code><a href="../reference/ilm_trends.html">ilm_trends()</a></code>, <code><a href="../reference/ilm_moderation.html">ilm_moderation()</a></code>,
+<code><a href="../reference/ilm_ame.html">ilm_ame()</a></code>, <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code>,
+<code><a href="../reference/ilm_denom_df.html">ilm_denom_df()</a></code>, <code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code>,
+<code><a href="../reference/ilm_boot_ci.html">ilm_boot_ci()</a></code>
 </td>
 </tr>
 <tr class="odd">
@@ -189,7 +192,8 @@ corrections</td>
 <td><strong>Exploration</strong></td>
 <td>
 <code><a href="../reference/ilm_describe_all.html">ilm_describe_all()</a></code>, fifteen <code>ilm_plot_*()</code>
-functions, <code><a href="../reference/ilm_outliers.html">ilm_outliers()</a></code>, <code><a href="../reference/ilm_anomaly.html">ilm_anomaly()</a></code>
+functions, <code><a href="../reference/ilm_outliers.html">ilm_outliers()</a></code>, <code><a href="../reference/ilm_anomaly.html">ilm_anomaly()</a></code> and
+<code><a href="../reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code>
 </td>
 </tr>
 <tr class="odd">
@@ -303,37 +307,48 @@ power to reporting, with a pointer for each.</p>
 <td>the whole path, stage by stage</td>
 </tr>
 <tr class="even">
+<td><code>benchmarking</code></td>
+<td>what was measured, against what, and where illume comes off
+worse</td>
+</tr>
+<tr class="odd">
 <td><code>regression-models</code></td>
 <td>
 <code><a href="../reference/ilm_model.html">ilm_model()</a></code> in depth, every family, mixed
 multinomial</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>exploring-data</code></td>
 <td>descriptives, plots, bootstrap intervals</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>profiling</code></td>
 <td>
 <code><a href="../reference/ilm_reduce.html">ilm_reduce()</a></code>, <code><a href="../reference/ilm_cluster.html">ilm_cluster()</a></code>,
 <code><a href="../reference/ilm_profile.html">ilm_profile()</a></code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>anomaly-detection</code></td>
 <td>rows that are implausible as combinations</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>missing-data</code></td>
 <td>diagnosing it, imputing it, pooling</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>causal-models</code></td>
 <td>DAGs, difference in differences, discontinuities</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>effect-size-and-power</code></td>
-<td>effect sizes, power, scenario projection</td>
+<td>effect sizes, power with or without a pilot, scenario
+projection</td>
+</tr>
+<tr class="even">
+<td><code>moderation</code></td>
+<td>whether an effect holds for everyone, without p-hacking the
+subgroups</td>
 </tr>
 <tr class="odd">
 <td><code>anova</code></td>

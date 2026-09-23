@@ -19,7 +19,9 @@ ilm_profile(
   method = c("pcamix", "glrm"),
   ...,
   vtest_threshold = 1.96,
-  top_n_vars = 2
+  top_n_vars = 2,
+  var_contrib = TRUE,
+  var_contrib_B = 199L
 )
 ```
 
@@ -66,11 +68,29 @@ ilm_profile(
 
   How many top-loading variables to name per dimension.
 
+- var_contrib:
+
+  Run
+  [`ilm_var_contrib()`](https://huttoncp.github.io/illume/reference/ilm_var_contrib.md)
+  on the result and report it. Nothing in this pipeline selects
+  variables, and an irrelevant one is not neutral: on three known
+  clusters with two informative columns, adding two pure-noise factors
+  took recovery from 0.301 to 0.006. So the check runs here rather than
+  waiting to be asked for, and a clustering that turns out to be one
+  variable's levels under another name raises a warning – the cluster
+  descriptions would otherwise be read at face value, and they would all
+  be true and all about that variable. Costs roughly 70% on top of the
+  clustering at 500 rows and five columns.
+
+- var_contrib_B:
+
+  Permutations for that check.
+
 ## Value
 
 An object of class `"ilm_profile"`: `reduce`, `cluster`,
-`characterization` (one row per dimension that characterises a cluster)
-and `summary`, one sentence per cluster.
+`characterization` (one row per dimension that characterises a cluster),
+`var_contrib` (or `NULL`) and `summary`, one sentence per cluster.
 
 ## How a cluster gets characterised
 

@@ -29,7 +29,10 @@ ilm_ame(object, terms = NULL, eps = 1e-04)
 ## Value
 
 A data frame with `term`, `level`, `estimate`, `se`, `lower`, `upper`,
-and `kind` (`"slope"` or `"contrast"`).
+and `kind` (`"slope"` or `"contrast"`). For an outcome with categories –
+multinomial or ordinal – there is also a `category` column and one row
+per category: the effect on the probability of each. Those rows sum to
+zero for every term, because the probabilities sum to one.
 
 ## Details
 

@@ -24,12 +24,14 @@ true beliefs, which makes it a fair way to score probabilistic predictions.'></h
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -50,7 +52,7 @@ true beliefs, which makes it a fair way to score probabilistic predictions.'></h
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Proper scoring rules for a categorical outcome</h1>
-      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_ic.R" class="external-link"><code>R/ilm_ic.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_ic.R" class="external-link"><code>R/ilm_ic.R</code></a>, <a href="https://github.com/huttoncp/illume/blob/main/R/zzz-iml-aliases.R" class="external-link"><code>R/zzz-iml-aliases.R</code></a></small>
       <div class="d-none name"><code>ilm_scores.Rd</code></div>
     </div>
 
@@ -89,6 +91,11 @@ between the predicted probability vector and the observed one-hot outcome,
 ranging from 0 to 2. Lower is better for both.</p>
 <p>Accuracy is also returned, though it ignores how confident the predictions
 were and is the least informative of the three.</p>
+<p>Defined for a multinomial fit, and for a binomial one with a 0/1 response,
+whose single fitted probability is scored as the two categories it
+implies. Other families have no category probabilities to score; compare
+those fits with <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">AIC()</a></code> or <code><a href="ilm_anova.html">ilm_anova()</a></code>, and check their predictions with
+<code><a href="ilm_check_predictive.html">ilm_check_predictive()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

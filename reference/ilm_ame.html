@@ -26,12 +26,14 @@ or a 20-point one depending on where the data sit."></head><body>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -52,7 +54,7 @@ or a 20-point one depending on where the data sit."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Average marginal effect on the response scale</h1>
-      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_interpret.R" class="external-link"><code>R/ilm_interpret.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/huttoncp/illume/blob/main/R/ilm_interpret.R" class="external-link"><code>R/ilm_interpret.R</code></a>, <a href="https://github.com/huttoncp/illume/blob/main/R/zzz-iml-aliases.R" class="external-link"><code>R/zzz-iml-aliases.R</code></a></small>
       <div class="d-none name"><code>ilm_ame.Rd</code></div>
     </div>
 
@@ -87,7 +89,10 @@ or a 20-point one depending on where the data sit.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A data frame with <code>term</code>, <code>level</code>, <code>estimate</code>, <code>se</code>, <code>lower</code>,
-<code>upper</code>, and <code>kind</code> (<code>"slope"</code> or <code>"contrast"</code>).</p>
+<code>upper</code>, and <code>kind</code> (<code>"slope"</code> or <code>"contrast"</code>). For an outcome with
+categories – multinomial or ordinal – there is also a <code>category</code> column
+and one row per category: the effect on the probability of each. Those
+rows sum to zero for every term, because the probabilities sum to one.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

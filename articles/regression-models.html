@@ -35,12 +35,14 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -93,6 +95,39 @@ stage sits.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/huttoncp/illume" class="external-link">illume</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
+<h2 id="why-a-multinomial-mixed-model-is-fitted-this-way">Why a multinomial mixed model is fitted this way<a class="anchor" aria-label="anchor" href="#why-a-multinomial-mixed-model-is-fitted-this-way"></a>
+</h2>
+<p>Fitting a multinomial mixed model has meant choosing which problem to
+accept. Penalised quasi-likelihood (<code>mclogit</code>) is fast, and
+in sparse data it shrinks fixed effects toward zero – 27% attenuation
+with 100 clusters of 4 – while reporting standard errors that do not
+know it, so coverage falls to 0.891 against a nominal 0.95. MCMC
+(<code>brms</code>) is exact up to Monte Carlo error and takes about 46
+seconds of sampling per fit, which is a long time when you are still
+deciding what the model is.</p>
+<p>illume takes a third route: the Laplace approximation via RTMB, with
+the random effects carried as a matrix-normal block. Against brms on the
+same data, estimates agree to a mean of 0.10 standard errors with an SE
+ratio of 0.984; against mclogit it holds coverage at 0.949 where PQL
+reaches 0.891. Median fit time is 0.60 seconds, roughly 75 times faster
+than brms’ sampling alone.</p>
+<p>One caveat travels with that: mclogit’s RMSE is <em>lower</em> (0.336
+against 0.409), because shrinkage buys a variance reduction that more
+than pays for the bias. For prediction that is a defensible trade. For a
+coefficient you intend to interpret it is not, and coverage is the
+measure that says so.</p>
+<p>On data that misbehave the picture is less tidy. With an outcome
+category under 4% of the data, illume <em>inflates</em> coefficients
+rather than shrinking them, and its mean absolute bias there is worse
+than mclogit’s; and in the study, with a random-effect SD near zero,
+only 63.3% of its fits counted as converged against mclogit’s 100%.
+(That study required a positive definite Hessian. illume has since
+reported the fixed effects when a variance sits at its boundary, and on
+the same datasets 97.5% of fits now give them.) The whole account,
+including where illume comes off worse, is in
+<code><a href="../articles/benchmarking.html">vignette("benchmarking")</a></code>.</p>
+</div>
+<div class="section level2">
 <h2 id="a-first-model">A first model<a class="anchor" aria-label="anchor" href="#a-first-model"></a>
 </h2>
 <p>We will simulate data where an outcome with three categories depends
@@ -129,7 +164,7 @@ on a continuous predictor <code>x1</code> and a grouping factor
 <span><span class="co">#&gt; Warning: the 'nobars' function has moved to the reformulas package. Please</span></span>
 <span><span class="co">#&gt; update your imports, or ask an upstream package maintainer to do so.</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ilm_model fit: 3 categories, 800 obs, 8 fixed + 3 covariance parameters</span></span>
+<span><span class="co">#&gt; ilm_model fit: 3 categories (multinomial), 800 obs, 8 fixed + 3 covariance parameters</span></span>
 <span><span class="co">#&gt;   logLik -549.45 | AIC 1267.9</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -137,7 +172,7 @@ on a continuous predictor <code>x1</code> and a grouping factor
 </h2>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Linear mixed model fit by maximum likelihood (Laplace approximation)</span></span>
+<span><span class="co">#&gt; Generalized linear mixed model fit by maximum likelihood (Laplace approximation)</span></span>
 <span><span class="co">#&gt;  Family: multinomial (3 categories: low, mid, high)</span></span>
 <span><span class="co">#&gt; Formula: y ~ x1 + grp + (1 | subj) </span></span>
 <span><span class="co">#&gt; </span></span>

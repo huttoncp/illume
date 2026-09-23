@@ -21,6 +21,40 @@ sits.
 library(illume)
 ```
 
+## Why a multinomial mixed model is fitted this way
+
+Fitting a multinomial mixed model has meant choosing which problem to
+accept. Penalised quasi-likelihood (`mclogit`) is fast, and in sparse
+data it shrinks fixed effects toward zero – 27% attenuation with 100
+clusters of 4 – while reporting standard errors that do not know it, so
+coverage falls to 0.891 against a nominal 0.95. MCMC (`brms`) is exact
+up to Monte Carlo error and takes about 46 seconds of sampling per fit,
+which is a long time when you are still deciding what the model is.
+
+illume takes a third route: the Laplace approximation via RTMB, with the
+random effects carried as a matrix-normal block. Against brms on the
+same data, estimates agree to a mean of 0.10 standard errors with an SE
+ratio of 0.984; against mclogit it holds coverage at 0.949 where PQL
+reaches 0.891. Median fit time is 0.60 seconds, roughly 75 times faster
+than brms’ sampling alone.
+
+One caveat travels with that: mclogit’s RMSE is *lower* (0.336 against
+0.409), because shrinkage buys a variance reduction that more than pays
+for the bias. For prediction that is a defensible trade. For a
+coefficient you intend to interpret it is not, and coverage is the
+measure that says so.
+
+On data that misbehave the picture is less tidy. With an outcome
+category under 4% of the data, illume *inflates* coefficients rather
+than shrinking them, and its mean absolute bias there is worse than
+mclogit’s; and in the study, with a random-effect SD near zero, only
+63.3% of its fits counted as converged against mclogit’s 100%. (That
+study required a positive definite Hessian. illume has since reported
+the fixed effects when a variance sits at its boundary, and on the same
+datasets 97.5% of fits now give them.) The whole account, including
+where illume comes off worse, is in
+[`vignette("benchmarking")`](https://huttoncp.github.io/illume/articles/benchmarking.md).
+
 ## A first model
 
 We will simulate data where an outcome with three categories depends on
@@ -62,7 +96,7 @@ fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd,
 #> Warning: the 'nobars' function has moved to the reformulas package. Please
 #> update your imports, or ask an upstream package maintainer to do so.
 fit
-#> ilm_model fit: 3 categories, 800 obs, 8 fixed + 3 covariance parameters
+#> ilm_model fit: 3 categories (multinomial), 800 obs, 8 fixed + 3 covariance parameters
 #>   logLik -549.45 | AIC 1267.9
 ```
 
@@ -71,7 +105,7 @@ fit
 ``` r
 
 summary(fit)
-#> Linear mixed model fit by maximum likelihood (Laplace approximation)
+#> Generalized linear mixed model fit by maximum likelihood (Laplace approximation)
 #>  Family: multinomial (3 categories: low, mid, high)
 #> Formula: y ~ x1 + grp + (1 | subj) 
 #> 

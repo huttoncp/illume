@@ -35,12 +35,14 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -190,8 +192,7 @@ not, <code><a href="../reference/ilm_impute.html">ilm_impute()</a></code> is the
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_missing.html">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span>
 <span><span class="va">im</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_impute.html">ilm_impute</a></span><span class="op">(</span><span class="va">d</span>, m <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>                  <span class="co"># chained equations by default</span></span>
-<span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">im</span><span class="op">$</span><span class="va">imputations</span>, <span class="kw">function</span><span class="op">(</span><span class="va">z</span><span class="op">)</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span>, data <span class="op">=</span> <span class="va">z</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/ilm_mi_pool.html">ilm_mi_pool</a></span><span class="op">(</span><span class="va">fits</span><span class="op">)</span>                            <span class="co"># Rubin's rules</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/ilm_mi_pool.html">ilm_mi_pool</a></span><span class="op">(</span><span class="va">im</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span>                   <span class="co"># fit each; Rubin's rules</span></span></code></pre></div>
 <p><code>method = "glrm"</code> imputes categorical columns as
 categories; <code>method = "lowrank"</code> handles data wider than it
 is long.</p>
@@ -363,8 +364,9 @@ multinomial</td>
 <tr class="odd">
 <td><em>Anomaly detection</em></td>
 <td>
-<code><a href="../reference/ilm_anomaly.html">ilm_anomaly()</a></code> against <code><a href="../reference/ilm_outliers.html">ilm_outliers()</a></code>
-</td>
+<code><a href="../reference/ilm_anomaly.html">ilm_anomaly()</a></code> against <code><a href="../reference/ilm_outliers.html">ilm_outliers()</a></code>;
+<code><a href="../reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code> to see whether the flagged rows stand
+apart</td>
 </tr>
 <tr class="even">
 <td><em>Missing data</em></td>
@@ -380,6 +382,13 @@ multinomial</td>
 <code><a href="../reference/ilm_effects.html">ilm_effects()</a></code>, <code><a href="../reference/ilm_power.html">ilm_power()</a></code>,
 <code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code>, <code><a href="../reference/ilm_scaffold.html">ilm_scaffold()</a></code>,
 <code><a href="../reference/ilm_scenario.html">ilm_scenario()</a></code>
+</td>
+</tr>
+<tr class="odd">
+<td><em>Moderation</em></td>
+<td>
+<code><a href="../reference/ilm_moderation.html">ilm_moderation()</a></code>,
+<code><a href="../reference/ilm_plot_moderation.html">ilm_plot_moderation()</a></code>
 </td>
 </tr>
 </tbody>

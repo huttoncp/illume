@@ -13,6 +13,231 @@ from the test suite. They came from comparing against something outside,
 from widening a simulation, or from someone calling illume from outside
 it, which remain the only things that have ever found a defect here.
 
+### The family is read off the response
+
+- [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  defaulted to `family = "gaussian"`, so leaving the family off a model
+  of a three-category outcome stopped with “gaussian family needs a
+  numeric response”, and leaving it off a count fitted a straight line
+  to it without comment. The default is now `"auto"`: the family is read
+  off the response, and the fit says which it chose and on what evidence
+  –
+  `` family = "poisson", inferred from `visits`: whole numbers from 0 to 14, a count ``
+  – and names the usual competitor, `"nbinom"` for counts and
+  `"ordinal"` for categories with an order. The choice is written into
+  `fit$call`, so anything that refits through the call keeps it instead
+  of guessing again on simulated data, and
+  [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) mark the family as
+  inferred.
+- Whole numbers are the hard case, because a count and a measurement
+  recorded to the nearest unit look alike. Whole numbers that reach down
+  to 0 or 1 are read as a count; ones that never come near zero, such as
+  a blood pressure, as a measurement. The range is in the message either
+  way, so a misreading shows at a glance.
+- What the response cannot settle is asked about, not guessed: a
+  proportion that touches 0 or 1 or comes with weights, a two-valued
+  variable coded other than 0/1, a survival time – which survival family
+  is a modelling decision – and a date.
+- [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
+  [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
+  and
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md)
+  infer through the same rules. Their own guesser sent an ordered factor
+  to the multinomial, proportions to the gaussian, and a variable coded
+  1/2 to the binomial, which then refused it.
+- [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
+  infers the family once, on the first imputation, and holds it, so
+  every imputation is fitted with the same likelihood. An imputation
+  that fails to fit is now reported; it used to be dropped without a
+  word, and the draw that made the model hardest to fit is not a random
+  one to lose.
+
+### A variance at its boundary no longer takes the fixed effects with it
+
+- When a random-effect variance sits at zero, or a correlation at +/-1,
+  the likelihood is flat in that direction and the Hessian over every
+  parameter is singular however well the fixed effects are determined.
+  The whole fit used to be graded FAIL, standard errors and all. Now the
+  covariance of that term is held at its estimate and the rest of the
+  Hessian inverted – what lme4 falls back to for a GLMM – and the fit
+  says, in [`summary()`](https://rdrr.io/r/base/summary.html) and
+  [`print()`](https://rdrr.io/r/base/print.html), what can be trusted:
+  the fixed effects, their standard errors and tests, yes; that
+  covariance, no. The check reads BOUNDARY, not FAIL.
+- Measured on the messy-data regime with a true random-effect SD of
+  0.05, on the study’s own 400 seeds: fits with usable fixed effects
+  rose from **63.3% to 97.5%**. The 128 newly usable ones cover at
+  **0.944**, and their standard errors are 1.011 times those of the same
+  model without the random term, which is what a variance of zero says
+  they should be. In the combined regime the share rose from 91.0% to
+  99.0%, and the 30 fits recovered there cover at **0.908** – a little
+  under nominal, and recorded rather than smoothed. The clean,
+  unbalanced and heavy-tailed regimes are unchanged.
+- The study’s own tables still report what was measured at the time; the
+  next run of `messy_compare.R` will count fits the new way.
+- glmmTMB recovers some of these by recomputing the Hessian more
+  accurately before giving up, and illume now does the same without its
+  dependency. On these regimes that alone recovered **no** fit: every
+  failure was a genuine boundary, which glmmTMB lets through only
+  because its threshold is machine epsilon, reporting a standard error
+  in the billions for the variance.
+- At a boundary nlminb stops with “false” or “singular convergence” as a
+  log standard deviation drifts towards minus infinity. The boundary
+  term is now held where it got to and the rest allowed to finish, as a
+  variance constrained at zero would in lme4.
+- A covariance fitted at a correlation of -1, with a positive definite
+  Hessian and standard errors within 4% of the model without the term,
+  used to be graded FAIL with “the standard errors above are not usable”
+  beneath them. It is a BOUNDARY now too.
+- Fixed effects that are not identified are not rescued. Aliased columns
+  passed a [`chol()`](https://rdrr.io/r/base/chol.html) test on a
+  finite-difference Hessian, whose noise makes a singular matrix
+  slightly positive; the test is now scale-free and the fit stays FAIL.
+
+### Refits are the same model
+
+- Eight places refit a model – a reduced model for a test, a bootstrap
+  replicate, a simulation envelope, a consistency check, the null model
+  behind an R-squared – and seven of them wrote out their own list of
+  what “the same model” means. Every one of those lists had gone out of
+  date, and none carried the **zero part** of a zero-inflated or hurdle
+  model, so `ilm_anova(test = "LRT")` compared it against a model
+  without one: a predictor with no effect came out at chi-square **68.8,
+  p \< 2e-16**, where the right answer was 0.02. Type II tests of a term
+  inside an interaction,
+  [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
+  and the simulation-based checks were affected the same way, and
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)’s
+  bootstrap refits also lacked censoring, a dispersion model and a
+  flexible survival baseline.
+- All of them are now built from one list, next to the one function that
+  reads it, and a test refits every kind of model on its own response
+  and requires its own likelihood back.
+- Refits of a REML fit are REML too. They were maximum likelihood, so a
+  Type III recode or a consistency check quietly used a different
+  estimator.
+- McFadden’s R-squared is NA for a REML fit, with a note: restricted
+  likelihoods of models with different fixed effects are not comparable.
+  `model_performance()` also failed outright on every fit whose outcome
+  is not a set of categories, on “subscript out of bounds” inside the
+  scoring rules; those scores are now NA there, and a 0/1 binomial fit
+  is scored as the two categories it is.
+
+### The flagship model, category by category
+
+- [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  on a multinomial or ordinal fit took the LAST column of the predicted
+  probabilities and reported it as the effect, unlabelled. It now gives
+  one row per category, in a `category` column. They sum to zero, and
+  the slopes agree with
+  [`marginaleffects::avg_slopes()`](https://rdrr.io/pkg/marginaleffects/man/slopes.html)
+  on [`nnet::multinom()`](https://rdrr.io/pkg/nnet/man/multinom.html) to
+  1e-3, the level at which the two fits agree.
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  described only the first category’s coefficients of a multinomial fit,
+  and quoted that last-category effect beside each. It now describes
+  every category, in the language of a categorical outcome, each with
+  its own effect in percentage points.
+- [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+  failed on every multinomial fit with an error blaming “a smooth or a
+  matrix column”. It now says it does not yet average a multinomial fit,
+  and names [`predict()`](https://rdrr.io/r/stats/predict.html) and
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  for what it would have given.
+
+### Column names that need backticks
+
+- `` ilm_model(`my y` ~ `x 1` + (1 | `site id`)) `` failed with
+  “unexpected symbol”. Names turned into text and parsed back lose their
+  backticks – in the formula front end, in mgcv, in the prediction code
+  and in half a dozen functions that take column names as strings. Each
+  place now quotes a name when it becomes code and not when it is looked
+  up. mgcv cannot take such a name at all, so a smooth of one is built
+  on a stand-in and evaluated through the same map.
+- Checked against the only oracle that matters here, the same data under
+  ordinary names: identical likelihoods, coefficients and standard
+  errors for random intercepts and slopes, nested terms, smooths, a
+  dispersion model, a zero part and weights, and identical results from
+  [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md),
+  [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md),
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md),
+  [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+  [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md),
+  [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md),
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
+  and
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md).
+- Functions that take a term by name take it the way a person writes it,
+  `"x 1"`, as well as the way R does.
+- Two defects found on the way, both independent of names. A smooth’s
+  `by` variable never reached the model frame unless it appeared
+  elsewhere in the formula, and mgcv stopped with “Can’t find by
+  variable”; `s(x, by = z)` now matches
+  [`mgcv::gam()`](https://rdrr.io/pkg/mgcv/man/gam.html). And a random
+  slope’s design on new data was built from text in a
+  [`tryCatch()`](https://rdrr.io/r/base/conditions.html), so a failure
+  dropped the slope from the draws without a word.
+
+### Seeing an anomaly scan
+
+- [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md):
+  `"scores"`, the default, plots every row’s score against its rank
+  beside the band the scan simulated. It is the one view that tells five
+  genuine outliers from the top 5% of a smooth continuum. `"drivers"`
+  counts which column drives the flags, `"map"` places the rows on the
+  first two dimensions of
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+  and `"row"` shows one row’s z-scores beside its residuals.
+- The band **restarts at the line**. Setting the flagged rows aside
+  moves every other row up that many ranks, so against the band as
+  simulated a clean remainder sits above it for a long stretch: over 60
+  scans, 0.69 of the ranks after the line with 2% planted anomalies,
+  against 0.82 to 1.00 for noise that really has heavy tails.
+- The verdict is a reading, not a test, and its rates are in the help
+  page: planted anomalies were said to stand clear in 89 and 97 scans of
+  100 and never to run on; t-tailed noise was said to run on in half to
+  two thirds of the scans that flagged anything. Nothing is read off the
+  band when nothing is flagged – in data with no anomalies the top
+  twenty scores sat half above it in 21 scans of 100.
+- An isolation forest gets no band and no row view, and says why.
+
+### Smaller fixes
+
+- [`summary()`](https://rdrr.io/r/base/summary.html) called a REML fit
+  “maximum likelihood” and a Poisson or multinomial mixed model a
+  “linear mixed model”. [`print()`](https://rdrr.io/r/base/print.html)
+  called a gaussian fit “2 categories”, and never showed
+  `[CHECKS FAILED]` for an ordinal one.
+- [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md)
+  refitted with `all.vars(formula)[1]` as the response, so
+  `log(y) ~ ...` was refitted on `y`.
+- [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
+  matched an `observed` factor as a regular expression.
+- Asking for censoring on a family without a censored form said only the
+  gaussian had one; the survival families have one too, and it says so.
+- The pkgdown reference index is generated, and hand edits to
+  `_pkgdown.yml` had drifted from the generator; they are in the
+  generator now.
+  [`ilm_anomalous()`](https://huttoncp.github.io/illume/reference/ilm_anomalous.md)
+  is indexed, and the `benchmarking` and `moderation` articles are
+  listed, without which a pkgdown build stops.
+- The benchmarking vignette said 1000 replications where the agreement
+  study ran 160 (1000 was each dataset’s size), gave mclogit’s RMSE
+  advantage as 8 to 13% where it is 3 to 14%, and its reproduction
+  commands passed the wrong arguments to two scripts. The messy-data
+  findings are now generated by `summarise_run.R` like every other
+  study’s, and its run lives in `studies/runs/0.0.7.9000/` with the
+  rest.
+
+### iml\_\*(), for the transposition
+
+- Every exported `ilm_*()` also answers to `iml_*()`, an easy
+  transposition to type. Each alias is the function itself rather than a
+  wrapper, so arguments, defaults, autocompletion and help pages are the
+  same, and a test fails when a new export has none.
+
 ### Estimated marginal means and contrasts
 
 - [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
@@ -297,6 +522,292 @@ The regression test for the first one checks that automatic alignment
 gives the **same answer** as subsetting by hand, not merely that it
 stops erroring: a wrong alignment also runs cleanly, and dropping the
 last rows rather than the right ones turns z = 23.5 into z = 0.41.
+
+- **[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
+  and
+  [`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md)
+  had the same defect and did not get the same fix.** They take `time`
+  and `group` straight from the data frame while the fit kept only the
+  complete rows, so every call on data with a gap in it stopped. On a
+  320-row example with 21 missing outcomes both were unusable. They now
+  align the same way, and
+  [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
+  picks it up too by going through `ilm_ar_envelope()`.
+- The alignment is attempted and falls back to the column as given,
+  rather than letting `ilm_align_rows()` raise. A length that matches
+  neither the data nor the fit therefore still produces the original
+  message, which two existing tests pin deliberately – fixing one error
+  by replacing another one’s wording is not a fix.
+
+### A tibble is a data frame and has to behave like one
+
+- **[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
+  and
+  [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
+  failed on any tibble with a numeric column**, which is to say on most
+  real data: on `gapminder::gapminder` they stopped with
+  `All variables in X.quanti must be numeric`.
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
+  handed its numeric half straight to
+  [`PCAmixdata::PCAmix()`](https://rdrr.io/pkg/PCAmixdata/man/PCAmix.html),
+  which checks columns with `is.numeric(X.quanti[, j])` – and `[` on a
+  tibble does not drop to a vector, so every numeric column looked
+  non-numeric. The categorical half was already coerced, which is why
+  only the numeric one broke.
+- Nothing in that message mentions tibbles, and a tibble is what anyone
+  gets from readr, dplyr or gapminder, so this closed the most ordinary
+  route into the function while looking like a complaint about the data.
+- The mixed-data handling itself was never the problem.
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
+  picks PCA, MCA or FAMD by column type and `gapminder` takes the FAMD
+  branch, as intended, once the frame reaches PCAmix in a shape it
+  accepts.
+- The rest of the package was swept for the same fault and is clean:
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+  [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),
+  [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md),
+  [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md),
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+  [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md),
+  [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
+  and the plotting functions all give a tibble and a data frame the same
+  answer.
+- **[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
+  refused mixed columns without naming the remedy.** It clusters
+  coordinates – a k-means centroid is not defined on a factor – so
+  refusing is right, but `the coordinates to cluster must be numeric`
+  left the caller to discover
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
+  for themselves, which is not how anything else in the package behaves.
+  It now names the offending columns and the call that fixes it, as
+  [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
+  already did for the same situation.
+
+The regression test builds its tibble with
+[`tibble::as_tibble()`](https://tibble.tidyverse.org/reference/as_tibble.html).
+Setting the class by hand does **not** reproduce this: `[.tbl_df` is
+only dispatched to when tibble’s namespace is loaded, so without it `[`
+falls through to `[.data.frame`, which drops correctly and the bug
+vanishes. The first version of the test did it by hand and passed
+against the broken code.
+
+### Does the effect hold for everyone?
+
+[`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md)
+searches a set of candidate moderators for evidence that the effect of a
+treatment varies, and charges for the search.
+
+- **Trying several moderators and reporting the strongest is a search,
+  and the p-value from a search is not the p-value from a test.** With
+  six candidates and no moderation present at all, that procedure
+  rejected **29.3%** of the time at a nominal 5%. Every adjustment
+  brings it back: Holm, BH and Bonferroni all landed at 0.027.
+- **The test is the JOINT test of the interaction block**, from
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+  with its degrees of freedom reported. A single interaction coefficient
+  tests moderation only when the moderator has 1 df – on a four-level
+  factor the three coefficients gave p = 0.62, 0.0018 and 0.00002 for
+  the same variable.
+- `x` must be named and has no default. `x:m` is the same term whichever
+  of the two is called the moderator; only the interpretation
+  distinguishes them. An
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
+  is the exception, since the graph has named the exposure already.
+- **An interaction already in the model is excluded from the search**,
+  because it was specified a priori and owes no multiplicity penalty.
+  Charging it one would make a pre-registered hypothesis weaker for
+  having been tested beside exploratory ones.
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
+  is named as where it belongs.
+- `adjust` passes straight to
+  [`stats::p.adjust()`](https://rdrr.io/r/stats/p.adjust.html), so every
+  method it supports is available; Holm is the default because it
+  controls the family-wise rate and dominates Bonferroni.
+- Each candidate is refit **through the fit’s own call**, so family,
+  `ziformula`, `dispformula`, `ar`, weights, contrasts and `reml` all
+  survive. Rebuilding the formula by hand drops every one of them
+  silently – a zero-inflated model would be tested without its zero part
+  and nothing would say so. Candidates are tested on equal footing: each
+  refit starts from the user’s model minus any *other* candidate’s
+  interaction.
+- `split = TRUE` picks the moderator on half the data and tests it on
+  the other half, needing no adjustment. It is better calibrated – 0.053
+  against Holm’s conservative 0.027 – and costs about half the power
+  (0.320 against 0.547 for a numeric moderator, 0.200 against 0.380 for
+  a three-level factor). **The gap widens with degrees of freedom**,
+  1.71x to 1.90x, so splitting is weakest precisely in the
+  three-level-factor case experimental work is full of. It is genuinely
+  required only when the hypotheses cannot be counted, as in an
+  open-ended tree search; this searches a named set.
+
+[`ilm_plot_moderation()`](https://huttoncp.github.io/illume/reference/ilm_plot_moderation.md)
+draws one: cell means for a categorical exposure, and the **slope** of a
+continuous one within each level of the moderator, from
+[`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
+– so the picture and the p-value are the same estimator on the same fit.
+It is deliberately not
+[`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md)’s
+effect plot, which holds the other predictors at typical values; pinning
+the moderator is exactly what would hide the moderation.
+
+A 0/1 treatment stored as a **number** is categorical in meaning and
+numeric in type, so
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+would hold it at its mean and draw one curve where two are wanted. Its
+values are named explicitly.
+
+One bug worth recording because the tests missed it: the plot builds its
+call with [`do.call()`](https://rdrr.io/r/base/do.call.html), and
+tinyplot deparses its arguments to title a legend, so a `by` factor
+arrives as a deparsed vector and the width computation throws
+`invalid graphics state`. Whether it fires depends on how long the level
+NAMES are – a test using `"a"`/`"b"`/`"c"` passed while
+`"north"`/`"central"`/ `"south"` did not. Fixed by titling the legend
+explicitly, and the test now uses realistic labels. This is the second
+time this exact mechanism has bitten.
+
+### Mixed data, measured rather than assumed
+
+[`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
+and
+[`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
+both refused to use categorical columns. Deciding what to do about that
+meant comparing seven approaches against data with known structure, and
+three of the results overturned the plan they were meant to confirm.
+
+- **`ilm_cluster(data)` now takes raw mixed data**, reducing it through
+  [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
+  (FAMD) and saying so.
+  [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
+  remains the front door: it is the same pipeline plus a description of
+  each cluster, in one call.
+
+- **FAMD then k-means is the default because it is the only one that
+  survives correlated variables.** Adjusted Rand index against three
+  known clusters:
+
+                                  FAMD+kmeans   Gower+PAM   RF proximity   VarSelLCM
+        balanced                     0.433        0.447        0.257         0.440
+        within-cluster r = 0.40      0.395          --           --          0.286
+        within-cluster r = 0.75      0.265          --           --          0.047
+        two irrelevant factors       0.006          --         0.093         0.397
+
+  VarSelLCM is remarkable in its own regime – it selects variables, and
+  on the irrelevant-factor case it scored 0.397 where everything else
+  collapsed – and it assumes the variables are independent within a
+  cluster. When that fails it fails the other way, to 0.047. Real
+  variables are correlated, so it is not the default. Random-forest
+  proximity was measured and is not offered: 0.257 against 0.433 on
+  well-behaved data.
+
+- **Gaussian mixtures are not suitable here, for a structural reason.**
+  On elliptical clusters a GMM beats k-means on the numeric columns
+  alone (0.547 against 0.452) and collapses to 0.253 on the FAMD
+  coordinates, where k-means reaches 0.620. The categorical part of an
+  embedding takes only as many distinct values as there are level
+  combinations, so a Gaussian mixture spends components modelling the
+  lattice. Its strength is what breaks it.
+
+- **Every `k`-selector over-selects on mixed data**, and
+  [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
+  now warns when the chosen `k` is the largest searched – the curve had
+  not turned, so that is where the search stopped rather than where the
+  evidence pointed. With truth `k = 3`, the gap statistic recovered it
+  in 25% of runs at best, BIC in 0%, and average silhouette in 0% –
+  silhouette on a Gower dissimilarity peaked at exactly the number of
+  level combinations, finding the lattice rather than the clusters.
+
+- **Both functions now report what the missing values will cost before
+  they cost it**, through
+  [`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md).
+  Twelve per cent missing across three columns leaves 68% of rows
+  complete, and the other 32% are dropped silently by any complete-case
+  method. The note names
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
+  and says which single column, if dropped, would recover the most rows.
+
+### Anomalies that live in the categories
+
+- **`ilm_anomaly(method = "iforest")`**, an isolation forest over every
+  column. AUC against planted anomalies:
+
+                                reconstruction   iForest   MCD     LOF+Gower
+        extreme value                1.000        0.975    1.000     0.998
+        implausible combination      0.999        0.950    1.000     0.997
+        category contradicts numbers 0.771        0.961    0.937     0.990
+        category pairing never seen  0.505        0.886    0.487     0.363
+
+  The reconstruction stays the default: unbeaten at what it was built
+  for, and the only method with a calibrated null and FDR-adjusted
+  p-values. It is a coin toss on the bottom row, which is what the
+  forest is for.
+
+- `ndim = 1` deliberately. The extended isolation forest is better on
+  numeric combinations (0.965 against 0.950) and worse on rare category
+  pairings (0.796 against 0.886) – and the categories are the reason it
+  is here.
+
+- A forest returns a score with no null behind it, so `p` and `p_adj`
+  are `NA` and `alpha` is the share of rows being called anomalous
+  rather than an error rate being controlled. The print method says so
+  rather than letting two columns of `NA` imply an oversight.
+
+- It keeps the `driver`. Replacing one column at a time with its median
+  or commonest level and taking the largest score drop recovered the
+  planted driver 100% of the time for an extreme value and 94% for a
+  category contradicting the numbers, at one extra prediction per
+  column.
+
+- Not added: MCD (ties the reconstruction on numeric anomalies, blind to
+  categorical ones, loses the calibration) and LOF, which is **worse
+  than random** on rare category pairings at 0.363 – a rare combination
+  forms its own small tight group, which looks locally dense.
+
+### Which variables are carrying a clustering
+
+[`ilm_var_contrib()`](https://huttoncp.github.io/illume/reference/ilm_var_contrib.md).
+Nothing in the package selects variables, and an irrelevant one is not
+neutral: on three known clusters with two informative columns, adding
+two pure-noise factors took recovery from 0.301 to **0.006**. That is
+the largest single effect measured anywhere in this comparison – larger
+than the choice of method, of distance, or of `k`.
+
+It reports the between-cluster share of variance for each variable
+against a permutation reference, so a variable the clustering ignored
+can be seen and dropped.
+
+The interesting case is the other one. When a variable separates the
+clusters *almost perfectly* while nothing else does, the partition
+**is** its levels under another name – and every informative variable
+then scores low against it, so the obvious reading of the table (“drop
+the ones at the bottom”) is exactly backwards. That case is detected and
+reported separately, because from inside a clustering a variable that
+defines it looks like the best variable. The first draft of this
+function gave the backwards advice.
+
+What it cannot do is settle relevance: the clustering was fitted to
+these variables, so one it used separates the clusters it helped make
+whether or not it means anything. A pure-noise column scored 0.441
+against 0.576 for a real one. The documentation says this rather than
+implying otherwise.
+
+**[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
+runs it, rather than leaving it for the user to find.** A diagnostic in
+a function nobody calls produces exactly the analyses this package
+exists to prevent, so the check is in the path: the result is stored on
+the object, the verdict is printed under the cluster descriptions, and
+the dominance case additionally **warns**, because otherwise the cluster
+descriptions get read at face value and they are all true and all about
+one variable. `var_contrib = FALSE` turns it off and `var_contrib_B`
+tunes it; it costs about 70% on top of the clustering at 500 rows and
+five columns, which is the price of the check being run rather than
+merely available.
+
+On thirty columns with two informative ones, the two rank first at 0.45
+and 0.40 with everything else at 0.13 or below. The verdicts are less
+useful there than the ranking – a noise column the clustering happened
+to split on still beats a shuffled label – which is why the output says
+to read the ranking.
 
 ### Parameters that were set and then ignored
 
@@ -645,6 +1156,32 @@ example that had been in the package, working, for months.
   Carlo standard errors below nominal – small, but in the
   anti-conservative direction.
 
+### Where illume loses to mclogit
+
+- A second comparison against `mclogit::mblogit()`, this time on data
+  that misbehaves: unbalanced clusters with many singletons, a 3.6%
+  outcome category, a variance component at the boundary, non-Gaussian
+  random effects, and all four together. 400 replications per regime.
+  `studies/findings/messy.md`, and the new **Benchmarking and
+  validation** vignette.
+- illume’s intervals cover better in all six regimes, and the gap widens
+  where theory says PQL should struggle – 0.931 against 0.853 with a
+  sparse category, 0.945 against 0.894 with everything combined. illume
+  is 6 to 13 times faster throughout.
+- **Three results go the other way and are recorded rather than
+  smoothed.** illume *inflates* coefficients when a category is sparse
+  (attenuation 1.46), and its mean absolute bias there is worse than
+  mclogit’s, 0.394 against 0.271; the intervals are wide enough to cover
+  anyway, but the point estimate should not be read at face value.
+  illume converged on **63.3%** of replications when the true
+  random-effect sd was 0.05, against mclogit’s 100%, so its coverage in
+  that cell describes only those 63.3%. And mclogit’s RMSE is lower in
+  four of the six regimes.
+- The two methods fail differently rather than one dominating. PQL
+  always converges, shrinks, and does not say so. The Laplace
+  approximation means what its intervals claim and declines more often.
+  Declining loudly is the intent, but it is still a cost.
+
 ### What the imputation ablation says
 
 - Five methods across six designs, scored on reconstruction AND on
@@ -743,12 +1280,17 @@ example that had been in the package, working, for months.
 
 ### Documentation
 
-- Nine vignettes. `workflow` is new and is the map: eleven stages from a
-  power calculation through to reporting, with scenario projection at
+- Twelve vignettes. `workflow` is new and is the map: eleven stages from
+  a power calculation through to reporting, with scenario projection at
   stage 10. The introduction is now an orientation rather than a
   tutorial, and the modelling material it used to carry has become
   `regression-models`. Also new: `profiling`, `anomaly-detection`,
-  `missing-data`, `effect-size-and-power`.
+  `missing-data`, `effect-size-and-power`, `anova`, `moderation`, and
+  `benchmarking`, which is the evidence – what was measured, against
+  what, and where illume comes off worse.
+- `regression-models` now opens with why the multinomial mixed model is
+  fitted the way it is, against `mclogit` and `brms`, with the results
+  that go against illume beside the ones that do not.
 
 ## illume 0.0.6.9000
 

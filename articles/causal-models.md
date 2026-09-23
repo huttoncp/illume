@@ -168,7 +168,7 @@ fit <- ilm_dag_model(g, d)
 #>   1 minimal adjustment set:
 #>     {severity}
 #> [4/6] response and error structure
-#>   `recovery` looks continuous -> family "gaussian"
+#>   `recovery`: continuous values from -3.58 to 4.25 -> family "gaussian"
 #>   no grouping structure found outside the graph
 #> [5/6] fitting 1 model (the mean structure is fixed by the graph)
 #>   set 1 of 1: recovery ~ treatment + severity
@@ -303,7 +303,7 @@ did <- ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
 #>   treatment starts at time = 5
 #>   4 pre-treatment periods
 #> [2/5] response
-#>   `y` looks continuous -> family "gaussian"
+#>   `y`: continuous values from -2.98 to 7.76 -> family "gaussian"
 #> [3/5] estimate
 #>   ATT = 1.0617  (0.6160, 1.5075)  p = <1e-04
 #> [4/5] parallel trends, before treatment
@@ -411,7 +411,7 @@ rd <- ilm_rdd(data.frame(run = run, score = score), "score", "run", cutoff = 0)
 #> [1/6] design
 #>   2000 rows: 994 below the cutoff, 1006 at or above
 #> [2/6] response and bandwidth
-#>   `score` looks continuous -> family "gaussian"
+#>   `score`: continuous values from -2.01 to 2.92 -> family "gaussian"
 #>   bandwidth 0.2352 (rule of thumb -- a starting point, not an optimum;
 #>     see $bandwidth, and rdrobust for a chosen one)
 #> [3/6] estimate

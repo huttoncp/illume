@@ -159,8 +159,7 @@ is the remedy.
 
 ilm_check_missing(d, y ~ x + z)
 im <- ilm_impute(d, m = 20)                  # chained equations by default
-fits <- lapply(im$imputations, function(z) ilm_model(y ~ x + z, data = z))
-ilm_mi_pool(fits)                            # Rubin's rules
+ilm_mi_pool(im, y ~ x + z)                   # fit each; Rubin's rules
 ```
 
 `method = "glrm"` imputes categorical columns as categories;
@@ -356,7 +355,8 @@ ilm_interpret(fit)
 | *Regression models* | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
 | *Exploring data* | descriptives, plots, bootstrap intervals |
 | *Profiling* | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md) |
-| *Anomaly detection* | [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) against [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md) |
+| *Anomaly detection* | [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) against [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md); [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md) to see whether the flagged rows stand apart |
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md), [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md) |
+| *Moderation* | [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md), [`ilm_plot_moderation()`](https://huttoncp.github.io/illume/reference/ilm_plot_moderation.md) |

@@ -12,11 +12,14 @@ row is far from the structure the columns share.
 ilm_anomaly(
   data,
   cols = NULL,
+  method = c("reconstruction", "iforest"),
   rank = NULL,
   trim = 0.25,
+  ntrees = 500L,
   B = 39L,
   alpha = 0.05,
   seed = 1L,
+  keep_data = TRUE,
   progress = NULL
 )
 ```
@@ -31,9 +34,25 @@ ilm_anomaly(
 
   Columns to use; see
   [ilm_selection](https://huttoncp.github.io/illume/reference/ilm_selection.md).
-  Numeric columns only – the reconstruction is a projection, and a
-  category has no residual along a direction. Anything else is dropped
-  with a note.
+  Under the default method, numeric columns only – the reconstruction is
+  a projection, and a category has no residual along a direction.
+  Anything else is dropped with a note. `method = "iforest"` uses every
+  column.
+
+- method:
+
+  `"reconstruction"` (the default) or `"iforest"`. The reconstruction is
+  unbeaten at what it is for – against planted anomalies it scores 1.000
+  for an extreme value and 0.999 for a jointly-implausible numeric
+  combination – and it is the only one here with a calibrated null, so
+  it reports FDR-adjusted p-values. It is also blind to the categories:
+  0.771 when a category contradicts the numbers, and 0.505, a coin toss,
+  for a category pairing that never otherwise occurs. An isolation
+  forest splits on factors directly and reaches 0.964 and 0.886 on those
+  two, giving up little elsewhere (0.975, 0.950) – but it returns a
+  score with no null behind it, so `p` and `p_adj` are `NA` and `alpha`
+  becomes the share of rows you are calling anomalous rather than an
+  error rate being controlled. Needs the isotree package.
 
 - rank:
 
@@ -44,6 +63,10 @@ ilm_anomaly(
   Share of the worst-fitting rows held out of the fit. `0` fits every
   row, which lets the anomalies define the structure they are scored
   against.
+
+- ntrees:
+
+  Trees in the isolation forest. Ignored by the default method.
 
 - B:
 
@@ -60,6 +83,15 @@ ilm_anomaly(
 - seed:
 
   Random seed.
+
+- keep_data:
+
+  Keep the scanned data on the result, so that
+  [`ilm_anomalous()`](https://huttoncp.github.io/illume/reference/ilm_anomalous.md),
+  [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md),
+  [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
+  and the describe functions can take the object directly. Set `FALSE`
+  if the frame is large and you only want the scores.
 
 - progress:
 

@@ -17,7 +17,7 @@ ilm_model(formula, ...)
 ilm_model_formula(
   formula,
   data,
-  family = "gaussian",
+  family = "auto",
   re_struct = NULL,
   ar = NULL,
   weights = NULL,
@@ -56,6 +56,22 @@ ilm_model_formula(
   Response distribution: one of "gaussian", "binomial", "poisson",
   "nbinom", "beta", "multinomial", or one of the ordinal families. See
   [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md).
+  The default, `"auto"` (or `NULL`), reads the family off the response
+  and says which it chose and why: a factor with 2 levels, a logical or
+  a 0/1 variable is binomial; an unordered factor with 3 or more levels
+  is multinomial and an ordered one ordinal; whole numbers that reach
+  down to 0 or 1 are a count, and poisson; whole numbers that never come
+  near zero, such as a blood pressure, are read as a measurement, and
+  gaussian; values strictly between 0 and 1 are beta; anything else
+  numeric is gaussian, as is a response censored at a floor or a
+  ceiling. Where the response cannot settle it – a proportion that
+  touches 0 or 1 or comes with weights, a numeric variable with two
+  values other than 0 and 1, a survival time, a date – the fit stops and
+  asks rather than guessing. The choice is a starting point, not a
+  verdict: counts are often overdispersed (`"nbinom"`), and ratings on a
+  short scale are often better read as ordinal. The chosen family is
+  written into `fit$call`, so a refit uses it rather than guessing
+  again.
 
 - re_struct:
 

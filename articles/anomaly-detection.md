@@ -15,7 +15,7 @@ asks whether a **value** is extreme for its own column.
 
 ``` r
 
-ilm_outliers(d, "height")
+ilm_outliers(d$height)
 ilm_outliers_all(d)            # every column at once
 ```
 
@@ -122,6 +122,76 @@ fall much below `1 / B`. At `B = 19` a lone anomaly among 300 rows could
 not be flagged however extreme it was, and the function says so rather
 than returning an empty list.
 
+## Seeing the scan
+
+A ranked table cannot say the one thing that decides what to do next:
+whether the flagged rows **stand apart** from the rest, or are only the
+top few percent of a smooth continuum that the threshold happened to
+cut. Five genuine outliers and the upper tail of a heavy-tailed column
+can produce the same list.
+[`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md)
+shows the difference, four ways:
+
+``` r
+
+ilm_plot_anomaly(r)                    # scores against rank, and the reference
+ilm_plot_anomaly(r, "drivers")         # which column drives the flags
+ilm_plot_anomaly(r, "map")             # where the flagged rows sit
+ilm_plot_anomaly(r, "row", row = 17)   # one row, column by column
+```
+
+**Scores.** Every row’s score against its rank, with a line at the
+number flagged and the band the scan simulated: where 95% of datasets
+with the same structure and no anomalies put the score at each rank.
+Genuine outliers are a few points well above the band, after which the
+curve drops back into it. A continuum has no break, and the plot says
+so. The choice then is to say plainly that you are reporting a fixed
+share of the rows, or to treat the tail as structure and look for it
+with
+[`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md).
+
+The band **restarts at the line**, and the step is deliberate. Setting
+the flagged rows aside moves every other row up that many ranks, so
+against the band as simulated a perfectly clean remainder scores too
+high for a long stretch. Over 60 scans with 2% planted anomalies, 0.69
+of the ranks after the line sat above that band – not far short of the
+0.82 to 1.00 of noise that genuinely has heavy tails, which is the
+confusion the plot exists to prevent. Right of the line the band is the
+reference for the unflagged rows on their own.
+
+The verdict is a reading of that band, not a test. With planted
+anomalies it said the flagged rows stand clear in 89 and 97 scans of 100
+and never said there was no break; with t-distributed noise it said
+there was no break in between half and two thirds of the scans that
+flagged anything. Nothing is read off the band when nothing is flagged,
+because it inherits the reference’s slightly light upper tail – the same
+thing
+[`?ilm_anomaly`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
+reports as the raw p-value running hot.
+
+**Drivers.** How many flagged rows each column drives, beside what the
+drivers of the other rows would predict. One column driving nearly every
+flag is usually a problem *in* that column – a unit, a sentinel code, a
+misplaced decimal – rather than in how the columns combine.
+
+**Map.** The rows on the first two dimensions of
+[`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md),
+the flagged ones in red and sized by score. A reconstruction anomaly is
+odd *off* the main dimensions, so it need not sit at the edge of this
+map: the view shows whether the flagged rows are alike, not whether they
+are extreme.
+
+**Row.** One row’s z-scores beside its residuals, each residual divided
+by its column’s typical residual so that 3 means unusual on both. A
+small \|z\| beside a large residual is a row that is odd only as a
+combination – the case the reconstruction exists for, and the one a
+column-at-a-time scan cannot see.
+
+An isolation forest has no null behind its score, so its `"scores"` view
+has no band and labels its line as the share you chose to call
+anomalous; its `"row"` view needs a fitted structure and is not
+available.
+
 ## What it cannot do
 
 When a large share of rows depart along the **same** direction, they are
@@ -149,6 +219,7 @@ real effects get removed, and the print says so every time.
 ## See also
 
 [`?ilm_anomaly`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md),
+[`?ilm_plot_anomaly`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md),
 [`?ilm_outliers`](https://huttoncp.github.io/illume/reference/ilm_outliers.md),
 [`vignette("profiling")`](https://huttoncp.github.io/illume/articles/profiling.md)
 for the dimension reduction underneath, and

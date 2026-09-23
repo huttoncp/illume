@@ -40,6 +40,7 @@ An object of class `"ilm_cluster_na"`, which is also an `"ilm_cluster"`.
 ``` r
 cl <- ilm_cluster_na(ilm_reduce_na(airquality), k_max = 4, B = 25, seed = 1)
 #> ilm_reduce_na(): dropping column(s) whose missingness never varies (always or never missing): Wind, Temp, Month, Day
+#> Warning: k was chosen as 4, which is the largest value searched. The curve had not turned, so this is where the search stopped rather than where the evidence pointed. Raise `k_max`, or set `k` from what the design says. On mixed data a selector can also lock onto the number of category combinations rather than the number of clusters; plot(x) shows the gap curve.
 cl
 #> <ilm_cluster_na> method = kmeans, k = 4 (chosen by gap statistic)
 #> 

@@ -1,6 +1,6 @@
 # illume
 
-**Exploration and frequentist inference in one toolkit.**
+**A Unified Engine for Exploration and Frequentist Inference.**
 
 `illume` is an analysis workflow for R aimed at **inference** rather
 than prediction. It covers the path from a sample-size calculation,
@@ -95,7 +95,7 @@ package.
 | **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
 | **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md), [`ilm_boot_ci()`](https://huttoncp.github.io/illume/reference/ilm_boot_ci.md) |
 | **ANOVA** | [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
-| **Exploration** | [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md), [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) |
+| **Exploration** | [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md), [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) and [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md) |
 | **Structure** | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md), [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md) |
 | **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md), [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
@@ -134,6 +134,12 @@ last row is the caveat that travels with the result: mclogit’s RMSE is
 for the bias. For prediction that is a defensible trade; for a
 coefficient you intend to interpret it is not.
 
+On data that misbehave – a sparse category, a variance at its boundary,
+lopsided clusters, random effects that are not normal – the comparison
+is less tidy, and not all of it favours illume.
+[`vignette("benchmarking")`](https://huttoncp.github.io/illume/articles/benchmarking.md)
+has the whole account, the results against illume included.
+
 ## How it is validated
 
 Every claim in the documentation is a measurement. The
@@ -149,8 +155,13 @@ study:
 | `power` | closed form where one exists | 13 designs |
 | `bench` | `lme4`, `glmmTMB`, `nlme`, `survreg` | agreement and timing |
 | `mclogit` | `mclogit::mblogit` | the table above |
+| `messy` | `mclogit::mblogit`, on data that misbehave | coverage, bias, RMSE and convergence in six regimes |
 | `brms` | `brms` | the Bayesian comparison |
 | `imputation` | 5 methods over 6 designs | reconstruction *and* downstream coverage |
+
+[`vignette("benchmarking")`](https://huttoncp.github.io/illume/articles/benchmarking.md)
+collects them, with the results that go against illume stated as plainly
+as the ones that do not.
 
 Individual features are checked against outside implementations rather
 than against expectations: `emmeans`, `pscl`, `ordinal`, `sandwich`,
@@ -181,6 +192,7 @@ parameters::model_parameters(fit)
 | Vignette | Covers |
 |----|----|
 | `workflow` | the whole path, eleven stages |
+| `benchmarking` | what was measured, against what, and where illume comes off worse |
 | `regression-models` | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
 | `exploring-data` | descriptives, plots, bootstrap intervals |
 | `profiling` | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md) |
@@ -188,6 +200,7 @@ parameters::model_parameters(fit)
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power, scenario projection |
+| `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, for a psychology audience |
 
 ``` r
@@ -198,8 +211,8 @@ vignette("workflow", package = "illume")
 ## How this package was built
 
 `illume` was developed in collaboration with [Claude Opus
-5](https://www.anthropic.com), run at maximum reasoning effort, under a
-human-in-the-loop model. The division of labour was consistent
+5.5](https://www.anthropic.com), run at maximum reasoning effort, under
+a human-in-the-loop model. The division of labour was consistent
 throughout and is worth stating plainly rather than leaving to be
 inferred.
 

@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Exploration and frequentist inference in one toolkit • illume</title>
+<title>A Unified Engine for Exploration and Frequentist Inference • illume</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Exploration and frequentist inference in one toolkit">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="A Unified Engine for Exploration and Frequentist Inference">
 <meta name="description" content="A frequentist regression workflow built around inference rather than prediction, together with the exploratory steps that precede it. One engine fits gaussian, binomial, Poisson, negative binomial, multinomial, beta, ordinal, zero-inflated, hurdle and accelerated failure time models by approximate maximum likelihood using the Laplace approximation via RTMB, with lme4-style formulas supporting crossed and nested random intercepts and slopes, penalised smooth terms via mgcv, non-constant dispersion, censoring, and AR(1) or CAR(1) correlation. Because one engine fits them all, every model shares a single object, a single set of methods, and a single diagnostic system that reports whether each assumption is consistent with the data, with a stated reason and a suggested remedy when it is not. Variance components may be estimated by maximum likelihood or by restricted maximum likelihood, and Satterthwaite or Kenward-Roger denominator degrees of freedom turn a mixed models large-sample test into a finite-sample one. Inference extends to cluster-robust standard errors, complex survey designs, instrumental variables, causal mediation, estimated marginal means and contrasts, marginal slopes for taking an interaction with a continuous predictor apart, effect sizes on each familys own scale, scenario projection, and a-priori power by simulation. A separate entry point specifies factorial and repeated-measures designs by naming the participant, the outcome and which factors vary between or within participants, reporting F tests, generalized eta squared and sphericity corrections in the form those designs are usually reported in. The exploratory half covers description, outlier and multivariate anomaly detection, dimension reduction, clustering and profiling, and evaluation and imputation of missing values. Mixed models for nominal categorical outcomes are fitted by maximising the Laplace-approximated marginal likelihood rather than by penalised quasi-likelihood. Methods of Kristensen, Nielsen, Berg, Skaug and Bell (2016) &lt;doi:10.18637/jss.v070.i05&gt; and Halekoh and Hojsgaard (2014) &lt;doi:10.18637/jss.v059.i09&gt;.">
 <meta property="og:description" content="A frequentist regression workflow built around inference rather than prediction, together with the exploratory steps that precede it. One engine fits gaussian, binomial, Poisson, negative binomial, multinomial, beta, ordinal, zero-inflated, hurdle and accelerated failure time models by approximate maximum likelihood using the Laplace approximation via RTMB, with lme4-style formulas supporting crossed and nested random intercepts and slopes, penalised smooth terms via mgcv, non-constant dispersion, censoring, and AR(1) or CAR(1) correlation. Because one engine fits them all, every model shares a single object, a single set of methods, and a single diagnostic system that reports whether each assumption is consistent with the data, with a stated reason and a suggested remedy when it is not. Variance components may be estimated by maximum likelihood or by restricted maximum likelihood, and Satterthwaite or Kenward-Roger denominator degrees of freedom turn a mixed models large-sample test into a finite-sample one. Inference extends to cluster-robust standard errors, complex survey designs, instrumental variables, causal mediation, estimated marginal means and contrasts, marginal slopes for taking an interaction with a continuous predictor apart, effect sizes on each familys own scale, scenario projection, and a-priori power by simulation. A separate entry point specifies factorial and repeated-measures designs by naming the participant, the outcome and which factors vary between or within participants, reporting F tests, generalized eta squared and sphericity corrections in the form those designs are usually reported in. The exploratory half covers description, outlier and multivariate anomaly detection, dimension reduction, clustering and profiling, and evaluation and imputation of missing values. Mixed models for nominal categorical outcomes are fitted by maximising the Laplace-approximated marginal likelihood rather than by penalised quasi-likelihood. Methods of Kristensen, Nielsen, Berg, Skaug and Bell (2016) &lt;doi:10.18637/jss.v070.i05&gt; and Halekoh and Hojsgaard (2014) &lt;doi:10.18637/jss.v059.i09&gt;.">
 </head>
@@ -37,12 +37,14 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -68,7 +70,7 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="illume">illume<a class="anchor" aria-label="anchor" href="#illume"></a>
 </h1></div>
-<p><strong>Exploration and frequentist inference in one toolkit.</strong></p>
+<p><strong>A Unified Engine for Exploration and Frequentist Inference.</strong></p>
 <p><code>illume</code> is an analysis workflow for R aimed at <strong>inference</strong> rather than prediction. It covers the path from a sample-size calculation, through exploration and missing data, to a model, its diagnostics, and a scenario a stakeholder can act on – with one object and one vocabulary the whole way.</p>
 <blockquote>
 <p>Not on CRAN yet. This is pre-release software under active development.</p>
@@ -158,7 +160,7 @@
 <tr>
 <td><strong>Exploration</strong></td>
 <td>
-<code><a href="reference/ilm_describe_all.html">ilm_describe_all()</a></code>, fifteen <code>ilm_plot_*()</code> functions, <code><a href="reference/ilm_outliers.html">ilm_outliers()</a></code>, <code><a href="reference/ilm_anomaly.html">ilm_anomaly()</a></code>
+<code><a href="reference/ilm_describe_all.html">ilm_describe_all()</a></code>, fifteen <code>ilm_plot_*()</code> functions, <code><a href="reference/ilm_outliers.html">ilm_outliers()</a></code>, <code><a href="reference/ilm_anomaly.html">ilm_anomaly()</a></code> and <code><a href="reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code>
 </td>
 </tr>
 <tr>
@@ -203,6 +205,7 @@
     attenuation           1.004     0.731      &lt;- 27% shrunk toward zero
     RMSE                  0.409     0.336      &lt;- mclogit wins here</code></pre>
 <p>With well-populated clusters the two agree. PQL degrades where the clusters are small, and its standard errors do not know it – the interval is centred in the wrong place at close to the right width. The last row is the caveat that travels with the result: mclogit’s RMSE is <em>lower</em>, because shrinkage buys a variance reduction that more than pays for the bias. For prediction that is a defensible trade; for a coefficient you intend to interpret it is not.</p>
+<p>On data that misbehave – a sparse category, a variance at its boundary, lopsided clusters, random effects that are not normal – the comparison is less tidy, and not all of it favours illume. <code><a href="articles/benchmarking.html">vignette("benchmarking")</a></code> has the whole account, the results against illume included.</p>
 </div>
 <div class="section level2">
 <h2 id="how-it-is-validated">How it is validated<a class="anchor" aria-label="anchor" href="#how-it-is-validated"></a>
@@ -250,6 +253,12 @@
 <td>the table above</td>
 </tr>
 <tr>
+<td><code>messy</code></td>
+<td>
+<code>mclogit::mblogit</code>, on data that misbehave</td>
+<td>coverage, bias, RMSE and convergence in six regimes</td>
+</tr>
+<tr>
 <td><code>brms</code></td>
 <td><code>brms</code></td>
 <td>the Bayesian comparison</td>
@@ -261,6 +270,7 @@
 </tr>
 </tbody>
 </table>
+<p><code><a href="articles/benchmarking.html">vignette("benchmarking")</a></code> collects them, with the results that go against illume stated as plainly as the ones that do not.</p>
 <p>Individual features are checked against outside implementations rather than against expectations: <code>emmeans</code>, <code>pscl</code>, <code>ordinal</code>, <code>sandwich</code>, <code>survey</code>, <code>glmmTMB</code>, closed-form 2SLS, and the SVD. <strong>Every real defect found in this package came from one of those comparisons, or from widening a simulation. None came from the test suite</strong> – which is worth knowing about test suites.</p>
 </div>
 <div class="section level2">
@@ -290,6 +300,10 @@
 <tr>
 <td><code>workflow</code></td>
 <td>the whole path, eleven stages</td>
+</tr>
+<tr>
+<td><code>benchmarking</code></td>
+<td>what was measured, against what, and where illume comes off worse</td>
 </tr>
 <tr>
 <td><code>regression-models</code></td>
@@ -323,6 +337,10 @@
 <td>effect sizes, power, scenario projection</td>
 </tr>
 <tr>
+<td><code>moderation</code></td>
+<td>whether an effect holds for everyone, without p-hacking the subgroups</td>
+</tr>
+<tr>
 <td><code>anova</code></td>
 <td>factorial and repeated-measures ANOVA, for a psychology audience</td>
 </tr>
@@ -334,7 +352,7 @@
 <div class="section level2">
 <h2 id="how-this-package-was-built">How this package was built<a class="anchor" aria-label="anchor" href="#how-this-package-was-built"></a>
 </h2>
-<p><code>illume</code> was developed in collaboration with <a href="https://www.anthropic.com" class="external-link">Claude Opus 5</a>, run at maximum reasoning effort, under a human-in-the-loop model. The division of labour was consistent throughout and is worth stating plainly rather than leaving to be inferred.</p>
+<p><code>illume</code> was developed in collaboration with <a href="https://www.anthropic.com" class="external-link">Claude Opus 5.5</a>, run at maximum reasoning effort, under a human-in-the-loop model. The division of labour was consistent throughout and is worth stating plainly rather than leaving to be inferred.</p>
 <p><strong>What the model did.</strong> Prototyped and drafted the implementation, the documentation and the simulation studies. Proposed designs, and argued for them when it thought a choice was wrong.</p>
 <p><strong>What the author did.</strong> Specified what the package should be and what it should refuse to do. Set the standing constraints – no new hard dependencies, every diagnostic names a remedy that exists in the package, no claim without a measurement behind it. Made the decisions the design turned on: which methods to include, which defaults to set, what to do when two defensible options existed. Directed the ordering of the work, and rejected proposals.</p>
 <p><strong>Status of independent review.</strong> The author is reviewing the package and testing it independently of the development process, and that work is <em>in progress at the time of writing</em>. It will be complete before any release, and this paragraph will say so when it is. Until then the package is pre-release and should be treated as such.</p>

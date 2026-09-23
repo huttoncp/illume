@@ -135,8 +135,12 @@ What the model says, on a scale someone can read.
   : Estimated marginal means
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   : Interpret a fitted model in words
+- [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md)
+  : Does the effect of X depend on something else?
 - [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
   : Parametric-bootstrap likelihood-ratio test
+- [`ilm_plot_moderation()`](https://huttoncp.github.io/illume/reference/ilm_plot_moderation.md)
+  : See a moderation
 - [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
   : Fixed effects with sandwich standard errors
 - [`ilm_rp_lrt()`](https://huttoncp.github.io/illume/reference/ilm_rp_lrt.md)
@@ -206,28 +210,36 @@ combination.
 
 - [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
   : Rows that do not fit the pattern the other rows make
+- [`ilm_anomalous()`](https://huttoncp.github.io/illume/reference/ilm_anomalous.md)
+  : The rows an anomaly scan flagged
+- [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md)
+  : See an anomaly scan
 - [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
   : Flag unusual values in a numeric vector
 - [`ilm_outliers_all()`](https://huttoncp.github.io/illume/reference/ilm_outliers_all.md)
   : Flag unusual values across a data frame
 
-## Structure: reduce, cluster, profile
+## Structure: profile, cluster, reduce
 
-The few directions a set of correlated columns shares, the groups in
-that space, and what distinguishes them.
+ilm_profile() is the front door: it reduces, clusters and describes the
+groups in one call, and handles mixed columns. The other two are the
+same pipeline taken a step at a time, for when you want the coordinates
+or the partition on their own.
 
-- [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
-  : Cluster observations, choosing the number of clusters
-- [`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md)
-  : Cluster observations by which values they are missing
-- [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
-  : A low-rank model with a loss chosen per column
 - [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
   : Profile a data set: reduce, cluster, and describe the clusters
-- [`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md)
-  : Profile which values are missing, and for whom
+- [`ilm_var_contrib()`](https://huttoncp.github.io/illume/reference/ilm_var_contrib.md)
+  : What each variable contributes to a clustering
+- [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
+  : Cluster observations, choosing the number of clusters
 - [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
   : Reduce a data frame's variables to a few dimensions
+- [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
+  : A low-rank model with a loss chosen per column
+- [`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md)
+  : Profile which values are missing, and for whom
+- [`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md)
+  : Cluster observations by which values they are missing
 - [`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
   : Reduce a data frame's missingness pattern to a few dimensions
 

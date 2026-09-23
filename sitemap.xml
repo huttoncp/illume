@@ -3,14 +3,17 @@
 <url><loc>https://huttoncp.github.io/illume/CODE_OF_CONDUCT.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/CONTRIBUTING.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/LICENSE-text.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/NEXT-SESSION.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/anomaly-detection.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/anova.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/articles/benchmarking.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/causal-models.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/effect-size-and-power.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/exploring-data.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/illume.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/index.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/missing-data.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/articles/moderation.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/profiling.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/regression-models.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/articles/workflow.html</loc></url>
@@ -25,6 +28,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/illume-package.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_adjust_sets.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_ame.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_anomalous.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_anomaly.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_anova.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_aov_ez.html</loc></url>
@@ -89,6 +93,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_mi_pool.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_model-accessors.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_model.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_moderation.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_outliers.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_outliers_all.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_pb_lrt.html</loc></url>
@@ -96,6 +101,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_acf.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_all.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_bar.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_boot_diff.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_box.html</loc></url>
@@ -108,6 +114,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_line.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_missing.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_model.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_moderation.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_na.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_na_all.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_profile.html</loc></url>
@@ -155,6 +162,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_thresholds.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_translate.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_trends.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_var_contrib.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_variogram.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_wash_df.html</loc></url>

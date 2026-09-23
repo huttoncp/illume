@@ -35,12 +35,14 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">The illume workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/benchmarking.html">Benchmarking and validation</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Modelling</h6></li>
     <li><a class="dropdown-item" href="../articles/regression-models.html">Regression models</a></li>
     <li><a class="dropdown-item" href="../articles/causal-models.html">Causal models: DAGs, difference in differences, regression discontinuity</a></li>
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
+    <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
     <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
@@ -227,7 +229,7 @@ is significant and means nothing.</p>
 <span><span class="co">#&gt;   1 minimal adjustment set:</span></span>
 <span><span class="co">#&gt;     {severity}</span></span>
 <span><span class="co">#&gt; [4/6] response and error structure</span></span>
-<span><span class="co">#&gt;   `recovery` looks continuous -&gt; family "gaussian"</span></span>
+<span><span class="co">#&gt;   `recovery`: continuous values from -3.58 to 4.25 -&gt; family "gaussian"</span></span>
 <span><span class="co">#&gt;   no grouping structure found outside the graph</span></span>
 <span><span class="co">#&gt; [5/6] fitting 1 model (the mean structure is fixed by the graph)</span></span>
 <span><span class="co">#&gt;   set 1 of 1: recovery ~ treatment + severity</span></span>
@@ -349,7 +351,7 @@ levels.</p>
 <span><span class="co">#&gt;   treatment starts at time = 5</span></span>
 <span><span class="co">#&gt;   4 pre-treatment periods</span></span>
 <span><span class="co">#&gt; [2/5] response</span></span>
-<span><span class="co">#&gt;   `y` looks continuous -&gt; family "gaussian"</span></span>
+<span><span class="co">#&gt;   `y`: continuous values from -2.98 to 7.76 -&gt; family "gaussian"</span></span>
 <span><span class="co">#&gt; [3/5] estimate</span></span>
 <span><span class="co">#&gt;   ATT = 1.0617  (0.6160, 1.5075)  p = &lt;1e-04</span></span>
 <span><span class="co">#&gt; [4/5] parallel trends, before treatment</span></span>
@@ -443,7 +445,7 @@ the effect.</p>
 <span><span class="co">#&gt; [1/6] design</span></span>
 <span><span class="co">#&gt;   2000 rows: 994 below the cutoff, 1006 at or above</span></span>
 <span><span class="co">#&gt; [2/6] response and bandwidth</span></span>
-<span><span class="co">#&gt;   `score` looks continuous -&gt; family "gaussian"</span></span>
+<span><span class="co">#&gt;   `score`: continuous values from -2.01 to 2.92 -&gt; family "gaussian"</span></span>
 <span><span class="co">#&gt;   bandwidth 0.2352 (rule of thumb -- a starting point, not an optimum;</span></span>
 <span><span class="co">#&gt;     see $bandwidth, and rdrobust for a chosen one)</span></span>
 <span><span class="co">#&gt; [3/6] estimate</span></span>

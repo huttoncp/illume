@@ -72,7 +72,8 @@ ilm_did(
 
 - family:
 
-  Response distribution; inferred from `y` when `NULL`.
+  Response distribution; inferred from `y` when `NULL`, by the same
+  rules as `ilm_model(family = "auto")`, and said.
 
 - ar:
 

@@ -45,7 +45,8 @@ ilm_dag_model(
 
 - family:
 
-  Response distribution. Inferred from the outcome when `NULL`, and the
+  Response distribution. Inferred from the outcome when `NULL` (or
+  `"auto"`), by the same rules as `ilm_model(family = "auto")`, and the
   inference is stated rather than assumed.
 
 - cluster:
