@@ -288,6 +288,8 @@ Dispersion model: ", deparse(o$disp_formula), "
       ilm_trust_note(intersect(o$hessian_held, at), at,
                      avoided = identical(o$boundary, "avoid"))
     }
+    if (nf + nw + nb)
+      cat("  ilm_remedies() writes out a remedy for each, as the change to make.\n")
   }
   invisible(x)
 }

@@ -39,3 +39,7 @@ f <- ilm_model(downtime ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
 ilm_check_zeros(f, B = 200)
 }
+\seealso{
+\code{\link[=ilm_remedies]{ilm_remedies()}}, given this result as \code{zeros}, writes the zero
+part out as the change to make.
+}

@@ -34,7 +34,7 @@ grp <- list(
 
   list("Diagnostics",
        "Each check reports whether an assumption is consistent with the data, and names a remedy that exists in this package when it is not.",
-       function(x) grepl("^ilm_(check_|appraise|rqr|binned|calibration|consistency|variogram|re_mahalanobis|scores)", x)),
+       function(x) grepl("^ilm_(check_|appraise|rqr|binned|calibration|consistency|variogram|re_mahalanobis|scores|remedies|apply_remedy)", x)),
 
   list("ANOVA",
        "Factorial and repeated-measures designs, specified by naming columns rather than by writing a formula with an error term.",

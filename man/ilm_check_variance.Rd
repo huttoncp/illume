@@ -40,7 +40,9 @@ script or a knitted document. See \link[illumex:ilm_progress_arg]{illumex::ilm_p
 }
 \value{
 Invisibly, a list with the observed statistics, their simulated
-nulls, p-values, a \code{status} and a suggested remedy.
+nulls, p-values, a \code{status}, a suggested remedy, and \code{by}: the column
+the groups were taken from, or \code{NA} when \code{by} was a vector or not given.
+Pass the list to \code{\link[=ilm_remedies]{ilm_remedies()}} to have the remedy written out.
 }
 \description{
 The assumption illume had no check for. Heteroscedasticity does not usually
