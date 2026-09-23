@@ -64,7 +64,7 @@ single-step studentized maximum: the contrasts' joint covariance is
 known exactly here, `C L V L' C'`, so the reference distribution is
 simulated from it directly rather than bootstrapped. This is the same
 construction
-[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
+[`illumex::ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
 uses on raw data, where it reproduced
 [`TukeyHSD()`](https://rdrr.io/r/stats/TukeyHSD.html) to 0.006 on the
 design Tukey is exact for.
@@ -76,7 +76,7 @@ to adjust and the column reads `"none"` whatever was asked.
 ## See also
 
 [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
-[`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
+[`illumex::ilm_boot_diff()`](https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html)
 for the same comparison made without a model.
 
 ## Examples

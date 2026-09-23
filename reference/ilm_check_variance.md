@@ -58,7 +58,7 @@ ilm_check_variance(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
+  [illumex::ilm_progress_arg](https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html).
 
 ## Value
 
@@ -91,6 +91,6 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 ilm_check_variance(f, B = 20, plot = FALSE)
 #> Warning: B = 20 puts the smallest achievable p-value at 0.048, so a FAIL verdict is unreachable. Use B >= 100.
-#> spread vs fitted: rho = 0.043, p = 0.4762
+#> spread vs fitted: rho = 0.043, p = 0.4118
 #> OK
 ```

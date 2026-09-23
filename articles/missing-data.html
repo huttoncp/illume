@@ -48,15 +48,11 @@
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
     <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
-    <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
-    <li><a class="dropdown-item" href="../articles/profiling.html">Profiling: reduce, cluster, characterise</a></li>
-    <li><a class="dropdown-item" href="../articles/anomaly-detection.html">Anomaly detection</a></li>
     <li><a class="dropdown-item" href="../articles/missing-data.html">Missing data</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
+<li class="nav-item"><a class="nav-link" href="https://huttoncp.github.io/illumex/">Exploration (illumex)</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -107,7 +103,7 @@ depends heavily on the predictors, which is weaker than
 missing-completely-at-random and much more often true. If it does,
 complete cases are biased and imputation is the remedy.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_missing.html">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">ilm_check_missing</a></span><span class="op">(</span><span class="va">d</span>, <span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span></code></pre></div>
 <p>This fits a model for being-missing on the outcome
 <strong>conditional on the predictors</strong>, rather than asking
 whether missingness and the outcome are marginally associated. The
@@ -196,11 +192,11 @@ the coverage decides.</p>
 looking at – which variables go missing together, and whether those
 groups of respondents differ.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_describe_na_all.html">ilm_describe_na_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>          <span class="co"># how much, and where</span></span>
-<span><span class="fu"><a href="../reference/ilm_plot_missing.html">ilm_plot_missing</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>             <span class="co"># the pattern</span></span>
-<span><span class="fu"><a href="../reference/ilm_reduce_na.html">ilm_reduce_na</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                <span class="co"># structure IN the missingness</span></span>
-<span><span class="fu"><a href="../reference/ilm_profile_na.html">ilm_profile_na</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>               <span class="co"># groups of respondents by what they skipped</span></span></code></pre></div>
-<p><code><a href="../reference/ilm_reduce_na.html">ilm_reduce_na()</a></code> runs the same dimension reduction on the
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_describe_na_all.html" class="external-link">ilm_describe_na_all</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>          <span class="co"># how much, and where</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_plot_missing.html" class="external-link">ilm_plot_missing</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>             <span class="co"># the pattern</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce_na.html" class="external-link">ilm_reduce_na</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>                <span class="co"># structure IN the missingness</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_profile_na.html" class="external-link">ilm_profile_na</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>               <span class="co"># groups of respondents by what they skipped</span></span></code></pre></div>
+<p><code><a href="https://rdrr.io/pkg/illumex/man/ilm_reduce_na.html" class="external-link">ilm_reduce_na()</a></code> runs the same dimension reduction on the
 missingness indicators rather than the values. A questionnaire where
 income and savings go missing together, and separately from the health
 block, has structure in its non-response that is worth knowing before
@@ -210,8 +206,8 @@ deciding what to do about it.</p>
 <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h2>
 <p><code><a href="../articles/workflow.html">vignette("workflow")</a></code> for where this sits,
-<code><a href="../reference/ilm_check_missing.html">?ilm_check_missing</a></code>, <code><a href="../reference/ilm_impute.html">?ilm_impute</a></code>,
-<code><a href="../reference/ilm_mi_pool.html">?ilm_mi_pool</a></code>, and <code><a href="../reference/ilm_glrm.html">?ilm_glrm</a></code> for the low-rank
+<code><a href="https://rdrr.io/pkg/illumex/man/ilm_check_missing.html" class="external-link">?ilm_check_missing</a></code>, <code><a href="../reference/ilm_impute.html">?ilm_impute</a></code>,
+<code><a href="../reference/ilm_mi_pool.html">?ilm_mi_pool</a></code>, and <code><a href="https://rdrr.io/pkg/illumex/man/ilm_glrm.html" class="external-link">?ilm_glrm</a></code> for the low-rank
 machinery underneath two of the three routes.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

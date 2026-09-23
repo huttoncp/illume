@@ -136,7 +136,7 @@ ilm_reduce_na(d)                # structure IN the missingness
 ilm_profile_na(d)               # groups of respondents by what they skipped
 ```
 
-[`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
+[`ilm_reduce_na()`](https://rdrr.io/pkg/illumex/man/ilm_reduce_na.html)
 runs the same dimension reduction on the missingness indicators rather
 than the values. A questionnaire where income and savings go missing
 together, and separately from the health block, has structure in its
@@ -146,9 +146,8 @@ non-response that is worth knowing before deciding what to do about it.
 
 [`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
 for where this sits,
-[`?ilm_check_missing`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md),
+[`?ilm_check_missing`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html),
 [`?ilm_impute`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
 [`?ilm_mi_pool`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md),
-and
-[`?ilm_glrm`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
-for the low-rank machinery underneath two of the three routes.
+and [`?ilm_glrm`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html) for the
+low-rank machinery underneath two of the three routes.

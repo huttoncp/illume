@@ -30,14 +30,10 @@ multiplicity adjustment."><meta property="og:image" content="https://huttoncp.gi
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
     <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
-    <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
-    <li><a class="dropdown-item" href="../articles/profiling.html">Profiling: reduce, cluster, characterise</a></li>
-    <li><a class="dropdown-item" href="../articles/anomaly-detection.html">Anomaly detection</a></li>
     <li><a class="dropdown-item" href="../articles/missing-data.html">Missing data</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
+<li class="nav-item"><a class="nav-link" href="https://huttoncp.github.io/illumex/">Exploration (illumex)</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -119,7 +115,7 @@ nominally 95% do not jointly cover at 95%. The default is the single-step
 studentized maximum: the contrasts' joint covariance is known exactly here,
 <code>C L V L' C'</code>, so the reference distribution is simulated from it directly
 rather than bootstrapped. This is the same construction
-<code><a href="ilm_boot_diff.html">ilm_boot_diff()</a></code> uses on raw data, where it reproduced <code><a href="https://rdrr.io/r/stats/TukeyHSD.html" class="external-link">TukeyHSD()</a></code> to
+<code><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html" class="external-link">illumex::ilm_boot_diff()</a></code> uses on raw data, where it reproduced <code><a href="https://rdrr.io/r/stats/TukeyHSD.html" class="external-link">TukeyHSD()</a></code> to
 0.006 on the design Tukey is exact for.</p>
 <p><code>"bonferroni"</code> is the conservative fallback and <code>"none"</code> is there for
 comparisons chosen in advance. With a single contrast there is nothing to
@@ -127,7 +123,7 @@ adjust and the column reads <code>"none"</code> whatever was asked.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="ilm_emmeans.html">ilm_emmeans()</a></code>, <code><a href="ilm_boot_diff.html">ilm_boot_diff()</a></code> for the same comparison made
+    <div class="dont-index"><p><code><a href="ilm_emmeans.html">ilm_emmeans()</a></code>, <code><a href="https://rdrr.io/pkg/illumex/man/ilm_boot_diff.html" class="external-link">illumex::ilm_boot_diff()</a></code> for the same comparison made
 without a model.</p></div>
     </div>
 

@@ -21,14 +21,5 @@
   measures](https://huttoncp.github.io/illume/articles/anova.md):
 - [Moderation: does the effect hold for
   everyone?](https://huttoncp.github.io/illume/articles/moderation.md):
-
-### Exploration
-
-- [Exploring data before you model
-  it](https://huttoncp.github.io/illume/articles/exploring-data.md):
-- [Profiling: reduce, cluster,
-  characterise](https://huttoncp.github.io/illume/articles/profiling.md):
-- [Anomaly
-  detection](https://huttoncp.github.io/illume/articles/anomaly-detection.md):
 - [Missing
   data](https://huttoncp.github.io/illume/articles/missing-data.md):

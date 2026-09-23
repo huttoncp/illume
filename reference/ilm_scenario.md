@@ -56,7 +56,7 @@ ilm_scenario(
 - progress:
 
   Show a progress bar; see
-  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
+  [illumex::ilm_progress_arg](https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html).
 
 ## Value
 

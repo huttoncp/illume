@@ -101,7 +101,7 @@ ilm_variogram(
   [`interactive()`](https://rdrr.io/r/base/interactive.html), so a bar
   appears when someone is watching and nothing is written in a script or
   a knitted document. See
-  [ilm_progress_arg](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md).
+  [illumex::ilm_progress_arg](https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html).
 
 ## Value
 

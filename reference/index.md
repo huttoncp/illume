@@ -76,8 +76,6 @@ and names a remedy that exists in this package when it is not.
   : Test whether residuals shift across a variable
 - [`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md)
   : Is the response more variable than the model allows?
-- [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md)
-  : What the missing values look like, and whether they matter
 - [`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md)
   : Screen variables the model does not use
 - [`ilm_check_predictive()`](https://huttoncp.github.io/illume/reference/ilm_check_predictive.md)
@@ -90,8 +88,6 @@ and names a remedy that exists in this package when it is not.
   : Are there more zeros than the model expects?
 - [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
   : Check whether the model can recover itself
-- [`ilm_gauss_check()`](https://huttoncp.github.io/illume/reference/ilm_gauss_check.md)
-  : How far a variable is from gaussian, and why
 - [`ilm_re_mahalanobis()`](https://huttoncp.github.io/illume/reference/ilm_re_mahalanobis.md)
   : Distances of the fitted random effects from zero
 - [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
@@ -119,10 +115,6 @@ What the model says, on a scale someone can read.
   : Average marginal effect on the response scale
 - [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
   : Analysis of deviance for fixed effects
-- [`ilm_boot_ci()`](https://huttoncp.github.io/illume/reference/ilm_boot_ci.md)
-  : Bootstrap confidence interval for a statistic
-- [`ilm_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_boot_diff.md)
-  : Bootstrap intervals for differences between groups
 - [`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md)
   : Coefficient table with Wald tests
 - [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
@@ -147,8 +139,6 @@ What the model says, on a scale someone can read.
   : Was the flexible baseline worth it?
 - [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
   : What the model says would happen under specified scenarios
-- [`ilm_translate()`](https://huttoncp.github.io/illume/reference/ilm_translate.md)
-  : Recode a variable against a dictionary held as two vectors
 - [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
   : Estimated marginal slopes
 - [`ilm_vcov_cluster()`](https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.md)
@@ -173,93 +163,15 @@ Before the data exist.
 - [`plot(`*`<ilm_power>`*`)`](https://huttoncp.github.io/illume/reference/plot.ilm_power.md)
   : Power curve
 
-## Describing data
-
-Descriptive statistics, counts, and the things that are wrong with a
-data frame before any model sees it.
-
-- [`ilm_copies()`](https://huttoncp.github.io/illume/reference/ilm_copies.md)
-  : Find copied or duplicated rows
-- [`ilm_counts()`](https://huttoncp.github.io/illume/reference/ilm_counts.md)
-  : Frequency counts of a vector's unique values
-- [`ilm_counts_all()`](https://huttoncp.github.io/illume/reference/ilm_counts_all.md)
-  : Frequency counts for every column
-- [`ilm_counts_tb()`](https://huttoncp.github.io/illume/reference/ilm_counts_tb.md)
-  : The most and least frequent values, side by side
-- [`ilm_counts_tb_all()`](https://huttoncp.github.io/illume/reference/ilm_counts_tb_all.md)
-  : Most and least frequent values for every column
-- [`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md)
-  : Class-aware description of one variable
-- [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md)
-  : Describe every column of a data frame
-- [`ilm_dupes()`](https://huttoncp.github.io/illume/reference/ilm_dupes.md)
-  : Duplicated rows only
-- [`ilm_frame_issues()`](https://huttoncp.github.io/illume/reference/ilm_frame_issues.md)
-  : Problems that belong to pairs of columns
-- [`ilm_recode_errors()`](https://huttoncp.github.io/illume/reference/ilm_recode_errors.md)
-  : Replace known-bad values with NA or another value
-- [`ilm_recode_errors_vec()`](https://huttoncp.github.io/illume/reference/ilm_recode_errors_vec.md)
-  : Replace known-bad values in a vector
-- [`ilm_wash_df()`](https://huttoncp.github.io/illume/reference/ilm_wash_df.md)
-  : Clean up a messy data frame
-
-## Outliers and anomalies
-
-A value extreme for its own column, against a row implausible as a
-combination.
-
-- [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md)
-  : Rows that do not fit the pattern the other rows make
-- [`ilm_anomalous()`](https://huttoncp.github.io/illume/reference/ilm_anomalous.md)
-  : The rows an anomaly scan flagged
-- [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md)
-  : See an anomaly scan
-- [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md)
-  : Flag unusual values in a numeric vector
-- [`ilm_outliers_all()`](https://huttoncp.github.io/illume/reference/ilm_outliers_all.md)
-  : Flag unusual values across a data frame
-
-## Structure: profile, cluster, reduce
-
-ilm_profile() is the front door: it reduces, clusters and describes the
-groups in one call, and handles mixed columns. The other two are the
-same pipeline taken a step at a time, for when you want the coordinates
-or the partition on their own.
-
-- [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md)
-  : Profile a data set: reduce, cluster, and describe the clusters
-- [`ilm_var_contrib()`](https://huttoncp.github.io/illume/reference/ilm_var_contrib.md)
-  : What each variable contributes to a clustering
-- [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md)
-  : Cluster observations, choosing the number of clusters
-- [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md)
-  : Reduce a data frame's variables to a few dimensions
-- [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md)
-  : A low-rank model with a loss chosen per column
-- [`ilm_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_profile_na.md)
-  : Profile which values are missing, and for whom
-- [`ilm_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_cluster_na.md)
-  : Cluster observations by which values they are missing
-- [`ilm_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_reduce_na.md)
-  : Reduce a data frame's missingness pattern to a few dimensions
-
 ## Missing data
 
-Diagnosing it, filling it in honestly, and pooling across the
-imputations.
+Filling it in honestly, and pooling across the imputations. Describing
+it is illumex’s: ilm_check_missing().
 
-- [`ilm_describe_na()`](https://huttoncp.github.io/illume/reference/ilm_describe_na.md)
-  : Missingness in one variable
-- [`ilm_describe_na_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_na_all.md)
-  : Missingness in every variable
 - [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)
   : Multiple imputation by chained equations
 - [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md)
   : Fit a model across imputations and pool the results
-- [`ilm_plot_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_na.md)
-  : Missing values in one column, across groups
-- [`ilm_plot_na_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_na_all.md)
-  : Missing values by column
 
 ## Causal models
 
@@ -280,83 +192,29 @@ A DAG, what it implies, and what it licenses you to say.
 
 ## Plots
 
-Built on tinyplot, named for what they show.
+Plots of a fitted model, built on tinyplot. Plots of the data themselves
+are illumex’s.
 
-- [`ilm_geom_spec()`](https://huttoncp.github.io/illume/reference/ilm_geom_spec.md)
-  : What each geom requires
-- [`ilm_pick_geom()`](https://huttoncp.github.io/illume/reference/ilm_pick_geom.md)
-  : Which geom would be drawn, and why
-- [`ilm_plot()`](https://huttoncp.github.io/illume/reference/ilm_plot.md)
-  : Adaptive plot of one or two variables
 - [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
   : Autocorrelation and partial-autocorrelation plots with verdicts
-- [`ilm_plot_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_all.md)
-  : Small multiples of every variable
-- [`ilm_plot_bar()`](https://huttoncp.github.io/illume/reference/ilm_plot_bar.md)
-  : Bar plot
-- [`ilm_plot_boot_diff()`](https://huttoncp.github.io/illume/reference/ilm_plot_boot_diff.md)
-  : The bootstrap distribution behind a group difference
-- [`ilm_plot_box()`](https://huttoncp.github.io/illume/reference/ilm_plot_box.md)
-  : Boxplot
-- [`ilm_plot_c()`](https://huttoncp.github.io/illume/reference/ilm_plot_c.md)
-  : Combine several plots into one figure
-- [`ilm_plot_cluster()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster.md)
-  [`ilm_plot_cluster_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster.md)
-  : Map the clusters
-- [`ilm_plot_cluster_gap()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster_gap.md)
-  [`ilm_plot_cluster_gap_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_cluster_gap.md)
-  : The gap statistic across every k considered
-- [`ilm_plot_density()`](https://huttoncp.github.io/illume/reference/ilm_plot_density.md)
-  : Density plot
 - [`ilm_plot_did()`](https://huttoncp.github.io/illume/reference/ilm_plot_did.md)
   : Event-study plot for a difference in differences
-- [`ilm_plot_histogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_histogram.md)
-  : Histogram
-- [`ilm_plot_line()`](https://huttoncp.github.io/illume/reference/ilm_plot_line.md)
-  : Line plot
-- [`ilm_plot_missing()`](https://huttoncp.github.io/illume/reference/ilm_plot_missing.md)
-  : Proportion missing, by variable
 - [`ilm_plot_model()`](https://huttoncp.github.io/illume/reference/ilm_plot_model.md)
   : Diagnostic and summary plots for a fitted model
-- [`ilm_plot_profile()`](https://huttoncp.github.io/illume/reference/ilm_plot_profile.md)
-  [`ilm_plot_profile_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_profile.md)
-  : Map the clusters from a profile
 - [`ilm_plot_rdd()`](https://huttoncp.github.io/illume/reference/ilm_plot_rdd.md)
   : Regression discontinuity plot
-- [`ilm_plot_reduce()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce.md)
-  [`ilm_plot_reduce_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce.md)
-  : Map the observations from a reduction
-- [`ilm_plot_reduce_contrib()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_contrib.md)
-  [`ilm_plot_reduce_contrib_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_contrib.md)
-  : Which variables a dimension is made of
-- [`ilm_plot_reduce_scree()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_scree.md)
-  [`ilm_plot_reduce_scree_na()`](https://huttoncp.github.io/illume/reference/ilm_plot_reduce_scree.md)
-  : Scree plot for a reduction
-- [`ilm_plot_scatter()`](https://huttoncp.github.io/illume/reference/ilm_plot_scatter.md)
-  : Scatter plot
-- [`ilm_plot_stat_error()`](https://huttoncp.github.io/illume/reference/ilm_plot_stat_error.md)
-  : Group means or medians with an error bar
 - [`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md)
   : Survival curve against the Kaplan-Meier estimate
-- [`ilm_plot_var()`](https://huttoncp.github.io/illume/reference/ilm_plot_var.md)
-  : Plot one or two variables, choosing the geometry
-- [`ilm_plot_var_all()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_all.md)
-  : Plot every column of a data frame
-- [`ilm_plot_var_pairs()`](https://huttoncp.github.io/illume/reference/ilm_plot_var_pairs.md)
-  : Pairwise plots
 - [`ilm_plot_variogram()`](https://huttoncp.github.io/illume/reference/ilm_plot_variogram.md)
   : Plot a residual variogram
-- [`ilm_plot_violin()`](https://huttoncp.github.io/illume/reference/ilm_plot_violin.md)
-  : Violin plot
 
 ## Simulation
 
-Data with a known structure, and draws from a fitted model.
+Draws from a fitted model. Example data with a known structure,
+ilm_sim(), is illumex’s.
 
 - [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)
   : Fitted category probabilities
-- [`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
-  : A simulated mixed-type dataset for testing and examples
 - [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
   : Simulate new outcomes from a fitted model
 - [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
@@ -415,10 +273,6 @@ on an illume fit.
 Documentation shared across functions, and methods you call by printing
 rather than by name.
 
-- [`ilm_progress_arg`](https://huttoncp.github.io/illume/reference/ilm_progress_arg.md)
-  : Progress reporting in illume
-- [`ilm_selection`](https://huttoncp.github.io/illume/reference/ilm_selection.md)
-  : How columns can be chosen
 - [`print(`*`<ilm_censor>`*`)`](https://huttoncp.github.io/illume/reference/print.ilm_censor.md)
   : Print a censoring specification
 - [`print(`*`<ilm_cor>`*`)`](https://huttoncp.github.io/illume/reference/print.ilm_cor.md)

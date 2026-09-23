@@ -32,14 +32,10 @@ what an inference package is for."><meta property="og:image" content="https://hu
     <li><a class="dropdown-item" href="../articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="../articles/anova.html">ANOVA: factorial and repeated measures</a></li>
     <li><a class="dropdown-item" href="../articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
-    <li><a class="dropdown-item" href="../articles/exploring-data.html">Exploring data before you model it</a></li>
-    <li><a class="dropdown-item" href="../articles/profiling.html">Profiling: reduce, cluster, characterise</a></li>
-    <li><a class="dropdown-item" href="../articles/anomaly-detection.html">Anomaly detection</a></li>
     <li><a class="dropdown-item" href="../articles/missing-data.html">Missing data</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
+<li class="nav-item"><a class="nav-link" href="https://huttoncp.github.io/illumex/">Exploration (illumex)</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -113,7 +109,7 @@ reachable.</p></dd>
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Show a progress bar. Defaults to <code><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive()</a></code>, so a
 bar appears when someone is watching and nothing is written in a
-script or a knitted document. See <a href="ilm_progress_arg.html">ilm_progress_arg</a>.</p></dd>
+script or a knitted document. See <a href="https://rdrr.io/pkg/illumex/man/ilm_progress_arg.html" class="external-link">illumex::ilm_progress_arg</a>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -140,12 +136,12 @@ than unevenly dispersed.</p></div>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_sim.html">ilm_sim</a></span><span class="op">(</span>n_id <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/illumex/man/ilm_sim.html" class="external-link">ilm_sim</a></span><span class="op">(</span>n_id <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">score</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span></span>
 <span class="r-in"><span>               verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ilm_check_variance</span><span class="op">(</span><span class="va">f</span>, B <span class="op">=</span> <span class="fl">20</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>B = 20 puts the smallest achievable p-value at 0.048, so a FAIL verdict is unreachable. Use B &gt;= 100.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> spread vs fitted: rho = 0.043, p = 0.4762</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> spread vs fitted: rho = 0.043, p = 0.4118</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> OK</span>
 </code></pre></div>
     </div>

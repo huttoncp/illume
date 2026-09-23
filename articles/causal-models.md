@@ -547,8 +547,8 @@ less plausible; none of it makes one true.
 
 [`vignette("regression-models")`](https://huttoncp.github.io/illume/articles/regression-models.md)
 for the modelling engine and its diagnostics,
-[`vignette("exploring-data")`](https://huttoncp.github.io/illume/articles/exploring-data.md)
-for the exploration side, and
+`vignette("exploring-data", package = "illumex")` for the exploration
+side, and
 [`vignette("effect-size-and-power")`](https://huttoncp.github.io/illume/articles/effect-size-and-power.md)
 for
 [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),

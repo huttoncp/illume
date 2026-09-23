@@ -81,11 +81,11 @@ package.
 | **Models** | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random effects, smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md) instrumental variables, [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md) difference in differences, [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md) regression discontinuity, [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md) complex samples |
 | **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
-| **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md), [`ilm_boot_ci()`](https://huttoncp.github.io/illume/reference/ilm_boot_ci.md) |
+| **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md), [`ilm_boot_ci()`](https://rdrr.io/pkg/illumex/man/ilm_boot_ci.html) |
 | **ANOVA** | [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns, with generalized eta squared and sphericity corrections |
-| **Exploration** | [`ilm_describe_all()`](https://huttoncp.github.io/illume/reference/ilm_describe_all.md), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://huttoncp.github.io/illume/reference/ilm_outliers.md), [`ilm_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_anomaly.md) and [`ilm_plot_anomaly()`](https://huttoncp.github.io/illume/reference/ilm_plot_anomaly.md) |
-| **Structure** | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md), [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md) |
-| **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md), [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) |
+| **Exploration** | [`ilm_describe_all()`](https://rdrr.io/pkg/illumex/man/ilm_describe_all.html), fifteen `ilm_plot_*()` functions, [`ilm_outliers()`](https://rdrr.io/pkg/illumex/man/ilm_outliers.html), [`ilm_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_anomaly.html) and [`ilm_plot_anomaly()`](https://rdrr.io/pkg/illumex/man/ilm_plot_anomaly.html) |
+| **Structure** | [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html), [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html), [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html), [`ilm_glrm()`](https://rdrr.io/pkg/illumex/man/ilm_glrm.html) |
+| **Missing data** | [`ilm_check_missing()`](https://rdrr.io/pkg/illumex/man/ilm_check_missing.html), [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
 | **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md), [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
 
@@ -170,14 +170,17 @@ each.
 | `workflow` | the whole path, stage by stage |
 | `benchmarking` | what was measured, against what, and where illume comes off worse |
 | `regression-models` | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) in depth, every family, mixed multinomial |
-| `exploring-data` | descriptives, plots, bootstrap intervals |
-| `profiling` | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md) |
-| `anomaly-detection` | rows that are implausible as combinations |
+| `exploring-data` (illumex) | descriptives, plots, bootstrap intervals |
+| `profiling` (illumex) | [`ilm_reduce()`](https://rdrr.io/pkg/illumex/man/ilm_reduce.html), [`ilm_cluster()`](https://rdrr.io/pkg/illumex/man/ilm_cluster.html), [`ilm_profile()`](https://rdrr.io/pkg/illumex/man/ilm_profile.html) |
+| `anomaly-detection` (illumex) | rows that are implausible as combinations |
 | `missing-data` | diagnosing it, imputing it, pooling |
 | `causal-models` | DAGs, difference in differences, discontinuities |
 | `effect-size-and-power` | effect sizes, power with or without a pilot, scenario projection |
 | `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
+
+The three marked (illumex) belong to `illumex`, the exploration package
+`illume` attaches: `vignette("exploring-data", package = "illumex")`.
 
 ## How this package was built
 
@@ -230,11 +233,11 @@ The exploratory half is a direct descendant of
 [`elucidate`](https://github.com/bcgov/elucidate), by the same author:
 `describe()`, `counts()`, `dupes()`, `wash_df()` and the `plot_*()`
 family are where
-[`ilm_describe()`](https://huttoncp.github.io/illume/reference/ilm_describe.md),
-[`ilm_counts()`](https://huttoncp.github.io/illume/reference/ilm_counts.md),
-[`ilm_dupes()`](https://huttoncp.github.io/illume/reference/ilm_dupes.md)
-and the rest came from, along with the idea that the routine work before
-a model should be one call with a consistent interface.
+[`ilm_describe()`](https://rdrr.io/pkg/illumex/man/ilm_describe.html),
+[`ilm_counts()`](https://rdrr.io/pkg/illumex/man/ilm_counts.html),
+[`ilm_dupes()`](https://rdrr.io/pkg/illumex/man/ilm_dupes.html) and the
+rest came from, along with the idea that the routine work before a model
+should be one call with a consistent interface.
 
 And some of it was read straight out of their source: the sphericity
 arithmetic from `car`, the generalized eta squared formula from `afex`,

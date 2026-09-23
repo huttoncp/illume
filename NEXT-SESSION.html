@@ -28,14 +28,10 @@
     <li><a class="dropdown-item" href="articles/effect-size-and-power.html">Effect size and power</a></li>
     <li><a class="dropdown-item" href="articles/anova.html">ANOVA: factorial and repeated measures</a></li>
     <li><a class="dropdown-item" href="articles/moderation.html">Moderation: does the effect hold for everyone?</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Exploration</h6></li>
-    <li><a class="dropdown-item" href="articles/exploring-data.html">Exploring data before you model it</a></li>
-    <li><a class="dropdown-item" href="articles/profiling.html">Profiling: reduce, cluster, characterise</a></li>
-    <li><a class="dropdown-item" href="articles/anomaly-detection.html">Anomaly detection</a></li>
     <li><a class="dropdown-item" href="articles/missing-data.html">Missing data</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
+<li class="nav-item"><a class="nav-link" href="https://huttoncp.github.io/illumex/">Exploration (illumex)</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/huttoncp/illume/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -91,6 +87,17 @@
 <div class="section level2">
 <h2 id="queue-in-craigs-stated-order">Queue, in Craig’s stated order<a class="anchor" aria-label="anchor" href="#queue-in-craigs-stated-order"></a></h2>
 <div class="section level3">
+<h3 id="id_0-agreed-on-2026-09-23-after-the-split-see-the-section-at-the-end">0. Agreed on 2026-09-23, after the split (see the section at the end)<a class="anchor" aria-label="anchor" href="#id_0-agreed-on-2026-09-23-after-the-split-see-the-section-at-the-end"></a></h3>
+<ol style="list-style-type: decimal"><li>
+<strong>Publishing the split – in progress.</strong> Craig created <code>https://github.com/huttoncp/illumex</code> (public, MIT licence commit) and asked for pull requests to review: one on illumex (the package), one on illume (the split). <strong>Merge illumex’s first</strong>: illume’s CI installs <code>Depends: illumex</code> through <code>Remotes: huttoncp/illumex</code>, i.e. from illumex’s <code>main</code>. Then enable GitHub Pages for illumex (gh-pages branch) as for illume.</li>
+<li>
+<strong>Remedies the code can act on.</strong> Each check’s remedy is free text in <code>suggestion</code> (<code>ilm_add_check()</code>, R/ilm_fit.R). Give each a structured action and a tier: numerical (always automatic), structural (automatic only if a plan allows: RE simplification at a boundary, dispersion model, negbin, ZI), estimand-changing (never automatic, only flagged: transforming y, splines, dropping predictors or outliers). Worth doing on its own merits.</li>
+<li>
+<strong>A design document for the conductor (<code>ilm_analysis()</code>)</strong>, to come back to when the package is more mature – not to build now. Its shape as agreed: a plan fixed before fitting (<code>ilm_plan()</code>: focal terms, which remedy tiers may run, follow-ups, multiplicity), fed by <code><a href="reference/ilm_scaffold.html">ilm_scaffold()</a></code>/<code><a href="reference/ilm_power.html">ilm_power()</a></code>; the actionable remedies above; a decision log plus a pre-specified-vs-final sensitivity table; <code>ilm_report()</code> writing a .qmd/.Rmd that holds the code for every step (HTML by default, PDF only with LaTeX); validation by simulation on the messy regimes before release. Rules that must survive: REML only for gaussian; follow-ups declared, not chosen by significance, and multiplicity-adjusted; on the DAG route only the exposure is causal (no Table 2 fallacy).</li>
+<li>
+<strong>Gaps, all worth filling</strong> (Craig agreed): Firth-type bias reduction for sparse multinomial categories; small-sample inference for GLMM Wald tests with few clusters; multinomial parity (cluster-robust SEs, <code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code>); the imputation argument on <code><a href="reference/ilm_model.html">ilm_model()</a></code> (5a below); unmeasured-confounding sensitivity (E-values) for <code><a href="reference/ilm_dag_model.html">ilm_dag_model()</a></code>; a reporting function.</li>
+</ol></div>
+<div class="section level3">
 <h3 id="id_1-messy-data-study-and-benchmarking-vignette--done-a7f5cdb-8986280">1. Messy-data study and benchmarking vignette – DONE (<code>a7f5cdb</code>, <code>8986280</code>)<a class="anchor" aria-label="anchor" href="#id_1-messy-data-study-and-benchmarking-vignette--done-a7f5cdb-8986280"></a></h3>
 <p>Including the three leftovers (the significance paraphrase in the regression-models vignette, README/intro cross-references to the benchmarking vignette, a <code>summarise_run.R</code> branch for the study).</p>
 <p><strong>The headline is not a clean win and the vignette says so.</strong> Do not let a later edit turn it into one. The boundary work below changed how many fits in the <code>flat_re</code> regime are <em>usable</em> (63.3% -&gt; 97.5%), but the study’s own tables still report what was measured at the time; the next run of <code>messy_compare.R</code> will count fits the new way.</p>
@@ -139,7 +146,7 @@
 </div>
 <div class="section level2">
 <h2 id="what-the-2026-09-22-opus-55-session-did">What the 2026-09-22 (Opus 5.5) session did<a class="anchor" aria-label="anchor" href="#what-the-2026-09-22-opus-55-session-did"></a></h2>
-<p>Committed in <code>8986280</code>: <code><a href="reference/ilm_plot_anomaly.html">ilm_plot_anomaly()</a></code>; column names needing backticks work everywhere (mgcv stand-ins); one refit list for every refit (the ZI LRT chi-square 68.8 vs 0.02 defect); boundary fits keep usable fixed effects (63.3% -&gt; 97.5% in <code>flat_re</code>); per-category <code><a href="reference/ilm_ame.html">ilm_ame()</a></code>/<code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code>; <code>iml_*()</code> aliases (generated by <code>dev/make_iml_aliases.R</code>, enforced by a test); <code>family = "auto"</code>.</p>
+<p>Committed in <code>8986280</code>: <code>ilm_plot_anomaly()</code>; column names needing backticks work everywhere (mgcv stand-ins); one refit list for every refit (the ZI LRT chi-square 68.8 vs 0.02 defect); boundary fits keep usable fixed effects (63.3% -&gt; 97.5% in <code>flat_re</code>); per-category <code><a href="reference/ilm_ame.html">ilm_ame()</a></code>/<code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code>; <code>iml_*()</code> aliases (generated by <code>dev/make_iml_aliases.R</code>, enforced by a test); <code>family = "auto"</code>.</p>
 <p>After that commit, and committed since in <code>3f6e368</code>:</p>
 <ul><li>
 <strong>Power</strong>: <code><a href="reference/ilm_power.html">ilm_power()</a></code> refits through the fit’s own design (contrasts, zero part, dispersion, censoring, AR, rp all kept); counts the test the analysis reports (t/z, joint F/chi-square); multinomial and joint tests; matrix-normal RE draws; frequency weights; pre-fit design failures reported rather than counted. Scaffolds redraw the planned design per replicate, balanced by CELL; multinomial and ordinal scaffolds; latent-scale ICC. Validated: t-test power (0.387 vs 0.395 at n = 20), noncentral chi-square for multinomial, Superpower/simr (see the effect-size vignette).</li>
@@ -178,6 +185,26 @@
 <strong>tmb vs boundary is a coin toss for boundary fits.</strong> Whether TMB’s own Hessian is positive definite at a boundary decides whether the fixed effects’ SEs carry the covariance’s uncertainty (“tmb”) or are conditional on it (“boundary”, as lme4). The floor flipped 42 of 144 fits each way, and the SEs moved by up to 5% (10% in one). Worth deciding one rule.</li>
 <li>The pilot’s “usable” (convergence code 0) is stricter than illume’s <code>ok</code>, which grades code 8 with a small gradient WARN; the messy study should count fits the illume way when it is next run.</li>
 <li>blme’s <code>wishart(common.scale = FALSE)</code> fails inside blme (<code>repackageMerMod</code>, lme4 1.1.35.3); <code>common.scale = TRUE</code> plus a gamma(3) residual prior does not reproduce the same objective. Not worth more time.</li>
+</ul><hr></div>
+<div class="section level2">
+<h2 id="the-split-into-illume--illumex-2026-09-23">The split into illume + illumex (2026-09-23)<a class="anchor" aria-label="anchor" href="#the-split-into-illume--illumex-2026-09-23"></a></h2>
+<p>Craig’s decision, after asking what a split would move. The exploratory half is now <strong><code>illumex</code></strong>, a sibling folder: <code>...\AI experiments\illumex</code> (the name went illumeda -&gt; illumex mid-split; nothing of the first name survives). A full copy of illume from just before the split, <code>.git</code> included, is in <code>...\AI experiments\Illume-pre-split</code>.</p>
+<ul><li>
+<strong>The line</strong>: data in (illumex) against model in (illume). Measured with a call graph before it was drawn: nothing that moved fits or reads a model, and the one call across is <code><a href="reference/ilm_impute.html">ilm_impute()</a></code> -&gt; <code>ilm_glrm()</code> (imported by name). 65 of 147 exports moved (the 64 planned plus <code>ilm_sim()</code>), ~20% of the code.</li>
+<li>
+<strong>Wiring</strong>: illume <code>Depends: illumex</code>, so <code><a href="https://github.com/huttoncp/illume" class="external-link">library(illume)</a></code> gives both and nothing downstream changed. <code>Remotes: huttoncp/illumex</code> until illumex is on CRAN; that field must go before illume’s CRAN submission, and illumex must be accepted first.</li>
+<li>
+<strong>illumex must never depend on illume.</strong> Its vignettes mention illume code in <code>eval = FALSE</code> chunks and its docs name illume functions as <code>illume::f()</code> text, never as links. A circular Suggests was considered and rejected.</li>
+<li>
+<strong>Shared helpers are copied, not imported</strong>: <code>%||%</code>, <code>ilm_bq()</code>, <code>ilm_wrap()</code>, <code>ilm_progress()</code> and the four <code>ilm_pch*()</code> helpers. illume’s <code>tests/testthat/test-shared-helpers.R</code> fails if a copy drifts. The <code>ilm_progress_arg</code> help page lives in illumex only.</li>
+<li>
+<strong>Tests split by block</strong>, not by file: the imputation blocks of test-missing.R became illume’s test-impute.R, the model-plot blocks of test-boot-and-plots.R became test-model-plots.R, the GLRM-imputation block became test-impute-glrm.R, and the anomaly-vs-imputation rank comparison became test-anomaly-rank.R (reaching <code>illumex:::ilm_anom_rank</code>).</li>
+<li>
+<strong>Each package has its own</strong> <code>dev/make_iml_aliases.R</code>, <code>pkgdown/make_reference_index.R</code> (navbars link each site to the other), workflows (illumex’s has no TMB step), README, NEWS, CONTRIBUTING and AI disclosure (the “review in progress” paragraph copied unchanged – Craig’s to update).</li>
+<li>
+<strong>To work on illume locally, illumex has to be installed</strong> (<code>R CMD INSTALL ../illumex</code>, or <code>devtools::install("../illumex")</code>), since <code>load_all()</code> resolves <code>Depends</code>. A change to illumex needs reinstalling before illume sees it.</li>
+<li>illumex’s git history starts fresh, on top of the licence commit GitHub made when Craig created the repo; the moved files’ history stays in illume’s. Its <code>LICENSE</code> is the two-line form CRAN needs, and GitHub’s full MIT text is <code>LICENSE.md</code> (build-ignored).</li>
+<li>Both packages were installed into Craig’s main library after the split (with vignettes), so <code><a href="https://github.com/huttoncp/illume" class="external-link">library(illume)</a></code> there is the post-split version.</li>
 </ul></div>
 </div>
 

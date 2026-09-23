@@ -1,6 +1,6 @@
 # Variance inflation among fixed effects
 
-[`ilm_frame_issues()`](https://huttoncp.github.io/illume/reference/ilm_frame_issues.md)
+[`illumex::ilm_frame_issues()`](https://rdrr.io/pkg/illumex/man/ilm_frame_issues.html)
 catches pairs of columns that are nearly identical, but the case that
 actually breaks a model is a predictor collinear with a *combination* of
 the others, which no pairwise correlation reveals. That is what variance
@@ -42,7 +42,7 @@ Journal of the American Statistical Association, 87(417), 178-183.
 
 ## See also
 
-[`ilm_frame_issues()`](https://huttoncp.github.io/illume/reference/ilm_frame_issues.md)
+[`illumex::ilm_frame_issues()`](https://rdrr.io/pkg/illumex/man/ilm_frame_issues.html)
 for collinearity in the raw data.
 
 ## Examples
