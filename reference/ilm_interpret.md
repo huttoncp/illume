@@ -21,6 +21,19 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 
 # S3 method for class 'ilm_rdd'
 ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+
+# S3 method for class 'ilm_power'
+ilm_interpret(
+  object,
+  causal = NULL,
+  ame = FALSE,
+  digits = 2,
+  target = 0.8,
+  ...
+)
+
+# S3 method for class 'ilm_contrast'
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 ```
 
 ## Arguments
@@ -32,7 +45,14 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
   [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md)
   or
-  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md).
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md);
+  or the result of
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+  or
+  [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md),
+  which is written up as a power analysis, or of
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md),
+  written up as the comparisons it makes.
 
 - ...:
 
@@ -51,6 +71,10 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 - digits:
 
   Rounding.
+
+- target:
+
+  For a power analysis, the power a study is to reach.
 
 ## Value
 

@@ -78,7 +78,7 @@
 <div class="section level2">
 <h2 id="two-commitments">Two commitments<a class="anchor" aria-label="anchor" href="#two-commitments"></a>
 </h2>
-<p><strong>One engine fits everything.</strong> <code><a href="reference/ilm_model.html">ilm_model()</a></code> goes from a simple regression to a mixed model with smooths and correlated errors, across families from gaussian through counts, proportions, ordered and unordered categories, and survival times. All of them are fitted by approximate maximum likelihood using the Laplace approximation via <a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a>. Because a single engine fits them all, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="reference/ilm_anova.html">ilm_anova()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> and every diagnostic stay the same as the model gets harder.</p>
+<p><strong>One engine fits everything.</strong> <code><a href="reference/ilm_model.html">ilm_model()</a></code> goes from a simple regression to a mixed model with smooths and correlated errors, across families from gaussian through counts, proportions, ordered and unordered categories, and survival times. All of them are fitted by approximate maximum likelihood using the Laplace approximation via <a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a>. Because a single engine fits them all, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="reference/ilm_anova.html">ilm_anova()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> and every diagnostic stay the same as the model gets harder. Leave <code>family</code> off and it is read off the response, with the choice and the evidence for it stated; what the response cannot settle is asked about rather than guessed.</p>
 <p><strong>Every check names a remedy that exists in this package.</strong> A diagnostic that tells you an assumption fails and leaves you to find the fix elsewhere is a complaint, not a tool. <code><a href="reference/ilm_check_variance.html">ilm_check_variance()</a></code> names <code>dispformula</code>; <code><a href="reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> names <code>ziformula</code>; <code><a href="reference/ilm_check_proportional.html">ilm_check_proportional()</a></code> names <code>family = "multinomial"</code>. Where a remedy did not exist, it was built – which is most of what this package is.</p>
 </div>
 <div class="section level2">
@@ -184,7 +184,7 @@
 <tr>
 <td><strong>Design and decision</strong></td>
 <td>
-<code><a href="reference/ilm_power.html">ilm_power()</a></code>, <code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code>, <code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code>
+<code><a href="reference/ilm_power.html">ilm_power()</a></code> from a fit, <code><a href="reference/ilm_power_design.html">ilm_power_design()</a></code> and <code><a href="reference/ilm_scaffold.html">ilm_scaffold()</a></code> from assumptions alone – for every family, multinomial included, each simulated study analysed with the test the analysis will report; <code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code>, <code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code>
 </td>
 </tr>
 </tbody>

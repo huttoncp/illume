@@ -84,7 +84,10 @@ see what your assumptions actually imply before you rely on them.</p>
 <span>  within <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  contrasts <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  thresholds <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  reml <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -149,7 +152,11 @@ matrix. Defaults to zero.</p></dd>
 <dt id="arg-icc">icc<a class="anchor" aria-label="anchor" href="#arg-icc"></a></dt>
 <dd><p>Intraclass correlation, as an alternative to <code>re_sd</code> for a random
 intercept: the random-effect variance becomes <code>icc / (1 - icc)</code> times the
-residual variance.</p></dd>
+residual variance. A binomial or ordinal model has no residual variance of
+its own, and there <code>icc</code> is on the latent scale, by the usual convention:
+the residual variance is that of the standard logistic, <code>pi^2 / 3</code>, for a
+logit link and 1 for a probit (Snijders and Bosker 2012). A count or
+multinomial model has no such convention, and takes <code>re_sd</code>.</p></dd>
 
 
 <dt id="arg-within">within<a class="anchor" aria-label="anchor" href="#arg-within"></a></dt>
@@ -167,6 +174,24 @@ so the two always agree.</p></dd>
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical. Report what was built.</p></dd>
+
+
+<dt id="arg-categories">categories<a class="anchor" aria-label="anchor" href="#arg-categories"></a></dt>
+<dd><p>For a multinomial or ordinal outcome, its categories in
+order. Taken from the columns of <code>cells</code> when it has them.</p></dd>
+
+
+<dt id="arg-thresholds">thresholds<a class="anchor" aria-label="anchor" href="#arg-thresholds"></a></dt>
+<dd><p>For an ordinal outcome given by <code>coefs</code>, the <code>J - 1</code> cut
+points on the latent scale, increasing.</p></dd>
+
+
+<dt id="arg-reml">reml<a class="anchor" aria-label="anchor" href="#arg-reml"></a></dt>
+<dd><p>Plan for an analysis fitted by restricted maximum likelihood,
+as <code>ilm_model(reml = TRUE)</code> fits one: every simulated study is then
+refitted by REML. For a gaussian mixed model that is the analysis most
+software reports, and its power is a little lower than that of the
+maximum-likelihood fit, whose variance components run small.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -192,6 +217,35 @@ names the term that is missing, rather than quietly fitting the closest
 thing it can.</p>
     </div>
     <div class="section level2">
+    <h2 id="a-categorical-outcome">A categorical outcome<a class="anchor" aria-label="anchor" href="#a-categorical-outcome"></a></h2>
+
+
+
+<p>For <code>family = "multinomial"</code> or an ordinal family, <code>cells</code> gives the
+PROBABILITY of each outcome category in each cell: a data frame with one
+column per design factor and one per category, or a matrix with the cell
+names as row names and the categories as column names. Each row sums to 1.
+The categories are taken from those columns, in their order; give
+<code>categories</code> to set it.</p>
+<p>For a multinomial model, <code>coefs</code> is a matrix with one row per model-matrix
+column and one column per category but the last – the layout
+<code><a href="fixef.ilm_model.html">fixef.ilm_model()</a></code> prints – or a vector named as <code><a href="coef.ilm_model.html">coef.ilm_model()</a></code> names
+them, <code>"treatment:armtreatment"</code>. The coding is sum-to-zero across
+categories, so a coefficient is that category's deviation from the average
+of all of them, and <code>categories</code> is needed to know what they are.</p>
+<p>For an ordinal model, <code>coefs</code> holds the slopes – there is no intercept, the
+thresholds take its place – and <code>thresholds</code> the <code>J - 1</code> increasing cut
+points on the latent scale. Cell probabilities have to be ones proportional
+odds can produce: the same shift at every cut point between two cells. If
+they are not, the call stops and says so, because an ordinal model cannot
+give the study that was described; <code>family = "multinomial"</code> can.</p>
+<p>A random intercept in a multinomial model is a random shift in each
+category's log-odds, and <code>re_sd</code> is its standard deviation. A shift common
+to all categories changes no probability, so the model carries the part of
+each that differs from the average – which is why a fitted multinomial's
+category standard deviations come out as <code>re_sd * sqrt(1 - 1/J)</code>.</p>
+    </div>
+    <div class="section level2">
     <h2 id="saying-how-big-the-study-is">Saying how big the study is<a class="anchor" aria-label="anchor" href="#saying-how-big-the-study-is"></a></h2>
 
 
@@ -212,6 +266,11 @@ naming.</p>
 its own size. They are not a property of your assumptions, and reading power
 off them would be reading one coin flip. That is what <code><a href="ilm_power.html">ilm_power()</a></code> is for:
 it refits many simulated studies and counts.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Snijders, T. A. B. and Bosker, R. J. (2012). <em>Multilevel
+Analysis</em>, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -247,6 +306,16 @@ it refits many simulated studies and counts.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    control post     12.2 1.064 10.116 14.28</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  treatment post     14.5 1.064 12.416 16.58</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Compare them with ilm_contrast().</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## a three-category outcome, stated as the probabilities in each arm</span></span></span>
+<span class="r-in"><span><span class="va">s3</span> <span class="op">&lt;-</span> <span class="fu">ilm_scaffold</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">arm</span>, design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   n_unit <span class="op">=</span> <span class="fl">200</span>, family <span class="op">=</span> <span class="st">"multinomial"</span>,</span></span>
+<span class="r-in"><span>                   cells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>control   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.5</span>, some <span class="op">=</span> <span class="fl">0.3</span>, full <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                 treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.35</span>, some <span class="op">=</span> <span class="fl">0.35</span>, full <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">s3</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  none:(Intercept) none:armtreatment  some:(Intercept) some:armtreatment </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        0.47570545       -0.42432189       -0.03512017        0.08650373 </span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

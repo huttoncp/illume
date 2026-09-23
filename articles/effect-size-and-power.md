@@ -70,6 +70,38 @@ the problem rather than something to smooth over. A design where a fifth
 of studies fail to fit is a design worth reconsidering, and averaging
 over only the successes hides exactly that.
 
+### The test it counts is the one you will report
+
+Each simulated study is analysed the way the real one will be. A model
+with nothing to integrate out reports exact t and F tests, so that is
+what is counted; anything else reports a Wald z, and a term with several
+coefficients – a factor with three levels, or any term of a multinomial
+model, which has one coefficient per category – is tested jointly, as
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
+tests it.
+
+``` r
+
+ilm_power(pilot, term = "dose")       # one coefficient: its z or t test
+ilm_power(pilot3, term = "arm")       # three arms: the joint test of both
+ilm_power(pilot3, term = "armB")      # or one comparison, named as a coefficient
+```
+
+It matters most where studies are small. Counting a z test where the
+analysis will use a t put the power of a 20-person two-arm trial at
+0.43, against an exact 0.395.
+
+For a joint test `effect` is a **multiple** of the assumed coefficients
+rather than a value for one of them: `effect = c(0.5, 1)` asks what
+happens if every part of the effect is half what was assumed.
+
+A study is also refitted as the same model – the contrasts, the zero
+part, the dispersion model, the censoring and a flexible survival
+baseline all come along, and serial correlation is simulated and
+refitted as itself. Each of those was once dropped, and a model with
+sum-to-zero contrasts came back with differently named coefficients and
+a power of exactly zero.
+
 ### Mixed designs
 
 For a model with a grouping factor, `n` is the number of rows but the
@@ -77,7 +109,9 @@ number of **clusters** moves with it, because that is what a mixed
 design’s power actually depends on. Resampling rows would hold the
 number of groups fixed while n grew, which is the wrong thing to hold
 fixed. A cluster drawn twice becomes two clusters, or the design has
-fewer independent groups than it appears to.
+fewer independent groups than it appears to – and so do the classes
+inside a school drawn twice, while items that every participant saw keep
+their labels, because new participants do not bring new items.
 
 A random **slope** is drawn as a random slope, not as an intercept
 shift. A `(1 + time | id)` design whose participants were all given the
@@ -121,7 +155,8 @@ s <- ilm_scaffold(change ~ arm * time + (1 | id), design = d,
 #>                     4
 #>
 #>   residual sd : 6
-#>   id sd     : 6
+#>   id sd       : 6
+#>   total sd    : 8.485   <- the outcome's own spread; `sd` above is the residual
 ```
 
 `n_unit` counts participants, not rows, so the number you give is the
@@ -169,18 +204,25 @@ pw <- ilm_power_design(change ~ arm * time + (1 | id), design = d,
                        within = "time", n_unit = c(60, 120, 240, 400),
                        cells = cells, sd = 6, icc = 0.5,
                        term = "arm:time", sims = 300)
+#> Simulated power for armtreatment:timepost (gaussian family, alpha = 0.05)
+#>   counting the Wald z test, as the analysis reports it
+#>   300 replicates per cell; the scaffold's own grid had 800 rows
+#>   each replicate is a fresh draw of the planned design: balanced
+#>   allocation, new participants
 #>  n_unit   n effect power mc_lower mc_upper power_converged converged
-#>      60 120      4 0.470    0.414    0.526           0.470         1
-#>     120 240      4 0.700    0.646    0.749           0.700         1
-#>     240 480      4 0.967    0.940    0.982           0.967         1
-#>     400 800      4 1.000    0.987    1.000           1.000         1
+#>      60 120      4 0.490    0.434    0.546           0.490         1
+#>     120 240      4 0.747    0.695    0.793           0.747         1
+#>     240 480      4 0.957    0.927    0.975           0.957         1
+#>     400 800      4 0.983    0.962    0.993           0.983         1
 
 ilm_power_n(pw, target = 0.8)
-#>  effect   n  n_lower n_upper n_unit n_unit_lower n_unit_upper
-#>       4 330 292.5298 365.872    165     146.2649      182.936
+#>  effect   n n_lower n_upper n_unit n_unit_lower n_unit_upper
+#>       4 301   249.8   348.7  150.5        124.9        174.4
 ```
 
-Read `n_unit`, not `n`: 165 participants measured twice, not 330 people.
+Read `n_unit`, not `n`: about 150 participants measured twice –
+somewhere between 125 and 175, given the Monte Carlo error – not 300
+people. `ilm_interpret(pw)` writes the same thing out in sentences.
 
 The standard errors printed on a scaffold come from **one realisation**
 of the design at its own size. They are not a property of the
@@ -190,7 +232,7 @@ what
 is for.
 
 None of this makes an assumption true. It makes the assumption explicit,
-and separates “we need 165 participants” from the four numbers that
+and separates “we need 150 participants” from the four numbers that
 claim implies.
 
 ### `sd` is the residual standard deviation
@@ -220,26 +262,124 @@ With a random slope the total varies by row — the spread depends on
 where you are in the design — and it says that instead of printing a
 number true at one point only.
 
+### Every simulated study is a fresh draw of the plan
+
+A scaffold has no data to resample, so each replicate draws the planned
+design again at its own size: participants allocated to cells the way a
+protocol randomises a factorial – every combination of the
+between-participant factors equally often, and any remainder spread so
+each factor’s own levels stay balanced – and a covariate given as a
+function drawn afresh. Resampling the scaffold’s own grid instead, as
+this once did, left cells of a small factorial empty: 18 participants in
+a 3 x 3 design fitted 28.5% of the time, where the planned study, with
+two in every cell, always can.
+
+### A categorical outcome
+
+For a multinomial or ordinal outcome the assumption is the probability
+of each category in each cell, which is how it would be written in a
+protocol.
+
+``` r
+
+cells <- rbind(control   = c(none = 0.50, some = 0.30, full = 0.20),
+               treatment = c(none = 0.35, some = 0.35, full = 0.30))
+pw <- ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+                       n_unit = c(100, 200, 400), family = "multinomial",
+                       cells = cells, term = "arm", sims = 1000)
+#>  n_unit   n effect power mc_lower mc_upper power_converged converged
+#>     100 100      1 0.239    0.214    0.266           0.239         1
+#>     200 200      1 0.468    0.437    0.499           0.468         1
+#>     400 400      1 0.818    0.793    0.841           0.818         1
+```
+
+`arm` is tested across all its categories at once, and `effect` is a
+multiple of the assumed coefficients. Checked against the noncentral
+chi-square the asymptotic theory gives, the curve is 0.818 against 0.813
+at 400; at 100 and 200 it sits 3 to 4 points below theory (0.239 against
+0.272, 0.468 against 0.502), because the Wald test the analysis reports
+is itself a little conservative there – it rejected a true null 4.2% of
+the time at 100 and 4.5% at 200. A Pearson test of the 2 x 3 table would
+have more power at those sizes, and that is not the test a mixed-model
+analysis reports.
+
+An ordinal outcome can be stated the same way, or as slopes and
+`thresholds`. Probabilities no proportional-odds model can produce are
+refused, with the model that can produce them named:
+
+``` r
+
+bad <- rbind(control = c(lo = 0.38, mid = 0.35, hi = 0.27),
+             treatment = c(lo = 0.20, mid = 0.60, hi = 0.20))
+ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
+             n_unit = 150, family = "ordinal", cells = bad)
+#> Error: these cell probabilities are not ones proportional odds can produce:
+#> between cells, the cumulative log-odds shift by different amounts at
+#> different cut points (off by 0.322). An ordinal model would plan a
+#> different study from the one described. family = "multinomial" reproduces
+#> these probabilities exactly.
+```
+
+A random intercept in a multinomial model is a random shift in every
+category’s log-odds, and `re_sd` is its standard deviation. For a binary
+or ordinal outcome an `icc` works as it does for a gaussian one, on the
+latent scale, whose residual variance is that of the standard logistic,
+`pi^2 / 3`.
+
+### When the design itself fails a check
+
+Some checks the analysis makes are made *before* fitting, on the design,
+so every study drawn from it fails them alike. Counting that against
+each replicate would put the power at zero whatever the effect, so the
+result reports it instead – with the remedy the check itself names:
+
+``` r
+
+#>   The DESIGN fails a check the analysis makes before fitting, and
+#>   every analysis of such a study will report it as FAILED:
+#>     latent_budget: 2.00 observations per latent value (240 observations,
+#>       120 latent values: id 120)  (100% of the simulated studies)
+#>       try: ... term 'id' contributes 120 (us, width 2). rr(1) would cut it to 60
+```
+
+That one is a three-category multinomial with four visits per
+participant: a random intercept per category and participant leaves two
+observations for every value it has to estimate. The same design with
+eight visits does not fail it.
+
+With 60 participants the Wald test of the treatment effect in that
+design rejected a true null 5.8% of the time with four visits and 7.8%
+with eight, so the power reported is a little flattered, by the same
+amount. That is the test the analysis will report;
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
+is the calibrated alternative for the analysis itself.
+
 ### What it was checked against
 
 Simulated power is only as good as the simulation, so this was compared
 with three outside implementations on designs each could express.
 
-**`power.t.test`**, two-sample, effect 2.5 on sd 4:
+**`power.t.test`**, two-sample, effect 2.5 on sd 4, 2,000 replicates:
 
       participants     100      200      300
-      illume         0.858    0.995    1.000
+      illume         0.878    0.995    1.000
       closed form    0.872    0.993    1.000
 
-**`Superpower::ANOVA_exact()`** and **`simr::makeLmer()`** on a 2 (arm,
-between) × 2 (time, within) design with an ICC of 0.5. `simr` is the
-closest existing thing to a scaffold — it builds a model from `fixef`,
-`VarCorr` and `sigma` with nothing fitted — so it is the fairest
-comparison available:
+And where it matters most, at 20 participants with an effect of 0.8
+standard deviations: 0.387 (0.374 to 0.399 over 6,000 replicates)
+against the exact 0.395. Counting a z test there, as this once did, gave
+0.43.
 
-      n per arm   Superpower (exact)   simr (z)   simr (Satterthwaite)   illume
-         20             0.538            0.557           0.512           0.588
-         40             0.838            0.840           0.830           0.812
+**`Superpower::ANOVA_exact()`** and **`simr::makeLmer()`** on the 2
+(arm, between) × 2 (time, within) design above, cell means 20/21/20/25
+with `sd = 6` and an ICC of 0.5. `simr` is the closest existing thing to
+a scaffold — it builds a model from `fixef`, `VarCorr` and `sigma` with
+nothing fitted — so it is the fairest comparison available. `simr` 1,000
+replicates, illume 2,000:
+
+      n per arm   Superpower   simr (z)   simr (Satterthwaite)   illume (ML)   illume (REML)
+         20          0.306       0.329           0.302              0.358         0.342
+         40          0.549       0.552           0.545              0.583         0.572
 
 **`faux`**, which generates the data a completely different way, on a
 random slope design. Per-subject moments from 8,000 simulated
@@ -250,14 +390,25 @@ participants:
       faux              2.157        1.270       -0.432
       illume            2.156        1.273       -0.446
 
+Checked directly as well: the random effects drawn for 8,000 simulated
+groups have standard deviations 2.016 and 1.209 and a correlation of
+−0.413, against 2, 1.2 and −0.4 assumed.
+
 Two things worth taking from that. The agreement with `faux` to three
 decimals is the strongest evidence that random slopes are simulated
 correctly — they were not, until recently, and an independent generator
-is what settled it. And illume sits a little above Superpower’s exact
-calculation at the smaller sizes; so does `simr` with a z reference
-(0.557), and the difference between a z and a Satterthwaite reference is
-about 0.015 on this design. Expect gaps of that size when comparing
-against G\*Power or Superpower, in either direction.
+is what settled it.
+
+And illume sits above Superpower’s exact calculation, for two reasons
+that can be taken apart. It counts the test its analysis reports, and a
+mixed model’s default analysis is maximum likelihood with a z reference.
+Maximum likelihood’s variance components run small, which flatters the
+power by about 1.5 points here; `reml = TRUE` plans for a REML analysis
+instead, and brings illume within Monte Carlo error of `simr`, which
+uses REML too. What remains is z against an exact F: a Satterthwaite
+reference takes `simr` down to Superpower’s value. Expect gaps of that
+size when comparing against G\*Power or Superpower, and choose `reml` to
+match the analysis you will actually run.
 
 ## After: how large the effect
 

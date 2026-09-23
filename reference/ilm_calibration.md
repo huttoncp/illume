@@ -40,3 +40,7 @@ observed proportions per bin plus the simulated interval.
 The comparison band is simulated from the model itself rather than taken
 from a formula, so it reflects how much scatter is expected at this
 sample size.
+
+For a binomial, multinomial or ordinal fit – every family whose
+prediction is a probability for each category. An ordinal fit is checked
+category by category, from the probabilities its thresholds imply.

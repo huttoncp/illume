@@ -86,7 +86,10 @@ write in a protocol.</p>
 <span>  alpha <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  progress <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  thresholds <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  reml <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -150,7 +153,11 @@ matrix. Defaults to zero.</p></dd>
 <dt id="arg-icc">icc<a class="anchor" aria-label="anchor" href="#arg-icc"></a></dt>
 <dd><p>Intraclass correlation, as an alternative to <code>re_sd</code> for a random
 intercept: the random-effect variance becomes <code>icc / (1 - icc)</code> times the
-residual variance.</p></dd>
+residual variance. A binomial or ordinal model has no residual variance of
+its own, and there <code>icc</code> is on the latent scale, by the usual convention:
+the residual variance is that of the standard logistic, <code>pi^2 / 3</code>, for a
+logit link and 1 for a probit (Snijders and Bosker 2012). A count or
+multinomial model has no such convention, and takes <code>re_sd</code>.</p></dd>
 
 
 <dt id="arg-within">within<a class="anchor" aria-label="anchor" href="#arg-within"></a></dt>
@@ -164,12 +171,14 @@ so the two always agree.</p></dd>
 
 <dt id="arg-term">term<a class="anchor" aria-label="anchor" href="#arg-term"></a></dt>
 <dd><p>The term to test, named as the variable or as the coefficient;
-see <code><a href="ilm_power.html">ilm_power()</a></code>.</p></dd>
+see <code><a href="ilm_power.html">ilm_power()</a></code>. A term with several coefficients – a factor with three
+levels, or any term of a multinomial model – is tested jointly.</p></dd>
 
 
 <dt id="arg-effect">effect<a class="anchor" aria-label="anchor" href="#arg-effect"></a></dt>
-<dd><p>Values for that coefficient on the link scale. Defaults to
-whatever the assumptions imply for it.</p></dd>
+<dd><p>For a single coefficient, values for it on the link scale;
+for a term tested jointly, multiples of its assumed coefficients. Defaults
+to whatever the assumptions imply.</p></dd>
 
 
 <dt id="arg-sims-alpha-seed-progress">sims, alpha, seed, progress<a class="anchor" aria-label="anchor" href="#arg-sims-alpha-seed-progress"></a></dt>
@@ -179,6 +188,24 @@ whatever the assumptions imply for it.</p></dd>
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical. Report what was built.</p></dd>
 
+
+<dt id="arg-categories">categories<a class="anchor" aria-label="anchor" href="#arg-categories"></a></dt>
+<dd><p>For a multinomial or ordinal outcome, its categories in
+order. Taken from the columns of <code>cells</code> when it has them.</p></dd>
+
+
+<dt id="arg-thresholds">thresholds<a class="anchor" aria-label="anchor" href="#arg-thresholds"></a></dt>
+<dd><p>For an ordinal outcome given by <code>coefs</code>, the <code>J - 1</code> cut
+points on the latent scale, increasing.</p></dd>
+
+
+<dt id="arg-reml">reml<a class="anchor" aria-label="anchor" href="#arg-reml"></a></dt>
+<dd><p>Plan for an analysis fitted by restricted maximum likelihood,
+as <code>ilm_model(reml = TRUE)</code> fits one: every simulated study is then
+refitted by REML. For a gaussian mixed model that is the analysis most
+software reports, and its power is a little lower than that of the
+maximum-likelihood fit, whose variance components run small.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -186,7 +213,11 @@ whatever the assumptions imply for it.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>For anything beyond a power curve – seeing what the assumptions imply,
+    <p>Every simulated study is a fresh draw of the design at its own size – the
+allocation balanced as the protocol would balance it, any covariate given
+as a function drawn again – and is analysed with the test the analysis
+will report; see <code><a href="ilm_power.html">ilm_power()</a></code>.</p>
+<p>For anything beyond a power curve – seeing what the assumptions imply,
 simulating a data set, checking marginal means – build the scaffold with
 <code><a href="ilm_scaffold.html">ilm_scaffold()</a></code> and use it directly.</p>
     </div>
@@ -218,11 +249,52 @@ simulating a data set, checking marginal means – build the scaffold with
 <span class="r-out co"><span class="r-pr">#&gt;</span>   the design at this size. For power, use ilm_power() or</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ilm_power_design(), which refit many simulated studies.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Simulated power for armtreatment (gaussian family, alpha = 0.05)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   50 replicates per cell; the fitted study had 200 rows</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   counting the t test, as the analysis reports it</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   50 replicates per cell; the scaffold's own grid had 200 rows</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   each replicate is a fresh draw of the planned design: balanced</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   allocation, new participants</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  n_unit   n effect power mc_lower mc_upper power_converged converged</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      60  60    2.5  0.62    0.482    0.741            0.62         1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     120 120    2.5  0.94    0.838    0.979            0.94         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      60  60    2.5  0.64    0.501    0.759            0.64         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     120 120    2.5  0.86    0.738    0.930            0.86         1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     200 200    2.5  1.00    0.929    1.000            1.00         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   mc_lower/mc_upper is a Wilson interval on the power ESTIMATE: at</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.80 from 50 replicates the standard error is 0.057, so a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   sample size read off this curve is a range. More replicates narrow it;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   nothing else does.</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## a three-category outcome: the test is of arm across all its categories</span></span></span>
+<span class="r-in"><span><span class="fu">ilm_power_design</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">arm</span>, design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                 n_unit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">200</span><span class="op">)</span>, family <span class="op">=</span> <span class="st">"multinomial"</span>,</span></span>
+<span class="r-in"><span>                 cells <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>control   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.5</span>, some <span class="op">=</span> <span class="fl">0.3</span>, full <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                               treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.35</span>, some <span class="op">=</span> <span class="fl">0.35</span>, full <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                 term <span class="op">=</span> <span class="st">"arm"</span>, sims <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ilm_scaffold&gt;  parameters ASSUMED, not estimated</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   formula    : y ~ arm</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   family     : multinomial</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   size       : 200 rows</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   between    : arm</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   categories : none, some, full</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   assumed coefficients (sum-to-zero across categories; the last,</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   'full', is minus the sum of the others)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 none    some</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)   0.4757 -0.0351</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> armtreatment -0.4243  0.0865</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   The standard errors on this object come from ONE realisation of</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the design at this size. For power, use ilm_power() or</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ilm_power_design(), which refit many simulated studies.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Simulated power for arm (multinomial family, alpha = 0.05)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   counting the joint Wald chi-square test of its 2 coefficients, as the analysis reports it</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   50 replicates per cell; the scaffold's own grid had 200 rows</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   each replicate is a fresh draw of the planned design: balanced</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   allocation, new participants</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   `effect` is a MULTIPLE of the assumed coefficients: 1 is the model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   as given, 0.5 half of every one of them</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  n_unit   n effect power mc_lower mc_upper power_converged converged</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     100 100      1  0.24    0.143    0.374            0.24         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     200 200      1  0.44    0.312    0.577            0.44         1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   mc_lower/mc_upper is a Wilson interval on the power ESTIMATE: at</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   0.80 from 50 replicates the standard error is 0.057, so a</span>

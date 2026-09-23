@@ -29,7 +29,10 @@ ilm_scaffold(
   within = NULL,
   contrasts = NULL,
   seed = 1L,
-  verbose = TRUE
+  verbose = TRUE,
+  categories = NULL,
+  thresholds = NULL,
+  reml = FALSE
 )
 ```
 
@@ -95,7 +98,12 @@ ilm_scaffold(
 
   Intraclass correlation, as an alternative to `re_sd` for a random
   intercept: the random-effect variance becomes `icc / (1 - icc)` times
-  the residual variance.
+  the residual variance. A binomial or ordinal model has no residual
+  variance of its own, and there `icc` is on the latent scale, by the
+  usual convention: the residual variance is that of the standard
+  logistic, `pi^2 / 3`, for a logit link and 1 for a probit (Snijders
+  and Bosker 2012). A count or multinomial model has no such convention,
+  and takes `re_sd`.
 
 - within:
 
@@ -114,6 +122,24 @@ ilm_scaffold(
 - verbose:
 
   Logical. Report what was built.
+
+- categories:
+
+  For a multinomial or ordinal outcome, its categories in order. Taken
+  from the columns of `cells` when it has them.
+
+- thresholds:
+
+  For an ordinal outcome given by `coefs`, the `J - 1` cut points on the
+  latent scale, increasing.
+
+- reml:
+
+  Plan for an analysis fitted by restricted maximum likelihood, as
+  `ilm_model(reml = TRUE)` fits one: every simulated study is then
+  refitted by REML. For a gaussian mixed model that is the analysis most
+  software reports, and its power is a little lower than that of the
+  maximum-likelihood fit, whose variance components run small.
 
 ## Value
 
@@ -136,6 +162,41 @@ produced by the formula you gave – crossed means under an additive
 formula, say – it says so and names the term that is missing, rather
 than quietly fitting the closest thing it can.
 
+## A categorical outcome
+
+For `family = "multinomial"` or an ordinal family, `cells` gives the
+PROBABILITY of each outcome category in each cell: a data frame with one
+column per design factor and one per category, or a matrix with the cell
+names as row names and the categories as column names. Each row sums
+to 1. The categories are taken from those columns, in their order; give
+`categories` to set it.
+
+For a multinomial model, `coefs` is a matrix with one row per
+model-matrix column and one column per category but the last – the
+layout
+[`fixef.ilm_model()`](https://huttoncp.github.io/illume/reference/fixef.ilm_model.md)
+prints – or a vector named as
+[`coef.ilm_model()`](https://huttoncp.github.io/illume/reference/coef.ilm_model.md)
+names them, `"treatment:armtreatment"`. The coding is sum-to-zero across
+categories, so a coefficient is that category's deviation from the
+average of all of them, and `categories` is needed to know what they
+are.
+
+For an ordinal model, `coefs` holds the slopes – there is no intercept,
+the thresholds take its place – and `thresholds` the `J - 1` increasing
+cut points on the latent scale. Cell probabilities have to be ones
+proportional odds can produce: the same shift at every cut point between
+two cells. If they are not, the call stops and says so, because an
+ordinal model cannot give the study that was described;
+`family = "multinomial"` can.
+
+A random intercept in a multinomial model is a random shift in each
+category's log-odds, and `re_sd` is its standard deviation. A shift
+common to all categories changes no probability, so the model carries
+the part of each that differs from the average – which is why a fitted
+multinomial's category standard deviations come out as
+`re_sd * sqrt(1 - 1/J)`.
+
 ## Saying how big the study is
 
 `n_unit` counts **independent units**: participants when the formula has
@@ -152,6 +213,11 @@ design at its own size. They are not a property of your assumptions, and
 reading power off them would be reading one coin flip. That is what
 [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
 is for: it refits many simulated studies and counts.
+
+## References
+
+Snijders, T. A. B. and Bosker, R. J. (2012). *Multilevel Analysis*, 2nd
+ed. Sage. (Section 17.3, the latent-variable ICC.)
 
 ## See also
 
@@ -191,5 +257,15 @@ ilm_emmeans(s2, c("arm", "time"))
 #>    control post     12.2 1.064 10.116 14.28
 #>  treatment post     14.5 1.064 12.416 16.58
 #>   Compare them with ilm_contrast().
+
+## a three-category outcome, stated as the probabilities in each arm
+s3 <- ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
+                   n_unit = 200, family = "multinomial",
+                   cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+                                 treatment = c(none = 0.35, some = 0.35, full = 0.3)),
+                   verbose = FALSE)
+coef(s3)
+#>  none:(Intercept) none:armtreatment  some:(Intercept) some:armtreatment 
+#>        0.47570545       -0.42432189       -0.03512017        0.08650373 
 # }
 ```

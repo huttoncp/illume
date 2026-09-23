@@ -182,8 +182,8 @@ each.
 ## How this package was built
 
 `illume` was developed in collaboration with [Claude Opus
-5](https://www.anthropic.com), run at maximum reasoning effort, under a
-human-in-the-loop model: the model prototyped and drafted the
+5.5](https://www.anthropic.com), run at maximum reasoning effort, under
+a human-in-the-loop model: the model prototyped and drafted the
 implementation, the documentation and the simulation studies; the author
 specified what the package should be, set the standing constraints, made
 the decisions the design turned on, and rejected proposals. The author’s

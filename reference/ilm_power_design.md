@@ -28,7 +28,10 @@ ilm_power_design(
   alpha = 0.05,
   seed = 1L,
   progress = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  categories = NULL,
+  thresholds = NULL,
+  reml = FALSE
 )
 ```
 
@@ -93,7 +96,12 @@ ilm_power_design(
 
   Intraclass correlation, as an alternative to `re_sd` for a random
   intercept: the random-effect variance becomes `icc / (1 - icc)` times
-  the residual variance.
+  the residual variance. A binomial or ordinal model has no residual
+  variance of its own, and there `icc` is on the latent scale, by the
+  usual convention: the residual variance is that of the standard
+  logistic, `pi^2 / 3`, for a logit link and 1 for a probit (Snijders
+  and Bosker 2012). A count or multinomial model has no such convention,
+  and takes `re_sd`.
 
 - within:
 
@@ -109,11 +117,14 @@ ilm_power_design(
 
   The term to test, named as the variable or as the coefficient; see
   [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md).
+  A term with several coefficients – a factor with three levels, or any
+  term of a multinomial model – is tested jointly.
 
 - effect:
 
-  Values for that coefficient on the link scale. Defaults to whatever
-  the assumptions imply for it.
+  For a single coefficient, values for it on the link scale; for a term
+  tested jointly, multiples of its assumed coefficients. Defaults to
+  whatever the assumptions imply.
 
 - sims, alpha, seed, progress:
 
@@ -124,6 +135,24 @@ ilm_power_design(
 
   Logical. Report what was built.
 
+- categories:
+
+  For a multinomial or ordinal outcome, its categories in order. Taken
+  from the columns of `cells` when it has them.
+
+- thresholds:
+
+  For an ordinal outcome given by `coefs`, the `J - 1` cut points on the
+  latent scale, increasing.
+
+- reml:
+
+  Plan for an analysis fitted by restricted maximum likelihood, as
+  `ilm_model(reml = TRUE)` fits one: every simulated study is then
+  refitted by REML. For a gaussian mixed model that is the analysis most
+  software reports, and its power is a little lower than that of the
+  maximum-likelihood fit, whose variance components run small.
+
 ## Value
 
 An
@@ -131,6 +160,12 @@ An
 result, with an extra `n_unit` column.
 
 ## Details
+
+Every simulated study is a fresh draw of the design at its own size –
+the allocation balanced as the protocol would balance it, any covariate
+given as a function drawn again – and is analysed with the test the
+analysis will report; see
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md).
 
 For anything beyond a power curve – seeing what the assumptions imply,
 simulating a data set, checking marginal means – build the scaffold with
@@ -167,11 +202,52 @@ ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
 #>   the design at this size. For power, use ilm_power() or
 #>   ilm_power_design(), which refit many simulated studies.
 #> Simulated power for armtreatment (gaussian family, alpha = 0.05)
-#>   50 replicates per cell; the fitted study had 200 rows
+#>   counting the t test, as the analysis reports it
+#>   50 replicates per cell; the scaffold's own grid had 200 rows
+#>   each replicate is a fresh draw of the planned design: balanced
+#>   allocation, new participants
 #>  n_unit   n effect power mc_lower mc_upper power_converged converged
-#>      60  60    2.5  0.62    0.482    0.741            0.62         1
-#>     120 120    2.5  0.94    0.838    0.979            0.94         1
+#>      60  60    2.5  0.64    0.501    0.759            0.64         1
+#>     120 120    2.5  0.86    0.738    0.930            0.86         1
 #>     200 200    2.5  1.00    0.929    1.000            1.00         1
+#> 
+#>   mc_lower/mc_upper is a Wilson interval on the power ESTIMATE: at
+#>   0.80 from 50 replicates the standard error is 0.057, so a
+#>   sample size read off this curve is a range. More replicates narrow it;
+#>   nothing else does.
+
+## a three-category outcome: the test is of arm across all its categories
+ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+                 n_unit = c(100, 200), family = "multinomial",
+                 cells = rbind(control   = c(none = 0.5, some = 0.3, full = 0.2),
+                               treatment = c(none = 0.35, some = 0.35, full = 0.3)),
+                 term = "arm", sims = 50)
+#> <ilm_scaffold>  parameters ASSUMED, not estimated
+#>   formula    : y ~ arm
+#>   family     : multinomial
+#>   size       : 200 rows
+#>   between    : arm
+#>   categories : none, some, full
+#> 
+#>   assumed coefficients (sum-to-zero across categories; the last,
+#>   'full', is minus the sum of the others)
+#>                 none    some
+#> (Intercept)   0.4757 -0.0351
+#> armtreatment -0.4243  0.0865
+#> 
+#>   The standard errors on this object come from ONE realisation of
+#>   the design at this size. For power, use ilm_power() or
+#>   ilm_power_design(), which refit many simulated studies.
+#> Simulated power for arm (multinomial family, alpha = 0.05)
+#>   counting the joint Wald chi-square test of its 2 coefficients, as the analysis reports it
+#>   50 replicates per cell; the scaffold's own grid had 200 rows
+#>   each replicate is a fresh draw of the planned design: balanced
+#>   allocation, new participants
+#>   `effect` is a MULTIPLE of the assumed coefficients: 1 is the model
+#>   as given, 0.5 half of every one of them
+#>  n_unit   n effect power mc_lower mc_upper power_converged converged
+#>     100 100      1  0.24    0.143    0.374            0.24         1
+#>     200 200      1  0.44    0.312    0.577            0.44         1
 #> 
 #>   mc_lower/mc_upper is a Wilson interval on the power ESTIMATE: at
 #>   0.80 from 50 replicates the standard error is 0.057, so a

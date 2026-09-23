@@ -85,15 +85,47 @@ groups as they are – but it is not an adjusted comparison.
 
 ## An ordered response
 
-For an ordinal fit these are marginal means of the **latent scale** –
-the linear predictor the thresholds cut up – and not of the categories,
-which have no mean to take. A contrast between two of them is a
-difference in log odds of being in a higher category, constant across
-cuts by the same assumption
+For an ordinal fit the link-scale values are marginal means of the
+**latent scale** – the linear predictor the thresholds cut up – and not
+of the categories, which have no mean to take. A contrast between two of
+them is a difference in log odds of being in a higher category, constant
+across cuts by the same assumption
 [`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
-tests. `type = "response"` is not available, because the inverse link of
-a marginal mean is not a category probability; use
-[`predict()`](https://rdrr.io/r/stats/predict.html) for those.
+tests.
+
+`type = "response"` gives each category's PROBABILITY instead, computed
+in every cell of the grid and averaged over the cells, with a
+delta-method standard error that carries the thresholds' uncertainty as
+well as the slopes'.
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
+then compares groups within each category as differences in probability.
+This agrees with `emmeans` on a
+[`MASS::polr()`](https://rdrr.io/pkg/MASS/man/polr.html) fit with
+`mode = "prob"`.
+
+## A multinomial response
+
+Every category gets its own row for every level of `specs`.
+
+On the **link** scale the value is the category's centred log-odds: its
+log-probability less the average log-probability over all the
+categories, which is what the sum-to-zero coefficients describe. These
+are exact linear combinations, as for any other family, and a contrast
+between two groups within a category is a difference of log-odds against
+the same average.
+
+On the **response** scale the value is the category's PROBABILITY,
+computed in every cell of the grid and then averaged over the cells with
+the chosen weights – the probabilities of each group sum to 1 – with a
+delta-method standard error and an interval formed on the logit scale,
+so it stays inside 0 and 1.
+[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
+then compares groups within each category as differences in probability.
+This is what `emmeans` computes for an
+[`nnet::multinom()`](https://rdrr.io/pkg/nnet/man/multinom.html) fit
+with `mode = "prob"`, and the two agree; the coefficients differ between
+the packages, because `nnet` codes against a baseline category, but the
+probabilities do not.
 
 ## Which scale
 

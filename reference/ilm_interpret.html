@@ -79,6 +79,19 @@ people who will not read a coefficient table.</p>
 <span><span class="fu">ilm_interpret</span><span class="op">(</span><span class="va">object</span>, causal <span class="op">=</span> <span class="cn">NULL</span>, ame <span class="op">=</span> <span class="cn">FALSE</span>, digits <span class="op">=</span> <span class="fl">3</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'ilm_rdd'</span></span>
+<span><span class="fu">ilm_interpret</span><span class="op">(</span><span class="va">object</span>, causal <span class="op">=</span> <span class="cn">NULL</span>, ame <span class="op">=</span> <span class="cn">FALSE</span>, digits <span class="op">=</span> <span class="fl">3</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'ilm_power'</span></span>
+<span><span class="fu">ilm_interpret</span><span class="op">(</span></span>
+<span>  <span class="va">object</span>,</span>
+<span>  causal <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  ame <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  digits <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  target <span class="op">=</span> <span class="fl">0.8</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'ilm_contrast'</span></span>
 <span><span class="fu">ilm_interpret</span><span class="op">(</span><span class="va">object</span>, causal <span class="op">=</span> <span class="cn">NULL</span>, ame <span class="op">=</span> <span class="cn">FALSE</span>, digits <span class="op">=</span> <span class="fl">3</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,7 +101,9 @@ people who will not read a coefficient table.</p>
 
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
 <dd><p>An <code><a href="ilm_model.html">ilm_model()</a></code>, <code><a href="ilm_dag_model.html">ilm_dag_model()</a></code>, <code><a href="ilm_did.html">ilm_did()</a></code> or
-<code><a href="ilm_rdd.html">ilm_rdd()</a></code>.</p></dd>
+<code><a href="ilm_rdd.html">ilm_rdd()</a></code>; or the result of <code><a href="ilm_power.html">ilm_power()</a></code> or <code><a href="ilm_power_design.html">ilm_power_design()</a></code>, which
+is written up as a power analysis, or of <code><a href="ilm_contrast.html">ilm_contrast()</a></code>, written up as
+the comparisons it makes.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -107,6 +122,10 @@ delta-method calculation; worth it for anything with a link function.</p></dd>
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
 <dd><p>Rounding.</p></dd>
+
+
+<dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
+<dd><p>For a power analysis, the power a study is to reach.</p></dd>
 
 </dl></div>
     <div class="section level2">

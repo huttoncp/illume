@@ -864,6 +864,11 @@ ilm_interpret(f, ame = FALSE)
 #>   predictor and the response, so an effect could differ in size or sign
 #>   from what is reported. To say more you need a design that identifies one:
 #>   ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+#> 
+#>   The tests above use a large-sample reference, and with 75 groups of `id`
+#>   one for an effect that varies between groups can run somewhat liberal.
+#>   For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value
+#>   by simulation, and ilm_denom_df() gives finite degrees of freedom.
 ```
 
 See

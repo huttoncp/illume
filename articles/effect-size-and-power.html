@@ -138,6 +138,33 @@ reconsidering, and averaging over only the successes hides exactly
 that.</p>
 </div>
 <div class="section level3">
+<h3 id="the-test-it-counts-is-the-one-you-will-report">The test it counts is the one you will report<a class="anchor" aria-label="anchor" href="#the-test-it-counts-is-the-one-you-will-report"></a>
+</h3>
+<p>Each simulated study is analysed the way the real one will be. A
+model with nothing to integrate out reports exact t and F tests, so that
+is what is counted; anything else reports a Wald z, and a term with
+several coefficients – a factor with three levels, or any term of a
+multinomial model, which has one coefficient per category – is tested
+jointly, as <code><a href="../reference/ilm_anova.html">ilm_anova()</a></code> tests it.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_power.html">ilm_power</a></span><span class="op">(</span><span class="va">pilot</span>, term <span class="op">=</span> <span class="st">"dose"</span><span class="op">)</span>       <span class="co"># one coefficient: its z or t test</span></span>
+<span><span class="fu"><a href="../reference/ilm_power.html">ilm_power</a></span><span class="op">(</span><span class="va">pilot3</span>, term <span class="op">=</span> <span class="st">"arm"</span><span class="op">)</span>       <span class="co"># three arms: the joint test of both</span></span>
+<span><span class="fu"><a href="../reference/ilm_power.html">ilm_power</a></span><span class="op">(</span><span class="va">pilot3</span>, term <span class="op">=</span> <span class="st">"armB"</span><span class="op">)</span>      <span class="co"># or one comparison, named as a coefficient</span></span></code></pre></div>
+<p>It matters most where studies are small. Counting a z test where the
+analysis will use a t put the power of a 20-person two-arm trial at
+0.43, against an exact 0.395.</p>
+<p>For a joint test <code>effect</code> is a <strong>multiple</strong>
+of the assumed coefficients rather than a value for one of them:
+<code>effect = c(0.5, 1)</code> asks what happens if every part of the
+effect is half what was assumed.</p>
+<p>A study is also refitted as the same model – the contrasts, the zero
+part, the dispersion model, the censoring and a flexible survival
+baseline all come along, and serial correlation is simulated and
+refitted as itself. Each of those was once dropped, and a model with
+sum-to-zero contrasts came back with differently named coefficients and
+a power of exactly zero.</p>
+</div>
+<div class="section level3">
 <h3 id="mixed-designs">Mixed designs<a class="anchor" aria-label="anchor" href="#mixed-designs"></a>
 </h3>
 <p>For a model with a grouping factor, <code>n</code> is the number of
@@ -145,7 +172,10 @@ rows but the number of <strong>clusters</strong> moves with it, because
 that is what a mixed design’s power actually depends on. Resampling rows
 would hold the number of groups fixed while n grew, which is the wrong
 thing to hold fixed. A cluster drawn twice becomes two clusters, or the
-design has fewer independent groups than it appears to.</p>
+design has fewer independent groups than it appears to – and so do the
+classes inside a school drawn twice, while items that every participant
+saw keep their labels, because new participants do not bring new
+items.</p>
 <p>A random <strong>slope</strong> is drawn as a random slope, not as an
 intercept shift. A <code>(1 + time | id)</code> design whose
 participants were all given the same slope would have them moving in
@@ -162,7 +192,7 @@ you are prepared to defend, and an ordinary <code>ilm_model</code>
 object that everything else in the package will accept.</p>
 <p>Assumptions go in as cell means on the response scale, which is the
 form most people actually hold one in.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span>, time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pre"</span>, <span class="st">"post"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>control.pre <span class="op">=</span> <span class="fl">20</span>, control.post <span class="op">=</span> <span class="fl">21</span>,</span>
 <span>           treatment.pre <span class="op">=</span> <span class="fl">20</span>, treatment.post <span class="op">=</span> <span class="fl">25</span><span class="op">)</span></span>
@@ -184,7 +214,8 @@ form most people actually hold one in.</p>
 <span><span class="co">#&gt;                     4</span></span>
 <span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt;   residual sd : 6</span></span>
-<span><span class="co">#&gt;   id sd     : 6</span></span></code></pre></div>
+<span><span class="co">#&gt;   id sd       : 6</span></span>
+<span><span class="co">#&gt;   total sd    : 8.485   &lt;- the outcome's own spread; `sd` above is the residual</span></span></code></pre></div>
 <p><code>n_unit</code> counts participants, not rows, so the number you
 give is the number that goes in a protocol. <code>arm</code> varies
 between participants and <code>time</code> within, and the grid is built
@@ -194,7 +225,7 @@ put the same person in both arms.</p>
 assumptions can be interrogated before anything is built on them. The
 cell means went in; here they are coming back out through an entirely
 different route.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_emmeans.html">ilm_emmeans</a></span><span class="op">(</span><span class="va">s</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"arm"</span>, <span class="st">"time"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;        arm time estimate    se lower upper</span></span>
 <span><span class="co">#&gt;    control  pre       20 1.595 16.87 23.13</span></span>
@@ -205,7 +236,7 @@ different route.</p>
 approximated. A least-squares solve always returns <em>something</em>,
 and the something it returns for crossed means under an additive formula
 is a scaffold for a different study:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scaffold.html">ilm_scaffold</a></span><span class="op">(</span><span class="va">change</span> <span class="op">~</span> <span class="va">arm</span> <span class="op">+</span> <span class="va">time</span>, design <span class="op">=</span> <span class="va">d</span>, within <span class="op">=</span> <span class="st">"time"</span>,</span>
 <span>             n_unit <span class="op">=</span> <span class="fl">60</span>, cells <span class="op">=</span> <span class="va">cells</span>, sd <span class="op">=</span> <span class="fl">6</span>, icc <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error: this formula cannot produce the cell means given: cell</span></span>
@@ -214,28 +245,35 @@ is a scaffold for a different study:</p>
 <span><span class="co">#&gt; them -- arm * time rather than arm + time.</span></span></code></pre></div>
 <p><code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code> is the scaffold plus the power curve
 in one call.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_power_design.html">ilm_power_design</a></span><span class="op">(</span><span class="va">change</span> <span class="op">~</span> <span class="va">arm</span> <span class="op">*</span> <span class="va">time</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, design <span class="op">=</span> <span class="va">d</span>,</span>
 <span>                       within <span class="op">=</span> <span class="st">"time"</span>, n_unit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">60</span>, <span class="fl">120</span>, <span class="fl">240</span>, <span class="fl">400</span><span class="op">)</span>,</span>
 <span>                       cells <span class="op">=</span> <span class="va">cells</span>, sd <span class="op">=</span> <span class="fl">6</span>, icc <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>                       term <span class="op">=</span> <span class="st">"arm:time"</span>, sims <span class="op">=</span> <span class="fl">300</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Simulated power for armtreatment:timepost (gaussian family, alpha = 0.05)</span></span>
+<span><span class="co">#&gt;   counting the Wald z test, as the analysis reports it</span></span>
+<span><span class="co">#&gt;   300 replicates per cell; the scaffold's own grid had 800 rows</span></span>
+<span><span class="co">#&gt;   each replicate is a fresh draw of the planned design: balanced</span></span>
+<span><span class="co">#&gt;   allocation, new participants</span></span>
 <span><span class="co">#&gt;  n_unit   n effect power mc_lower mc_upper power_converged converged</span></span>
-<span><span class="co">#&gt;      60 120      4 0.470    0.414    0.526           0.470         1</span></span>
-<span><span class="co">#&gt;     120 240      4 0.700    0.646    0.749           0.700         1</span></span>
-<span><span class="co">#&gt;     240 480      4 0.967    0.940    0.982           0.967         1</span></span>
-<span><span class="co">#&gt;     400 800      4 1.000    0.987    1.000           1.000         1</span></span>
+<span><span class="co">#&gt;      60 120      4 0.490    0.434    0.546           0.490         1</span></span>
+<span><span class="co">#&gt;     120 240      4 0.747    0.695    0.793           0.747         1</span></span>
+<span><span class="co">#&gt;     240 480      4 0.957    0.927    0.975           0.957         1</span></span>
+<span><span class="co">#&gt;     400 800      4 0.983    0.962    0.993           0.983         1</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/ilm_power_n.html">ilm_power_n</a></span><span class="op">(</span><span class="va">pw</span>, target <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  effect   n  n_lower n_upper n_unit n_unit_lower n_unit_upper</span></span>
-<span><span class="co">#&gt;       4 330 292.5298 365.872    165     146.2649      182.936</span></span></code></pre></div>
-<p>Read <code>n_unit</code>, not <code>n</code>: 165 participants
-measured twice, not 330 people.</p>
+<span><span class="co">#&gt;  effect   n n_lower n_upper n_unit n_unit_lower n_unit_upper</span></span>
+<span><span class="co">#&gt;       4 301   249.8   348.7  150.5        124.9        174.4</span></span></code></pre></div>
+<p>Read <code>n_unit</code>, not <code>n</code>: about 150 participants
+measured twice – somewhere between 125 and 175, given the Monte Carlo
+error – not 300 people. <code>ilm_interpret(pw)</code> writes the same
+thing out in sentences.</p>
 <p>The standard errors printed on a scaffold come from <strong>one
 realisation</strong> of the design at its own size. They are not a
 property of the assumptions, and power read off them would be one coin
 flip. That is what <code><a href="../reference/ilm_power_design.html">ilm_power_design()</a></code> is for.</p>
 <p>None of this makes an assumption true. It makes the assumption
-explicit, and separates “we need 165 participants” from the four numbers
+explicit, and separates “we need 150 participants” from the four numbers
 that claim implies.</p>
 </div>
 <div class="section level3">
@@ -254,7 +292,7 @@ spread is <code>sd / sqrt(1 - icc)</code>. The example above —
 read one off. Converting is:</p>
 <pre><code><span>  <span class="va">sd_illume</span> <span class="op">=</span> <span class="va">sd_total</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="va">icc</span><span class="op">)</span></span></code></pre>
 <p>The scaffold prints both so the two cannot be quietly confused:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#&gt;   residual sd : 4.243</span></span>
 <span><span class="co">#&gt;   id sd       : 4.243</span></span>
 <span><span class="co">#&gt;   total sd    : 6   &lt;- the outcome's own spread; `sd` above is the residual</span></span></code></pre></div>
@@ -263,25 +301,113 @@ where you are in the design — and it says that instead of printing a
 number true at one point only.</p>
 </div>
 <div class="section level3">
+<h3 id="every-simulated-study-is-a-fresh-draw-of-the-plan">Every simulated study is a fresh draw of the plan<a class="anchor" aria-label="anchor" href="#every-simulated-study-is-a-fresh-draw-of-the-plan"></a>
+</h3>
+<p>A scaffold has no data to resample, so each replicate draws the
+planned design again at its own size: participants allocated to cells
+the way a protocol randomises a factorial – every combination of the
+between-participant factors equally often, and any remainder spread so
+each factor’s own levels stay balanced – and a covariate given as a
+function drawn afresh. Resampling the scaffold’s own grid instead, as
+this once did, left cells of a small factorial empty: 18 participants in
+a 3 x 3 design fitted 28.5% of the time, where the planned study, with
+two in every cell, always can.</p>
+</div>
+<div class="section level3">
+<h3 id="a-categorical-outcome">A categorical outcome<a class="anchor" aria-label="anchor" href="#a-categorical-outcome"></a>
+</h3>
+<p>For a multinomial or ordinal outcome the assumption is the
+probability of each category in each cell, which is how it would be
+written in a protocol.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>control   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.50</span>, some <span class="op">=</span> <span class="fl">0.30</span>, full <span class="op">=</span> <span class="fl">0.20</span><span class="op">)</span>,</span>
+<span>               treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>none <span class="op">=</span> <span class="fl">0.35</span>, some <span class="op">=</span> <span class="fl">0.35</span>, full <span class="op">=</span> <span class="fl">0.30</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">pw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_power_design.html">ilm_power_design</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">arm</span>, design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                       n_unit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span>, <span class="fl">200</span>, <span class="fl">400</span><span class="op">)</span>, family <span class="op">=</span> <span class="st">"multinomial"</span>,</span>
+<span>                       cells <span class="op">=</span> <span class="va">cells</span>, term <span class="op">=</span> <span class="st">"arm"</span>, sims <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
+<span><span class="co">#&gt;  n_unit   n effect power mc_lower mc_upper power_converged converged</span></span>
+<span><span class="co">#&gt;     100 100      1 0.239    0.214    0.266           0.239         1</span></span>
+<span><span class="co">#&gt;     200 200      1 0.468    0.437    0.499           0.468         1</span></span>
+<span><span class="co">#&gt;     400 400      1 0.818    0.793    0.841           0.818         1</span></span></code></pre></div>
+<p><code>arm</code> is tested across all its categories at once, and
+<code>effect</code> is a multiple of the assumed coefficients. Checked
+against the noncentral chi-square the asymptotic theory gives, the curve
+is 0.818 against 0.813 at 400; at 100 and 200 it sits 3 to 4 points
+below theory (0.239 against 0.272, 0.468 against 0.502), because the
+Wald test the analysis reports is itself a little conservative there –
+it rejected a true null 4.2% of the time at 100 and 4.5% at 200. A
+Pearson test of the 2 x 3 table would have more power at those sizes,
+and that is not the test a mixed-model analysis reports.</p>
+<p>An ordinal outcome can be stated the same way, or as slopes and
+<code>thresholds</code>. Probabilities no proportional-odds model can
+produce are refused, with the model that can produce them named:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>lo <span class="op">=</span> <span class="fl">0.38</span>, mid <span class="op">=</span> <span class="fl">0.35</span>, hi <span class="op">=</span> <span class="fl">0.27</span><span class="op">)</span>,</span>
+<span>             treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>lo <span class="op">=</span> <span class="fl">0.20</span>, mid <span class="op">=</span> <span class="fl">0.60</span>, hi <span class="op">=</span> <span class="fl">0.20</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/ilm_scaffold.html">ilm_scaffold</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">arm</span>, design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>arm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"control"</span>, <span class="st">"treatment"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>             n_unit <span class="op">=</span> <span class="fl">150</span>, family <span class="op">=</span> <span class="st">"ordinal"</span>, cells <span class="op">=</span> <span class="va">bad</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error: these cell probabilities are not ones proportional odds can produce:</span></span>
+<span><span class="co">#&gt; between cells, the cumulative log-odds shift by different amounts at</span></span>
+<span><span class="co">#&gt; different cut points (off by 0.322). An ordinal model would plan a</span></span>
+<span><span class="co">#&gt; different study from the one described. family = "multinomial" reproduces</span></span>
+<span><span class="co">#&gt; these probabilities exactly.</span></span></code></pre></div>
+<p>A random intercept in a multinomial model is a random shift in every
+category’s log-odds, and <code>re_sd</code> is its standard deviation.
+For a binary or ordinal outcome an <code>icc</code> works as it does for
+a gaussian one, on the latent scale, whose residual variance is that of
+the standard logistic, <code>pi^2 / 3</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="when-the-design-itself-fails-a-check">When the design itself fails a check<a class="anchor" aria-label="anchor" href="#when-the-design-itself-fails-a-check"></a>
+</h3>
+<p>Some checks the analysis makes are made <em>before</em> fitting, on
+the design, so every study drawn from it fails them alike. Counting that
+against each replicate would put the power at zero whatever the effect,
+so the result reports it instead – with the remedy the check itself
+names:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co">#&gt;   The DESIGN fails a check the analysis makes before fitting, and</span></span>
+<span><span class="co">#&gt;   every analysis of such a study will report it as FAILED:</span></span>
+<span><span class="co">#&gt;     latent_budget: 2.00 observations per latent value (240 observations,</span></span>
+<span><span class="co">#&gt;       120 latent values: id 120)  (100% of the simulated studies)</span></span>
+<span><span class="co">#&gt;       try: ... term 'id' contributes 120 (us, width 2). rr(1) would cut it to 60</span></span></code></pre></div>
+<p>That one is a three-category multinomial with four visits per
+participant: a random intercept per category and participant leaves two
+observations for every value it has to estimate. The same design with
+eight visits does not fail it.</p>
+<p>With 60 participants the Wald test of the treatment effect in that
+design rejected a true null 5.8% of the time with four visits and 7.8%
+with eight, so the power reported is a little flattered, by the same
+amount. That is the test the analysis will report;
+<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code> is the calibrated alternative for the analysis
+itself.</p>
+</div>
+<div class="section level3">
 <h3 id="what-it-was-checked-against">What it was checked against<a class="anchor" aria-label="anchor" href="#what-it-was-checked-against"></a>
 </h3>
 <p>Simulated power is only as good as the simulation, so this was
 compared with three outside implementations on designs each could
 express.</p>
 <p><strong><code>power.t.test</code></strong>, two-sample, effect 2.5 on
-sd 4:</p>
+sd 4, 2,000 replicates:</p>
 <pre><code>  participants     100      200      300
-  illume         0.858    0.995    1.000
+  illume         0.878    0.995    1.000
   closed form    0.872    0.993    1.000</code></pre>
+<p>And where it matters most, at 20 participants with an effect of 0.8
+standard deviations: 0.387 (0.374 to 0.399 over 6,000 replicates)
+against the exact 0.395. Counting a z test there, as this once did, gave
+0.43.</p>
 <p><strong><code>Superpower::ANOVA_exact()</code></strong> and
-<strong><code>simr::makeLmer()</code></strong> on a 2 (arm, between) × 2
-(time, within) design with an ICC of 0.5. <code>simr</code> is the
-closest existing thing to a scaffold — it builds a model from
+<strong><code>simr::makeLmer()</code></strong> on the 2 (arm, between) ×
+2 (time, within) design above, cell means 20/21/20/25 with
+<code>sd = 6</code> and an ICC of 0.5. <code>simr</code> is the closest
+existing thing to a scaffold — it builds a model from
 <code>fixef</code>, <code>VarCorr</code> and <code>sigma</code> with
-nothing fitted — so it is the fairest comparison available:</p>
-<pre><code>  n per arm   Superpower (exact)   simr (z)   simr (Satterthwaite)   illume
-     20             0.538            0.557           0.512           0.588
-     40             0.838            0.840           0.830           0.812</code></pre>
+nothing fitted — so it is the fairest comparison available.
+<code>simr</code> 1,000 replicates, illume 2,000:</p>
+<pre><code>  n per arm   Superpower   simr (z)   simr (Satterthwaite)   illume (ML)   illume (REML)
+     20          0.306       0.329           0.302              0.358         0.342
+     40          0.549       0.552           0.545              0.583         0.572</code></pre>
 <p><strong><code>faux</code></strong>, which generates the data a
 completely different way, on a random slope design. Per-subject moments
 from 8,000 simulated participants:</p>
@@ -289,15 +415,24 @@ from 8,000 simulated participants:</p>
   target            2.000        1.200       -0.400
   faux              2.157        1.270       -0.432
   illume            2.156        1.273       -0.446</code></pre>
+<p>Checked directly as well: the random effects drawn for 8,000
+simulated groups have standard deviations 2.016 and 1.209 and a
+correlation of −0.413, against 2, 1.2 and −0.4 assumed.</p>
 <p>Two things worth taking from that. The agreement with
 <code>faux</code> to three decimals is the strongest evidence that
 random slopes are simulated correctly — they were not, until recently,
-and an independent generator is what settled it. And illume sits a
-little above Superpower’s exact calculation at the smaller sizes; so
-does <code>simr</code> with a z reference (0.557), and the difference
-between a z and a Satterthwaite reference is about 0.015 on this design.
-Expect gaps of that size when comparing against G*Power or Superpower,
-in either direction.</p>
+and an independent generator is what settled it.</p>
+<p>And illume sits above Superpower’s exact calculation, for two reasons
+that can be taken apart. It counts the test its analysis reports, and a
+mixed model’s default analysis is maximum likelihood with a z reference.
+Maximum likelihood’s variance components run small, which flatters the
+power by about 1.5 points here; <code>reml = TRUE</code> plans for a
+REML analysis instead, and brings illume within Monte Carlo error of
+<code>simr</code>, which uses REML too. What remains is z against an
+exact F: a Satterthwaite reference takes <code>simr</code> down to
+Superpower’s value. Expect gaps of that size when comparing against
+G*Power or Superpower, and choose <code>reml</code> to match the
+analysis you will actually run.</p>
 </div>
 </div>
 <div class="section level2">
@@ -305,7 +440,7 @@ in either direction.</p>
 </h2>
 <p><code><a href="../reference/ilm_effects.html">ilm_effects()</a></code> reports each coefficient on the scale its
 family puts it on.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">~</span> <span class="va">dose</span> <span class="op">+</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"binomial"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <table class="table">
@@ -357,7 +492,7 @@ cluster</em> – two patients in the same hospital, one exposed – not for
 the population, and the gap widens as the random effects grow. The print
 says so and names <code><a href="../reference/ilm_ame.html">ilm_ame()</a></code> for the population-averaged
 quantity:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>      <span class="co"># conditional odds ratio, e.g. 2.58</span></span>
 <span><span class="fu"><a href="../reference/ilm_ame.html">ilm_ame</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"dose"</span><span class="op">)</span>  <span class="co"># marginal effect on the probability scale, e.g. 0.193</span></span></code></pre></div>
 <p><strong>Standardising a binary predictor is meaningless.</strong>
@@ -367,11 +502,11 @@ anyone asks. Those are left alone, and the reason is printed rather than
 the number quietly omitted. <code>standardise = "gelman"</code> divides
 numeric predictors by <em>two</em> standard deviations, which is what
 makes them comparable with a binary one.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span>, standardise <span class="op">=</span> <span class="st">"gelman"</span><span class="op">)</span></span></code></pre></div>
 <p>A robust covariance can be substituted, so the same table can be
 built on clustered or design-based standard errors:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span>, vcov <span class="op">=</span> <span class="fu"><a href="../reference/ilm_vcov_cluster.html">ilm_vcov_cluster</a></span><span class="op">(</span><span class="va">fit</span>, <span class="op">~</span> <span class="va">clinic</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -379,7 +514,7 @@ built on clustered or design-based standard errors:</p>
 </h2>
 <p><code><a href="../reference/ilm_scenario.html">ilm_scenario()</a></code> sets predictors to values someone is
 considering and reports what the model implies.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, dose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span><span class="op">)</span>, contrast <span class="op">=</span> <span class="st">"first"</span><span class="op">)</span></span></code></pre></div>
 <p>The default averages over <strong>the observed units</strong>: set
 the intervention for everyone, keep each unit’s own covariates, predict,
@@ -393,7 +528,7 @@ prediction at the average. On a logistic fit at the same dose: 0.657
 averaged over the units, 0.683 at the average covariate.
 <code>over = "reference"</code> gives the second, and the print says
 which was used.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, dose <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>                        <span class="co"># the population</span></span>
 <span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, dose <span class="op">=</span> <span class="fl">10</span>, over <span class="op">=</span> <span class="st">"reference"</span><span class="op">)</span>    <span class="co"># a unit like this</span></span></code></pre></div>
 <div class="section level3">
@@ -413,7 +548,7 @@ nobody occupies. On personnel data where years of service is roughly age
 minus 22, a 25-year-old with 35 years of service has both values well
 inside their ranges, and sits 2.39 standardised units from the nearest
 real person against 0.25 for a typical one.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_scenario.html">ilm_scenario</a></span><span class="op">(</span><span class="va">fit</span>, age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">45</span>, <span class="fl">25</span><span class="op">)</span>, service <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">23</span>, <span class="fl">35</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  age service estimate lower upper extrapolating</span></span>
 <span><span class="co">#&gt;   45      23    3.095 3.003 3.180         FALSE</span></span>

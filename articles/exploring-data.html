@@ -805,7 +805,12 @@ whether an AR(1) term is even possible:</p>
 <span><span class="co">#&gt;   These are associations. Nothing here rules out a common cause of a</span></span>
 <span><span class="co">#&gt;   predictor and the response, so an effect could differ in size or sign</span></span>
 <span><span class="co">#&gt;   from what is reported. To say more you need a design that identifies one:</span></span>
-<span><span class="co">#&gt;   ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().</span></span></code></pre></div>
+<span><span class="co">#&gt;   ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   The tests above use a large-sample reference, and with 75 groups of `id`</span></span>
+<span><span class="co">#&gt;   one for an effect that varies between groups can run somewhat liberal.</span></span>
+<span><span class="co">#&gt;   For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value</span></span>
+<span><span class="co">#&gt;   by simulation, and ilm_denom_df() gives finite degrees of freedom.</span></span></code></pre></div>
 <p>See <code><a href="../articles/workflow.html">vignette("workflow")</a></code> for where this sits in an
 analysis, <code><a href="../articles/regression-models.html">vignette("regression-models")</a></code> for the modelling
 half, <code><a href="../articles/profiling.html">vignette("profiling")</a></code> for structure across many

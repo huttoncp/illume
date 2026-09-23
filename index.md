@@ -24,7 +24,9 @@ single engine fits them all,
 [`summary()`](https://rdrr.io/r/base/summary.html),
 [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
 [`predict()`](https://rdrr.io/r/stats/predict.html) and every diagnostic
-stay the same as the model gets harder.
+stay the same as the model gets harder. Leave `family` off and it is
+read off the response, with the choice and the evidence for it stated;
+what the response cannot settle is asked about rather than guessed.
 
 **Every check names a remedy that exists in this package.** A diagnostic
 that tells you an assumption fails and leaves you to find the fix
@@ -99,7 +101,7 @@ package.
 | **Structure** | [`ilm_reduce()`](https://huttoncp.github.io/illume/reference/ilm_reduce.md), [`ilm_cluster()`](https://huttoncp.github.io/illume/reference/ilm_cluster.md), [`ilm_profile()`](https://huttoncp.github.io/illume/reference/ilm_profile.md), [`ilm_glrm()`](https://huttoncp.github.io/illume/reference/ilm_glrm.md) |
 | **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illume/reference/ilm_check_missing.md), [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md), [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
-| **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
+| **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md) from a fit, [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md) and [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md) from assumptions alone – for every family, multinomial included, each simulated study analysed with the test the analysis will report; [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
 
 ## The multinomial claim, stated carefully
 
