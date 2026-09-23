@@ -1,10 +1,10 @@
 # Adapted from r-lib/actions/examples/pkgdown.yaml
 # https://github.com/r-lib/actions/tree/v2/examples
 #
-# NOTE: this workflow PUBLISHES to GitHub Pages on every push to main. It will
-# do nothing until Pages is enabled for the repository (Settings > Pages >
-# Source: GitHub Actions). Leave it disabled until the site is ready to be
-# public.
+# NOTE: this workflow PUBLISHES the site on every push to main: it builds it
+# and pushes the result to the gh-pages branch. GitHub serves that branch once
+# Pages is enabled for the repository (Settings > Pages > Source: Deploy from
+# a branch > gh-pages, / (root)); until then the site is built but not served.
 on:
   push:
     branches: [main, master]

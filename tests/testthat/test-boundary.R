@@ -22,33 +22,71 @@ bnd_data <- function(seed) {
   d
 }
 
-test_that("a variance at zero is held, and the fixed effects are those of the model without it", {
+test_that("a variance at zero leaves the fixed effects those of the model without it", {
   d <- bnd_data(4)
-  f <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
-                 verbose = FALSE)
+  f <- suppressMessages(ilm_model(y ~ x + g + (1 | site), data = d,
+                                  family = "multinomial", verbose = FALSE))
   f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
-  expect_equal(f$hessian_how, "boundary")
-  expect_equal(f$hessian_held, "site")
-  expect_false(isTRUE(f$sdr$pdHess))            # the record stays honest
+  ## Which of two routes a boundary fit takes is the platform's arithmetic.
+  ## With R 4.4 and RTMB 1.9, TMB's Hessian at this boundary is not positive
+  ## definite and the term is held; with R 4.6.1 it is, at the same optimum
+  ## (logLik -311.3, a correlation of 1), and nothing needs holding. Both are
+  ## right, and what this is about holds on either: the fit is usable, the
+  ## boundary is recorded, and the fixed effects are those of the model
+  ## without the term. The hold itself is tested directly below.
+  expect_true(f$hessian_how %in% c("boundary", "tmb"))
   expect_true(f$ok)
-  expect_equal(f$checks$status[f$checks$check == "hessian"], "BOUNDARY")
+  expect_true("site" %in% f$boundary_terms)
   ## the fixed effects: usable, silent, and those of the model without the term
+  ## (R 4.6.1's route gave standard errors 1.004-1.035 times those; this
+  ## one's, 1.002-1.022)
   expect_silent(V <- vcov(f))
   expect_true(all(is.finite(V)))
   r <- sqrt(diag(V)) / sqrt(diag(vcov(f0)))
   expect_true(all(r > 0.97 & r < 1.05))
   expect_lt(max(abs(coef(f) - coef(f0))), 0.05)
   expect_silent(suppressMessages(ilm_anova(f)))
-  ## the covariance parameters are held: asking for them says so
-  expect_warning(Vf <- vcov(f, full = TRUE), "held at its estimate")
-  expect_true(all(is.finite(Vf)))
   ## and the verdict says, where the numbers are read, what to trust
   out <- paste(utils::capture.output(summary(f)), collapse = "\n")
   expect_match(out, "What can be trusted", fixed = TRUE)
-  expect_match(out, "held at its", fixed = TRUE)
   expect_match(paste(utils::capture.output(print(f)), collapse = "\n"),
                "[BOUNDARY: site at a boundary; fixed effects usable]",
                fixed = TRUE)
+  if (identical(f$hessian_how, "boundary")) {
+    expect_equal(f$hessian_held, "site")
+    expect_false(isTRUE(f$sdr$pdHess))          # the record stays honest
+    expect_equal(f$checks$status[f$checks$check == "hessian"], "BOUNDARY")
+    ## the covariance parameters are held: asking for them says so
+    expect_warning(Vf <- vcov(f, full = TRUE), "held at its estimate")
+    expect_true(all(is.finite(Vf)))
+    expect_match(out, "held at its", fixed = TRUE)
+  } else {
+    expect_true(isTRUE(f$sdr$pdHess))
+    expect_equal(f$checks$status[f$checks$check == "hessian"], "OK")
+    expect_match(out, "positive definite", fixed = TRUE)
+  }
+})
+
+test_that("a boundary term is held whenever TMB's own Hessian refuses, on any platform", {
+  ## Which route the fit above takes depends on the arithmetic, so the hold is
+  ## exercised directly: the same fit, with TMB's verdict on its Hessian taken
+  ## as a refusal. What comes back must hold `site` and leave the fixed effects
+  ## those of the model without it.
+  d <- bnd_data(4)
+  f <- suppressMessages(ilm_model(y ~ x + g + (1 | site), data = d,
+                                  family = "multinomial", verbose = FALSE))
+  f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
+  pn <- names(f$opt$par)
+  cb <- ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk, f$toff,
+                       f$ar, f$opt$par, pn)
+  expect_true("site" %in% cb$flagged)
+  sdr <- f$sdr; sdr$pdHess <- FALSE
+  h <- ilm_hess_recover(f$obj, f$opt, sdr, cb, joint = FALSE)
+  expect_equal(h$how, "boundary")
+  expect_equal(h$held, "site")
+  se <- sqrt(diag(h$sdr$cov.fixed)[pn == "beta"])
+  r <- se / sqrt(diag(vcov(f0)))
+  expect_true(all(r > 0.97 & r < 1.05))
 })
 
 test_that("a covariance at a correlation of -1 is a boundary, not a failure", {

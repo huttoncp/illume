@@ -79,11 +79,11 @@ is the shape of the whole package.
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random effects, smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
 | **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
-| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_moderation()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()`, `ilm_boot_ci()` |
+| **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_moderation()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()` |
 | **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns, with generalized eta squared and sphericity corrections |
-| **Exploration** | `ilm_describe_all()`, fifteen `ilm_plot_*()` functions, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |
-| **Structure** | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
-| **Missing data** | `ilm_check_missing()`, `ilm_impute()`, `ilm_mi_pool()` |
+| **Exploration** (illumex) | `ilm_describe_all()`, the data plots, `ilm_boot_ci()`, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |
+| **Structure** (illumex) | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()`, `ilm_glrm()` |
+| **Missing data** | `ilm_check_missing()` (illumex) to describe it; `ilm_impute()` and `ilm_mi_pool()` to fill it in and pool |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
 | **Design and decision** | `ilm_power()`, `ilm_scaffold()`, `ilm_power_design()`, `ilm_scenario()`, `ilm_interpret()` |
 
