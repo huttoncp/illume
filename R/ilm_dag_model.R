@@ -146,8 +146,10 @@ ilm_dag_remediate <- function(fit, form, data, family, verbose, ...) {
 #'   graph fixed the adjustment set before any data were looked at: the fixed
 #'   effects are not being selected, so the one thing REML forbids -- comparing
 #'   likelihoods across different fixed structures -- never arises, and its
-#'   unbiased variance components are simply better. Ignored for non-gaussian
-#'   responses, where restricted likelihood has no meaning.
+#'   unbiased variance components are simply better. Applied to gaussian
+#'   responses only: for any other family the restricted likelihood is only
+#'   approximate (see [ilm_model()]), so this route stays with maximum
+#'   likelihood there.
 #' @param ... Passed to [ilm_model()].
 #' @return An object of class `"ilm_dag_model"`: the graph, the sets, the fits,
 #'   an `effects` table with one row per set, the DAG test, and `steps`.
@@ -278,8 +280,9 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
     ## The DAG fixed the adjustment set before any data were looked at, so the
     ## fixed effects are not up for selection here and REML is the right
     ## estimator: unbiased variance components, and no likelihood comparison
-    ## across fixed structures that it would invalidate. It has no meaning
-    ## outside a linear model, so it applies only where it applies.
+    ## across fixed structures that it would invalidate. Outside a linear model
+    ## the restricted likelihood is only approximate, so it applies only where
+    ## it is exact.
     use_reml <- isTRUE(reml) && identical(fam, "gaussian")
     fit <- tryCatch(suppressWarnings(
              ilm_model(form, data = data, family = fam, verbose = FALSE,

@@ -79,6 +79,10 @@ remain the only things that have ever found a defect here.
   * a category covariance at its edge given rank 1 passes the check it failed.
 
   `test-remedies.R` also fails if any check the package can report has no rule.
+* The README, the *Introduction* and the *Regression models* vignette show
+  them. The vignette works through a five-category covariance too rich for
+  twenty subjects: the checks name a rank, `ilm_remedies()` writes it out, and
+  `ilm_apply_remedy()` takes the level check from FAIL to WARN.
 * Writing the rules out found five remedies that were wrong:
   * `re_struct` naming only some of a model's terms stopped with an error about
     `re_struct$NA`. The argument reads as if a term left out keeps the default,
@@ -1126,6 +1130,15 @@ failing call was `ilm_plot_scatter(mtcars, "mpg", "wt", by = "cyl", trend =
   say what to do. `ilm_robust()` refuses too -- integrating the coefficients
   out leaves no per-observation score for a sandwich to sum, which is the same
   combination `glmmTMB`'s `estfun` rejects.
+* The help pages lagged behind the change above. `ilm_fit()`'s still said
+  non-gaussian REML was refused, `ilm_model()`'s pointed to a section that did
+  not exist, and `ilm_dag_model()`'s said a restricted likelihood has no
+  meaning outside a gaussian model. All three now say what the code does:
+  exact REML for a gaussian response, and an approximately restricted
+  likelihood for every other family, recorded in `fit$reml_exact`.
+  `ilm_dag_model()` still uses REML for a gaussian response only, now for the
+  stated reason that it is exact there. The *Regression models* vignette says
+  the same.
 
 ## Marginal slopes
 

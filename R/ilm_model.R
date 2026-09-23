@@ -178,10 +178,13 @@ ilm_need_bars <- function()
 #'   freedom from [ilm_denom_df()]. Once set, any likelihood-ratio test refuses
 #'   rather than quietly comparing things that are not comparable, and so does
 #'   [ilm_robust()], whose sandwich needs per-observation scores that a
-#'   restricted likelihood does not have. Available for every family, but it
-#'   delivers different amounts depending on the family -- see the section
-#'   below. [ilm_dag_model()] defaults to `TRUE`, because there the graph fixed
-#'   the adjustment set before any data were seen.
+#'   restricted likelihood does not have. Available for every family, but exact
+#'   only for a gaussian response: for any other family it is an approximately
+#'   restricted likelihood, which reduces the downward bias without REML's
+#'   exact properties, and `fit$reml_exact` says which a fit has (see the
+#'   *Regression models* vignette). [ilm_dag_model()] defaults to `TRUE` for a
+#'   gaussian response, because there the graph fixed the adjustment set
+#'   before any data were seen.
 #' @param boundary What to do about a random-effect covariance at the edge of
 #'   its range -- a variance of zero, or a correlation of +/-1 -- where the
 #'   likelihood is flat and cannot say where in that direction the truth is.
