@@ -294,7 +294,12 @@ test_that("zero parts, censoring, serial correlation and survival come along", {
   fa <- ilm_model(y ~ x + (1 | id), data = da, family = "gaussian",
                   ar = ilm_ar1(da$t, da$id, verbose = FALSE), verbose = FALSE)
   pa <- ilm_power(fa, n = 240L, sims = 10L, progress = FALSE)
-  expect_gt(pa$converged, 0.8)
+  ## most of the refits must work, not nine in ten: this model is hard enough
+  ## that the count moves with the platform's arithmetic -- Windows on R 4.6.1
+  ## converged 8 of these 10, which "> 0.8" refused. At a true rate of 0.9,
+  ## ten replicates come in at 8 or fewer 26% of the time and at 6 or fewer
+  ## 1.3%, so seven is the bar
+  expect_gte(pa$converged, 0.7)
   ## the replicate's AR(1) specification is rebuilt for the rows it drew
   r <- ilm_power_rows(240L, ilm_ar_group(fa$ar), seq_len(nrow(da)))
   a2 <- ilm_ar_rows(fa$ar, r$rows, r$copy)

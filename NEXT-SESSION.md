@@ -170,6 +170,19 @@ Craig, 2026-09-22: save it for the eventual paper rather than write it now.
 
 ### 6. Open, not scheduled
 
+- **Python versions of both packages -- agreed 2026-09-23, AFTER both are on
+  CRAN.** The R packages are the reference implementation: every Python
+  function gets an agreement test against them, run through rpy2 in CI (as
+  pyfixest does with fixest). illumex first (polars for collapse; it builds
+  the cross-language harness), then a JAX prototype of illume's engine -- the
+  multinomial GLMM first, benchmarked against R -- before committing to a
+  full port. The hard part is TMB's sparse Laplace approximation (dense
+  Hessians are fine up to a few thousand random effects; crossed designs need
+  sparse Cholesky with hand-written derivatives); JAX's vmap/jit would most
+  speed up power, the parametric bootstrap and the envelopes. API: same
+  formulas, names and arguments, `import pyillume as ilm` -> `ilm.model()`.
+  Names: `illume` is taken on PyPI (an unrelated placeholder); pyillume and
+  pyillumex proposed, not yet chosen.
 - macOS CI: `___kmpc_for_static_fini` (LLVM/Intel OpenMP). The macOS-only
   source-install step for TMB/RTMB in `.github/workflows/R-CMD-check.yaml`
   works: the 2026-09-23 run loaded RTMB and got as far as the tests, where it
