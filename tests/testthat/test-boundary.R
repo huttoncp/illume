@@ -8,6 +8,12 @@
 ## rose from 63.2% to 97.5%, the newly usable ones covered at 0.944, and their
 ## standard errors were 1.011 times those of the same model without the random
 ## term -- which is what a variance of zero says they should be.
+##
+## At the boundary only the direction the data cannot resolve is held (see
+## ilm_hess_recover()), so a boundary fit's standard errors are those of the
+## reduced model -- a covariance of lower rank, or the term dropped -- and no
+## longer depend on what TMB made of its own Hessian. The measurement behind
+## that choice is studies/scripts/boundary_se.R.
 
 bnd_data <- function(seed) {
   set.seed(seed); n <- 300
@@ -22,92 +28,86 @@ bnd_data <- function(seed) {
   d
 }
 
-test_that("a variance at zero leaves the fixed effects those of the model without it", {
+test_that("a covariance at its boundary gives the fixed effects of the reduced model", {
   d <- bnd_data(4)
   f <- suppressMessages(ilm_model(y ~ x + g + (1 | site), data = d,
                                   family = "multinomial", verbose = FALSE))
   f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
-  ## Which of two routes a boundary fit takes is the platform's arithmetic.
-  ## With R 4.4 and RTMB 1.9, TMB's Hessian at this boundary is not positive
-  ## definite and the term is held; with R 4.6.1 it is, at the same optimum
-  ## (logLik -311.3, a correlation of 1), and nothing needs holding. Both are
-  ## right, and what this is about holds on either: the fit is usable, the
-  ## boundary is recorded, and the fixed effects are those of the model
-  ## without the term. The hold itself is tested directly below.
-  expect_true(f$hessian_how %in% c("boundary", "tmb"))
+  ## The optimum is a correlation of 1 (logLik -311.3): a covariance of rank
+  ## one. Only the direction that reaches the boundary is held, whatever TMB
+  ## made of its own Hessian -- which R 4.4 and R 4.6.1 decided differently,
+  ## and which used to decide the route -- so the standard errors are those
+  ## of the rank-one model itself, on every platform.
+  expect_equal(f$hessian_how, "boundary")
+  expect_equal(f$hessian_held, "site")
+  expect_equal(f$hessian_flat, 1L)
   expect_true(f$ok)
   expect_true("site" %in% f$boundary_terms)
-  ## the fixed effects: usable, silent, and those of the model without the term
-  ## (R 4.6.1's route gave standard errors 1.004-1.035 times those; this
-  ## one's, 1.002-1.022)
+  fr <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+                  verbose = FALSE, re_struct = list(site = list(type = "rr", rank = 1L)))
   expect_silent(V <- vcov(f))
   expect_true(all(is.finite(V)))
+  expect_equal(sqrt(diag(V)), sqrt(diag(vcov(fr))), tolerance = 1e-3)
+  ## and, with no site effect in the data, close to the model without the term
   r <- sqrt(diag(V)) / sqrt(diag(vcov(f0)))
   expect_true(all(r > 0.97 & r < 1.05))
   expect_lt(max(abs(coef(f) - coef(f0))), 0.05)
   expect_silent(suppressMessages(ilm_anova(f)))
+  expect_false(isTRUE(f$sdr$pdHess))          # the record stays honest
+  expect_equal(f$checks$status[f$checks$check == "hessian"], "BOUNDARY")
+  ## the parameters along the held direction carry no uncertainty, and
+  ## asking for them says so
+  expect_warning(Vf <- vcov(f, full = TRUE), "held at its estimate")
+  expect_true(all(is.finite(Vf)))
   ## and the verdict says, where the numbers are read, what to trust
   out <- paste(utils::capture.output(summary(f)), collapse = "\n")
   expect_match(out, "What can be trusted", fixed = TRUE)
+  expect_match(out, "held at its estimate", fixed = TRUE)
   expect_match(paste(utils::capture.output(print(f)), collapse = "\n"),
                "[BOUNDARY: site at a boundary; fixed effects usable]",
                fixed = TRUE)
-  if (identical(f$hessian_how, "boundary")) {
-    expect_equal(f$hessian_held, "site")
-    expect_false(isTRUE(f$sdr$pdHess))          # the record stays honest
-    expect_equal(f$checks$status[f$checks$check == "hessian"], "BOUNDARY")
-    ## the covariance parameters are held: asking for them says so
-    expect_warning(Vf <- vcov(f, full = TRUE), "held at its estimate")
-    expect_true(all(is.finite(Vf)))
-    expect_match(out, "held at its", fixed = TRUE)
-  } else {
-    expect_true(isTRUE(f$sdr$pdHess))
-    expect_equal(f$checks$status[f$checks$check == "hessian"], "OK")
-    expect_match(out, "positive definite", fixed = TRUE)
-  }
 })
 
-test_that("a boundary term is held whenever TMB's own Hessian refuses, on any platform", {
-  ## Which route the fit above takes depends on the arithmetic, so the hold is
-  ## exercised directly: the same fit, with TMB's verdict on its Hessian taken
-  ## as a refusal. What comes back must hold `site` and leave the fixed effects
-  ## those of the model without it.
+test_that("a boundary is held the same way whatever TMB made of its Hessian", {
+  ## the property that makes a boundary fit's standard errors the same on
+  ## every platform: TMB's verdict on its own Hessian, which moves with the
+  ## arithmetic, no longer decides anything
   d <- bnd_data(4)
   f <- suppressMessages(ilm_model(y ~ x + g + (1 | site), data = d,
                                   family = "multinomial", verbose = FALSE))
-  f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
   pn <- names(f$opt$par)
   cb <- ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk, f$toff,
                        f$ar, f$opt$par, pn)
   expect_true("site" %in% cb$flagged)
-  sdr <- f$sdr; sdr$pdHess <- FALSE
-  h <- ilm_hess_recover(f$obj, f$opt, sdr, cb, joint = FALSE)
-  expect_equal(h$how, "boundary")
-  expect_equal(h$held, "site")
-  se <- sqrt(diag(h$sdr$cov.fixed)[pn == "beta"])
-  r <- se / sqrt(diag(vcov(f0)))
-  expect_true(all(r > 0.97 & r < 1.05))
+  hs <- lapply(c(TRUE, FALSE), function(v) {
+    sdr <- f$sdr; sdr$pdHess <- v
+    ilm_hess_recover(f$obj, f$opt, sdr, cb, joint = FALSE)
+  })
+  for (h in hs) {
+    expect_equal(h$how, "boundary")
+    expect_equal(h$held, "site")
+  }
+  ib <- pn == "beta"
+  expect_equal(hs[[1]]$sdr$cov.fixed[ib, ib], hs[[2]]$sdr$cov.fixed[ib, ib],
+               tolerance = 1e-10)
 })
 
 test_that("a covariance at a correlation of -1 is a boundary, not a failure", {
-  ## the Hessian is positive definite here, so nothing needs holding; the
-  ## rank-deficient covariance used to be graded FAIL all the same, with
-  ## "the standard errors above are not usable" beneath standard errors that
-  ## were within 4% of the model without the term
+  ## the rank-deficient covariance used to be graded FAIL, with "the standard
+  ## errors above are not usable" beneath standard errors within 4% of the
+  ## model without the term
   d <- bnd_data(1)
   f <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
                  verbose = FALSE)
-  ## where on the ridge the optimiser stops is the platform's arithmetic: with
-  ## RTMB 1.x at a log-Cholesky diagonal of -9.9 with a positive definite
-  ## Hessian, with RTMB 2.0 at the floor, where the term may be held instead
-  expect_true(f$hessian_how %in% c("tmb", "boundary"))
+  ## wherever on the ridge the optimiser stops -- RTMB 1.x at a log-Cholesky
+  ## diagonal of -9.9, RTMB 2.0 at the floor -- the direction along it is held
+  expect_equal(f$hessian_how, "boundary")
   expect_true(f$ok)
   expect_equal(f$checks$status[f$checks$check == "sigma_rank[site]"], "BOUNDARY")
   expect_true("site" %in% f$boundary_terms)
   out <- paste(utils::capture.output(summary(f)), collapse = "\n")
   expect_match(out, "What can be trusted", fixed = TRUE)
-  expect_match(out, if (f$hessian_how == "tmb") "positive definite" else "held at its",
-               fixed = TRUE)
+  expect_match(out, "held at its estimate", fixed = TRUE)
   ## A correlation of -1 is a rank-one covariance, so no fit can beat the
   ## rank-one model by more than rounding. RTMB 2.0 once "beat" it by 0.3,
   ## deep in the region where the Laplace arithmetic is noise, and printed
@@ -115,9 +115,29 @@ test_that("a covariance at a correlation of -1 is a boundary, not a failure", {
   fr <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
                   verbose = FALSE, re_struct = list(site = list(type = "rr", rank = 1L)))
   expect_lt(as.numeric(logLik(f)) - as.numeric(logLik(fr)), 1e-3)
+  ## and it IS the rank-one model, standard errors included
+  expect_equal(sqrt(diag(vcov(f))), sqrt(diag(vcov(fr))), tolerance = 1e-3)
   f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
   r <- sqrt(diag(vcov(f))) / sqrt(diag(vcov(f0)))
   expect_true(all(r > 0.95 & r < 1.1))
+})
+
+test_that("a random slope at a variance of zero keeps the uncertainty of what is still estimated", {
+  set.seed(21); n <- 480
+  d <- data.frame(g = factor(rep(1:60, each = 8)), x = rnorm(n))
+  d$y <- rbinom(n, 1, plogis(-0.3 + 0.5 * d$x + rnorm(60)[d$g]))  # no slope variance
+  f <- suppressMessages(ilm_model(y ~ x + (1 + x | g), data = d, verbose = FALSE))
+  expect_equal(f$hessian_how, "boundary")
+  expect_equal(f$hessian_held, "g")
+  expect_true(f$ok)
+  f0 <- suppressMessages(ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE))
+  ## Only the direction that reaches zero is held. The intercept-slope term
+  ## beside it sits at zero but is curved, so its uncertainty is kept, and
+  ## the standard errors come out a little above the random-intercept
+  ## model's rather than below: holding the whole term would have put them
+  ## below, which is how it undercovered in studies/scripts/boundary_se.R.
+  r <- sqrt(diag(vcov(f))) / sqrt(diag(vcov(f0)))
+  expect_true(all(r >= 0.999 & r < 1.05))
 })
 
 test_that("a correlation taken past the floor is brought back to it", {

@@ -37,13 +37,15 @@ ilm_warn_hess <- function(object, full = FALSE) {
   if (isTRUE(object$sdr$pdHess)) return(invisible())
   ## A term held at its boundary leaves the fixed effects usable, so asking for
   ## them is not an error worth a warning; asking for the covariance
-  ## parameters too is, because the held ones carry no uncertainty.
+  ## parameters too is, because the ones along a held direction carry no
+  ## uncertainty.
   if (length(object$hessian_held)) {
     if (full)
       warning("the covariance of ", paste(object$hessian_held, collapse = ", "),
-              " is held at its estimate (it sits at a boundary), so its rows ",
-              "here carry no uncertainty. The fixed effects are unaffected; ",
-              "see fit$checks.", call. = FALSE)
+              " sits at a boundary, and the direction in which it cannot be ",
+              "resolved is held at its estimate, so the rows of the ",
+              "parameters along it carry no uncertainty here. The fixed ",
+              "effects are unaffected; see fit$checks.", call. = FALSE)
     return(invisible())
   }
   warning("Hessian is not positive definite: this covariance matrix is unusable ",
