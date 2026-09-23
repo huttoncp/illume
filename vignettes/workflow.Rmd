@@ -73,8 +73,10 @@ See `?ilm_power`, `?ilm_scaffold` and the *Effect size and power* vignette.
 
 ## 2. Exploration
 
-Descriptive statistics, plots, and bootstrap intervals for the quantities you
-are about to model. `ilm_describe_all()` summarises every column at once;
+Stages 2 to 4 use `illumex`, the exploration package `illume` attaches, so
+nothing extra needs loading. Descriptive statistics, plots, and bootstrap
+intervals for the quantities you are about to model. `ilm_describe_all()`
+summarises every column at once;
 `ilm_plot_all()` picks a sensible plot per variable; `ilm_boot_ci()` and
 `ilm_boot_diff()` put intervals on means, medians and differences between
 groups without assuming normality.
@@ -295,9 +297,9 @@ ilm_interpret(fit)
 |---|---|
 | *Introduction to illume* | orientation and one worked example |
 | *Regression models* | `ilm_model()` in depth, every family, mixed multinomial |
-| *Exploring data* | descriptives, plots, bootstrap intervals |
-| *Profiling* | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
-| *Anomaly detection* | `ilm_anomaly()` against `ilm_outliers()`; `ilm_plot_anomaly()` to see whether the flagged rows stand apart |
+| *Exploring data* (illumex) | descriptives, plots, bootstrap intervals |
+| *Profiling* (illumex) | `ilm_reduce()`, `ilm_cluster()`, `ilm_profile()` |
+| *Anomaly detection* (illumex) | `ilm_anomaly()` against `ilm_outliers()`; `ilm_plot_anomaly()` to see whether the flagged rows stand apart |
 | *Missing data* | diagnosing it, imputing it, pooling |
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | `ilm_effects()`, `ilm_power()`, `ilm_power_design()`, `ilm_scaffold()`, `ilm_scenario()` |

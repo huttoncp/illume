@@ -536,7 +536,7 @@ ilm_power_p <- function(fit, nm) {
 #' @param sims Replicates per cell.
 #' @param alpha Two-sided level.
 #' @param seed Random seed.
-#' @param progress Show a progress bar; see [ilm_progress_arg].
+#' @param progress Show a progress bar; see [illumex::ilm_progress_arg].
 #' @return An object of class `"ilm_power"`: one row per `n` by `effect` cell
 #'   with `power`, its Monte Carlo interval, `power_converged` and `converged`.
 #' @seealso [ilm_power_n()] to read off the size for a target power,

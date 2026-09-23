@@ -141,7 +141,7 @@ ilm_drop_intercept <- function(X, object) {
 #'   fall below `1 / (B + 1)`.
 #' @param alpha Level for the per-term verdicts.
 #' @param seed Random seed.
-#' @param progress Show a progress bar; see [ilm_progress_arg].
+#' @param progress Show a progress bar; see [illumex::ilm_progress_arg].
 #' @return Invisibly, a data frame with one row per fixed-effect term giving
 #'   the spread statistic, a simulated p-value, the largest gap between cuts
 #'   and a `status`, with the per-cut coefficients in a `coefs` attribute.

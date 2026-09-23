@@ -38,7 +38,7 @@ Defaults are 0 and 1, or the first two levels of a factor.}
 
 \item{seed}{Random seed.}
 
-\item{progress}{Show a progress bar; see \link{ilm_progress_arg}.}
+\item{progress}{Show a progress bar; see \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_mediate"}: a data frame of estimates and

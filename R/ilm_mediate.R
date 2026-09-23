@@ -108,7 +108,7 @@ ilm_med_mu <- function(fit, nd, beta) {
 #' @param sims Simulation draws.
 #' @param level Confidence level for the percentile intervals.
 #' @param seed Random seed.
-#' @param progress Show a progress bar; see [ilm_progress_arg].
+#' @param progress Show a progress bar; see [illumex::ilm_progress_arg].
 #' @return An object of class `"ilm_mediate"`: a data frame of estimates and
 #'   intervals, with the draws attached.
 #' @seealso [ilm_mediate_sens()] for the untestable assumption,

@@ -188,7 +188,7 @@ ilm_typical_row <- function(object) {
 #' @param verbose Print the verdict.
 #' @param progress Show a progress bar. Defaults to [interactive()], so a
 #'   bar appears when someone is watching and nothing is written in a
-#'   script or a knitted document. See [ilm_progress_arg].
+#'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return Invisibly, a list with the fitted curve, the Kaplan-Meier, the
 #'   largest gap between them and a `status`.
 #' @seealso [ilm_survival()], [ilm_surv()].

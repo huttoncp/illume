@@ -21,6 +21,7 @@
 ## Otherwise it is "associated with", every time.
 ## ---------------------------------------------------------------------------
 
+## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
 #' @keywords internal
 #' @noRd
 ilm_wrap <- function(x, width = 76L, indent = "") {

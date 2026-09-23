@@ -15,27 +15,11 @@
 ## The default is interactive(): visible when a person is watching, silent in
 ## scripts, tests and knitr. A bar written into a vignette or a test log is
 ## noise, and would break every expect_silent() in the suite.
+##
+## The help page for the `progress` argument, ilm_progress_arg, is illumex's;
+## ilm_progress() is a copy of illumex's, compared by
+## tests/testthat/test-shared-helpers.R, so change the two together.
 ## ---------------------------------------------------------------------------
-
-#' Progress reporting in illume
-#'
-#' Long-running functions take a `progress` argument. It defaults to
-#' [interactive()], so a bar appears when someone is watching and nothing is
-#' written in a script, a test or a knitted document.
-#'
-#' The bar costs nothing worth measuring. On 2000 bootstrap replicates over
-#' 20,000 rows, the loop took 2.48s with a bar and 2.53s without.
-#'
-#' Where work is spread over several cores, the bar advances as each **chunk**
-#' of the work returns rather than each replicate: the workers are separate
-#' processes and cannot write to the parent's console. It is coarser, and it
-#' still tells you the run is alive and roughly how far along.
-#'
-#' @name ilm_progress_arg
-#' @examples
-#' d <- ilm_sim()
-#' ilm_boot_ci(d, "score", R = 200, progress = FALSE)
-NULL
 
 ## A bar, or a silent stand-in with the same shape so callers need no branch.
 #' @keywords internal

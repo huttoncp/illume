@@ -166,7 +166,7 @@ ilm_bin_cor <- function(z, pr, bin, nb, min_pairs = 30L) {
 #' @param verbose Print the table.
 #' @param progress Show a progress bar. Defaults to [interactive()], so a
 #'   bar appears when someone is watching and nothing is written in a
-#'   script or a knitted document. See [ilm_progress_arg].
+#'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return Invisibly, a list with the per-bin `table`, the simulated null, and
 #'   the number of replicates that refitted.
 #' @references

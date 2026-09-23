@@ -33,7 +33,7 @@ ilm_scenario(
 
 \item{seed}{Random seed.}
 
-\item{progress}{Show a progress bar; see \link{ilm_progress_arg}.}
+\item{progress}{Show a progress bar; see \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 An object of class \code{"ilm_scenario"}: a data frame of the grid with

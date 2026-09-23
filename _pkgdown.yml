@@ -9,8 +9,12 @@ home:
 
 navbar:
   structure:
-    left:  [intro, reference, articles, news]
+    left:  [intro, reference, articles, news, illumex]
     right: [search, github]
+  components:
+    illumex:
+      text: Exploration (illumex)
+      href: https://huttoncp.github.io/illumex/
 
 articles:
 - title: Start here
@@ -27,12 +31,6 @@ articles:
   - effect-size-and-power
   - anova
   - moderation
-- title: Exploration
-  navbar: Exploration
-  contents:
-  - exploring-data
-  - profiling
-  - anomaly-detection
   - missing-data
 
 reference:
@@ -75,14 +73,12 @@ reference:
   - ilm_check_collinearity
   - ilm_check_covariate
   - ilm_check_dispersion
-  - ilm_check_missing
   - ilm_check_omitted
   - ilm_check_predictive
   - ilm_check_proportional
   - ilm_check_variance
   - ilm_check_zeros
   - ilm_consistency
-  - ilm_gauss_check
   - ilm_re_mahalanobis
   - ilm_rqr
   - ilm_rqr_test
@@ -99,8 +95,6 @@ reference:
   contents:
   - ilm_ame
   - ilm_anova
-  - ilm_boot_ci
-  - ilm_boot_diff
   - ilm_coef_table
   - ilm_contrast
   - ilm_denom_df
@@ -113,7 +107,6 @@ reference:
   - ilm_robust
   - ilm_rp_lrt
   - ilm_scenario
-  - ilm_translate
   - ilm_trends
   - ilm_vcov_cluster
   - ilm_zi_coef
@@ -127,53 +120,12 @@ reference:
   - ilm_power
   - ilm_power_n
   - plot.ilm_power
-- title: "Describing data"
-  desc: >
-    Descriptive statistics, counts, and the things that are wrong with a data frame before any model sees it.
-  contents:
-  - ilm_copies
-  - ilm_counts
-  - ilm_counts_all
-  - ilm_counts_tb
-  - ilm_counts_tb_all
-  - ilm_describe
-  - ilm_describe_all
-  - ilm_dupes
-  - ilm_frame_issues
-  - ilm_recode_errors
-  - ilm_recode_errors_vec
-  - ilm_wash_df
-- title: "Outliers and anomalies"
-  desc: >
-    A value extreme for its own column, against a row implausible as a combination.
-  contents:
-  - ilm_anomaly
-  - ilm_anomalous
-  - ilm_plot_anomaly
-  - ilm_outliers
-  - ilm_outliers_all
-- title: "Structure: profile, cluster, reduce"
-  desc: >
-    ilm_profile() is the front door: it reduces, clusters and describes the groups in one call, and handles mixed columns. The other two are the same pipeline taken a step at a time, for when you want the coordinates or the partition on their own.
-  contents:
-  - ilm_profile
-  - ilm_var_contrib
-  - ilm_cluster
-  - ilm_reduce
-  - ilm_glrm
-  - ilm_profile_na
-  - ilm_cluster_na
-  - ilm_reduce_na
 - title: "Missing data"
   desc: >
-    Diagnosing it, filling it in honestly, and pooling across the imputations.
+    Filling it in honestly, and pooling across the imputations. Describing it is illumex's: ilm_check_missing().
   contents:
-  - ilm_describe_na
-  - ilm_describe_na_all
   - ilm_impute
   - ilm_mi_pool
-  - ilm_plot_na
-  - ilm_plot_na_all
 - title: "Causal models"
   desc: >
     A DAG, what it implies, and what it licenses you to say.
@@ -186,44 +138,19 @@ reference:
   - ilm_dsep
 - title: "Plots"
   desc: >
-    Built on tinyplot, named for what they show.
+    Plots of a fitted model, built on tinyplot. Plots of the data themselves are illumex's.
   contents:
-  - ilm_geom_spec
-  - ilm_pick_geom
-  - ilm_plot
   - ilm_plot_acf
-  - ilm_plot_all
-  - ilm_plot_bar
-  - ilm_plot_boot_diff
-  - ilm_plot_box
-  - ilm_plot_c
-  - ilm_plot_cluster
-  - ilm_plot_cluster_gap
-  - ilm_plot_density
   - ilm_plot_did
-  - ilm_plot_histogram
-  - ilm_plot_line
-  - ilm_plot_missing
   - ilm_plot_model
-  - ilm_plot_profile
   - ilm_plot_rdd
-  - ilm_plot_reduce
-  - ilm_plot_reduce_contrib
-  - ilm_plot_reduce_scree
-  - ilm_plot_scatter
-  - ilm_plot_stat_error
   - ilm_plot_survival
-  - ilm_plot_var
-  - ilm_plot_var_all
-  - ilm_plot_var_pairs
   - ilm_plot_variogram
-  - ilm_plot_violin
 - title: "Simulation"
   desc: >
-    Data with a known structure, and draws from a fitted model.
+    Draws from a fitted model. Example data with a known structure, ilm_sim(), is illumex's.
   contents:
   - ilm_fitted
-  - ilm_sim
   - ilm_simulate
   - ilm_survival
 - title: "Working with other packages"
@@ -249,7 +176,5 @@ reference:
   desc: >
     Documentation shared across functions, and methods you call by printing rather than by name.
   contents:
-  - ilm_progress_arg
-  - ilm_selection
   - print.ilm_censor
   - print.ilm_cor

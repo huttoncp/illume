@@ -144,7 +144,7 @@ ilm_scen_support <- function(mf, scen, vars) {
 #' @param contrast Compare scenarios against one another: `FALSE`, `"first"`
 #'   (each against the first) or `"pairwise"`.
 #' @param seed Random seed.
-#' @param progress Show a progress bar; see [ilm_progress_arg].
+#' @param progress Show a progress bar; see [illumex::ilm_progress_arg].
 #' @return An object of class `"ilm_scenario"`: a data frame of the grid with
 #'   `estimate`, `lower` and `upper`, plus any contrasts.
 #' @seealso [ilm_ame()] for the effect of a one-unit change rather than a named

@@ -9,7 +9,7 @@
 
 #' Variance inflation among fixed effects
 #'
-#' [ilm_frame_issues()] catches pairs of columns that are nearly identical, but
+#' [illumex::ilm_frame_issues()] catches pairs of columns that are nearly identical, but
 #' the case that actually breaks a model is a predictor collinear with a
 #' *combination* of the others, which no pairwise correlation reveals. That is
 #' what variance inflation measures.
@@ -27,7 +27,7 @@
 #' @references
 #' Fox, J. and Monette, G. (1992). Generalized collinearity diagnostics.
 #' Journal of the American Statistical Association, 87(417), 178-183.
-#' @seealso [ilm_frame_issues()] for collinearity in the raw data.
+#' @seealso [illumex::ilm_frame_issues()] for collinearity in the raw data.
 #' @examples
 #' set.seed(1)
 #' d <- ilm_sim()
@@ -447,7 +447,7 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 #' @param verbose Print the verdict.
 #' @param progress Show a progress bar. Defaults to [interactive()], so a
 #'   bar appears when someone is watching and nothing is written in a
-#'   script or a knitted document. See [ilm_progress_arg].
+#'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return Invisibly, a list with the observed statistics, their simulated
 #'   nulls, p-values, a `status` and a suggested remedy.
 #' @seealso [ilm_rqr_test()] for other residual statistics,

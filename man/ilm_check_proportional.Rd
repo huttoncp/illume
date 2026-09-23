@@ -23,7 +23,7 @@ fall below \code{1 / (B + 1)}.}
 
 \item{seed}{Random seed.}
 
-\item{progress}{Show a progress bar; see \link{ilm_progress_arg}.}
+\item{progress}{Show a progress bar; see \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
 }
 \value{
 Invisibly, a data frame with one row per fixed-effect term giving
