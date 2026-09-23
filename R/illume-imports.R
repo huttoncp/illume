@@ -36,6 +36,8 @@ utils::globalVariables(c(
   "ar_idx", "idx1", "idx_t", "idx_lag", "n_g", "Tt", "qk", "brng", "lc_idx",
   "is_car", "ar_gap", "nre_ar", "has_dm", "disp_mu", "Zdisp", "gamma", "mu_pow",
   "has_rp", "Drp",
+  ## the boundary-avoiding penalty: its weight, and which terms it applies to
+  "pen_re", "pen_k",
   ## the zero part and the ordered-response block, which live in the TMB
   ## data and parameter lists rather than in this frame
   "Zzi", "gzi", "has_zi", "zi_hurdle", "zi_cont", "i_zero", "i_pos",

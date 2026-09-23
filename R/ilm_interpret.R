@@ -430,7 +430,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     ## words summary() uses
     if (bnd)
       dl <- c(dl, paste("BOUNDARY --",
-                        ilm_trust_text(object$hessian_held, ilm_boundary_at(object))))
+                        ilm_trust_text(object$hessian_held, ilm_boundary_at(object),
+                                       avoided = identical(object$boundary, "avoid"))))
   }
   sec$diagnostics <- dl
 

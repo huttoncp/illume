@@ -285,7 +285,8 @@ Dispersion model: ", deparse(o$disp_formula), "
     if (nf) cat("  >> FAIL means the standard errors above are not usable.\n")
     else if (nb) {
       at <- ilm_boundary_at(o)
-      ilm_trust_note(intersect(o$hessian_held, at), at)
+      ilm_trust_note(intersect(o$hessian_held, at), at,
+                     avoided = identical(o$boundary, "avoid"))
     }
   }
   invisible(x)
@@ -305,7 +306,7 @@ ilm_boundary_at <- function(o) {
 ## the printed summary and the prose cannot say different things.
 #' @keywords internal
 #' @noRd
-ilm_trust_text <- function(held, boundary = character(0)) {
+ilm_trust_text <- function(held, boundary = character(0), avoided = FALSE) {
   at <- union(held, boundary)
   if (!length(at))
     return(paste("A smooth is penalised all the way to its unpenalised part,",
@@ -322,7 +323,13 @@ ilm_trust_text <- function(held, boundary = character(0)) {
          else ": the Hessian behind them is positive definite",
          ". If the term is not needed, drop it; if it is, a simpler structure ",
          "for it (re_struct \"diag\", or \"rr\" with a lower rank) may be ",
-         "supported.")
+         "supported",
+         if (isTRUE(avoided)) "." else paste0(
+           ", or refitting with boundary = \"avoid\" keeps the covariance off ",
+           "the boundary with a small penalty -- it is then assumed nonzero ",
+           "rather than estimated at zero, its variance comes out larger, and ",
+           "for a binary or categorical outcome the fixed effects move a little ",
+           "further from zero, markedly so when a category is rare."))
 }
 
 ## What can be trusted in a fit with a covariance at its boundary. Said in
@@ -330,7 +337,7 @@ ilm_trust_text <- function(held, boundary = character(0)) {
 ## like the table of a fit with nothing unusual about it.
 #' @keywords internal
 #' @noRd
-ilm_trust_note <- function(held, boundary = character(0)) {
+ilm_trust_note <- function(held, boundary = character(0), avoided = FALSE) {
   at <- union(held, boundary)
   if (!length(at)) {
     cat("  >> BOUNDARY: a smooth is penalised to its unpenalised part, which is\n",
@@ -353,6 +360,13 @@ ilm_trust_note <- function(held, boundary = character(0)) {
       "       estimate says the data cannot resolve it, not what it is. If the\n",
       "       term is not needed, drop it; if it is, a simpler structure for it\n",
       "       (re_struct: \"diag\", or \"rr\" with a lower rank) may be supported.\n",
+      if (!isTRUE(avoided))
+        paste0("     - or refit with boundary = \"avoid\": a small penalty keeps the\n",
+               "       covariance off the boundary. It is then assumed nonzero rather\n",
+               "       than estimated at zero, so do not test whether it is; its\n",
+               "       variance comes out larger, and for a binary or categorical\n",
+               "       outcome the fixed effects move a little further from zero,\n",
+               "       markedly so when a category is rare.\n"),
       sep = "")
 }
 

@@ -290,6 +290,18 @@ before cover at 0.944. In the combined regime the share rises from 91.0% to
 nominal, which is the price of holding a variance fixed where there is least
 to say about it. The other findings in this section are unchanged.
 
+Two later changes bear on this regime. A few of those fits ran along the ridge
+that a variance at zero leaves, past the point where the Laplace
+approximation's arithmetic holds, and two of them reported standard errors of
+exactly zero. With that fixed, 395 of the 400 give usable fixed effects. And
+`ilm_model(boundary = "avoid")` now offers the other answer to a boundary: a
+small penalty (Chung et al. 2013, 2015) that keeps the variance off zero. On
+these datasets it made all 400 fits usable, covering at 0.949. Its price is
+bias: its median estimate of that 0.05 SD is 0.21, and the larger variance
+moves the fixed effects further from zero. The shift is about 1% here and in
+three other regimes, 11% with a rare category and 20% in the combined regime.
+That is why it is offered rather than the default.
+
 **mclogit's RMSE is lower in four of six regimes**, by 3% (`flat_re`) to 14%.
 illume wins on RMSE only in the two sparse-cell regimes, and narrowly.
 

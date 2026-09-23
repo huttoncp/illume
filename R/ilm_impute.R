@@ -530,13 +530,16 @@ ilm_mi_pool <- function(object, formula = NULL, ...) {
       NULL else "auto"
     out <- vector("list", length(object$imputations))
     for (i in seq_along(out)) {
-      out[[i]] <- tryCatch(suppressWarnings(
+      ## What the first fit says -- the family it inferred, a covariance at
+      ## its boundary -- is said once, not once per imputation
+      said <- any(!vapply(out[seq_len(i - 1L)], is.null, TRUE))
+      out[[i]] <- tryCatch(suppressWarnings((if (said) suppressMessages else identity)(
         if (is.null(fam))
           ilm_model(formula, data = object$imputations[[i]],
                     verbose = FALSE, ...)
         else
           ilm_model(formula, data = object$imputations[[i]], family = fam,
-                    verbose = FALSE, ...)),
+                    verbose = FALSE, ...))),
         error = function(e) { errs[i] <<- conditionMessage(e); NULL })
       if (identical(fam, "auto") && !is.null(out[[i]]))
         fam <- out[[i]]$family$name

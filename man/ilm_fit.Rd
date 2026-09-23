@@ -24,7 +24,8 @@ ilm_fit(
   rp = NULL,
   Zzi = NULL,
   zi_type = c("inflated", "hurdle"),
-  reml = FALSE
+  reml = FALSE,
+  boundary = c("hold", "avoid")
 )
 }
 \arguments{
@@ -103,6 +104,11 @@ Laplace approximation to it is exact -- so this is REML rather than an
 approximation to it. Gaussian responses only; elsewhere the integral is
 still well defined but has none of REML's properties, so it is refused.
 See \code{\link[=ilm_model]{ilm_model()}} for when to switch it on.}
+
+\item{boundary}{\code{"hold"} (maximum likelihood; a covariance that reaches the
+edge of its range is held there) or \code{"avoid"} (the boundary-avoiding
+penalty of Chung et al. 2013, 2015). See \code{\link[=ilm_model]{ilm_model()}} for what each
+implies.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

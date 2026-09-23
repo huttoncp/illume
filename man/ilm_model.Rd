@@ -28,7 +28,8 @@ ilm_model_formula(
   ziformula = NULL,
   zi_type = c("inflated", "hurdle"),
   design = NULL,
-  reml = FALSE
+  reml = FALSE,
+  boundary = c("hold", "avoid")
 )
 }
 \arguments{
@@ -144,6 +145,36 @@ restricted likelihood does not have. Available for every family, but it
 delivers different amounts depending on the family -- see the section
 below. \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE}, because there the graph fixed
 the adjustment set before any data were seen.}
+
+\item{boundary}{What to do about a random-effect covariance at the edge of
+its range -- a variance of zero, or a correlation of +/-1 -- where the
+likelihood is flat and cannot say where in that direction the truth is.
+\code{"hold"}, the default, is maximum likelihood: an estimate that lands there
+is held at it, the rest of the fit's uncertainty is computed around it,
+and the fixed effects remain usable (see the BOUNDARY verdict in
+\code{\link[=summary.ilm_model]{summary.ilm_model()}}). \code{"avoid"} adds the boundary-avoiding penalty of
+Chung et al. (2013, 2015) -- half the log-determinant of each grouping
+term's covariance -- which keeps every estimate strictly inside its
+range; in one dimension it is a gamma(2) prior on the standard deviation.
+The penalty is small against the likelihood, so it matters only where
+the data cannot resolve the covariance, and \code{logLik()} reports the
+likelihood of the data at the penalised estimate.
+
+Measured against \code{"hold"} on a three-category outcome with 60 groups of
+8, 400 datasets per condition: with a true between-group SD of 0.05,
+every \code{"avoid"} fit was usable against 395 of 400 under \code{"hold"}, and the
+fixed effects' intervals covered at 0.949 against 0.946. The cost is in
+the estimates.
+A variance is pulled away from zero rather than estimated at it -- that
+SD of 0.05 came out at a median of 0.21, against 0.10 -- so a test of
+whether it IS zero no longer applies. And a larger between-group variance
+means larger within-group effects on a logit scale, so the fixed effects
+moved further from zero with it: by about 1\% in four conditions of six,
+but by 11\% when one outcome category was rare, where coverage fell from
+0.930 to 0.916, and by 20\% when the groups were unbalanced and
+heavy-tailed as well. \code{"hold"} stays the default for that reason; the fit
+says when a boundary was reached under it, and names \code{"avoid"} as the
+alternative.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in
@@ -184,7 +215,8 @@ would be mistaken for an ordinary predictor. This matches \code{mgcv::gam()}.
 The outcome may be a factor or a character vector. Its levels set the category
 labels used throughout the output.
 
-Random-effect bars are extracted with \code{lme4::findbars()} and smooths with
+Random-effect bars are extracted with \code{findbars()} from reformulas (lme4's
+parser; lme4 itself is used when reformulas is absent) and smooths with
 \code{mgcv::interpret.gam()}, then reparameterised by \code{ilm_smooth()} so that the
 unpenalised part of each smooth joins the fixed effects and the penalised part
 becomes a random term.
@@ -250,6 +282,16 @@ ilm_anova(fit, type = 3)
 head(predict(fit))
 }
 
+}
+\references{
+Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., & Liu, J. (2013). A
+nondegenerate penalized likelihood estimator for variance parameters in
+multilevel models. \emph{Psychometrika}, 78(4), 685--709.
+
+Chung, Y., Gelman, A., Rabe-Hesketh, S., Liu, J., & Dorie, V. (2015).
+Weakly informative prior for point estimation of covariance matrices in
+hierarchical models. \emph{Journal of Educational and Behavioral Statistics},
+40(2), 136--157.
 }
 \seealso{
 \code{\link[=summary.ilm_model]{summary.ilm_model()}}, \code{\link[=ilm_anova]{ilm_anova()}}, \code{\link[=predict.ilm_model]{predict.ilm_model()}},

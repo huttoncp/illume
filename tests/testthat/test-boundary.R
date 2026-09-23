@@ -59,13 +59,61 @@ test_that("a covariance at a correlation of -1 is a boundary, not a failure", {
   d <- bnd_data(1)
   f <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
                  verbose = FALSE)
-  expect_equal(f$hessian_how, "tmb")
+  ## where on the ridge the optimiser stops is the platform's arithmetic: with
+  ## RTMB 1.x at a log-Cholesky diagonal of -9.9 with a positive definite
+  ## Hessian, with RTMB 2.0 at the floor, where the term may be held instead
+  expect_true(f$hessian_how %in% c("tmb", "boundary"))
   expect_true(f$ok)
   expect_equal(f$checks$status[f$checks$check == "sigma_rank[site]"], "BOUNDARY")
   expect_true("site" %in% f$boundary_terms)
   out <- paste(utils::capture.output(summary(f)), collapse = "\n")
   expect_match(out, "What can be trusted", fixed = TRUE)
-  expect_match(out, "positive definite", fixed = TRUE)
+  expect_match(out, if (f$hessian_how == "tmb") "positive definite" else "held at its",
+               fixed = TRUE)
+  ## A correlation of -1 is a rank-one covariance, so no fit can beat the
+  ## rank-one model by more than rounding. RTMB 2.0 once "beat" it by 0.3,
+  ## deep in the region where the Laplace arithmetic is noise, and printed
+  ## standard errors of 0.
+  fr <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+                  verbose = FALSE, re_struct = list(site = list(type = "rr", rank = 1L)))
+  expect_lt(as.numeric(logLik(f)) - as.numeric(logLik(fr)), 1e-3)
+  f0 <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
+  r <- sqrt(diag(vcov(f))) / sqrt(diag(vcov(f0)))
+  expect_true(all(r > 0.95 & r < 1.1))
+})
+
+test_that("a correlation taken past the floor is brought back to it", {
+  ## put the optimiser where RTMB 2.0 took it: a log-Cholesky diagonal of -18,
+  ## where the objective is noise
+  d <- bnd_data(1)
+  f <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+                 verbose = FALSE)
+  pn <- names(f$opt$par); it <- which(pn == "theta")
+  pos <- ilm_floor_pos(f$re, f$ty, f$toff, f$C, pn)
+  expect_equal(pos, it[c(1, 3)])                # both diagonals of a 2 x 2 factor
+  ctl <- list(iter.max = 3000, eval.max = 3000)
+  bad <- f$opt; bad$par[it] <- c(log(0.048), -0.191, -18)
+  o <- ilm_floor_refit(f$obj, bad, pos, ilm_logsd_floor, ctl)
+  expect_true(all(o$par[pos] >= ilm_logsd_floor))
+  expect_lt(abs(o$objective - f$opt$objective), 1e-3)
+  ## a fit that never went past the floor is left exactly as it was
+  expect_identical(ilm_floor_refit(f$obj, f$opt, pos, ilm_logsd_floor, ctl), f$opt)
+  ## nothing to floor with one predictor, or in a reduced-rank or diagonal term
+  expect_length(ilm_floor_pos(f$re, "rr", f$toff, f$C, pn), 0L)
+  expect_length(ilm_floor_pos(f$re, "diag", f$toff, f$C, pn), 0L)
+  expect_length(ilm_floor_pos(f$re, f$ty, f$toff, 1L, pn), 0L)
+  ## end to end: unconstrained, this one goes to -13 with RTMB 1.x; the site
+  ## effect is null, so the fixed effects are those of the model without it
+  d8 <- bnd_data(8)
+  f8 <- ilm_model(y ~ x + g + (1 | site), data = d8, family = "multinomial",
+                  verbose = FALSE)
+  p8 <- ilm_floor_pos(f8$re, f8$ty, f8$toff, f8$C, names(f8$opt$par))
+  expect_gte(min(f8$opt$par[p8]), ilm_logsd_floor)
+  expect_true(f8$ok)
+  f80 <- ilm_model(y ~ x + g, data = d8, family = "multinomial", verbose = FALSE)
+  r <- sqrt(diag(vcov(f8))) / sqrt(diag(vcov(f80)))
+  expect_true(all(r > 0.97 & r < 1.05))
+  expect_lt(max(abs(coef(f8) - coef(f80))), 0.05)
 })
 
 test_that("fixed effects that are not identified are not rescued", {

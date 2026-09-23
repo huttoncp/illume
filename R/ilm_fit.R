@@ -807,13 +807,24 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @param re_struct Named list of covariance structures.
 #' @param kinds Named list marking each term `"group"` or `"basis"`.
 #' @param pnames Character vector of parameter names.
+#' @param avoided Logical. Whether the fit used `boundary = "avoid"`, in which
+#'   case the remedies do not offer it again.
 #' @return A data frame of checks.
 #' @keywords internal
 #' @noRd
 ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, kinds = NULL,
                       pnames = NULL, gap = NULL, hess = NULL,
-                      boundary = character(0)) {
+                      boundary = character(0), avoided = FALSE) {
   how <- if (is.null(hess)) "tmb" else hess$how
+  ## The remedy a boundary check names. Under the default the penalised
+  ## alternative is named with what it costs; a fit that already used it
+  ## has only the structural remedies left.
+  alt <- if (isTRUE(avoided)) "" else paste0(
+    "; or refit with boundary = \"avoid\", which keeps it off the boundary ",
+    "with a small penalty -- it is then assumed nonzero rather than ",
+    "estimated at zero, so do not test whether it is zero, and it comes out ",
+    "larger, with the fixed effects of a binary or categorical outcome a ",
+    "little further from zero")
   held <- if (is.null(hess)) character(0) else hess$held
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
   ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
@@ -882,7 +893,9 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     ck <- ilm_add_check(ck, "variance_boundary", if (any(bad)) "WARN" else "OK",
       sprintf("smallest random-effect SD across grouping terms = %.2e", min(gsd)),
       if (any(bad)) "a random-effect variance has collapsed to zero" else "",
-      if (any(bad)) "drop that term; the data do not support it" else "")
+      if (any(bad)) paste0("drop that term if the design does not call for ",
+                           "it; if it does -- repeated measures, say -- keep ",
+                           "it", alt) else "")
   }
   ## Penalised-out smooth components: informative, not a failure -- unless the
   ## whole smooth vanishes, which means the term has no effect at all.
@@ -919,7 +932,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
           "; this term's own level count was adequate, so the global latent budget is the likely cause" else "") else "",
       if (rt < 1e-3) {
         if (s$type == "rr") sprintf("lower the rank below %d for this term", s$rank)
-        else "use a reduced-rank (rr) category covariance for this term"
+        else paste0("use a reduced-rank (rr) category covariance for this term",
+                    alt)
       } else "")
   }
   ## Within-group (intercept/slope) covariance.  Distinct from sigma_rank, which
@@ -935,12 +949,14 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
       st <- "FAIL"
       dt <- sprintf("smallest slope SD, relative to the intercept, = %.2e (correlation %.3f)", min(rel), mxc)
       wy <- "a random-slope variance has collapsed to zero: these data do not support an independent slope for this term"
-      tr <- sprintf("remove the random slope from term '%s', keeping its random intercept", nm)
+      tr <- paste0(sprintf("remove the random slope from term '%s', keeping its random intercept", nm),
+                   alt)
     } else if (mxc > 0.99) {
       st <- if (mxc > 0.999) "FAIL" else "WARN"
       dt <- sprintf("largest |intercept-slope correlation| = %.4f", mxc)
       wy <- "intercept and slope are (near) perfectly correlated, so Sigma_d is singular and the slope adds no independent dimension"
-      tr <- sprintf("set d_cor = FALSE for term '%s' to drop the intercept-slope correlation, or remove the random slope", nm)
+      tr <- paste0(sprintf("set d_cor = FALSE for term '%s' to drop the intercept-slope correlation, or remove the random slope", nm),
+                   alt)
     } else {
       st <- "OK"
       dt <- sprintf("slope/intercept SD ratio %.3f, |correlation| %.3f", min(rel), mxc)
@@ -1096,6 +1112,69 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn) {
        keep = which(!pn %in% c("theta", "lchol_ar", "rho_raw")))
 }
 
+## HOW FAR A CORRELATION MAY GO TOWARDS +/-1. An unstructured category
+## covariance reaches a correlation of +/-1 by sending a log-Cholesky diagonal
+## to minus infinity, and the random effects' density is evaluated through the
+## inverse of that factor. The inner Hessian of the Laplace approximation then
+## carries a rank-one part of size exp(-2c), which its Cholesky factorisation
+## has to cancel back down to the data's O(1) curvature: past exp(-2c) of about
+## 1 / machine epsilon the objective is noise, and the optimiser, walking a
+## ridge the likelihood is flat on, can find a "maximum" there. On R release
+## with RTMB 2.0 it did -- an objective 0.3 better than the true boundary
+## maximum (the rank-one fit's logLik, -316.401), false convergence with a
+## gradient of 1.08, and standard errors of 0 from a Hessian differenced out
+## of the noise. Profiled along the ridge, where the true objective is flat:
+## with three categories it moves by 2e-6 down to c = -12, 1e-4 at -15 and
+## 10 at -20; with four, all three diagonals held together, by under 1e-4
+## down to -11, then 2e-3 at -12 and 18 at -13. -10 is an SD of 4.5e-5 on the
+## logit scale -- a zero for every purpose, and below the 1e-3 at which a term
+## is called a boundary, so nothing downstream changes. A scalar variance is
+## exact to -20, a diagonal structure has no correlation to take to +/-1, and
+## a reduced-rank term is non-centred and never inverts its factor, so only
+## these positions are floored: the diagonals of an unstructured category
+## covariance (C >= 2) of a population term, and of the AR innovation
+## covariance, which is built the same way. The multinomial is the only
+## family with C >= 2, so the floor is always on the logit scale.
+ilm_logsd_floor <- -10
+
+#' @keywords internal
+#' @noRd
+ilm_floor_pos <- function(re, ty, toff, C, pn, ar = NULL) {
+  if (C < 2L) return(integer(0))
+  ## a lower-triangular fill by columns puts the diagonal at 1, C + 1, ...
+  dg <- cumsum(c(1L, C - seq_len(C - 1L) + 1L))
+  it <- which(pn == "theta"); pos <- integer(0)
+  for (k in seq_along(re))
+    if (ty[k] == "us" && !identical(re[[k]]$kind, "basis"))
+      pos <- c(pos, it[toff[k] + dg])
+  if (!is.null(ar)) pos <- c(pos, which(pn == "lchol_ar")[dg])
+  pos
+}
+
+## Refit with the floor as a lower bound -- only when the unconstrained fit went
+## past it, so every fit that never got there is exactly what it was. The
+## objective beyond the floor is not trusted, so the refit is kept even when
+## it is "worse": that objective is the one that is real.
+#' @keywords internal
+#' @noRd
+ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
+  if (!length(pos) || all(opt$par[pos] >= floor)) return(opt)
+  st <- opt$par; st[pos] <- pmax(st[pos], floor)
+  lo <- rep(-Inf, length(st)); lo[pos] <- floor
+  o2 <- tryCatch({
+    o <- nlminb(st, obj$fn, obj$gr, lower = lo, control = ctl)
+    nlminb(o$par, obj$fn, obj$gr, lower = lo, control = ctl)
+  }, error = function(e) NULL)
+  if (is.null(o2) || !is.finite(o2$objective)) return(opt)
+  ## TMB remembers the lowest objective it has seen, and starts every inner
+  ## optimisation from the random effects there -- which is now the spurious
+  ## point past the floor. Forgetting it makes the next evaluation, at this
+  ## estimate, the one remembered.
+  if (exists("value.best", envir = obj$env, inherits = FALSE))
+    assign("value.best", Inf, envir = obj$env)
+  o2
+}
+
 ## The three outcomes: "recomputed" (the accurate Hessian is positive definite
 ## and nothing is at a boundary, so the fit is fully usable), "boundary" (the
 ## terms in `held` are held at their estimates and everything else is
@@ -1109,11 +1188,18 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
   if (isTRUE(sdr$pdHess)) return(list(sdr = sdr, how = "tmb", held = character(0)))
   out <- list(sdr = sdr, how = "none", held = character(0))
   if (!length(opt$par)) return(out)
+  ## Only at a stationary point. A Hessian differenced where the gradient is
+  ## not zero is not the curvature at a maximum, and its inverse is not a
+  ## covariance: from a fit stopped at a gradient of 1.08 it gave standard
+  ## errors of 0. The line is the gradient check's own FAIL line, so a fit it
+  ## would call usable is never refused here.
+  g0 <- tryCatch(abs(as.numeric(obj$gr(opt$par))), error = function(e) NULL)
   H <- tryCatch(ilm_hessian(function(p) as.numeric(obj$gr(p)), opt$par),
                 error = function(e) NULL)
   ## those gradient calls moved the tape; put it back at the optimum
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
-  if (is.null(H) || !all(is.finite(H))) return(out)
+  if (is.null(H) || !all(is.finite(H)) || is.null(g0) || !all(is.finite(g0)))
+    return(out)
   ## Positive definite on a scale-free test, not merely chol()-able. Finite
   ## differences leave an exactly singular Hessian slightly positive, so an
   ## aliased pair of columns (x2 = 2 * x1) passed chol() and was "rescued";
@@ -1136,7 +1222,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
   ## a boundary variance is handled as one whatever the Hessian says: an
   ## inverse that is merely positive definite gives it a standard error in the
   ## billions, which is a number rather than information
-  if (!length(cb$flagged) && pd(H)) {
+  if (!length(cb$flagged) && max(g0) <= 1e-2 && pd(H)) {
     s2 <- redo(H)
     if (!is.null(s2) && isTRUE(s2$pdHess))
       return(list(sdr = s2, how = "recomputed", held = character(0)))
@@ -1145,7 +1231,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     d <- unlist(cb$blocks[on], use.names = FALSE)
     if (!length(d) || any(cb$keep %in% d)) next
     kp <- setdiff(seq_len(nrow(H)), d)
-    if (!length(kp) || !pd(H[kp, kp, drop = FALSE])) next
+    if (!length(kp) || max(g0[kp]) > 1e-2 || !pd(H[kp, kp, drop = FALSE])) next
     ## held: its rows and columns cut loose, with a curvature so large that
     ## no uncertainty is carried through from it
     Hm <- H; Hm[d, ] <- 0; Hm[, d] <- 0
@@ -1292,6 +1378,10 @@ ilm_print_checks <- function(ck, title) {
 #'   approximation to it. Gaussian responses only; elsewhere the integral is
 #'   still well defined but has none of REML's properties, so it is refused.
 #'   See [ilm_model()] for when to switch it on.
+#' @param boundary `"hold"` (maximum likelihood; a covariance that reaches the
+#'   edge of its range is held there) or `"avoid"` (the boundary-avoiding
+#'   penalty of Chung et al. 2013, 2015). See [ilm_model()] for what each
+#'   implies.
 #'
 #' @return An object of class `"ilm_model"`: a list whose most useful elements are
 #'   `checks` (the diagnostic table), `Sigma` (fitted category covariances),
@@ -1330,8 +1420,9 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
                      rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle"),
-                     reml = FALSE) {
+                     reml = FALSE, boundary = c("hold", "avoid")) {
   zi_type <- match.arg(zi_type)
+  boundary <- match.arg(boundary)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Integrating the fixed effects out under a flat prior is available for any
   ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-
@@ -1567,7 +1658,15 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
              nlk = as.integer(nlk), dk = as.integer(dk), wk = as.integer(wk),
              npc = as.integer(npc), ty = as.character(ty), rk = as.integer(rk),
              dcor = as.logical(dcor), K = K, C = C, has_ar = !is.null(ar),
-             is_car = isTRUE(ar$type == "car1"))
+             is_car = isTRUE(ar$type == "car1"),
+             ## the boundary-avoiding penalty, and which terms it applies to:
+             ## populations only -- a smooth's penalty variance reaching zero
+             ## is the smooth becoming linear, which is not a boundary to keep
+             ## it from -- and not a reduced-rank term, whose covariance is
+             ## singular by construction
+             pen_re = if (identical(boundary, "avoid")) 1 else 0,
+             pen_k = vapply(re, function(e) !identical(e$kind, "basis"), TRUE) &
+               ty != "rr")
   if (!is.null(ar)) {
     if (identical(ar$type, "car1")) {
       ## cells are ordered by group then time, so the preceding observation of
@@ -1627,6 +1726,19 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
         nll <- nll + w * nl * sum(log(diag(Ld)))
       }
       nll <- nll + nl * d * lcld
+      ## boundary = "avoid": half the log-determinant of the term's covariance,
+      ## Sigma_cat (x) Sigma_d, added to the log-likelihood (Chung et al. 2013,
+      ## 2015). In one dimension it is log(sigma), a gamma(2) prior on the SD --
+      ## in the log-SD parameterisation a barrier, so no estimate can reach
+      ## zero, and a correlation cannot reach +/-1 either, where the
+      ## determinant vanishes. Its pull is O(1) against a likelihood that grows
+      ## with the data, so it matters only where the data cannot resolve the
+      ## covariance -- which is where the boundary is.
+      if (pen_re > 0 && pen_k[k]) {
+        lp <- d * lcld
+        if (d > 1L) lp <- lp + w * sum(log(diag(Ld)))
+        nll <- nll - pen_re * lp
+      }
       if (kind[k] == "basis") {
         ctb <- bas[[k]] %*% rows(1L)             # dense basis, no grouping index
         if (ty[k] == "rr") ctb <- ctb %*% t(Lam)
@@ -1772,7 +1884,8 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     base <- try(suppressWarnings(
       ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
               weights = weights, family = fam, verbose = FALSE,
-              restarts = 1L, censor = censor)), silent = TRUE)
+              restarts = 1L, censor = censor, boundary = boundary)),
+      silent = TRUE)
     if (!inherits(base, "try-error")) {
       bp <- base$opt$par; bn <- names(bp)
       pars$beta <- matrix(bp[bn == "beta"], p, C)
@@ -1833,7 +1946,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
       ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
               weights = weights, family = fam, verbose = FALSE,
               restarts = 1L, censor = censor, Zd = Zd,
-              disp_mu = disp_mu)), silent = TRUE)
+              disp_mu = disp_mu, boundary = boundary)), silent = TRUE)
     if (!inherits(bz, "try-error")) {
       bp <- bz$opt$par; bn <- names(bp)
       pars$beta <- matrix(bp[bn == "beta"], p, C)
@@ -1876,6 +1989,11 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   opt <- nlminb(obj$par, obj$fn, obj$gr, control = ctl)
   for (k in seq_len(restarts))
     opt <- nlminb(opt$par, obj$fn, obj$gr, control = ctl)
+  ## a correlation taken towards +/-1 past where the Laplace arithmetic holds
+  ## is brought back to the floor (see ilm_logsd_floor)
+  fpos <- ilm_floor_pos(re, ty, toff, C, names(obj$par), ar)
+  opt <- ilm_floor_refit(obj, opt, fpos, ilm_logsd_floor, ctl)
+  invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
 
   ## the fitted covariance structures, which depend on the estimates alone
   pn <- names(obj$par)
@@ -1913,6 +2031,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
     if (length(d) && !any(cb$keep %in% d)) {
       lo <- rep(-Inf, length(opt$par)); up <- rep(Inf, length(opt$par))
+      lo[fpos] <- pmin(ilm_logsd_floor, opt$par[fpos])
       lo[d] <- up[d] <- opt$par[d]
       o2 <- tryCatch(nlminb(opt$par, obj$fn, obj$gr, lower = lo, upper = up,
                             control = ctl), error = function(e) NULL)
@@ -1932,6 +2051,18 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   }
   Sig <- s$Sig; Sigd <- s$Sigd; Lams <- s$Lams
   pe <- opt$par; thv <- pe[pn == "theta"]
+  ## the penalty's value at the estimate, which the reported likelihood adds
+  ## back: logLik() is the likelihood of the data at the penalised estimate,
+  ## not the penalised objective the optimiser minimised
+  re_penalty <- 0
+  if (identical(boundary, "avoid"))
+    for (k in which(dl$pen_k)) {
+      re_penalty <- re_penalty + 0.5 * dk[k] *
+        as.numeric(determinant(Sig[[k]], logarithm = TRUE)$modulus)
+      if (dk[k] > 1L)
+        re_penalty <- re_penalty + 0.5 * C *
+          as.numeric(determinant(Sigd[[names(re)[k]]], logarithm = TRUE)$modulus)
+    }
 
   ## joint = TRUE also returns the joint precision over (fixed, random), which
   ## is what lets predict() propagate uncertainty in the PENALISED SMOOTH
@@ -1980,7 +2111,8 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   post <- ilm_postcheck(opt, obj, sdr, C, !is.null(ar), pre, Sig, Sigd, re_struct,
                         gap = if (identical(ar$type, "car1")) ar$gap else NULL,
                     kinds = as.list(vapply(re, `[[`, "", "kind")), pnames = pnames,
-                    hess = hess, boundary = cb$flagged)
+                    hess = hess, boundary = cb$flagged,
+                    avoided = identical(boundary, "avoid"))
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {
@@ -2053,6 +2185,9 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  ## so a power simulation reports them rather than counting
                  ## each replicate that repeats them as a failed fit
                  n_precheck = nrow(pre),
+                 ## how a boundary was treated, and the penalty's value at the
+                 ## estimate when it was avoided (zero otherwise)
+                 boundary = boundary, re_penalty = re_penalty,
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
@@ -2215,7 +2350,8 @@ ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
           censor = object$censor, Zd = Zd, disp_mu = isTRUE(object$disp_mu),
           rp = rp, Zzi = object$Zzi,
           zi_type = if (is.null(object$zi_type)) "inflated" else object$zi_type,
-          reml = isTRUE(object$reml))
+          reml = isTRUE(object$reml),
+          boundary = if (is.null(object$boundary)) "hold" else object$boundary)
 }
 
 ## Everything ilm_refit_like() reads, as plain R objects and nothing else --
@@ -2235,7 +2371,8 @@ ilm_refit_stub <- function(object)
        ylevels = object$ylevels, family = object$family,
        weights = object$weights, censor = object$censor, Zd = object$Zd,
        disp_mu = isTRUE(object$disp_mu), rp = object$rp, Zzi = object$Zzi,
-       zi_type = object$zi_type, reml = isTRUE(object$reml))
+       zi_type = object$zi_type, reml = isTRUE(object$reml),
+       boundary = if (is.null(object$boundary)) "hold" else object$boundary)
 
 #' Fitted dispersion, one value per observation
 #'

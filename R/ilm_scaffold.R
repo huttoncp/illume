@@ -188,9 +188,7 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   if (is.na(n_unit) || n_unit < 4L)
     stop("`n_unit` below 4 is not a study; it is ", n_unit, call. = FALSE)
   fam <- if (inherits(family, "ilm_family")) family else ilm_family(family)
-  if (!requireNamespace("lme4", quietly = TRUE))
-    stop("the formula interface needs lme4 to read random-effect bars; ",
-         "install.packages(\"lme4\")", call. = FALSE)
+  ilm_need_bars()
   ## A categorical outcome has categories to name, and an ordinal one cut
   ## points; nothing else has either, and quietly ignoring them would plan a
   ## study other than the one described.
@@ -202,8 +200,8 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
          "outcome, and this is a ", fam$name, " model.", call. = FALSE)
   }
 
-  bars  <- lme4::findbars(formula)
-  fform <- lme4::nobars(formula)
+  bars  <- ilm_findbars(formula)
+  fform <- ilm_nobars(formula)
   resp  <- all.vars(formula)[1L]
   group <- if (length(bars)) ilm_mf_name(bars[[1L]][[3L]]) else NULL
   ## a variable a bar varies over is within-unit whether or not it was named

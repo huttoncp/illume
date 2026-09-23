@@ -215,7 +215,11 @@ logLik.ilm_model <- function(object, ...) {
   ## coverage and power studies.
   q <- object$n_integrated
   if (is.null(q)) q <- 0L
-  val <- -object$opt$objective - (q / 2) * log(2 * pi)
+  ## Under boundary = "avoid" the optimiser minimised the penalised objective;
+  ## the likelihood of the data at that estimate is the objective with the
+  ## penalty taken back out.
+  pen <- if (is.null(object$re_penalty)) 0 else object$re_penalty
+  val <- -object$opt$objective - pen - (q / 2) * log(2 * pi)
   structure(val, df = length(object$opt$par), nobs = nrow(object$X), class = "logLik")
 }
 

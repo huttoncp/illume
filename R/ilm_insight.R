@@ -21,9 +21,9 @@
 ilm_ins_formula <- function(x, ...) {
   f <- stats::formula(x)
   re <- names(x$re)
-  out <- list(conditional = lme4::nobars(f))
+  out <- list(conditional = ilm_nobars(f))
   if (length(re)) {
-    bars <- lme4::findbars(f)
+    bars <- ilm_findbars(f)
     if (length(bars))
       out$random <- lapply(bars, function(b)
         ilm_one_sided(b, environment(f) %||% parent.frame()))
@@ -40,7 +40,7 @@ ilm_ins_response <- function(x, ...) ilm_mf_name(stats::formula(x)[[2]])
 #' @noRd
 ilm_ins_predictors <- function(x, effects = "fixed", flatten = FALSE, ...) {
   f <- stats::formula(x)
-  cond <- all.vars(stats::delete.response(stats::terms(lme4::nobars(f))))
+  cond <- all.vars(stats::delete.response(stats::terms(ilm_nobars(f))))
   re <- names(x$re)
   out <- list(conditional = cond)
   if (length(re) && effects %in% c("all", "random")) out$random <- re

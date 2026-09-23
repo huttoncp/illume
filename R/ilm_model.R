@@ -2,14 +2,37 @@
 ##
 ##   ilm_model(y ~ x1 + x2 + (1 | subj) + (1 + time | site) + s(x), data = dd)
 ##
-## Random-effect bars are parsed with lme4::findbars; smooths with
-## mgcv::interpret.gam, then reparameterised by ilm_smooth() into fixed
-## null-space columns (appended to X) plus iid random basis blocks.
+## Random-effect bars are parsed with reformulas::findbars (lme4's own parser,
+## which moved there); smooths with mgcv::interpret.gam, then reparameterised
+## by ilm_smooth() into fixed null-space columns (appended to X) plus iid
+## random basis blocks.
 ##
 ## This stores call / terms / xlev / contrasts / model frame / smooth objects.
 ## That is not bookkeeping for its own sake: emmeans::recover_data, any
 ## predict(newdata=) and car::Anova all rebuild a reference grid from exactly
 ## those components, and retrofitting them later is painful.
+
+## The random-effect bars of a formula, and the formula without them. lme4
+## 2.0 moved its bar parser to reformulas and warns when it is reached through
+## lme4; an older lme4 has it and reformulas may be absent, so either serves.
+#' @keywords internal
+#' @noRd
+ilm_findbars <- function(f)
+  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::findbars(f) else lme4::findbars(f)
+
+#' @keywords internal
+#' @noRd
+ilm_nobars <- function(f)
+  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::nobars(f) else lme4::nobars(f)
+
+## Whether either is there to parse bars with, and what to install if not.
+#' @keywords internal
+#' @noRd
+ilm_need_bars <- function()
+  if (!requireNamespace("reformulas", quietly = TRUE) &&
+      !requireNamespace("lme4", quietly = TRUE))
+    stop("the formula interface needs reformulas (or lme4) to read ",
+         "random-effect bars; install.packages(\"reformulas\")", call. = FALSE)
 
 #' Fit a multinomial linear mixed model
 #'
@@ -158,12 +181,51 @@
 #'   delivers different amounts depending on the family -- see the section
 #'   below. [ilm_dag_model()] defaults to `TRUE`, because there the graph fixed
 #'   the adjustment set before any data were seen.
+#' @param boundary What to do about a random-effect covariance at the edge of
+#'   its range -- a variance of zero, or a correlation of +/-1 -- where the
+#'   likelihood is flat and cannot say where in that direction the truth is.
+#'   `"hold"`, the default, is maximum likelihood: an estimate that lands there
+#'   is held at it, the rest of the fit's uncertainty is computed around it,
+#'   and the fixed effects remain usable (see the BOUNDARY verdict in
+#'   [summary.ilm_model()]). `"avoid"` adds the boundary-avoiding penalty of
+#'   Chung et al. (2013, 2015) -- half the log-determinant of each grouping
+#'   term's covariance -- which keeps every estimate strictly inside its
+#'   range; in one dimension it is a gamma(2) prior on the standard deviation.
+#'   The penalty is small against the likelihood, so it matters only where
+#'   the data cannot resolve the covariance, and `logLik()` reports the
+#'   likelihood of the data at the penalised estimate.
+#'
+#'   Measured against `"hold"` on a three-category outcome with 60 groups of
+#'   8, 400 datasets per condition: with a true between-group SD of 0.05,
+#'   every `"avoid"` fit was usable against 395 of 400 under `"hold"`, and the
+#'   fixed effects' intervals covered at 0.949 against 0.946. The cost is in
+#'   the estimates.
+#'   A variance is pulled away from zero rather than estimated at it -- that
+#'   SD of 0.05 came out at a median of 0.21, against 0.10 -- so a test of
+#'   whether it IS zero no longer applies. And a larger between-group variance
+#'   means larger within-group effects on a logit scale, so the fixed effects
+#'   moved further from zero with it: by about 1% in four conditions of six,
+#'   but by 11% when one outcome category was rare, where coverage fell from
+#'   0.930 to 0.916, and by 20% when the groups were unbalanced and
+#'   heavy-tailed as well. `"hold"` stays the default for that reason; the fit
+#'   says when a boundary was reached under it, and names `"avoid"` as the
+#'   alternative.
 #'
 #' @return An object of class `"ilm_model"`. Beyond the elements listed in
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
 #'   `contrasts`, the model frame and the smooth objects -- everything needed to
 #'   rebuild a reference grid for [predict.ilm_model()] and for `emmeans` or
 #'   `marginaleffects`.
+#'
+#' @references
+#' Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., & Liu, J. (2013). A
+#' nondegenerate penalized likelihood estimator for variance parameters in
+#' multilevel models. *Psychometrika*, 78(4), 685--709.
+#'
+#' Chung, Y., Gelman, A., Rabe-Hesketh, S., Liu, J., & Dorie, V. (2015).
+#' Weakly informative prior for point estimation of covariance matrices in
+#' hierarchical models. *Journal of Educational and Behavioral Statistics*,
+#' 40(2), 136--157.
 #'
 #' @examples
 #' \dontrun{
@@ -208,7 +270,8 @@ ilm_model <- function(formula, ...) {
 #' Parses the formula, builds the design matrices and calls [ilm_fit()]. Called
 #' by [ilm_model()]; documented separately only because [ilm_model()] dispatches to it.
 #'
-#' Random-effect bars are extracted with `lme4::findbars()` and smooths with
+#' Random-effect bars are extracted with `findbars()` from reformulas (lme4's
+#' parser; lme4 itself is used when reformulas is absent) and smooths with
 #' `mgcv::interpret.gam()`, then reparameterised by `ilm_smooth()` so that the
 #' unpenalised part of each smooth joins the fixed effects and the penalised part
 #' becomes a random term.
@@ -234,8 +297,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
                          censor = NULL, dispformula = NULL,
                          rp_df = 3L, rp_knots = NULL, ziformula = NULL,
                          zi_type = c("inflated", "hurdle"), design = NULL,
-                         reml = FALSE) {
+                         reml = FALSE, boundary = c("hold", "avoid")) {
   zi_type <- match.arg(zi_type)
+  boundary <- match.arg(boundary)
   ## A survey design supplies the weights, so taking them from both places
   ## would silently apply one and ignore the other.
   if (!is.null(design)) {
@@ -252,10 +316,10 @@ ilm_model_formula <- function(formula, data, family = "auto",
   auto <- is.null(family) || identical(family, "auto")
   fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
-  if (!requireNamespace("lme4", quietly = TRUE)) stop("lme4 is required for the formula interface")
+  ilm_need_bars()
   if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
 
-  ## Where the terms of the formula get evaluated. lme4::nobars(),
+  ## Where the terms of the formula get evaluated. nobars(),
   ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying
   ## an environment of their own, so without this the model frame is built
   ## somewhere the caller's local variables do not exist -- and a term such as
@@ -264,8 +328,8 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fenv <- environment(formula)
   if (is.null(fenv)) fenv <- parent.frame()
 
-  bars  <- lme4::findbars(formula)
-  fform <- lme4::nobars(formula)
+  bars  <- ilm_findbars(formula)
+  fform <- ilm_nobars(formula)
   environment(fform) <- fenv
   ## Not mgcv::interpret.gam() directly: it rebuilds formulas from text and
   ## fails outright on a column name that needs backticks. See ilm_names.R.
@@ -288,7 +352,7 @@ ilm_model_formula <- function(formula, data, family = "auto",
          "is treated as an ordinary predictor.", call. = FALSE)
 
   ## all.vars() on the grouping side, not deparse(). A NESTED bar is expanded
-  ## by lme4::findbars() into a grouping EXPRESSION rather than a name --
+  ## by findbars() into a grouping EXPRESSION rather than a name --
   ## `(1 | continent/country)` becomes `(1 | country:continent)` plus
   ## `(1 | continent)` -- and deparsing that yields "country:continent", which
   ## is not a column, so neither constituent ever reached the model frame.
@@ -646,7 +710,32 @@ ilm_model_formula <- function(formula, data, family = "auto",
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
-                  restarts = restarts, joint = joint, reml = reml)
+                  restarts = restarts, joint = joint, reml = reml,
+                  boundary = boundary)
+
+  ## A covariance that ended at its boundary is said HERE, where the fit was
+  ## asked for, and not only in summary(): with verbose = FALSE nothing else
+  ## would mention it. Named with its remedy and what the remedy costs, as
+  ## every diagnostic in this package is. Refits inside the package go
+  ## through ilm_fit() and do not repeat it.
+  if (identical(boundary, "hold")) {
+    grp <- vapply(fit$re, function(e) !identical(e$kind, "basis"), TRUE)
+    small <- names(fit$re)[grp][vapply(which(grp), function(k)
+      any(sqrt(pmax(diag(as.matrix(fit$Sigma[[k]])), 0)) < 1e-3), TRUE)]
+    at <- union(ilm_boundary_at(fit), small)
+    if (length(at))
+      message("ilm_model(): the random-effect covariance of ",
+              paste(sprintf("`%s`", at), collapse = ", "), " sits at the edge ",
+              "of its range -- a variance of zero or a correlation of +/-1 -- ",
+              "where the data cannot resolve it. The fixed effects and their ",
+              "standard errors are still usable; summary() says what else is. ",
+              "If the term belongs in the model, boundary = \"avoid\" keeps it ",
+              "inside its range with a small penalty: it is then assumed ",
+              "nonzero rather than estimated at zero, so do not test whether ",
+              "it is; its variance comes out larger, and for a binary or ",
+              "categorical outcome the fixed effects a little further from ",
+              "zero -- markedly so when a category is rare.")
+  }
 
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
   fit$design    <- design
