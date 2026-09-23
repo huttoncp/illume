@@ -73,23 +73,25 @@ Two traps that bit repeatedly this session, both now in memory:
    (the split). **Merge illumex's first**: illume's CI installs `Depends:
    illumex` through `Remotes: huttoncp/illumex`, i.e. from illumex's `main`.
    Then enable GitHub Pages for illumex (gh-pages branch) as for illume.
-2. **Remedies the code can act on.** Each check's remedy is free text in
-   `suggestion` (`ilm_add_check()`, R/ilm_fit.R). Give each a structured action
-   and a tier: numerical (always automatic), structural (automatic only if a
-   plan allows: RE simplification at a boundary, dispersion model, negbin, ZI),
-   estimand-changing (never automatic, only flagged: transforming y, splines,
-   dropping predictors or outliers). Worth doing on its own merits.
-3. **A design document for the conductor (`ilm_analysis()`)**, to come back
-   to when the package is more mature -- not to build now. Its shape as
-   agreed: a plan fixed before fitting (`ilm_plan()`: focal terms, which
-   remedy tiers may run, follow-ups, multiplicity), fed by
-   `ilm_scaffold()`/`ilm_power()`; the actionable remedies above; a decision
-   log plus a pre-specified-vs-final sensitivity table; `ilm_report()` writing
-   a .qmd/.Rmd that holds the code for every step (HTML by default, PDF only
-   with LaTeX); validation by simulation on the messy regimes before release.
-   Rules that must survive: REML only for gaussian; follow-ups declared, not
-   chosen by significance, and multiplicity-adjusted; on the DAG route only
-   the exposure is causal (no Table 2 fallacy).
+2. **Remedies the code can act on -- BUILT on branch `actionable-remedies`,**
+   not yet merged. `ilm_remedies(fit, dispersion =, zeros =, variance =)` lists
+   a remedy for every check that is not OK, with a tier (numerical /
+   structural / estimand) and the `ilm_model()` change that makes it;
+   `ilm_apply_remedy(fit, remedies, id)` refits through the fit's own call and
+   keeps `fit$remedy_log`. The rules live in R/ilm_remedies.R and read the fit,
+   not the suggestion text; `test-remedies.R` fails if a check has no rule.
+   Writing the rules out also fixed: `re_struct` naming only some terms (it
+   errored about `re_struct$NA`), `rr(1)` advice for one-category-dimension
+   models (a no-op), "drop term 's(x)'" for a smooth shrunk to a line (which
+   would drop the line too), and two remedies the package does not have.
+3. **A design document for the conductor (`ilm_analysis()`) -- WRITTEN:**
+   `dev/design-ilm-analysis.md` (build-ignored). Not to build now. It keeps
+   the agreed shape (`ilm_plan()`, the remedy loop over the functions above
+   with a revert rule and a refit budget, a decision log and sensitivity
+   table, `ilm_report()`, validation on the messy regimes) and the rules that
+   must survive: REML to report only where it is exact (gaussian), follow-ups
+   declared and multiplicity-adjusted, only the exposure causal on the DAG
+   route.
 4. **Gaps, all worth filling** (Craig agreed): Firth-type bias reduction for
    sparse multinomial categories; small-sample inference for GLMM Wald tests
    with few clusters; multinomial parity (cluster-robust SEs,

@@ -190,7 +190,9 @@ ilm_check_predictive <- function(object, B = 50L, seed = 1L, plot = TRUE) {
 #' @param seed Random seed.
 #' @return Invisibly, a list with the observed ratio, the simulated
 #'   distribution, a p-value and a `status`.
-#' @seealso [ilm_check_zeros()] when the excess variance is concentrated at zero.
+#' @seealso [ilm_check_zeros()] when the excess variance is concentrated at
+#'   zero; [ilm_remedies()], given this result as `dispersion`, writes the
+#'   remedy out as the change to make.
 #' @examples
 #' set.seed(1)
 #' d <- ilm_sim()
@@ -271,6 +273,8 @@ ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
 #' @param seed Random seed.
 #' @return Invisibly, a list with the observed and expected zero counts, a
 #'   p-value and a `status`.
+#' @seealso [ilm_remedies()], given this result as `zeros`, writes the zero
+#'   part out as the change to make.
 #' @examples
 #' set.seed(1)
 #' d <- ilm_sim()
@@ -449,7 +453,9 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 #'   bar appears when someone is watching and nothing is written in a
 #'   script or a knitted document. See [illumex::ilm_progress_arg].
 #' @return Invisibly, a list with the observed statistics, their simulated
-#'   nulls, p-values, a `status` and a suggested remedy.
+#'   nulls, p-values, a `status`, a suggested remedy, and `by`: the column
+#'   the groups were taken from, or `NA` when `by` was a vector or not given.
+#'   Pass the list to [ilm_remedies()] to have the remedy written out.
 #' @seealso [ilm_rqr_test()] for other residual statistics,
 #'   [ilm_check_dispersion()] when the whole response is over-dispersed rather
 #'   than unevenly dispersed.
@@ -471,14 +477,16 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
             signif(1 / (B + 1), 2), ", so a FAIL verdict is unreachable. ",
             "Use B >= 100.", call. = FALSE)
 
-  by_vec <- NULL; by_lab <- NULL
+  ## by_col is kept only when `by` names a column, since only then can a
+  ## dispersion formula be written in it -- see ilm_remedies()
+  by_vec <- NULL; by_lab <- NULL; by_col <- NA_character_
   if (!is.null(by)) {
     if (length(by) == 1L && is.character(by)) {
       mf <- object$model
       if (is.null(mf) || !by %in% names(mf))
         stop("`by` (", by, ") is not a column of the model frame. Available: ",
              paste(names(mf), collapse = ", "), call. = FALSE)
-      by_vec <- factor(mf[[by]]); by_lab <- by
+      by_vec <- factor(mf[[by]]); by_lab <- by; by_col <- by
     } else {
       if (length(by) != nrow(object$X))
         stop("`by` has ", length(by), " values but the model has ",
@@ -559,7 +567,7 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
   res <- list(trend = unname(obs[["trend"]]), p_trend = round(p_trend, 4),
               ratio = unname(obs[["ratio"]]), p_ratio = round(p_ratio, 4),
               n_refits = nok, B = B, status = status,
-              suggestion = paste(fix, collapse = "; "))
+              suggestion = paste(fix, collapse = "; "), by = by_col)
   if (verbose) {
     cat(sprintf("spread vs fitted: rho = %.3f, p = %s\n", res$trend,
                 format(res$p_trend)))

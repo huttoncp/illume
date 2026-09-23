@@ -42,7 +42,9 @@ only; \code{NULL} for every other family.}
 \code{list(basis =)} (a smooth, from \code{ilm_smooth()}).}
 
 \item{re_struct}{Optional named list of category covariance structures,
-parallel to \code{re_list}. Defaults to \code{"us"} for every term. Set \code{d_cor = FALSE} within an element to drop an intercept-slope correlation.}
+named by term as \code{re_list} is. A term it leaves out gets \code{"us"}, so only
+the terms that differ need naming. Set \code{d_cor = FALSE} within an element
+to drop an intercept-slope correlation.}
 
 \item{ar}{Optional AR(1) specification:
 \code{list(idx =, n_group =, Tt =)}.}

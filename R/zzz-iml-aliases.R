@@ -31,6 +31,11 @@ iml_anova <- ilm_anova
 #' @export
 iml_aov_ez <- ilm_aov_ez
 
+#' @rdname ilm_apply_remedy
+#' @usage NULL
+#' @export
+iml_apply_remedy <- ilm_apply_remedy
+
 #' @rdname ilm_appraise
 #' @usage NULL
 #' @export
@@ -320,6 +325,11 @@ iml_register_insight <- ilm_register_insight
 #' @usage NULL
 #' @export
 iml_register_marginaleffects <- ilm_register_marginaleffects
+
+#' @rdname ilm_remedies
+#' @usage NULL
+#' @export
+iml_remedies <- ilm_remedies
 
 #' @rdname ilm_robust
 #' @usage NULL

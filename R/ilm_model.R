@@ -109,7 +109,8 @@ ilm_need_bars <- function()
 #'   written into `fit$call`, so a refit uses it rather than guessing again.
 #' @param data A data frame.
 #' @param re_struct Optional named list of category covariance structures, named
-#'   by grouping variable. See [ilm_fit()].
+#'   by grouping variable, e.g. `list(site = list(type = "rr", rank = 1))`.
+#'   Terms it leaves out keep the default, `"us"`. See [ilm_fit()].
 #' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
 #' @param censor Optional censoring specification from [ilm_censor()], for a
 #'   response with a floor, a ceiling or a detection limit.

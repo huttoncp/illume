@@ -34,5 +34,7 @@ f <- ilm_model(claims ~ income + (1 | id), data = d, family = "poisson",
 ilm_check_dispersion(f, B = 200)
 }
 \seealso{
-\code{\link[=ilm_check_zeros]{ilm_check_zeros()}} when the excess variance is concentrated at zero.
+\code{\link[=ilm_check_zeros]{ilm_check_zeros()}} when the excess variance is concentrated at
+zero; \code{\link[=ilm_remedies]{ilm_remedies()}}, given this result as \code{dispersion}, writes the
+remedy out as the change to make.
 }

@@ -664,7 +664,11 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
           else if (ratio < 3) "FAIL" else if (ratio < 6) "WARN" else "OK"
     sug <- ""
     if (st != "OK") {
-      if (s$type %in% c("us", "diag")) {
+      ## A rank is over the CATEGORY dimensions, so with one of them (every
+      ## family but the multinomial) rr(1) is the structure already fitted,
+      ## and suggesting it offered "1 parameters instead of 1". What can come
+      ## down there is the random slope, or its correlation with the intercept.
+      if (C >= 2L && s$type %in% c("us", "diag")) {
         r <- ilm_rec_rank(C, nl)
         ## Prefer rr over diag: at equal parameter count rr also cuts the latent
         ## width from C to r, which ran ~2.6x faster over 3 seeds in
@@ -674,9 +678,13 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
           sprintf("use rr(%d) for this term: %d parameters instead of %d, and latent width %d instead of %d",
                   r, ilm_nrr(C, r), ilm_str_npar(s, C), r, C)
         else sprintf("use rr(1): %d parameters, latent width 1 (diag costs the same but leaves the width at %d)", C, C)
-      } else if (isTRUE(s$rank > 1L)) {
+      } else if (C >= 2L && isTRUE(s$rank > 1L)) {
         sug <- sprintf("lower the rank below %d for this term, or drop this grouping factor", s$rank)
-      } else sug <- "the rank is already 1; pool levels of this grouping factor, or drop it"
+      } else sug <- paste0(
+        if (C >= 2L) "the rank is already 1; " else "",
+        if (e$d > 1L) paste0(if (isTRUE(s$d_cor)) "drop the intercept-slope correlation (d_cor = FALSE) or " else "",
+                             "remove the random slope; or ") else "",
+        "pool levels of this grouping factor, or drop it")
     }
     unit <- if (e$kind == "basis") "basis functions" else "levels"
     ck <- ilm_add_check(ck, paste0("re_levels[", nm, "]"), st,
@@ -739,11 +747,19 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     big <- names(lat)[which.max(lat)]
     target <- N / 5                                  # latent budget for the OK band
     if (big %in% names(re)) {
-      e <- re[[big]]; s <- re_struct[[big]]
+      e <- re[[big]]; s <- re_struct[[big]]; w <- ilm_str_width(s, C)
       keep <- max(1L, as.integer(floor((lat[big] - (tot - target)) / (e$nl * e$d))))
-      sug <- sprintf("total latent budget for %g observations is about %d; term '%s' contributes %d (%s, width %d). rr(%d) would cut it to %d",
-                     N, as.integer(target), big, lat[big], ilm_str_label(s),
-                     ilm_str_width(s, C), keep, as.integer(e$nl * e$d * keep))
+      lead <- sprintf("total latent budget for %g observations is about %d; term '%s' contributes %d (%s, width %d)",
+                      N, as.integer(target), big, lat[big], ilm_str_label(s), w)
+      ## a lower rank helps only if it is lower than the width already
+      ## fitted; at width 1 -- every family but the multinomial -- rr(1)
+      ## is the term as it stands
+      sug <- if (keep < w)
+        sprintf("%s. rr(%d) would cut it to %d", lead, keep, as.integer(e$nl * e$d * keep))
+      else if (identical(e$kind, "basis"))
+        paste0(lead, ". Lower the basis dimension k of this smooth")
+      else paste0(lead, if (e$d > 1L) ". Remove its random slopes, or drop the term"
+                        else ". Drop the term, or pool its levels")
     } else sug <- sprintf("total latent budget for %g observations is about %d; the AR term contributes %d -- coarsen its time grid",
                           N, as.integer(target), lat[["ar"]])
   }
@@ -769,7 +785,7 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
       if (thin) "the latent process carries about one categorical observation per latent value; Laplace attenuates the variance components and rho is driven toward the boundary" else "",
       if (thin) {
         if (car) "coarsen the time passed to ilm_car1() so observations share a latent value, or replace the term with s(time) plus a random slope"
-        else "coarsen the AR time grid, use a reduced-rank AR, or replace AR with s(time) plus a random slope"
+        else "coarsen the AR time grid, or replace AR with s(time) plus a random slope"
       } else "")
   }
   ck
@@ -906,8 +922,12 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
       if (all(z)) "FAIL" else "OK",
       sprintf("%d of %d category components penalised to zero (SDs: %s)",
               sum(z), length(sv), paste(sprintf("%.3g", sv), collapse = ", ")),
-      if (all(z)) "the entire smooth was penalised out: these data show no smooth effect for this term" else "",
-      if (all(z)) sprintf("drop term '%s' from the model", nm) else "")
+      if (all(z)) "the smooth's penalised part was shrunk to zero: these data show no curvature in this term beyond its unpenalised part" else "",
+      ## Not "drop the term": the unpenalised part -- for s(x), a straight
+      ## line in x -- sits in the fixed effects and is still fitted. Swapping
+      ## s(x) for x gives the same likelihood with one parameter fewer;
+      ## dropping s(x) would take the line out too.
+      if (all(z)) sprintf("replace '%s' with its unpenalised part, which is all the fit kept -- for a smooth of one variable, that variable as a straight line (ilm_remedies() writes the formula)", nm) else "")
   }
   ## Eigenvalue rank check.  For C > 2 a category covariance can be numerically
   ## singular while every pairwise correlation stays modest.  A reduced-rank term
@@ -1004,7 +1024,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
       sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair),
       if (mx > 0.95) sprintf("%s cannot be separated by these data", pair) else "",
-      if (mx > 0.95) "remove one of the competing terms, or fix one of the two parameters" else "")
+      if (mx > 0.95) "remove one of the two competing terms from the model" else "")
   } else {
     ck <- ilm_add_check(ck, "parameter_aliasing", "INCONCLUSIVE",
       "covariance of fixed parameters unavailable", "Hessian not usable", "")
@@ -1331,8 +1351,9 @@ ilm_print_checks <- function(ck, title) {
 #'   (random intercept), a `list(group =, Z =)` (random slopes), or a
 #'   `list(basis =)` (a smooth, from `ilm_smooth()`).
 #' @param re_struct Optional named list of category covariance structures,
-#'   parallel to `re_list`. Defaults to `"us"` for every term. Set `d_cor =
-#'   FALSE` within an element to drop an intercept-slope correlation.
+#'   named by term as `re_list` is. A term it leaves out gets `"us"`, so only
+#'   the terms that differ need naming. Set `d_cor = FALSE` within an element
+#'   to drop an intercept-slope correlation.
 #' @param ar Optional AR(1) specification:
 #'   `list(idx =, n_group =, Tt =)`.
 #' @param censor Optional censoring specification from [ilm_censor()], marking
@@ -1531,8 +1552,25 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   C <- fam$C_of(J); N <- nrow(X); p <- ncol(X)
   Tc <- if (fam$name == "multinomial") contr.sum(J) else matrix(1, 1, 1)
   re <- ilm_norm_re(re_list, N)
-  if (is.null(re_struct)) re_struct <- lapply(re, function(z) list(type = "us"))
-  re_struct <- re_struct[names(re)]
+  ## A term the list leaves out gets the default, so a structure can be set
+  ## for one term without spelling out every other -- which is how the
+  ## argument reads, and what a remedy for one term needs. Indexing by the
+  ## term names alone turned each term left out into an element named NA,
+  ## and the fit stopped with an error about `re_struct$NA`. A name that is
+  ## not a term stops here too: a misspelt structure quietly ignored would
+  ## fit something other than what was asked for.
+  if (is.null(re_struct)) re_struct <- list()
+  unknown <- setdiff(names(re_struct), names(re))
+  if (length(unknown) || (length(re_struct) && is.null(names(re_struct))))
+    stop("`re_struct` must be a list named by random-effect term, and ",
+         if (length(unknown)) paste0(paste(sprintf("'%s'", unknown), collapse = ", "),
+                                     if (length(unknown) > 1L) " are not terms" else " is not a term",
+                                     " of this model. ")
+         else "its elements have no names. ",
+         if (length(re)) paste0("The terms are: ", paste(sprintf("'%s'", names(re)), collapse = ", "), ".")
+         else "This model has no random-effect terms.", call. = FALSE)
+  re_struct <- lapply(stats::setNames(names(re), names(re)), function(nm)
+    if (is.null(re_struct[[nm]])) list(type = "us") else re_struct[[nm]])
   for (nm in names(re_struct)) {
     if (is.null(re_struct[[nm]]$rank))  re_struct[[nm]]$rank  <- NA_integer_
     if (is.null(re_struct[[nm]]$d_cor)) re_struct[[nm]]$d_cor <- TRUE
@@ -2135,6 +2173,8 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
           "See the BOUNDARY lines above.\n", sep = "")
     else if (any(st == "WARN")) cat(">> fit completed with", sum(st == "WARN"), "warning(s).\n")
     else cat(">> all checks passed.\n")
+    if (any(st %in% c("FAIL", "WARN", "BOUNDARY")))
+      cat(">> ilm_remedies(fit) writes out a remedy for each, as the change to make.\n")
   }
   ## A gaussian model with nothing integrated out is an ordinary linear model,
   ## where exact t inference is available and strictly better than the

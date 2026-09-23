@@ -58,7 +58,8 @@ short scale are often better read as ordinal. The chosen family is
 written into \code{fit$call}, so a refit uses it rather than guessing again.}
 
 \item{re_struct}{Optional named list of category covariance structures, named
-by grouping variable. See \code{\link[=ilm_fit]{ilm_fit()}}.}
+by grouping variable, e.g. \code{list(site = list(type = "rr", rank = 1))}.
+Terms it leaves out keep the default, \code{"us"}. See \code{\link[=ilm_fit]{ilm_fit()}}.}
 
 \item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}} or \code{\link[=ilm_car1]{ilm_car1()}}.}
 
