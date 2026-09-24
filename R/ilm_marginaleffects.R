@@ -76,10 +76,11 @@ ilm_rebuild <- function(object, par) {
     ## parameter does not pass through tanh there. Both forms return something
     ## inside (-1, 1), so using the wrong one is not visible in the value.
     rr <- unname(object$opt$par[pn == "ar:rho_raw"])
+    ## a random walk has no correlation parameter, and keeps rho = NA
     if (identical(object$ar$type, "car1")) {
       object$ar_range <- exp(rr)
       object$rho <- exp(-1 / exp(rr))
-    } else object$rho <- tanh(rr)
+    } else if (length(rr)) object$rho <- tanh(rr)
   }
   object$Sigma <- Sig; object$Lambda <- Lam; object$Sigma_d <- Sd
   ilm_rebuild_aux(object, tl)

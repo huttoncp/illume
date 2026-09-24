@@ -181,7 +181,18 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
       cat("   (the first within-group SD is fixed at 1: Sigma_cat carries the scale)\n")
     }
   }
-  if (!is.null(o$ar)) cat(sprintf(" ar1 over time: rho = %.4f\n", o$rho))
+  if (!is.null(o$ar)) {
+    sd_ar <- paste(sprintf("%.4g", sqrt(diag(as.matrix(o$Sigma[["ar"]])))),
+                   collapse = ", ")
+    ## Sigma$ar is a walk's variance per unit of time, and the stationary
+    ## variance of the other two
+    cat(switch(o$ar$type,
+      rw1 = sprintf(" random walk over time: SD %s across one unit of time, zero at each group's first time\n",
+                    sd_ar),
+      car1 = sprintf(" CAR(1) over time: rho = %.4f per unit of time, SD %s\n",
+                     o$rho, sd_ar),
+      sprintf(" AR(1) over time: rho = %.4f per step, SD %s\n", o$rho, sd_ar)))
+  }
   gl <- vapply(o$re, function(e) if (e$kind == "basis") NA_integer_ else e$nl, 1L)
   gl0 <- vapply(o$re, function(e) if (e$kind == "basis") NA_integer_ else e$nl, 1L)
   if (!length(gl0) || all(is.na(gl0)))

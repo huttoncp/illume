@@ -9,9 +9,11 @@ ilm_car1(time, group, verbose = TRUE)
 }
 \arguments{
 \item{time}{Time, one value per observation. Any numeric scale or \code{Date};
-\code{rho} is the correlation one unit apart, so the units matter.}
+\code{rho} is the correlation one unit apart, so the units matter. Or a
+one-sided formula \code{~ time | group} naming two columns of the model's data.}
 
-\item{group}{Unit identifier, one value per observation.}
+\item{group}{Unit identifier, one value per observation. Omitted when
+\code{time} is a formula.}
 
 \item{verbose}{Warn when the latent budget is thin.}
 }
@@ -36,6 +38,9 @@ observation -- the regime where the Laplace approximation stops converging.
 The constructor reports the budget and warns when it is thin; rounding \code{time}
 to a coarser grid, so that observations share a latent, is the usual fix and
 is what makes the difference between a model that fits and one that does not.
+
+\code{ilm_car1(~ time | group)} names two columns of the model's data instead of
+passing them; see \code{\link[=ilm_ar1]{ilm_ar1()}} for why that is the safer form.
 }
 \examples{
 set.seed(1)
@@ -44,6 +49,7 @@ d <- data.frame(id = rep(1:20, each = 6),
 ilm_car1(d$day, d$id)
 }
 \seealso{
-\code{\link[=ilm_ar1]{ilm_ar1()}} for evenly spaced time, \code{\link[=ilm_check_ar]{ilm_check_ar()}} and
-\code{\link[=ilm_plot_acf]{ilm_plot_acf()}} to test whether the structure is needed.
+\code{\link[=ilm_ar1]{ilm_ar1()}} for evenly spaced time, \code{\link[=ilm_rw1]{ilm_rw1()}} for a level that
+drifts rather than reverting, \code{\link[=ilm_check_ar]{ilm_check_ar()}} and \code{\link[=ilm_plot_acf]{ilm_plot_acf()}} to
+test whether the structure is needed, \code{\link[=ilm_cells]{ilm_cells()}} for the fitted cells.
 }

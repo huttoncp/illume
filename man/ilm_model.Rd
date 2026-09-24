@@ -78,7 +78,11 @@ For example \code{list(site = list(type = "rr", rank = 1))}, or
 what each costs. The pre-fit checks say when a structure is too rich for
 the data and name a rank to try.}
 
-\item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}} or \code{\link[=ilm_car1]{ilm_car1()}}.}
+\item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}}, \code{\link[=ilm_car1]{ilm_car1()}} or
+\code{\link[=ilm_rw1]{ilm_rw1()}}. Written by name, as \code{ilm_car1(~ time | group)}, it takes the
+two columns from \code{data} after rows with missing values are dropped, so it
+cannot come out of step with the response, and the fit remembers them for
+\code{\link[=ilm_cells]{ilm_cells()}} and for predictions on new rows.}
 
 \item{weights}{Optional \strong{frequency} weights: the number of replicate
 observations each row stands for. Evaluated inside \code{data}. See \code{\link[=ilm_fit]{ilm_fit()}}

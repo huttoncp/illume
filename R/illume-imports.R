@@ -35,7 +35,7 @@ utils::globalVariables(c(
   "X", "Ycount", "wrow", "Tct", "grp", "Zl", "kind", "bas", "b_idx", "t_idx",
   "nlk", "dk", "wk", "npc", "ty", "rk", "dcor", "K", "C", "has_ar",
   "ar_idx", "idx1", "idx_t", "idx_lag", "n_g", "Tt", "qk", "brng", "lc_idx",
-  "is_car", "ar_gap", "nre_ar", "has_dm", "disp_mu", "Zdisp", "gamma", "mu_pow",
+  "is_car", "is_rw", "ar_gap", "nre_ar", "has_dm", "disp_mu", "Zdisp", "gamma", "mu_pow",
   "has_rp", "Drp",
   ## the boundary-avoiding penalty: its weight, and which terms it applies to
   "pen_re", "pen_k",

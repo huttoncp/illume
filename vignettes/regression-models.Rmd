@@ -523,8 +523,13 @@ observations is `rho` raised to the gap between them, which is `nlme`'s
 
 ```{r car1, eval = FALSE}
 ilm_model(y ~ x + (1 | subj), data = dd, family = "gaussian",
-          ar = ilm_car1(dd$day, dd$subj))
+          ar = ilm_car1(~ day | subj))
 ```
+
+Written as `~ day | subj`, the time and the unit are read from the data after
+incomplete rows are dropped, so they cannot fall out of step with the
+response, as vectors taken from the whole data frame can. All three
+structures over time take this form.
 
 Both constructors report their **latent budget** before you fit, because that is
 the constraint that bites. These are latent-variable structures: one latent
@@ -535,6 +540,25 @@ linear-Gaussian, the Laplace approximation is exact, and coverage measured over
 and 0.949 against a nominal 0.95. For a categorical response it is not, and the
 fit says so. Rounding `time` to a coarser grid, so observations share a latent,
 is the usual fix.
+
+### A level that drifts
+
+A CAR(1) process wanders and comes back: however far it strays, it is pulled
+towards its mean. A level that drifts and stays where it drifted to is a
+random walk, which `ilm_rw1()` fits -- the local-level model of time-series
+analysis. Each unit's walk is zero at its first time, so the fixed effects
+give its starting level, and from there it moves by changes whose variance
+is proportional to the time elapsed:
+
+```{r rw1, eval = FALSE}
+ilm_model(y ~ x, data = dd, family = "gaussian",
+          ar = ilm_rw1(~ day | subj))
+```
+
+Add `(1 | subj)` when units start from different levels. For a gaussian
+response the fit is the exact likelihood of the local-level model, by
+maximum likelihood or by REML. `ilm_cells()` lists the fitted walk's cells:
+each unit's times, which is its last, and where the fit holds each value.
 
 ### Checking a correlation structure over irregular time
 

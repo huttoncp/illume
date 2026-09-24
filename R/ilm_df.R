@@ -142,6 +142,8 @@ ilm_vbeta_at <- function(object, par = NULL, h = 1e-5) {
 #' @keywords internal
 #' @noRd
 ilm_kr_applicable <- function(object) {
+  if (identical(object$ar$type, "rw1"))
+    return("the model has a random-walk term, which the Kenward-Roger computation here does not cover")
   if (!is.null(object$ar))
     return("the model has an AR(1) or CAR(1) term, whose correlation parameter makes the marginal covariance non-linear in the variance components")
   if (!is.null(object$disp_formula))
