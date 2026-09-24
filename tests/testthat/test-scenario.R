@@ -59,10 +59,13 @@ test_that("the grid, the intervals and the contrasts behave", {
   ct <- attr(s, "contrasts")
   expect_equal(nrow(ct), 5L)                    # each against the first
   expect_true(all(ct$lower < ct$estimate & ct$estimate < ct$upper))
-  ## the contrast is computed WITHIN each draw, so it is not the difference of
-  ## two independently-summarised numbers
+  ## the estimate is the difference at the fit; the interval is computed
+  ## WITHIN each draw, so it is not built from two independently-summarised
+  ## numbers
   dr <- attr(s, "draws")
-  expect_equal(ct$estimate[1], mean(dr[, 2] - dr[, 1]), tolerance = 1e-10)
+  expect_equal(ct$estimate[1], s$estimate[2] - s$estimate[1], tolerance = 1e-12)
+  expect_equal(ct$lower[1], unname(stats::quantile(dr[, 2] - dr[, 1], 0.025)),
+               tolerance = 1e-12)
   ## pairwise gives every pair
   s2 <- ilm_scenario(f, dose = c(0, 10, 20), sims = 200L,
                      contrast = "pairwise", progress = FALSE)
