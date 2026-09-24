@@ -92,6 +92,27 @@ test_that("a boundary is held the same way whatever TMB made of its Hessian", {
                tolerance = 1e-10)
 })
 
+test_that("a boundary term curved in every direction gets the accurate Hessian, whatever TMB said", {
+  ## A term can be called a boundary by its estimate and still have no
+  ## direction flat enough to hold. Its standard errors then come from the
+  ## accurate Hessian, never TMB's cruder one -- so they, too, are the same
+  ## on every platform. The 0.0.8.9000 run of studies/scripts/boundary_se.R
+  ## found one such fit, where TMB's Hessian put them 2 to 10% off.
+  f <- fit_basic(1)
+  pn <- names(f$opt$par)
+  cb <- ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk, f$toff,
+                       f$ar, f$opt$par, pn)
+  cb$flagged <- "subj"                  # as if at a boundary, curved everywhere
+  hs <- lapply(c(TRUE, FALSE), function(v) {
+    sdr <- f$sdr; sdr$pdHess <- v
+    ilm_hess_recover(f$obj, f$opt, sdr, cb, joint = FALSE)
+  })
+  for (h in hs) expect_equal(h$how, "recomputed")
+  ib <- pn == "beta"
+  expect_equal(hs[[1]]$sdr$cov.fixed[ib, ib], hs[[2]]$sdr$cov.fixed[ib, ib],
+               tolerance = 1e-10)
+})
+
 test_that("a covariance at a correlation of -1 is a boundary, not a failure", {
   ## the rank-deficient covariance used to be graded FAIL, with "the standard
   ## errors above are not usable" beneath standard errors within 4% of the
