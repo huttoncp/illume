@@ -12,12 +12,15 @@
 ## giving u_i ~ U(0, 1) under a correct model, with no arbitrary ordering
 ## anywhere -- the fitted probabilities induce it.
 
-#' Randomised quantile residuals for a nominal outcome
+#' Randomised quantile residuals
 #'
-#' Turns categorical outcomes into residuals that should be uniformly
-#' distributed when the model is right.
+#' Residuals that are uniformly distributed when the model is right, for every
+#' family: the distribution function at the observation for a continuous
+#' response, drawn uniformly across the jump for a discrete one, and for a
+#' nominal outcome, which has no order to take a distribution function along,
+#' the construction below.
 #'
-#' @section The obstacle, and the way around it:
+#' @section A nominal outcome -- the obstacle, and the way around it:
 #' Quantile residuals need a cumulative distribution function, and a CDF needs an
 #' ordering. Nominal categories have none -- "red", "green", "blue" cannot be put
 #' in order -- which is why `DHARMa` cannot be applied directly to this model.
@@ -464,14 +467,19 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
 
 #' Diagnostic plots for a fitted model
 #'
-#' Six panels: a quantile-residual normal plot, residuals against fitted
-#' probability, per-category calibration with a simulated band, observed against
-#' simulated category frequencies, a random-effects distance plot, and the model
-#' check verdicts.
+#' Six panels, chosen for the family: randomised quantile residuals against
+#' the normal; residuals against the fitted value (for a multinomial, the
+#' predicted probability of the category observed); calibration of the
+#' predicted probabilities with a simulated band for a binomial or multinomial
+#' outcome, and scale-location otherwise; the observed response against
+#' simulations from the fit (category frequencies for a multinomial); a
+#' random-effects distance plot; and the model check verdicts.
 #'
-#' These are built for a nominal categorical outcome rather than adapted from
-#' tools designed for continuous responses, because the usual residual plots have
-#' no clear meaning here. `performance::check_model()` routes to this function.
+#' The residuals are [ilm_rqr()]'s, which are uniform under a correct model in
+#' every family -- including a nominal outcome, where the usual residual plots
+#' have no clear meaning.
+#'
+#' `performance::check_model()` draws these panels too.
 #'
 #' @param object A fitted `"ilm_model"` object.
 #' @param nbins Integer. Bins for the calibration panel.
@@ -589,13 +597,20 @@ ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
 
 #' performance::check_model method
 #'
-#' Routes `performance::check_model()` to [ilm_appraise()], so the panels are
-#' the ones built for this model rather than generic ones that would not apply.
+#' `performance::check_model(fit)` draws [ilm_appraise()]'s panels. Its own
+#' checks cannot be drawn for these fits: they need support from the insight
+#' package that an `"ilm_model"` does not have, and without this method
+#' `check_model()` stops with an error -- after [ilm_register_insight()] too.
+#' The panels drawn instead are illume's, built for every family it fits,
+#' including a nominal outcome, where the usual residual plots have no clear
+#' meaning.
+#'
+#' Registered with performance's generic when performance is loaded.
 #'
 #' @param x A fitted `"ilm_model"` object.
 #' @param ... Passed to [ilm_appraise()].
 #' @return Invisibly, the result of [ilm_appraise()].
-#' @export
+#' @exportS3Method performance::check_model
 check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 
 ## ---------------------------------------------------- targeted covariate checks

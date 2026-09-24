@@ -86,3 +86,21 @@ test_that("an unusable rank is refused with a helpful message", {
   expect_match(bad(list(type = "rr", rank = 99)), "only 3 category dimensions")
   expect_match(bad(list(type = "banana")), 'one of "us", "diag" or "rr"')
 })
+
+test_that("an re_struct element may leave its type to the default", {
+  ## d_cor is all an uncorrelated random slope needs outside a multinomial
+  ## model, and naming it alone used to stop, asking for a type
+  set.seed(3); n <- 240
+  d <- data.frame(x = rnorm(n), subj = factor(sample(20, n, TRUE)))
+  d$y <- 0.5 * d$x + rnorm(20)[d$subj] + rnorm(20, 0, 0.3)[d$subj] * d$x + rnorm(n)
+  f <- ilm_model(y ~ x + (1 + x | subj), data = d, family = "gaussian",
+                 re_struct = list(subj = list(d_cor = FALSE)), verbose = FALSE)
+  expect_s3_class(f, "ilm_model")
+  expect_identical(f$re_struct$subj$type, "us")
+  expect_false(f$re_struct$subj$d_cor)
+  ## a type that is not one of the three still stops
+  expect_error(ilm_model(y ~ x + (1 | subj), data = d, family = "gaussian",
+                         re_struct = list(subj = list(type = "full")),
+                         verbose = FALSE),
+               "must be one of")
+})

@@ -42,14 +42,14 @@ test_that("the interpretation names each effect on the response scale", {
   expect_s3_class(r, "ilm_interpretation")
   txt <- paste(unlist(r$sections), collapse = " ")
   expect_match(txt, "binomial model")
-  ## one sentence per coefficient, each naming its own term
+  ## one sentence per term, each naming its own
   expect_length(r$sections$effects, 3L)
-  expect_match(txt, "odds ratio")
+  expect_match(txt, "[Oo]dds ratio")
   expect_match(txt, "percentage points")
-  ## a factor level is described against its reference, not as a bare name
-  expect_match(txt, "being b rather than a")
-  ## a numeric predictor reads as a change in it
-  expect_match(txt, "a higher x")
+  ## a factor is described level by level, in probabilities
+  expect_match(txt, "is [0-9]+% for 'a' and [0-9]+% for 'b'")
+  ## a numeric predictor over its middle half, with the predictions at both ends
+  expect_match(txt, "Across the middle half of x, the predicted probability that y is 1 is [0-9]+% at")
   ## and the output is deterministic
   expect_identical(capture.output(print(r)), capture.output(print(ilm_interpret(f))))
 })
@@ -68,7 +68,8 @@ test_that("causal language is withheld unless a design licenses it", {
   g <- ilm_dag("dag { x [exposure] ; y [outcome] ; z -> x -> y ; z -> y }")
   m <- ilm_dag_model(g, d, verbose = FALSE)
   causal <- paste(unlist(ilm_interpret(m, ame = FALSE)$sections), collapse = " ")
-  expect_match(causal, "leads to")
+  expect_match(causal, "x affects y")
+  expect_match(causal, "Moving x across its middle half")
   expect_match(causal, "minimal sufficient set")
   ## and it says the licence is an assumption, not a finding
   expect_match(causal, "assumption you supplied")
@@ -192,4 +193,93 @@ test_that("a power analysis is written up with its size and its uncertainty", {
   expect_match(paste(it$sections$caveats, collapse = " "), "Monte Carlo",
                fixed = TRUE)
   expect_output(print(it), "INTERPRETATION (power analysis)", fixed = TRUE)
+})
+
+test_that("an effect is the model's predictions over the middle half, averaged over the rows", {
+  set.seed(4); n <- 300
+  d <- data.frame(x = rnorm(n, 50, 10), g = factor(sample(c("a", "b"), n, TRUE)))
+  d$y <- 2 + 0.5 * d$x + 3 * (d$g == "b") + rnorm(n)
+  f <- ilm_model(y ~ x + g, data = d, family = "gaussian", verbose = FALSE)
+  q <- unname(stats::quantile(d$x, c(0.25, 0.75), type = 1))
+  ap <- illume:::ilm_avg_pred(f, "x", q)
+  ## in a linear model the difference is the slope times the distance
+  expect_equal(ap$diff$estimate, unname(coef(f)["x"]) * diff(q), tolerance = 1e-8)
+  ## and its interval the slope's, scaled
+  expect_equal(ap$diff$se, unname(sqrt(diag(vcov(f)))["x"]) * diff(q), tolerance = 1e-4)
+  s <- ilm_interpret(f)$sections$effects[1]
+  expect_match(s, "Across the middle half of x, predicted y is", fixed = TRUE)
+  expect_match(s, "per unit of x", fixed = TRUE)
+})
+
+test_that("a REML fit predicts", {
+  ## beta sits in the random block under REML, and the stored fixed effects
+  ## used to be NA, so every REML fit predicted NA
+  set.seed(5); n <- 200
+  d <- data.frame(x = rnorm(n), g = factor(sample(1:15, n, TRUE)))
+  d$y <- 1 + 0.4 * d$x + rnorm(15)[d$g] + rnorm(n)
+  for (fm in list(y ~ x, y ~ x + (1 | g))) {
+    f <- ilm_model(fm, data = d, family = "gaussian", reml = TRUE, verbose = FALSE)
+    expect_false(anyNA(f$beta))
+    expect_equal(as.vector(f$beta), unname(coef(f)), tolerance = 1e-8)
+    expect_false(anyNA(stats::predict(f, type = "response")))
+  }
+})
+
+test_that("p-values are given to three figures, or as below 0.001", {
+  expect_identical(illume:::ilm_fmt_p(0.017642), "p = 0.0176")
+  expect_identical(illume:::ilm_fmt_p(0.5), "p = 0.5")
+  expect_identical(illume:::ilm_fmt_p(0.0004), "p < 0.001")
+  expect_identical(illume:::ilm_fmt_p(0.03, "adjusted p"), "adjusted p = 0.03")
+  txt <- paste(unlist(ilm_interpret(bin_fit())$sections), collapse = " ")
+  expect_false(grepl("e-0", txt, fixed = TRUE))
+})
+
+test_that("a predictor in a multinomial model gets one verdict, in shares", {
+  set.seed(6); n <- 400
+  d <- data.frame(x = rnorm(n), h = factor(sample(c("u", "v"), n, TRUE)))
+  eta <- cbind(0, 0.8 * d$x, -0.8 * d$x)
+  pr <- exp(eta) / rowSums(exp(eta))
+  d$k <- factor(apply(pr, 1, function(p) sample(c("a", "b", "c"), 1, prob = p)))
+  f <- ilm_model(k ~ x + h, data = d, family = "multinomial", verbose = FALSE)
+  e <- ilm_interpret(f, ame = FALSE)$sections$effects
+  expect_length(e, 2L)
+  expect_match(e[1], "the predicted share of 'a' is [0-9]+% against [0-9]+%")
+  expect_match(e[2], "Predicted shares for 'u' against 'v'", fixed = TRUE)
+})
+
+test_that("a cluster profile is written up as the profile of each cluster", {
+  skip_if_not_installed("PCAmixdata")
+  skip_if_not_installed("cluster")
+  skip_if_not("not_distinctive" %in% names(
+    suppressMessages(illumex::ilm_profile(mtcars[1:4], k = 2, B = 5, seed = 1,
+                                          var_contrib = FALSE))))
+  cars <- mtcars; cars$am <- factor(cars$am)
+  p <- suppressMessages(illumex::ilm_profile(cars[c("mpg", "wt", "hp", "am")],
+                                             k = 2, B = 10, seed = 1))
+  it <- ilm_interpret(p)
+  expect_s3_class(it, "ilm_interpretation")
+  expect_match(it$sections$model, "rows fell into 2 clusters", fixed = TRUE)
+  expect_match(it$sections$effects[1], "^Cluster 1 holds")
+  expect_match(paste(it$sections$caveats, collapse = " "), "They are not tests",
+               fixed = TRUE)
+  expect_output(print(it), "INTERPRETATION (cluster profiles)", fixed = TRUE)
+  expect_output(print(it), "What each cluster is", fixed = TRUE)
+})
+
+test_that("a mixed model's effects say they are for a typical group", {
+  set.seed(9); n <- 400
+  d <- data.frame(x = rnorm(n), g = factor(rep(1:40, each = 10)))
+  d$yb <- rbinom(n, 1, plogis(0.5 * d$x + rnorm(40, sd = 1.2)[d$g]))
+  d$yg <- 0.5 * d$x + rnorm(40)[d$g] + rnorm(n)
+  fb <- ilm_model(yb ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
+  hb <- ilm_interpret(fb, ame = FALSE)$sections$model
+  ## through the logit, a random effect of zero is not the average over g
+  expect_match(hb, "hold the random effect of g at zero -- a typical g --", fixed = TRUE)
+  ## with an identity link the two are the same, and nothing is said
+  fg <- ilm_model(yg ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
+  expect_no_match(ilm_interpret(fg, ame = FALSE)$sections$model, "random effect of g at zero")
+  ## a smooth is held as a random term, but it does not group the observations
+  d$ys <- sin(2 * d$x) + rnorm(n, sd = 0.5)
+  fs <- ilm_model(ys ~ s(x), data = d, family = "gaussian", verbose = FALSE)
+  expect_no_match(ilm_interpret(fs, ame = FALSE)$sections$model, "grouped by")
 })

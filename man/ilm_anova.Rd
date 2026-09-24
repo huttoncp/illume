@@ -44,7 +44,8 @@ as an intercept-only model, returns a table with zero rows rather than an
 error: "there is nothing to test" is an answer, not a failure.
 }
 \description{
-Tests each fixed-effect term, \strong{jointly across all category dimensions}.
+Tests each fixed-effect term jointly: all of its coefficients at once, and
+for a multinomial outcome \strong{across all category dimensions}.
 }
 \section{Why this exists rather than car}{
 :Anova:

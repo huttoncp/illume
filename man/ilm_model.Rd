@@ -5,7 +5,7 @@
 \alias{ilm_model_formula}
 \alias{iml_model}
 \alias{iml_model_formula}
-\title{Fit a multinomial linear mixed model}
+\title{Fit generalized linear and additive mixed models}
 \usage{
 ilm_model(formula, ...)
 
@@ -40,8 +40,10 @@ ilm_model_formula(
 \item{data}{A data frame.}
 
 \item{family}{Response distribution: one of "gaussian", "binomial",
-"poisson", "nbinom", "beta", "multinomial", or one of the ordinal
-families. See \code{\link[=ilm_family]{ilm_family()}}. The default, \code{"auto"} (or \code{NULL}), reads
+"poisson", "nbinom", "beta", "multinomial", the ordinal families
+("ordinal", "ordinal_probit", "ordinal_cloglog"), the accelerated failure
+time families ("weibull", "lognormal", "loglogistic") or the
+Royston-Parmar ones ("rp", "rp_odds", "rp_normal"). See \code{\link[=ilm_family]{ilm_family()}}. The default, \code{"auto"} (or \code{NULL}), reads
 the family off the response and says which it chose and why: a factor
 with 2 levels, a logical or a 0/1 variable is binomial; an unordered
 factor with 3 or more levels is multinomial and an ordered one ordinal;
@@ -57,9 +59,24 @@ verdict: counts are often overdispersed (\code{"nbinom"}), and ratings on a
 short scale are often better read as ordinal. The chosen family is
 written into \code{fit$call}, so a refit uses it rather than guessing again.}
 
-\item{re_struct}{Optional named list of category covariance structures, named
-by grouping variable, e.g. \code{list(site = list(type = "rr", rank = 1))}.
-Terms it leaves out keep the default, \code{"us"}. See \code{\link[=ilm_fit]{ilm_fit()}}.}
+\item{re_struct}{Optional named list setting the covariance structure of
+random terms, one element per term, named by its grouping variable as the
+formula names it; a term it leaves out keeps the default. Each element is
+itself a list:
+\describe{
+\item{\code{type}, and \code{rank} with \code{"rr"}}{the covariance across the
+outcome's categories, so it matters only for a multinomial model:
+\code{"us"} (the default, every variance and correlation free), \code{"diag"}
+(categories uncorrelated) or \code{"rr"} (reduced rank, with \code{rank} below
+the number of categories less one). Every other family has one linear
+predictor, where a rank has nothing to reduce.}
+\item{\code{d_cor = FALSE}}{drops the correlation between a random intercept
+and its slopes, in any family.}
+}
+For example \code{list(site = list(type = "rr", rank = 1))}, or
+\code{list(subj = list(d_cor = FALSE))}; see the examples, and \code{\link[=ilm_fit]{ilm_fit()}} for
+what each costs. The pre-fit checks say when a structure is too rich for
+the data and name a rank to try.}
 
 \item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}} or \code{\link[=ilm_car1]{ilm_car1()}}.}
 
@@ -190,9 +207,13 @@ rebuild a reference grid for \code{\link[=predict.ilm_model]{predict.ilm_model()
 An object of class \code{"ilm_model"}.
 }
 \description{
-The main entry point. Takes an lme4-style formula and a data frame and fits a
-mixed-effects model for a nominal categorical outcome with three or more
-unordered categories.
+The main entry point. Takes an lme4-style formula and a data frame and fits
+a regression model for a gaussian, binomial, Poisson, negative binomial,
+beta, multinomial or ordinal response, or a survival time (accelerated
+failure time or Royston-Parmar) -- with or without random effects,
+penalised smooths, AR(1) or CAR(1) correlation, a model for the dispersion,
+zero inflation or a hurdle, and censoring at a floor or a ceiling. See
+\code{family} for the full list.
 
 Parses the formula, builds the design matrices and calls \code{\link[=ilm_fit]{ilm_fit()}}. Called
 by \code{\link[=ilm_model]{ilm_model()}}; documented separately only because \code{\link[=ilm_model]{ilm_model()}} dispatches to it.
@@ -216,8 +237,8 @@ package relies on. And write smooths \strong{unqualified} -- \code{s(x)}, not
 \code{mgcv::s(x)} -- because mgcv identifies them by name, so a namespaced call
 would be mistaken for an ordinary predictor. This matches \code{mgcv::gam()}.
 
-The outcome may be a factor or a character vector. Its levels set the category
-labels used throughout the output.
+A categorical outcome may be a factor or a character vector; its levels set
+the category labels used throughout the output.
 
 Random-effect bars are extracted with \code{findbars()} from reformulas (lme4's
 parser; lme4 itself is used when reformulas is absent) and smooths with
@@ -253,10 +274,12 @@ small-sample analogue, so it keeps z and chi-square.
 
 \section{Reading the coefficients}{
 
-Categories are coded \strong{sum-to-zero}, so a coefficient is that category's
-deviation from the average across categories, \emph{not} a contrast against a
-baseline. \code{summary()} prints a reminder, because this is easy to misread if
-you are used to \code{\link[nnet:multinom]{nnet::multinom()}}.
+Every family but the multinomial has one coefficient per predictor, read as
+in \code{\link[stats:glm]{stats::glm()}}. A multinomial outcome has one per predictor per category,
+and its categories are coded \strong{sum-to-zero}, so a coefficient is that
+category's deviation from the average across categories, \emph{not} a contrast
+against a baseline. \code{summary()} prints a reminder, because this is easy to
+misread if you are used to \code{\link[nnet:multinom]{nnet::multinom()}}.
 }
 
 \section{Always read the checks}{
@@ -269,21 +292,41 @@ for anything that is not \code{"OK"}.
 }
 
 \examples{
-\dontrun{
 set.seed(1)
-n <- 600
-dd <- data.frame(
-  subj = factor(sample(40, n, TRUE)),
-  x1   = rnorm(n),
-  grp  = factor(sample(c("a", "b", "c"), n, TRUE))
-)
-dd$y <- factor(sample(c("low", "mid", "high"), n, TRUE),
-               levels = c("low", "mid", "high"))
+n <- 300
+dd <- data.frame(subj = factor(sample(30, n, TRUE)), x1 = rnorm(n),
+                 grp = factor(sample(c("a", "b", "c"), n, TRUE)))
+dd$y <- 1 + 0.5 * dd$x1 + rnorm(30)[dd$subj] + rnorm(n)
 
-fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd)
+## a linear mixed model: a random intercept for each subject
+fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd, family = "gaussian",
+                 verbose = FALSE)
 summary(fit)
-ilm_anova(fit, type = 3)
-head(predict(fit))
+
+## a random slope for x1 as well, without its correlation with the
+## intercept -- re_struct names the term by its grouping variable
+fit2 <- ilm_model(y ~ x1 + (1 + x1 | subj), data = dd, family = "gaussian",
+                  re_struct = list(subj = list(d_cor = FALSE)),
+                  verbose = FALSE)
+
+\donttest{
+## a count, and a nominal outcome with four categories
+dd$n_events <- rpois(n, exp(0.3 + 0.2 * dd$x1))
+fit3 <- ilm_model(n_events ~ x1 + (1 | subj), data = dd, family = "poisson",
+                  verbose = FALSE)
+## subjects that differ along one direction across the categories: more
+## "x" and "y" and less "w" and "z", in fixed proportions
+u <- rnorm(30)[dd$subj]
+eta <- cbind(-u, u + 0.4 * dd$x1, 0.5 * u, -0.5 * u)
+dd$k <- factor(apply(exp(eta) / rowSums(exp(eta)), 1, function(p)
+  sample(c("w", "x", "y", "z"), 1, prob = p)))
+## the subjects' random intercepts vary across the three category
+## dimensions; a reduced rank of 1 describes that covariance with one
+## dimension instead of three -- fewer parameters and fewer latent values
+fit4 <- ilm_model(k ~ x1 + (1 | subj), data = dd, family = "multinomial",
+                  re_struct = list(subj = list(type = "rr", rank = 1)),
+                  verbose = FALSE)
+ilm_anova(fit4, type = 3)
 }
 
 }

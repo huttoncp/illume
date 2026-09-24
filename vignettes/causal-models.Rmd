@@ -159,7 +159,9 @@ attention than any single point estimate.
 ilm_interpret(fit, ame = FALSE)
 ```
 
-Note that this says "leads to" rather than "is associated with", and says why.
+Note that this says "affects" rather than "is associated with", and reads each
+effect as a change -- moving a predictor across its middle half, and what that
+does to the predicted outcome -- and says why.
 Without a design that identifies an effect, `ilm_interpret()` will not use
 causal language at all -- and it tells you that the licence rests on the graph
 being right, which is an assumption you supplied rather than something the data

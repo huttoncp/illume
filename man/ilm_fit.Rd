@@ -3,18 +3,18 @@
 \name{ilm_fit}
 \alias{ilm_fit}
 \alias{iml_fit}
-\title{Fit a multinomial mixed model from a design matrix}
+\title{Fit a model from a design matrix}
 \usage{
 ilm_fit(
   X,
   y,
   J = NULL,
-  re_list,
+  re_list = list(),
   re_struct = NULL,
   ar = NULL,
   ylevels = NULL,
   weights = NULL,
-  family = "multinomial",
+  family = "gaussian",
   verbose = TRUE,
   restarts = 3L,
   joint = FALSE,
@@ -31,20 +31,24 @@ ilm_fit(
 \arguments{
 \item{X}{Numeric design matrix for the fixed effects, with \code{N} rows.}
 
-\item{y}{Integer vector of length \code{N} giving the observed category, coded
-\code{1} to \code{J}.}
+\item{y}{The response, of length \code{N}: for a multinomial or ordinal model
+the observed category coded \code{1} to \code{J}, and for every other family the
+numeric response.}
 
 \item{J}{Integer. Number of outcome categories, for the multinomial family
 only; \code{NULL} for every other family.}
 
 \item{re_list}{Named list of random terms. Each element is a grouping vector
 (random intercept), a \code{list(group =, Z =)} (random slopes), or a
-\code{list(basis =)} (a smooth, from \code{ilm_smooth()}).}
+\code{list(basis =)} (a smooth, from \code{ilm_smooth()}). The default, an empty
+list, fits the fixed effects alone.}
 
-\item{re_struct}{Optional named list of category covariance structures,
-named by term as \code{re_list} is. A term it leaves out gets \code{"us"}, so only
-the terms that differ need naming. Set \code{d_cor = FALSE} within an element
-to drop an intercept-slope correlation.}
+\item{re_struct}{Optional named list of covariance structures, named by term
+as \code{re_list} is, each element a list: \code{type} (\code{"us"}, \code{"diag"}, or \code{"rr"}
+with \code{rank}) for the covariance across a multinomial outcome's categories,
+and \code{d_cor = FALSE} to drop an intercept-slope correlation in any family.
+A term it leaves out gets \code{"us"} with its correlations, so only the terms
+that differ need naming. See the section above and the examples.}
 
 \item{ar}{Optional AR(1) specification:
 \code{list(idx =, n_group =, Tt =)}.}
@@ -62,7 +66,10 @@ across subjects. These are \strong{not} sampling weights; see the
 \code{weights_type} check and the note below.}
 
 \item{family}{Response distribution: a name, or the object returned by
-\code{\link[=ilm_family]{ilm_family()}}. See \code{\link[=ilm_family]{ilm_family()}} for what each one assumes.}
+\code{\link[=ilm_family]{ilm_family()}}. See \code{\link[=ilm_family]{ilm_family()}} for what each one assumes. The default
+is \code{"gaussian"}, as it is for \code{\link[stats:glm]{stats::glm.fit()}}; a nominal outcome needs
+\code{family = "multinomial"} and \code{J}. \code{\link[=ilm_model]{ilm_model()}} reads the family off the
+response instead.}
 
 \item{verbose}{Logical. Print the checks while fitting.}
 
@@ -114,7 +121,8 @@ implies.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are
-\code{checks} (the diagnostic table), \code{Sigma} (fitted category covariances),
+\code{checks} (the diagnostic table), \code{Sigma} (fitted random-effect
+covariances, across the categories for a multinomial model),
 \code{beta} (fixed effects as a p-by-C matrix), \code{opt} (optimiser output), \code{sdr}
 (\code{TMB::sdreport()} output) and \code{ok} (whether every check passed).
 }
@@ -125,10 +133,12 @@ is what the formula interface calls internally.
 }
 \section{How the model is parameterised}{
 
-With \code{J} outcome categories there are \code{C = J - 1} free linear predictors.
-Coefficients use \strong{sum-to-zero} coding, so each one is that category's
-deviation from the average across categories, not a contrast against a
-baseline. This differs from \code{\link[nnet:multinom]{nnet::multinom()}} and \code{brms}.
+Every family but the multinomial has one linear predictor (\code{C = 1}). A
+multinomial outcome with \code{J} categories has \code{C = J - 1} free linear
+predictors, and its coefficients use \strong{sum-to-zero} coding, so each one is
+that category's deviation from the average across categories, not a
+contrast against a baseline. This differs from \code{\link[nnet:multinom]{nnet::multinom()}} and
+\code{brms}.
 
 Random effects are held as a matrix rather than a long vector, with a
 \emph{matrix-normal} prior. Writing it this way means the covariance over groups
@@ -137,9 +147,14 @@ Kronecker product, which keeps both memory and computation manageable and
 lets AR(1), spatial and i.i.d. structures share a single code path.
 }
 
-\section{Choosing a category covariance structure}{
+\section{Choosing a covariance structure}{
 
-Each random term gets its own structure through \code{re_struct}:
+Each random term gets its own structure through \code{re_struct}, a list with one
+element per term, named as \code{re_list} names it; each element is itself a
+list, for example \code{re_struct = list(site = list(type = "rr", rank = 1))}.
+Its \code{type} sets the covariance across a multinomial outcome's \code{C} category
+dimensions, and with one of them -- every other family -- there is nothing
+for it to change:
 \describe{
 \item{\code{"us"}}{unstructured: every variance and correlation free. Costs
 \code{C(C+1)/2} parameters, which grows quickly -- 45 at \code{J = 10}.}
@@ -148,8 +163,10 @@ Each random term gets its own structure through \code{re_struct}:
 \code{Lambda} of size C-by-r. Costs fewer parameters \strong{and} fewer latent
 values, which is usually the better trade when a term is stretched.}
 }
-If a structure is too rich for the data the pre-fit checks will say so and
-name a specific rank to try.
+Separately, \code{d_cor = FALSE} in an element drops the correlation between a
+random intercept and its slopes, which applies in every family. If a
+structure is too rich for the data the pre-fit checks will say so and name a
+specific rank to try.
 }
 
 \section{Models with no random effects}{
@@ -182,6 +199,31 @@ design-based variance estimator, neither of which is implemented. The
 \code{weights_type} check flags weights that look like sampling weights.
 }
 
+\examples{
+set.seed(1)
+n <- 300
+x <- rnorm(n)
+site <- factor(sample(20, n, TRUE))
+X <- cbind("(Intercept)" = 1, x = x)
+
+## a gaussian response, the default family, with a random intercept per site
+y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
+fit <- ilm_fit(X, y, re_list = list(site = site), verbose = FALSE)
+coef(fit)
+
+\donttest{
+## a nominal outcome with four categories, coded 1 to 4, whose site
+## intercepts share one dimension across the three category dimensions
+u <- rnorm(20)[site]
+eta <- cbind(-u, u + 0.4 * x, 0.5 * u, -0.5 * u)
+k <- apply(exp(eta) / rowSums(exp(eta)), 1, function(p) sample(4, 1, prob = p))
+fit2 <- ilm_fit(X, k, J = 4, family = "multinomial",
+                re_list = list(site = site),
+                re_struct = list(site = list(type = "rr", rank = 1)),
+                verbose = FALSE)
+fit2$Sigma
+}
+}
 \references{
 Kristensen, K., Nielsen, A., Berg, C. W., Skaug, H., & Bell, B. M. (2016).
 TMB: Automatic differentiation and Laplace approximation.

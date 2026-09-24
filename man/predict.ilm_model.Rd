@@ -2,7 +2,7 @@
 % Please edit documentation in R/ilm_predict.R
 \name{predict.ilm_model}
 \alias{predict.ilm_model}
-\title{Predicted category probabilities}
+\title{Predictions from a fitted model}
 \usage{
 \method{predict}{ilm_model}(
   object,
@@ -50,9 +50,10 @@ A matrix of probabilities (or linear predictors), or a factor for
 with \code{fit}, \code{se.fit}, \code{lower}, \code{upper}, \code{level} and \code{joint}.
 }
 \description{
-Returns one probability per observation per category, as
-\code{nnet::multinom(type = "probs")} does, optionally with standard errors and
-intervals.
+Returns the fitted mean on the response scale -- one probability per
+category for a multinomial or ordinal outcome, as
+\code{nnet::multinom(type = "probs")} does -- or the linear predictor, optionally
+with standard errors and intervals.
 }
 \section{Conditional versus population-averaged}{
 

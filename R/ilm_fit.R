@@ -1025,7 +1025,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
       sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair),
-      if (mx > 0.95) sprintf("%s cannot be separated by these data", pair) else "",
+      if (mx > 0.95) sprintf("these data cannot separate %s from %s", pnm[ij[1]], pnm[ij[2]]) else "",
       if (mx > 0.95) "remove one of the two competing terms from the model" else "")
   } else {
     ck <- ilm_add_check(ck, "parameter_aliasing", "INCONCLUSIVE",
@@ -1376,17 +1376,19 @@ ilm_print_checks <- function(ck, title) {
   invisible(ck)
 }
 
-#' Fit a multinomial mixed model from a design matrix
+#' Fit a model from a design matrix
 #'
 #' The computational engine. Most users should call [ilm_model()] with a formula
 #' instead; this is the entry point when you already have a design matrix, and it
 #' is what the formula interface calls internally.
 #'
 #' @section How the model is parameterised:
-#' With `J` outcome categories there are `C = J - 1` free linear predictors.
-#' Coefficients use **sum-to-zero** coding, so each one is that category's
-#' deviation from the average across categories, not a contrast against a
-#' baseline. This differs from [nnet::multinom()] and `brms`.
+#' Every family but the multinomial has one linear predictor (`C = 1`). A
+#' multinomial outcome with `J` categories has `C = J - 1` free linear
+#' predictors, and its coefficients use **sum-to-zero** coding, so each one is
+#' that category's deviation from the average across categories, not a
+#' contrast against a baseline. This differs from [nnet::multinom()] and
+#' `brms`.
 #'
 #' Random effects are held as a matrix rather than a long vector, with a
 #' *matrix-normal* prior. Writing it this way means the covariance over groups
@@ -1394,8 +1396,13 @@ ilm_print_checks <- function(ck, title) {
 #' Kronecker product, which keeps both memory and computation manageable and
 #' lets AR(1), spatial and i.i.d. structures share a single code path.
 #'
-#' @section Choosing a category covariance structure:
-#' Each random term gets its own structure through `re_struct`:
+#' @section Choosing a covariance structure:
+#' Each random term gets its own structure through `re_struct`, a list with one
+#' element per term, named as `re_list` names it; each element is itself a
+#' list, for example `re_struct = list(site = list(type = "rr", rank = 1))`.
+#' Its `type` sets the covariance across a multinomial outcome's `C` category
+#' dimensions, and with one of them -- every other family -- there is nothing
+#' for it to change:
 #' \describe{
 #'   \item{`"us"`}{unstructured: every variance and correlation free. Costs
 #'     `C(C+1)/2` parameters, which grows quickly -- 45 at `J = 10`.}
@@ -1404,8 +1411,10 @@ ilm_print_checks <- function(ck, title) {
 #'     `Lambda` of size C-by-r. Costs fewer parameters **and** fewer latent
 #'     values, which is usually the better trade when a term is stretched.}
 #' }
-#' If a structure is too rich for the data the pre-fit checks will say so and
-#' name a specific rank to try.
+#' Separately, `d_cor = FALSE` in an element drops the correlation between a
+#' random intercept and its slopes, which applies in every family. If a
+#' structure is too rich for the data the pre-fit checks will say so and name a
+#' specific rank to try.
 #'
 #' @section Models with no random effects:
 #' `re_list` may be empty. The latent parameter block is then omitted entirely
@@ -1423,19 +1432,26 @@ ilm_print_checks <- function(ck, title) {
 #' [ilm_consistency()] to test it directly on your own fit.
 #'
 #' @param X Numeric design matrix for the fixed effects, with `N` rows.
-#' @param y Integer vector of length `N` giving the observed category, coded
-#'   `1` to `J`.
+#' @param y The response, of length `N`: for a multinomial or ordinal model
+#'   the observed category coded `1` to `J`, and for every other family the
+#'   numeric response.
 #' @param J Integer. Number of outcome categories, for the multinomial family
 #'   only; `NULL` for every other family.
 #' @param family Response distribution: a name, or the object returned by
-#'   [ilm_family()]. See [ilm_family()] for what each one assumes.
+#'   [ilm_family()]. See [ilm_family()] for what each one assumes. The default
+#'   is `"gaussian"`, as it is for [stats::glm.fit()]; a nominal outcome needs
+#'   `family = "multinomial"` and `J`. [ilm_model()] reads the family off the
+#'   response instead.
 #' @param re_list Named list of random terms. Each element is a grouping vector
 #'   (random intercept), a `list(group =, Z =)` (random slopes), or a
-#'   `list(basis =)` (a smooth, from `ilm_smooth()`).
-#' @param re_struct Optional named list of category covariance structures,
-#'   named by term as `re_list` is. A term it leaves out gets `"us"`, so only
-#'   the terms that differ need naming. Set `d_cor = FALSE` within an element
-#'   to drop an intercept-slope correlation.
+#'   `list(basis =)` (a smooth, from `ilm_smooth()`). The default, an empty
+#'   list, fits the fixed effects alone.
+#' @param re_struct Optional named list of covariance structures, named by term
+#'   as `re_list` is, each element a list: `type` (`"us"`, `"diag"`, or `"rr"`
+#'   with `rank`) for the covariance across a multinomial outcome's categories,
+#'   and `d_cor = FALSE` to drop an intercept-slope correlation in any family.
+#'   A term it leaves out gets `"us"` with its correlations, so only the terms
+#'   that differ need naming. See the section above and the examples.
 #' @param ar Optional AR(1) specification:
 #'   `list(idx =, n_group =, Tt =)`.
 #' @param censor Optional censoring specification from [ilm_censor()], marking
@@ -1487,7 +1503,8 @@ ilm_print_checks <- function(ck, title) {
 #'   implies.
 #'
 #' @return An object of class `"ilm_model"`: a list whose most useful elements are
-#'   `checks` (the diagnostic table), `Sigma` (fitted category covariances),
+#'   `checks` (the diagnostic table), `Sigma` (fitted random-effect
+#'   covariances, across the categories for a multinomial model),
 #'   `beta` (fixed effects as a p-by-C matrix), `opt` (optimiser output), `sdr`
 #'   (`TMB::sdreport()` output) and `ok` (whether every check passed).
 #'
@@ -1517,15 +1534,47 @@ ilm_print_checks <- function(ck, title) {
 #'
 #' @seealso [ilm_model()] for the formula interface, [summary.ilm_model()],
 #'   [ilm_consistency()].
+#' @examples
+#' set.seed(1)
+#' n <- 300
+#' x <- rnorm(n)
+#' site <- factor(sample(20, n, TRUE))
+#' X <- cbind("(Intercept)" = 1, x = x)
+#'
+#' ## a gaussian response, the default family, with a random intercept per site
+#' y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
+#' fit <- ilm_fit(X, y, re_list = list(site = site), verbose = FALSE)
+#' coef(fit)
+#'
+#' \donttest{
+#' ## a nominal outcome with four categories, coded 1 to 4, whose site
+#' ## intercepts share one dimension across the three category dimensions
+#' u <- rnorm(20)[site]
+#' eta <- cbind(-u, u + 0.4 * x, 0.5 * u, -0.5 * u)
+#' k <- apply(exp(eta) / rowSums(exp(eta)), 1, function(p) sample(4, 1, prob = p))
+#' fit2 <- ilm_fit(X, k, J = 4, family = "multinomial",
+#'                 re_list = list(site = site),
+#'                 re_struct = list(site = list(type = "rr", rank = 1)),
+#'                 verbose = FALSE)
+#' fit2$Sigma
+#' }
 #' @export
-ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
-                     ylevels = NULL, weights = NULL, family = "multinomial",
+ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NULL,
+                     ylevels = NULL, weights = NULL, family = "gaussian",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
                      rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle"),
                      reml = FALSE, boundary = c("hold", "avoid")) {
   zi_type <- match.arg(zi_type)
   boundary <- match.arg(boundary)
+  ## A category count with no family is a multinomial call written when that
+  ## was the default. Fitting a gaussian model to its category codes would
+  ## return numbers that look like an answer.
+  if (missing(family) && !is.null(J) && J >= 3L)
+    stop("`J` gives ", J, " categories but `family` is not given, and the ",
+         "default is \"gaussian\". For a nominal outcome, say ",
+         "family = \"multinomial\"; for an ordered one, family = \"ordinal\".",
+         call. = FALSE)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Integrating the fixed effects out under a flat prior is available for any
   ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-
@@ -1656,8 +1705,13 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   for (nm in names(re_struct)) {
     if (is.null(re_struct[[nm]]$rank))  re_struct[[nm]]$rank  <- NA_integer_
     if (is.null(re_struct[[nm]]$d_cor)) re_struct[[nm]]$d_cor <- TRUE
+    ## `type` defaults like everything else in an element: the covariance
+    ## across categories means nothing outside a multinomial model, and
+    ## list(subj = list(d_cor = FALSE)) -- all an uncorrelated random slope in
+    ## any other family needs -- used to stop, asking for it
+    if (is.null(re_struct[[nm]]$type)) re_struct[[nm]]$type <- "us"
     ty_nm <- re_struct[[nm]]$type
-    if (is.null(ty_nm) || !ty_nm %in% c("us", "diag", "rr"))
+    if (!ty_nm %in% c("us", "diag", "rr"))
       stop(sprintf("re_struct$%s$type must be one of \"us\", \"diag\" or \"rr\"", nm),
            call. = FALSE)
     ## rank = 2 is a double, which is what anyone would actually type, but the
@@ -2301,6 +2355,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     ## restricting the likelihood to contrasts orthogonal to X buys
     sdr$cov.fixed <- Vfull
   }
+  ## The fixed effects, from where they actually are. `pe` is the native
+  ## parameter vector, which under REML does not hold beta -- it sits in the
+  ## random block and was pulled out above -- so `pe[pn == "beta"]` was empty
+  ## and matrix() filled the stored beta with NA. predict() reads it, and every
+  ## REML fit predicted NA: ilm_ame(), ilm_scenario() and the effects in
+  ## ilm_interpret() with it, including every ilm_dag_model(), which fits by
+  ## REML.
+  beta_hat <- matrix(if (reml) reml_beta else pe[pn == "beta"], p, C)
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  ## how many of those rows were checks of the DESIGN, made
                  ## before fitting: the same for every study of this design,
@@ -2358,7 +2420,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      stats::median(ilm_disp_rows(
                        Zd, unname(pe[pn == "gamma"]),
                        if (isTRUE(disp_mu)) unname(pe[pn == "mu_pow"]) else NA_real_,
-                       fam, X, matrix(pe[pn == "beta"], p, C))),
+                       fam, X, beta_hat)),
                      fam$disp_names[1])
                  } else NULL,
                  disp_formula = if (has_dm) attr(Zd, "formula") else NULL,
@@ -2394,7 +2456,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                    stats::setNames(unname(ss[pn == "gzi"]), colnames(Zzi))
                  } else NULL,
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
-                 beta = matrix(pe[pn == "beta"], p, C),
+                 beta = beta_hat,
                  ## rho is the correlation ONE TIME UNIT apart under both
                  ## structures, so the two are directly comparable. For CAR(1)
                  ## the fitted parameter is log(range), and rho = exp(-1/range).

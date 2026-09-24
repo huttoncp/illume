@@ -3,7 +3,7 @@
 \name{ilm_fitted}
 \alias{ilm_fitted}
 \alias{iml_fitted}
-\title{Fitted category probabilities}
+\title{Fitted values}
 \usage{
 ilm_fitted(object, conditional = TRUE)
 }
@@ -16,8 +16,10 @@ and AR terms to zero. Smooth terms are included either way, because they
 are mean structure rather than a population to average over.}
 }
 \value{
-A matrix of probabilities with one column per category.
+A matrix with one row per observation: one column per category for
+a multinomial or ordinal outcome, one column otherwise.
 }
 \description{
-Fitted category probabilities
+The fitted mean for each observation: the probability of each category for
+a multinomial or ordinal outcome, the fitted value otherwise.
 }

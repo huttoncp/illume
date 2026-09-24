@@ -4,7 +4,7 @@
 \alias{check_model.ilm_model}
 \title{performance::check_model method}
 \usage{
-check_model.ilm_model(x, ...)
+\method{check_model}{ilm_model}(x, ...)
 }
 \arguments{
 \item{x}{A fitted \code{"ilm_model"} object.}
@@ -15,6 +15,14 @@ check_model.ilm_model(x, ...)
 Invisibly, the result of \code{\link[=ilm_appraise]{ilm_appraise()}}.
 }
 \description{
-Routes \code{performance::check_model()} to \code{\link[=ilm_appraise]{ilm_appraise()}}, so the panels are
-the ones built for this model rather than generic ones that would not apply.
+\code{performance::check_model(fit)} draws \code{\link[=ilm_appraise]{ilm_appraise()}}'s panels. Its own
+checks cannot be drawn for these fits: they need support from the insight
+package that an \code{"ilm_model"} does not have, and without this method
+\code{check_model()} stops with an error -- after \code{\link[=ilm_register_insight]{ilm_register_insight()}} too.
+The panels drawn instead are illume's, built for every family it fits,
+including a nominal outcome, where the usual residual plots have no clear
+meaning.
+}
+\details{
+Registered with performance's generic when performance is loaded.
 }

@@ -2,9 +2,9 @@
 % Please edit documentation in R/ilm_ic.R
 \name{model_performance.ilm_model}
 \alias{model_performance.ilm_model}
-\title{Fit indices for a multinomial mixed model}
+\title{Fit indices for a fitted model}
 \usage{
-model_performance.ilm_model(model, metrics = "all", ..., verbose = TRUE)
+\method{model_performance}{ilm_model}(model, metrics = "all", ..., verbose = TRUE)
 }
 \arguments{
 \item{model}{A fitted \code{"ilm_model"} object.}
@@ -27,8 +27,9 @@ R-squared, and the scoring rules from \code{\link[=ilm_scores]{ilm_scores()}}.
 
 Nakagawa's marginal and conditional R-squared, and the ICC, are \strong{not}
 reported. Both require a distribution-specific residual variance, and a
-nominal multinomial outcome does not have one. Reporting them would mean
-inventing a quantity rather than estimating it.
+nominal multinomial outcome does not have one -- reporting them would mean
+inventing a quantity rather than estimating it -- so they are left out for
+every family rather than given for some.
 
 McFadden's R-squared is relative to an intercept-only model with the same
 grouping random effects, so it answers "how much do the predictors add?"

@@ -34,11 +34,15 @@ ilm_need_bars <- function()
     stop("the formula interface needs reformulas (or lme4) to read ",
          "random-effect bars; install.packages(\"reformulas\")", call. = FALSE)
 
-#' Fit a multinomial linear mixed model
+#' Fit generalized linear and additive mixed models
 #'
-#' The main entry point. Takes an lme4-style formula and a data frame and fits a
-#' mixed-effects model for a nominal categorical outcome with three or more
-#' unordered categories.
+#' The main entry point. Takes an lme4-style formula and a data frame and fits
+#' a regression model for a gaussian, binomial, Poisson, negative binomial,
+#' beta, multinomial or ordinal response, or a survival time (accelerated
+#' failure time or Royston-Parmar) -- with or without random effects,
+#' penalised smooths, AR(1) or CAR(1) correlation, a model for the dispersion,
+#' zero inflation or a hurdle, and censoring at a floor or a ceiling. See
+#' `family` for the full list.
 #'
 #' @details
 #' Random-effect terms use lme4 syntax and smooths use mgcv syntax, so a model
@@ -59,8 +63,8 @@ ilm_need_bars <- function()
 #' `mgcv::s(x)` -- because mgcv identifies them by name, so a namespaced call
 #' would be mistaken for an ordinary predictor. This matches `mgcv::gam()`.
 #'
-#' The outcome may be a factor or a character vector. Its levels set the category
-#' labels used throughout the output.
+#' A categorical outcome may be a factor or a character vector; its levels set
+#' the category labels used throughout the output.
 #'
 #' @section Simple models get exact inference:
 #' A gaussian model with no random or smooth terms is an ordinary linear model.
@@ -76,10 +80,12 @@ ilm_need_bars <- function()
 #' small-sample analogue, so it keeps z and chi-square.
 #'
 #' @section Reading the coefficients:
-#' Categories are coded **sum-to-zero**, so a coefficient is that category's
-#' deviation from the average across categories, *not* a contrast against a
-#' baseline. `summary()` prints a reminder, because this is easy to misread if
-#' you are used to [nnet::multinom()].
+#' Every family but the multinomial has one coefficient per predictor, read as
+#' in [stats::glm()]. A multinomial outcome has one per predictor per category,
+#' and its categories are coded **sum-to-zero**, so a coefficient is that
+#' category's deviation from the average across categories, *not* a contrast
+#' against a baseline. `summary()` prints a reminder, because this is easy to
+#' misread if you are used to [nnet::multinom()].
 #'
 #' @section Always read the checks:
 #' This model class fails quietly: a fit can return sensible-looking
@@ -91,8 +97,10 @@ ilm_need_bars <- function()
 #' @param formula A formula with random-effect bars and optional smooth terms.
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
-#'   "poisson", "nbinom", "beta", "multinomial", or one of the ordinal
-#'   families. See [ilm_family()]. The default, `"auto"` (or `NULL`), reads
+#'   "poisson", "nbinom", "beta", "multinomial", the ordinal families
+#'   ("ordinal", "ordinal_probit", "ordinal_cloglog"), the accelerated failure
+#'   time families ("weibull", "lognormal", "loglogistic") or the
+#'   Royston-Parmar ones ("rp", "rp_odds", "rp_normal"). See [ilm_family()]. The default, `"auto"` (or `NULL`), reads
 #'   the family off the response and says which it chose and why: a factor
 #'   with 2 levels, a logical or a 0/1 variable is binomial; an unordered
 #'   factor with 3 or more levels is multinomial and an ordered one ordinal;
@@ -108,9 +116,24 @@ ilm_need_bars <- function()
 #'   short scale are often better read as ordinal. The chosen family is
 #'   written into `fit$call`, so a refit uses it rather than guessing again.
 #' @param data A data frame.
-#' @param re_struct Optional named list of category covariance structures, named
-#'   by grouping variable, e.g. `list(site = list(type = "rr", rank = 1))`.
-#'   Terms it leaves out keep the default, `"us"`. See [ilm_fit()].
+#' @param re_struct Optional named list setting the covariance structure of
+#'   random terms, one element per term, named by its grouping variable as the
+#'   formula names it; a term it leaves out keeps the default. Each element is
+#'   itself a list:
+#'   \describe{
+#'     \item{`type`, and `rank` with `"rr"`}{the covariance across the
+#'       outcome's categories, so it matters only for a multinomial model:
+#'       `"us"` (the default, every variance and correlation free), `"diag"`
+#'       (categories uncorrelated) or `"rr"` (reduced rank, with `rank` below
+#'       the number of categories less one). Every other family has one linear
+#'       predictor, where a rank has nothing to reduce.}
+#'     \item{`d_cor = FALSE`}{drops the correlation between a random intercept
+#'       and its slopes, in any family.}
+#'   }
+#'   For example `list(site = list(type = "rr", rank = 1))`, or
+#'   `list(subj = list(d_cor = FALSE))`; see the examples, and [ilm_fit()] for
+#'   what each costs. The pre-fit checks say when a structure is too rich for
+#'   the data and name a rank to try.
 #' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
 #' @param censor Optional censoring specification from [ilm_censor()], for a
 #'   response with a floor, a ceiling or a detection limit.
@@ -232,21 +255,41 @@ ilm_need_bars <- function()
 #' 40(2), 136--157.
 #'
 #' @examples
-#' \dontrun{
 #' set.seed(1)
-#' n <- 600
-#' dd <- data.frame(
-#'   subj = factor(sample(40, n, TRUE)),
-#'   x1   = rnorm(n),
-#'   grp  = factor(sample(c("a", "b", "c"), n, TRUE))
-#' )
-#' dd$y <- factor(sample(c("low", "mid", "high"), n, TRUE),
-#'                levels = c("low", "mid", "high"))
+#' n <- 300
+#' dd <- data.frame(subj = factor(sample(30, n, TRUE)), x1 = rnorm(n),
+#'                  grp = factor(sample(c("a", "b", "c"), n, TRUE)))
+#' dd$y <- 1 + 0.5 * dd$x1 + rnorm(30)[dd$subj] + rnorm(n)
 #'
-#' fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd)
+#' ## a linear mixed model: a random intercept for each subject
+#' fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd, family = "gaussian",
+#'                  verbose = FALSE)
 #' summary(fit)
-#' ilm_anova(fit, type = 3)
-#' head(predict(fit))
+#'
+#' ## a random slope for x1 as well, without its correlation with the
+#' ## intercept -- re_struct names the term by its grouping variable
+#' fit2 <- ilm_model(y ~ x1 + (1 + x1 | subj), data = dd, family = "gaussian",
+#'                   re_struct = list(subj = list(d_cor = FALSE)),
+#'                   verbose = FALSE)
+#'
+#' \donttest{
+#' ## a count, and a nominal outcome with four categories
+#' dd$n_events <- rpois(n, exp(0.3 + 0.2 * dd$x1))
+#' fit3 <- ilm_model(n_events ~ x1 + (1 | subj), data = dd, family = "poisson",
+#'                   verbose = FALSE)
+#' ## subjects that differ along one direction across the categories: more
+#' ## "x" and "y" and less "w" and "z", in fixed proportions
+#' u <- rnorm(30)[dd$subj]
+#' eta <- cbind(-u, u + 0.4 * dd$x1, 0.5 * u, -0.5 * u)
+#' dd$k <- factor(apply(exp(eta) / rowSums(exp(eta)), 1, function(p)
+#'   sample(c("w", "x", "y", "z"), 1, prob = p)))
+#' ## the subjects' random intercepts vary across the three category
+#' ## dimensions; a reduced rank of 1 describes that covariance with one
+#' ## dimension instead of three -- fewer parameters and fewer latent values
+#' fit4 <- ilm_model(k ~ x1 + (1 | subj), data = dd, family = "multinomial",
+#'                   re_struct = list(subj = list(type = "rr", rank = 1)),
+#'                   verbose = FALSE)
+#' ilm_anova(fit4, type = 3)
 #' }
 #'
 #' @seealso [summary.ilm_model()], [ilm_anova()], [predict.ilm_model()],
