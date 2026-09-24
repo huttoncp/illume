@@ -17,11 +17,13 @@ ilm_car1(time, group, verbose = TRUE)
 - time:
 
   Time, one value per observation. Any numeric scale or `Date`; `rho` is
-  the correlation one unit apart, so the units matter.
+  the correlation one unit apart, so the units matter. Or a one-sided
+  formula `~ time | group` naming two columns of the model's data.
 
 - group:
 
-  Unit identifier, one value per observation.
+  Unit identifier, one value per observation. Omitted when `time` is a
+  formula.
 
 - verbose:
 
@@ -47,14 +49,23 @@ is thin; rounding `time` to a coarser grid, so that observations share a
 latent, is the usual fix and is what makes the difference between a
 model that fits and one that does not.
 
+`ilm_car1(~ time | group)` names two columns of the model's data instead
+of passing them; see
+[`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
+for why that is the safer form.
+
 ## See also
 
 [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
 for evenly spaced time,
+[`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+for a level that drifts rather than reverting,
 [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 and
 [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
-to test whether the structure is needed.
+to test whether the structure is needed,
+[`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+for the fitted cells.
 
 ## Examples
 

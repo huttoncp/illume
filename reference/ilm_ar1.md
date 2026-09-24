@@ -16,11 +16,13 @@ ilm_ar1(time, group, verbose = TRUE)
 - time:
 
   Time index, one value per observation. Whole numbers, or values on a
-  common step such as `c(0, 5, 10, 15)`.
+  common step such as `c(0, 5, 10, 15)`. Or a one-sided formula
+  `~ time | group` naming two columns of the model's data; see Details.
 
 - group:
 
-  Unit identifier, one value per observation.
+  Unit identifier, one value per observation. Omitted when `time` is a
+  formula.
 
 - verbose:
 
@@ -38,12 +40,26 @@ the latent for that step simply has no observation attached, and the
 chain continues across it. What is *not* allowed is times that do not
 sit on a common grid at all, because then "one step" has no meaning.
 
+**By name.** `ilm_ar1(~ time | group)` names two columns of the model's
+data instead of passing them.
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+reads them from its model frame, after rows with missing values are
+dropped, so the structure cannot come out of step with the response;
+vectors taken from the whole data frame beforehand can. The fitted model
+remembers the names, so
+[`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+and predictions for new rows know where to find the time and the group.
+
 ## See also
 
 [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
 for arbitrary gaps,
+[`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+for a level that drifts,
 [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
-to test whether the structure is needed.
+to test whether the structure is needed,
+[`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+for the fitted cells.
 
 ## Examples
 

@@ -165,7 +165,11 @@ the data and name a rank to try.</p></dd>
 
 
 <dt id="arg-ar">ar<a class="anchor" aria-label="anchor" href="#arg-ar"></a></dt>
-<dd><p>Optional correlation over time, from <code><a href="ilm_ar1.html">ilm_ar1()</a></code> or <code><a href="ilm_car1.html">ilm_car1()</a></code>.</p></dd>
+<dd><p>Optional correlation over time, from <code><a href="ilm_ar1.html">ilm_ar1()</a></code>, <code><a href="ilm_car1.html">ilm_car1()</a></code> or
+<code><a href="ilm_rw1.html">ilm_rw1()</a></code>. Written by name, as <code>ilm_car1(~ time | group)</code>, it takes the
+two columns from <code>data</code> after rows with missing values are dropped, so it
+cannot come out of step with the response, and the fit remembers them for
+<code><a href="ilm_cells.html">ilm_cells()</a></code> and for predictions on new rows.</p></dd>
 
 
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>

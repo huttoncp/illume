@@ -68,11 +68,13 @@ visits, months, waves. For irregular times use <code><a href="ilm_car1.html">ilm
 
 <dl><dt id="arg-time">time<a class="anchor" aria-label="anchor" href="#arg-time"></a></dt>
 <dd><p>Time index, one value per observation. Whole numbers, or values
-on a common step such as <code>c(0, 5, 10, 15)</code>.</p></dd>
+on a common step such as <code>c(0, 5, 10, 15)</code>. Or a one-sided formula
+<code>~ time | group</code> naming two columns of the model's data; see Details.</p></dd>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
-<dd><p>Unit identifier, one value per observation.</p></dd>
+<dd><p>Unit identifier, one value per observation. Omitted when
+<code>time</code> is a formula.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -90,11 +92,18 @@ observation, so a unit that misses a wave is handled correctly – the latent
 for that step simply has no observation attached, and the chain continues
 across it. What is <em>not</em> allowed is times that do not sit on a common grid at
 all, because then "one step" has no meaning.</p>
+<p><strong>By name.</strong> <code>ilm_ar1(~ time | group)</code> names two columns of the model's
+data instead of passing them. <code><a href="ilm_model.html">ilm_model()</a></code> reads them from its model
+frame, after rows with missing values are dropped, so the structure cannot
+come out of step with the response; vectors taken from the whole data frame
+beforehand can. The fitted model remembers the names, so <code><a href="ilm_cells.html">ilm_cells()</a></code> and
+predictions for new rows know where to find the time and the group.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="ilm_car1.html">ilm_car1()</a></code> for arbitrary gaps, <code><a href="ilm_check_ar.html">ilm_check_ar()</a></code> to test whether
-the structure is needed.</p></div>
+    <div class="dont-index"><p><code><a href="ilm_car1.html">ilm_car1()</a></code> for arbitrary gaps, <code><a href="ilm_rw1.html">ilm_rw1()</a></code> for a level that
+drifts, <code><a href="ilm_check_ar.html">ilm_check_ar()</a></code> to test whether the structure is needed,
+<code><a href="ilm_cells.html">ilm_cells()</a></code> for the fitted cells.</p></div>
     </div>
 
     <div class="section level2">

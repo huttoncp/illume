@@ -9,6 +9,8 @@ comes back is the same whatever was fitted.
   : A first-order autoregressive structure over evenly spaced time
 - [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   : A continuous-time autoregressive structure over irregular time
+- [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+  : The cells of a correlation over time
 - [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
   : Mark censored observations
 - [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
@@ -26,6 +28,8 @@ comes back is the same whatever was fitted.
 - [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   [`ilm_model_formula()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   : Fit generalized linear and additive mixed models
+- [`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+  : A random walk over time
 - [`ilm_squeeze()`](https://huttoncp.github.io/illume/reference/ilm_squeeze.md)
   : Move proportions off 0 and 1
 - [`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md)

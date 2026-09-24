@@ -71,11 +71,13 @@ and the spacing need not be regular. This is the structure <code>nlme</code>'s
 
 <dl><dt id="arg-time">time<a class="anchor" aria-label="anchor" href="#arg-time"></a></dt>
 <dd><p>Time, one value per observation. Any numeric scale or <code>Date</code>;
-<code>rho</code> is the correlation one unit apart, so the units matter.</p></dd>
+<code>rho</code> is the correlation one unit apart, so the units matter. Or a
+one-sided formula <code>~ time | group</code> naming two columns of the model's data.</p></dd>
 
 
 <dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
-<dd><p>Unit identifier, one value per observation.</p></dd>
+<dd><p>Unit identifier, one value per observation. Omitted when
+<code>time</code> is a formula.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -98,11 +100,14 @@ observation – the regime where the Laplace approximation stops converging.
 The constructor reports the budget and warns when it is thin; rounding <code>time</code>
 to a coarser grid, so that observations share a latent, is the usual fix and
 is what makes the difference between a model that fits and one that does not.</p>
+<p><code>ilm_car1(~ time | group)</code> names two columns of the model's data instead of
+passing them; see <code><a href="ilm_ar1.html">ilm_ar1()</a></code> for why that is the safer form.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="ilm_ar1.html">ilm_ar1()</a></code> for evenly spaced time, <code><a href="ilm_check_ar.html">ilm_check_ar()</a></code> and
-<code><a href="ilm_plot_acf.html">ilm_plot_acf()</a></code> to test whether the structure is needed.</p></div>
+    <div class="dont-index"><p><code><a href="ilm_ar1.html">ilm_ar1()</a></code> for evenly spaced time, <code><a href="ilm_rw1.html">ilm_rw1()</a></code> for a level that
+drifts rather than reverting, <code><a href="ilm_check_ar.html">ilm_check_ar()</a></code> and <code><a href="ilm_plot_acf.html">ilm_plot_acf()</a></code> to
+test whether the structure is needed, <code><a href="ilm_cells.html">ilm_cells()</a></code> for the fitted cells.</p></div>
     </div>
 
     <div class="section level2">

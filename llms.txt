@@ -111,7 +111,7 @@ the whole package.
 
 |  |  |
 |----|----|
-| **Models** | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
+| **Models** | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1) and random walks over time, dispersion models, zero-inflation and hurdles |
 | **Other designs** | [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md) instrumental variables, [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md) difference in differences, [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md) regression discontinuity, [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md) complex samples |
 | **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy; [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md) writes the remedies out as code and [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md) makes one |
 | **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md) |
@@ -388,6 +388,8 @@ comes back is the same whatever was fitted.
   : A first-order autoregressive structure over evenly spaced time
 - [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   : A continuous-time autoregressive structure over irregular time
+- [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+  : The cells of a correlation over time
 - [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
   : Mark censored observations
 - [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
@@ -405,6 +407,8 @@ comes back is the same whatever was fitted.
 - [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   [`ilm_model_formula()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   : Fit generalized linear and additive mixed models
+- [`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+  : A random walk over time
 - [`ilm_squeeze()`](https://huttoncp.github.io/illume/reference/ilm_squeeze.md)
   : Move proportions off 0 and 1
 - [`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md)

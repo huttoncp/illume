@@ -111,9 +111,16 @@ ilm_model_formula(
 - ar:
 
   Optional correlation over time, from
-  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
+  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md),
+  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   or
-  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md).
+  [`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md).
+  Written by name, as `ilm_car1(~ time | group)`, it takes the two
+  columns from `data` after rows with missing values are dropped, so it
+  cannot come out of step with the response, and the fit remembers them
+  for
+  [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+  and for predictions on new rows.
 
 - weights:
 

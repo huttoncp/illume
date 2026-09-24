@@ -112,7 +112,17 @@ such a term as if it were an intercept understates that, and the error
 grows with the slope variance and with distance from centre.
 
 An **AR(1) or CAR(1) term** is averaged over too: at any one row its
-latent value has the stationary distribution, whatever the time.
+latent value has the stationary distribution, whatever the time. A
+**random walk**
+([`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md))
+is not stationary: at a row its variance is the variance per unit of
+time multiplied by the time since the row's group started, so each row
+is averaged over its own spread, and the population mean moves away from
+the typical group's as time passes. New rows need their time and group
+for that, which the fit can find only when the walk was given by name,
+`ilm_rw1(~ time | group)`; a group the fit has not seen is taken to
+start at its earliest time among the new rows, as each fitted group
+started at its first.
 
 With **one linear predictor** – every family but the multinomial – a
 row's whole latent contribution is a single normal, and the average is

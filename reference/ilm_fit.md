@@ -68,7 +68,15 @@ ilm_fit(
 
 - ar:
 
-  Optional AR(1) specification: `list(idx =, n_group =, Tt =)`.
+  Optional correlation over time, from
+  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md),
+  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
+  or
+  [`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+  given vectors – a structure given by name, `~ time | group`, is built
+  from the data by
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  – or the older bare AR(1) list, `list(idx =, n_group =, Tt =)`.
 
 - ylevels:
 
