@@ -194,6 +194,21 @@ ilm_re_draws <- function(A, B, ndraw, C) {
   lapply(seq_len(ndraw), function(m) A %*% matrix(Z[m, ], d, C) %*% B)
 }
 
+## Gauss-Hermite nodes and weights for E[f(Z)], Z ~ N(0, 1), by the
+## Golub-Welsch eigenvalue method: E[f(Z)] ~ sum(w * f(z)). With one linear
+## predictor, a row's whole latent contribution is a single normal, so its
+## average over the random effects is a one-dimensional integral, and 40 points
+## do it to the digits a probability is ever quoted to.
+#' @keywords internal
+#' @noRd
+ilm_gh <- function(n = 40L) {
+  i <- seq_len(n - 1L)
+  J <- matrix(0, n, n)
+  J[cbind(i, i + 1L)] <- J[cbind(i + 1L, i)] <- sqrt(i / 2)
+  e <- eigen(J, symmetric = TRUE)
+  list(z = sqrt(2) * e$values, w = e$vectors[1L, ]^2)
+}
+
 #' Convert linear predictors to category probabilities
 #'
 #' Applies the softmax (multinomial logistic) transform so each row gives
@@ -287,6 +302,15 @@ ilm_joint_draws <- function(object, nsim, seed) {
 #' were an intercept understates that, and the error grows with the slope
 #' variance and with distance from centre.
 #'
+#' An **AR(1) or CAR(1) term** is averaged over too: at any one row its latent
+#' value has the stationary distribution, whatever the time.
+#'
+#' With **one linear predictor** -- every family but the multinomial -- a row's
+#' whole latent contribution is a single normal, and the average is taken by
+#' Gauss-Hermite quadrature: exact for any purpose, the same on every call, and
+#' free of `ndraw`. A multinomial outcome has one dimension per category, and
+#' is averaged over `ndraw` draws with common random numbers.
+#'
 #' @section Uncertainty:
 #' Standard errors and intervals come from simulation rather than a formula,
 #' because the softmax makes the quantity nonlinear in the parameters. Intervals
@@ -315,7 +339,9 @@ ilm_joint_draws <- function(object, nsim, seed) {
 #' @param interval `"none"` or `"confidence"`.
 #' @param level Numeric. Interval coverage, default 0.95.
 #' @param nsim Integer. Parameter draws used for uncertainty.
-#' @param ndraw Integer. Random-effect draws used when `marginal = TRUE`.
+#' @param ndraw Integer. Random-effect draws used when `marginal = TRUE` for a
+#'   multinomial outcome; a single linear predictor is averaged by quadrature
+#'   and does not use it.
 #' @param seed Integer. Random seed, so results are reproducible.
 #' @param ... Unused.
 #'
@@ -356,6 +382,11 @@ predict.ilm_model <- function(object, newdata = NULL,
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
 
   gk <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
+  ## An AR or CAR term is a population to average over too. Its latent value at
+  ## any one row is N(0, Sigma$ar) -- the stationary covariance, whatever the
+  ## time -- and it used to be left out: a Poisson model with a stationary AR
+  ## variance of 0.59 averaged 1.40 where its own simulations averaged 1.86.
+  has_ar <- !is.null(object$ar) && !is.null(object$Sigma[["ar"]])
   ## Under an identity link the average over the random effects IS the
   ## conditional value: E[eta + z'u] = eta, because the random effects have
   ## mean zero and nothing nonlinear stands between. Simulating it instead
@@ -365,11 +396,11 @@ predict.ilm_model <- function(object, newdata = NULL,
   if (marginal && !isTRUE(object$ordinal) && object$C == 1L &&
       !is.null(object$family) && identical(object$family$link, "identity"))
     marginal <- FALSE
-  draws <- NULL
-  if (marginal && length(gk)) {                    # fixed RE draws: common random numbers
-    set.seed(seed)
+  integ <- marginal && (length(gk) > 0L || has_ar)
+  draws <- NULL; vrow <- NULL
+  if (integ) {
     pdat <- if (is.null(newdata)) object$model else newdata
-    draws <- lapply(gk, function(k) {
+    tms <- lapply(gk, function(k) {
       f  <- ilm_re_factors(object, k)
       Zb <- ilm_re_design(object, k, pdat, f$d)
       if (is.null(Zb)) {
@@ -385,8 +416,29 @@ predict.ilm_model <- function(object, newdata = NULL,
         f$A <- matrix(1, 1L, 1L)
         Zb  <- matrix(1, nrow(pdat), 1L)
       }
-      list(Zb = Zb, U = ilm_re_draws(f$A, f$B, ndraw, object$C))
+      list(Zb = Zb, A = f$A, B = f$B)
     })
+    if (object$C > 1L) {
+      ## C linear predictors: draws, with common random numbers, in the same
+      ## stream as before for the grouping terms, and the AR term after them
+      set.seed(seed)
+      draws <- lapply(tms, function(tk)
+        list(Zb = tk$Zb, U = ilm_re_draws(tk$A, tk$B, ndraw, object$C)))
+      if (has_ar)
+        draws[[length(draws) + 1L]] <- list(
+          Zb = matrix(1, nrow(pdat), 1L),
+          U = ilm_re_draws(matrix(1, 1L, 1L), ilm_msqrt(object$Sigma[["ar"]]),
+                           ndraw, object$C))
+    } else {
+      ## One linear predictor: a row's latent contribution is a single normal,
+      ## with variance z' Sigma_d z times the term's scale for each term, plus
+      ## the AR variance. Averaged by quadrature rather than by draws, whose
+      ## noise grows with that variance and moves finite-difference effects
+      ## with the seed.
+      vrow <- numeric(nrow(pdat))
+      for (tk in tms) vrow <- vrow + rowSums((tk$Zb %*% tk$A)^2) * sum(tk$B^2)
+      if (has_ar) vrow <- vrow + object$Sigma[["ar"]][1L, 1L]
+    }
   }
   ## A univariate family has one linear predictor and its own inverse link; the
   ## multinomial has C dimensions that the softmax maps onto J probabilities.
@@ -419,24 +471,29 @@ predict.ilm_model <- function(object, newdata = NULL,
     eta <- ilm_eta(object, nd, beta, bvec)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
     if (ordinal) {
-      if (!marginal || !length(gk))
+      if (!integ)
         return(ilm_ord_probs(eta[, 1], object$zeta, object$family$pfun))
-      P <- matrix(0, nrow(eta), object$J)
-      for (m in seq_len(ndraw)) {
-        sh <- shift(m, nrow(eta), ncol(eta))
-        P <- P + ilm_ord_probs(eta[, 1] + sh[, 1], object$zeta,
-                               object$family$pfun)
-      }
-      return(P / ndraw)
+      gh <- ilm_gh(); P <- 0
+      for (q in seq_along(gh$z))
+        P <- P + gh$w[q] * ilm_ord_probs(eta[, 1] + sqrt(vrow) * gh$z[q],
+                                         object$zeta, object$family$pfun)
+      return(P)
     }
-    if (!marginal || !length(gk))
+    if (!integ)
       return(if (multinom) ilm_softmax_J(eta, Tc) else
                matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
-    P <- matrix(0, nrow(eta), if (multinom) object$J else 1L)
+    if (!multinom) {
+      ## the zero part inside the integral: a hurdle's mean is not linear in
+      ## the count mean, so it cannot be applied to the average afterwards
+      gh <- ilm_gh(); P <- 0
+      for (q in seq_along(gh$z))
+        P <- P + gh$w[q] * zi_adj(linkinv(eta[, 1] + sqrt(vrow) * gh$z[q]))
+      return(matrix(P, ncol = 1L))
+    }
+    P <- matrix(0, nrow(eta), object$J)
     for (m in seq_len(ndraw)) {
       sh <- shift(m, nrow(eta), ncol(eta))
-      P <- P + if (multinom) ilm_softmax_J(eta + sh, Tc)
-               else matrix(zi_adj(linkinv(eta[, 1] + sh[, 1])), ncol = 1L)
+      P <- P + ilm_softmax_J(eta + sh, Tc)
     }
     P / ndraw
   }

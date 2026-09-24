@@ -123,6 +123,13 @@ ilm_scen_support <- function(mf, scen, vars) {
 #' non-linear link, because the average of a prediction is not the prediction
 #' at the average. The printed output says which was used.
 #'
+#' In a mixed model each unit's prediction is averaged over every random term
+#' -- intercepts, slopes, an AR or CAR latent -- as `predict(marginal = TRUE)`
+#' does, so the result is a population mean rather than the value for a group
+#' whose random effect happens to be zero. The interval draws the whole
+#' parameter vector, variance components included, since that average depends
+#' on them.
+#'
 #' @section Extrapolation:
 #'
 #' A model returns a number for a dose nobody received, and the interval around
@@ -167,10 +174,11 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
-  if (object$C > 1L)
-    stop("a multinomial fit predicts a vector of probabilities per row, not ",
-         "one number, so a scenario has no single value to report; use ",
-         "predict() with newdata.", call. = FALSE)
+  if (object$C > 1L || isTRUE(object$ordinal))
+    stop(if (isTRUE(object$ordinal)) "an ordinal" else "a multinomial",
+         " fit predicts a vector of probabilities per row, not one number, so ",
+         "a scenario has no single value to report; use predict() with newdata.",
+         call. = FALSE)
   spec <- list(...)
   if (!length(spec) || is.null(names(spec)) || any(names(spec) == ""))
     stop("name the predictors to set, for instance dose = c(0, 10, 20).",
@@ -188,23 +196,32 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   others <- setdiff(names(mf)[-1L], names(spec))
   ref <- ilm_scen_reference(mf)
 
-  set.seed(seed)
-  mixed <- length(object$re) > 0L
+  ## A population mean averages over every random term -- intercepts, slopes,
+  ## an AR or CAR latent -- and is taken by predict(), which also carries a
+  ## smooth's penalised part and a zero part. This used to be computed here
+  ## from the fixed-effect design and each term's intercept variance alone:
+  ## with a random slope that gave the intercept-only average, and a
+  ## smooth lost its penalised part entirely -- a gaussian sin() curve came
+  ## out as -1.31 at its peak of +1.
+  mixed <- any(vapply(object$re, function(e) e$kind != "basis", TRUE)) ||
+    !is.null(object$ar)
   nsc <- nrow(grid)
-  draws <- matrix(NA_real_, sims, nsc)
   ## the base data each scenario is applied to
   base <- if (over == "sample") mf else ref
+  nds <- lapply(seq_len(nsc), function(j) {
+    nd <- base
+    for (v in names(spec)) nd[[v]] <- ilm_med_set(nd[[v]], grid[j, v])
+    nd
+  })
+  ## every parameter draw is made here, before predict() could touch the
+  ## random number stream
+  set.seed(seed)
+  P <- ilm_scen_par_draws(object, sims)
+  draws <- matrix(NA_real_, sims, nsc)
   pb <- ilm_progress(sims, progress, "projecting scenarios")
-  ## random-effect draws, so a mixed model's answer is population-averaged
-  ## rather than the value for a cluster whose effect happens to be zero
-  reb <- if (mixed) ilm_scen_re_draws(object, 200L) else NULL
   for (s in seq_len(sims)) {
-    b <- ilm_med_draw(object)
-    for (j in seq_len(nsc)) {
-      nd <- base
-      for (v in names(spec)) nd[[v]] <- ilm_med_set(nd[[v]], grid[j, v])
-      draws[s, j] <- ilm_scen_mean(object, nd, b, reb)
-    }
+    obj <- ilm_rebuild(object, P[s, ])
+    for (j in seq_len(nsc)) draws[s, j] <- ilm_scen_mean(obj, nds[[j]], mixed)
     pb$tick(s)
   }
   pb$done()
@@ -249,38 +266,35 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
             vars = names(spec), sims = sims)
 }
 
-#' Draws of the total random-effect shift, for a population-averaged mean
+#' Draws of the whole parameter vector, for a scenario's interval
+#'
+#' The variance components are drawn with the fixed effects, because a
+#' population-averaged mean depends on them. Drawing the fixed effects alone
+#' left their uncertainty out of the interval.
 #'
 #' @keywords internal
 #' @noRd
-ilm_scen_re_draws <- function(object, ndraw) {
-  gk <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
-  if (!length(gk)) return(NULL)
-  rowSums(vapply(gk, function(k) {
-    S <- object$Sigma[[k]]
-    as.numeric(matrix(stats::rnorm(ndraw), ndraw, 1L) *
-                 sqrt(max(S[1L, 1L], 0)))
-  }, numeric(ndraw)))
+ilm_scen_par_draws <- function(object, sims) {
+  b0 <- suppressWarnings(stats::coef(object, full = TRUE))
+  V <- tryCatch(as.matrix(suppressWarnings(stats::vcov(object, full = TRUE))),
+                error = function(e) NULL)
+  if (is.null(V) || length(b0) != nrow(V))
+    stop("the fit has no usable covariance for its parameters, so a scenario ",
+         "has no interval; see fit$checks.", call. = FALSE)
+  ## a direction held at a covariance boundary carries no uncertainty
+  V[!is.finite(V)] <- 0
+  R <- ilm_msqrt((V + t(V)) / 2)
+  sweep(matrix(stats::rnorm(sims * length(b0)), sims) %*% R, 2L, b0, "+")
 }
 
 #' The average predicted outcome under one scenario
 #'
 #' @keywords internal
 #' @noRd
-ilm_scen_mean <- function(object, nd, beta, reb) {
-  X <- ilm_newX(object, nd)$X
-  eta <- as.numeric(X %*% beta)
-  li <- if (is.null(object$family)) identity else object$family$linkinv
-  mu <- if (is.null(reb)) li(eta) else
-    ## average the inverse link over the random-effect distribution, which is
-    ## what makes this a population mean rather than the value for a cluster
-    ## whose effect is exactly zero
-    rowMeans(vapply(reb, function(u) li(eta + u), numeric(length(eta))))
-  if (!is.null(object$Zzi)) {
-    Z <- ilm_zi_design(object$zi_formula, nd, colnames(object$Zzi))
-    mu <- ilm_zi_mean(object, mu, Z)
-  }
-  mean(mu)
+ilm_scen_mean <- function(object, nd, mixed) {
+  mu <- suppressWarnings(stats::predict(object, newdata = nd, type = "response",
+                                        marginal = mixed))
+  mean(as.numeric(mu))
 }
 
 #' @export

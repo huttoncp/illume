@@ -5,7 +5,7 @@
 \alias{iml_ame}
 \title{Average marginal effect on the response scale}
 \usage{
-ilm_ame(object, terms = NULL, eps = 1e-04)
+ilm_ame(object, terms = NULL, eps = 1e-04, marginal = FALSE)
 }
 \arguments{
 \item{object}{An \code{\link[=ilm_model]{ilm_model()}}.}
@@ -13,6 +13,10 @@ ilm_ame(object, terms = NULL, eps = 1e-04)
 \item{terms}{Which predictors. Default is every fixed-effect term.}
 
 \item{eps}{Relative step for the numerical derivatives.}
+
+\item{marginal}{Logical. \code{FALSE} (the default) for the effect in a typical
+group, with the random effects at zero; \code{TRUE} for the effect averaged
+over them. See "Which effect, in a mixed model".}
 }
 \value{
 A data frame with \code{term}, \code{level}, \code{estimate}, \code{se}, \code{lower},
@@ -35,10 +39,22 @@ from the reference, which is a contrast rather than a derivative.
 
 Standard errors come from the delta method: the effect is differentiated
 numerically with respect to the parameters and combined with their covariance.
-The parameter vector includes the covariance parameters, because a
-population-averaged prediction depends on them and pretending otherwise would
-understate the uncertainty.
+The parameter vector includes the covariance parameters, which the effect
+depends on when it is averaged over the random effects.
 }
+\section{Which effect, in a mixed model}{
+
+By default the predictions hold the random effects at zero, so the effect is
+the one for a \strong{typical group} -- the effect \code{\link[=ilm_interpret]{ilm_interpret()}} reports, and
+the one the coefficients describe. With \code{marginal = TRUE} the predictions
+are averaged over every random term, as \code{predict(marginal = TRUE)} does, and
+the effect is the one on the \strong{population as a whole}. Through a nonlinear
+link the two differ: a logit's population-averaged effect is the flatter
+one. They answer different questions. The \code{marginaleffects} bridge averages
+over the random effects unless its option \code{ilm_model.marginal} is set to
+\code{FALSE}, so it matches \code{marginal = TRUE}.
+}
+
 \examples{
 set.seed(1); n <- 400
 d <- data.frame(x = rnorm(n), g = factor(sample(c("a", "b"), n, TRUE)))

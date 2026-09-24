@@ -60,6 +60,13 @@ once. That answers "what would happen to a unit that looks like this".
 They are different questions and they give different answers under any
 non-linear link, because the average of a prediction is not the prediction
 at the average. The printed output says which was used.
+
+In a mixed model each unit's prediction is averaged over every random term
+-- intercepts, slopes, an AR or CAR latent -- as \code{predict(marginal = TRUE)}
+does, so the result is a population mean rather than the value for a group
+whose random effect happens to be zero. The interval draws the whole
+parameter vector, variance components included, since that average depends
+on them.
 }
 
 \section{Extrapolation}{
