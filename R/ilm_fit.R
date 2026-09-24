@@ -1376,17 +1376,19 @@ ilm_print_checks <- function(ck, title) {
   invisible(ck)
 }
 
-#' Fit a multinomial mixed model from a design matrix
+#' Fit a model from a design matrix
 #'
 #' The computational engine. Most users should call [ilm_model()] with a formula
 #' instead; this is the entry point when you already have a design matrix, and it
 #' is what the formula interface calls internally.
 #'
 #' @section How the model is parameterised:
-#' With `J` outcome categories there are `C = J - 1` free linear predictors.
-#' Coefficients use **sum-to-zero** coding, so each one is that category's
-#' deviation from the average across categories, not a contrast against a
-#' baseline. This differs from [nnet::multinom()] and `brms`.
+#' Every family but the multinomial has one linear predictor (`C = 1`). A
+#' multinomial outcome with `J` categories has `C = J - 1` free linear
+#' predictors, and its coefficients use **sum-to-zero** coding, so each one is
+#' that category's deviation from the average across categories, not a
+#' contrast against a baseline. This differs from [nnet::multinom()] and
+#' `brms`.
 #'
 #' Random effects are held as a matrix rather than a long vector, with a
 #' *matrix-normal* prior. Writing it this way means the covariance over groups
@@ -1394,8 +1396,13 @@ ilm_print_checks <- function(ck, title) {
 #' Kronecker product, which keeps both memory and computation manageable and
 #' lets AR(1), spatial and i.i.d. structures share a single code path.
 #'
-#' @section Choosing a category covariance structure:
-#' Each random term gets its own structure through `re_struct`:
+#' @section Choosing a covariance structure:
+#' Each random term gets its own structure through `re_struct`, a list with one
+#' element per term, named as `re_list` names it; each element is itself a
+#' list, for example `re_struct = list(site = list(type = "rr", rank = 1))`.
+#' Its `type` sets the covariance across a multinomial outcome's `C` category
+#' dimensions, and with one of them -- every other family -- there is nothing
+#' for it to change:
 #' \describe{
 #'   \item{`"us"`}{unstructured: every variance and correlation free. Costs
 #'     `C(C+1)/2` parameters, which grows quickly -- 45 at `J = 10`.}
@@ -1404,8 +1411,10 @@ ilm_print_checks <- function(ck, title) {
 #'     `Lambda` of size C-by-r. Costs fewer parameters **and** fewer latent
 #'     values, which is usually the better trade when a term is stretched.}
 #' }
-#' If a structure is too rich for the data the pre-fit checks will say so and
-#' name a specific rank to try.
+#' Separately, `d_cor = FALSE` in an element drops the correlation between a
+#' random intercept and its slopes, which applies in every family. If a
+#' structure is too rich for the data the pre-fit checks will say so and name a
+#' specific rank to try.
 #'
 #' @section Models with no random effects:
 #' `re_list` may be empty. The latent parameter block is then omitted entirely
@@ -1423,19 +1432,24 @@ ilm_print_checks <- function(ck, title) {
 #' [ilm_consistency()] to test it directly on your own fit.
 #'
 #' @param X Numeric design matrix for the fixed effects, with `N` rows.
-#' @param y Integer vector of length `N` giving the observed category, coded
-#'   `1` to `J`.
+#' @param y The response, of length `N`: for a multinomial or ordinal model
+#'   the observed category coded `1` to `J`, and for every other family the
+#'   numeric response.
 #' @param J Integer. Number of outcome categories, for the multinomial family
 #'   only; `NULL` for every other family.
 #' @param family Response distribution: a name, or the object returned by
-#'   [ilm_family()]. See [ilm_family()] for what each one assumes.
+#'   [ilm_family()]. See [ilm_family()] for what each one assumes. The default
+#'   is `"multinomial"`, where the package began; [ilm_model()] reads it off
+#'   the response instead.
 #' @param re_list Named list of random terms. Each element is a grouping vector
 #'   (random intercept), a `list(group =, Z =)` (random slopes), or a
 #'   `list(basis =)` (a smooth, from `ilm_smooth()`).
-#' @param re_struct Optional named list of category covariance structures,
-#'   named by term as `re_list` is. A term it leaves out gets `"us"`, so only
-#'   the terms that differ need naming. Set `d_cor = FALSE` within an element
-#'   to drop an intercept-slope correlation.
+#' @param re_struct Optional named list of covariance structures, named by term
+#'   as `re_list` is, each element a list: `type` (`"us"`, `"diag"`, or `"rr"`
+#'   with `rank`) for the covariance across a multinomial outcome's categories,
+#'   and `d_cor = FALSE` to drop an intercept-slope correlation in any family.
+#'   A term it leaves out gets `"us"` with its correlations, so only the terms
+#'   that differ need naming. See the section above and the examples.
 #' @param ar Optional AR(1) specification:
 #'   `list(idx =, n_group =, Tt =)`.
 #' @param censor Optional censoring specification from [ilm_censor()], marking
@@ -1487,7 +1501,8 @@ ilm_print_checks <- function(ck, title) {
 #'   implies.
 #'
 #' @return An object of class `"ilm_model"`: a list whose most useful elements are
-#'   `checks` (the diagnostic table), `Sigma` (fitted category covariances),
+#'   `checks` (the diagnostic table), `Sigma` (fitted random-effect
+#'   covariances, across the categories for a multinomial model),
 #'   `beta` (fixed effects as a p-by-C matrix), `opt` (optimiser output), `sdr`
 #'   (`TMB::sdreport()` output) and `ok` (whether every check passed).
 #'
@@ -1517,6 +1532,31 @@ ilm_print_checks <- function(ck, title) {
 #'
 #' @seealso [ilm_model()] for the formula interface, [summary.ilm_model()],
 #'   [ilm_consistency()].
+#' @examples
+#' set.seed(1)
+#' n <- 300
+#' x <- rnorm(n)
+#' site <- factor(sample(20, n, TRUE))
+#' X <- cbind("(Intercept)" = 1, x = x)
+#'
+#' ## a gaussian response with a random intercept per site
+#' y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
+#' fit <- ilm_fit(X, y, family = "gaussian", re_list = list(site = site),
+#'                verbose = FALSE)
+#' coef(fit)
+#'
+#' \donttest{
+#' ## a nominal outcome with four categories, coded 1 to 4, whose site
+#' ## intercepts share one dimension across the three category dimensions
+#' u <- rnorm(20)[site]
+#' eta <- cbind(-u, u + 0.4 * x, 0.5 * u, -0.5 * u)
+#' k <- apply(exp(eta) / rowSums(exp(eta)), 1, function(p) sample(4, 1, prob = p))
+#' fit2 <- ilm_fit(X, k, J = 4, family = "multinomial",
+#'                 re_list = list(site = site),
+#'                 re_struct = list(site = list(type = "rr", rank = 1)),
+#'                 verbose = FALSE)
+#' fit2$Sigma
+#' }
 #' @export
 ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      ylevels = NULL, weights = NULL, family = "multinomial",
@@ -1656,8 +1696,13 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
   for (nm in names(re_struct)) {
     if (is.null(re_struct[[nm]]$rank))  re_struct[[nm]]$rank  <- NA_integer_
     if (is.null(re_struct[[nm]]$d_cor)) re_struct[[nm]]$d_cor <- TRUE
+    ## `type` defaults like everything else in an element: the covariance
+    ## across categories means nothing outside a multinomial model, and
+    ## list(subj = list(d_cor = FALSE)) -- all an uncorrelated random slope in
+    ## any other family needs -- used to stop, asking for it
+    if (is.null(re_struct[[nm]]$type)) re_struct[[nm]]$type <- "us"
     ty_nm <- re_struct[[nm]]$type
-    if (is.null(ty_nm) || !ty_nm %in% c("us", "diag", "rr"))
+    if (!ty_nm %in% c("us", "diag", "rr"))
       stop(sprintf("re_struct$%s$type must be one of \"us\", \"diag\" or \"rr\"", nm),
            call. = FALSE)
     ## rank = 2 is a double, which is what anyone would actually type, but the

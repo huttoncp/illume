@@ -3,7 +3,7 @@
 \name{ilm_rqr}
 \alias{ilm_rqr}
 \alias{iml_rqr}
-\title{Randomised quantile residuals for a nominal outcome}
+\title{Randomised quantile residuals}
 \usage{
 ilm_rqr(object, conditional = TRUE, seed = 1L)
 }
@@ -18,10 +18,13 @@ ilm_rqr(object, conditional = TRUE, seed = 1L)
 A numeric vector on the unit interval.
 }
 \description{
-Turns categorical outcomes into residuals that should be uniformly
-distributed when the model is right.
+Residuals that are uniformly distributed when the model is right, for every
+family: the distribution function at the observation for a continuous
+response, drawn uniformly across the jump for a discrete one, and for a
+nominal outcome, which has no order to take a distribution function along,
+the construction below.
 }
-\section{The obstacle, and the way around it}{
+\section{A nominal outcome -- the obstacle, and the way around it}{
 
 Quantile residuals need a cumulative distribution function, and a CDF needs an
 ordering. Nominal categories have none -- "red", "green", "blue" cannot be put

@@ -130,14 +130,18 @@ BIC.ilm_model <- function(object, ..., n = c("obs", "groups")) {
   -2 * as.numeric(ll) + log(nn) * attr(ll, "df")
 }
 
-#' Fitted category probabilities
+#' Fitted values
+#'
+#' The fitted mean for each observation: the probability of each category for
+#' a multinomial or ordinal outcome, the fitted value otherwise.
 #'
 #' @param object A fitted `"ilm_model"` object.
 #' @param conditional Logical. `TRUE` evaluates the random effects at their
 #'   fitted values, giving in-sample fitted probabilities. `FALSE` sets grouping
 #'   and AR terms to zero. Smooth terms are included either way, because they
 #'   are mean structure rather than a population to average over.
-#' @return A matrix of probabilities with one column per category.
+#' @return A matrix with one row per observation: one column per category for
+#'   a multinomial or ordinal outcome, one column otherwise.
 #' @export
 ilm_fitted <- function(object, conditional = TRUE) {
   Tc <- contr.sum(object$J)
@@ -335,7 +339,7 @@ ilm_null_ll <- function(object, restarts = 1L) {
   -f$opt$objective
 }
 
-#' Fit indices for a multinomial mixed model
+#' Fit indices for a fitted model
 #'
 #' A `performance::model_performance()` method. Returns AIC, AICc, BIC (both
 #' sample-size conventions), the log-likelihood, degrees of freedom, McFadden's
@@ -344,8 +348,9 @@ ilm_null_ll <- function(object, restarts = 1L) {
 #' @section What is deliberately absent:
 #' Nakagawa's marginal and conditional R-squared, and the ICC, are **not**
 #' reported. Both require a distribution-specific residual variance, and a
-#' nominal multinomial outcome does not have one. Reporting them would mean
-#' inventing a quantity rather than estimating it.
+#' nominal multinomial outcome does not have one -- reporting them would mean
+#' inventing a quantity rather than estimating it -- so they are left out for
+#' every family rather than given for some.
 #'
 #' McFadden's R-squared is relative to an intercept-only model with the same
 #' grouping random effects, so it answers "how much do the predictors add?"

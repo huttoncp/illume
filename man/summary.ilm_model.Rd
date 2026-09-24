@@ -3,7 +3,7 @@
 \name{summary.ilm_model}
 \alias{summary.ilm_model}
 \alias{print.summary.ilm_model}
-\title{Summarise a fitted multinomial mixed model}
+\title{Summarise a fitted model}
 \usage{
 \method{summary}{ilm_model}(object, ...)
 

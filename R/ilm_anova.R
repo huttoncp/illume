@@ -236,7 +236,8 @@ ilm_recode_sum <- function(object, which) {
 
 #' Analysis of deviance for fixed effects
 #'
-#' Tests each fixed-effect term, **jointly across all category dimensions**.
+#' Tests each fixed-effect term jointly: all of its coefficients at once, and
+#' for a multinomial outcome **across all category dimensions**.
 #'
 #' @section Why this exists rather than car::Anova:
 #' `car::Anova()` reads the `assign` attribute of the model matrix, which has one

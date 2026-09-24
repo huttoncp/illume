@@ -48,7 +48,7 @@ ilm_fmt_corr <- function(S, labs, digits = 3) {
                    row.names = labs, check.names = FALSE), keep)
 }
 
-#' Summarise a fitted multinomial mixed model
+#' Summarise a fitted model
 #'
 #' Prints the model, fit statistics, random-effect covariances, a coefficient
 #' table with Wald tests, and -- unusually for a `summary()` method -- the
@@ -84,7 +84,7 @@ summary.ilm_model <- function(object, ...) {
   structure(list(object = object), class = "summary.ilm_model")
 }
 
-#' Summarise a fitted multinomial mixed model
+#' Summarise a fitted model
 #'
 #' Prints the model, fit statistics, random-effect covariances, a coefficient
 #' table with Wald tests, and -- unusually for a `summary()` method -- the

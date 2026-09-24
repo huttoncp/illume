@@ -236,11 +236,12 @@ ilm_joint_draws <- function(object, nsim, seed) {
   list(draws = sweep(D, 1L, mu, "+"), which = rownames(Q))
 }
 
-#' Predicted category probabilities
+#' Predictions from a fitted model
 #'
-#' Returns one probability per observation per category, as
-#' `nnet::multinom(type = "probs")` does, optionally with standard errors and
-#' intervals.
+#' Returns the fitted mean on the response scale -- one probability per
+#' category for a multinomial or ordinal outcome, as
+#' `nnet::multinom(type = "probs")` does -- or the linear predictor, optionally
+#' with standard errors and intervals.
 #'
 #' @section Conditional versus population-averaged:
 #' This is the choice that matters most, and there is no safe default that suits

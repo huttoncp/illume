@@ -20,7 +20,8 @@ category codes.
 }
 \description{
 Draws fresh random effects from their estimated distributions, forms the
-linear predictor, and samples a category for each observation.
+linear predictor, and samples a new response for each observation from the
+model's family -- a category for a multinomial or ordinal outcome.
 }
 \section{Why this is central}{
 

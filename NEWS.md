@@ -42,6 +42,21 @@
   `performance::check_model()` routes to `ilm_appraise()`. It never did, for
   the reason above, and making it do so would replace performance's own
   checks; `ilm_appraise()` draws the panels built for these models.
+* The documentation says what the package fits. `ilm_model()` is "Fit
+  generalized linear and additive mixed models" rather than "Fit a
+  multinomial linear mixed model", its `family` argument lists all fifteen
+  families, and `summary()`, `predict()`, the fitted values, the quantile
+  residuals, `ilm_appraise()`, `ilm_simulate()`, `ilm_anova()`, the fit
+  indices and `ilm_fit()` no longer describe themselves as multinomial-only.
+  Where something IS about categories, it now says so.
+* `re_struct` is documented with examples in `ilm_model()`, `ilm_fit()` and
+  the regression-models vignette: one element per random term, named by its
+  grouping variable, holding `type` (and `rank`) for the covariance across a
+  multinomial outcome's categories, and `d_cor = FALSE` for an uncorrelated
+  random slope in any family. An element may leave `type` to its default
+  now: `list(subj = list(d_cor = FALSE))`, which is all an uncorrelated slope
+  needs outside a multinomial model, used to stop and ask for one.
+  `ilm_model()`'s example, which never ran, is replaced by ones that do.
 * The parameter-aliasing check no longer starts a sentence with a capitalised
   parameter name ("Retired:(Intercept) <-> retired:age cannot be separated");
   it reads "These data cannot separate retired:(Intercept) from retired:age".

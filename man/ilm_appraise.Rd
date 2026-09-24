@@ -23,15 +23,18 @@ Invisibly, the residuals, calibration data and random-effect
 distances.
 }
 \description{
-Six panels: a quantile-residual normal plot, residuals against fitted
-probability, per-category calibration with a simulated band, observed against
-simulated category frequencies, a random-effects distance plot, and the model
-check verdicts.
+Six panels, chosen for the family: randomised quantile residuals against
+the normal; residuals against the fitted value (for a multinomial, the
+predicted probability of the category observed); calibration of the
+predicted probabilities with a simulated band for a binomial or multinomial
+outcome, and scale-location otherwise; the observed response against
+simulations from the fit (category frequencies for a multinomial); a
+random-effects distance plot; and the model check verdicts.
 }
 \details{
-These are built for a nominal categorical outcome rather than adapted from
-tools designed for continuous responses, because the usual residual plots have
-no clear meaning here.
+The residuals are \code{\link[=ilm_rqr]{ilm_rqr()}}'s, which are uniform under a correct model in
+every family -- including a nominal outcome, where the usual residual plots
+have no clear meaning.
 }
 \seealso{
 \code{\link[=ilm_check_ar]{ilm_check_ar()}} for temporal correlation,

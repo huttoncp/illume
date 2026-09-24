@@ -268,6 +268,26 @@ Two rules for smooths: use `t2()` rather than `te()` for tensor products, and
 write them unqualified -- `s(x)`, not `mgcv::s(x)` -- because mgcv identifies
 smooths by name.
 
+A random term's covariance is set through `re_struct`: a list with one element
+per term, named by its grouping variable, each element itself a list. Two
+settings go in it. `d_cor = FALSE` drops the correlation between a random
+intercept and its slopes, in any family. `type` sets the covariance across a
+multinomial outcome's categories -- `"us"` by default, `"diag"`, or `"rr"` with
+a `rank` -- and matters only there, since every other family has a single
+linear predictor:
+
+```{r restruct, eval = FALSE}
+## a slope for time, uncorrelated with the subject's intercept
+ilm_model(y ~ x1 + time + (1 + time | subj), data = dd, family = "gaussian",
+          re_struct = list(subj = list(d_cor = FALSE)))
+## a multinomial outcome whose site effects share one dimension
+ilm_model(y ~ x1 + (1 | site), data = dd, family = "multinomial",
+          re_struct = list(site = list(type = "rr", rank = 1)))
+```
+
+A term `re_struct` does not name keeps the default. "When there are many
+categories", below, says when to reach for a reduced rank.
+
 ## Simple models, and exact inference
 
 Nothing requires a random effect. `ilm_model()` fits an ordinary regression, and
