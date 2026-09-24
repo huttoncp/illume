@@ -34,6 +34,19 @@
   and the effects in `ilm_interpret()` -- returned `NA` for every
   `ilm_model(reml = TRUE)` and every `ilm_dag_model()`, which fits by REML.
   `coef()` and the standard errors were never affected.
+* Fixed: `predict()`'s intervals for a model with a smooth were centred on the
+  wrong parameters whenever the family has one the model declares after its
+  random effects -- a dispersion (gaussian, negative binomial, beta, the
+  survival families), cut points (ordinal), a zero part, a dispersion
+  formula, an AR term. The draws behind them had the right spread around the
+  wrong centre: for a gaussian `y ~ s(x)`, a fit of 0.245 had a "95% interval"
+  of -3.30 to -2.98, and every interval missed its own fit. Through a
+  nonlinear link the standard errors were wrong too -- a negative binomial
+  smooth's ran from 0.02 to 16 times mgcv's -- and so were the bands of
+  `ilm_plot_model(what = "effect")`, which are built from them. Binomial and
+  Poisson smooths, which have no such parameter, were unaffected. The draws
+  are now centred parameter by parameter, and `test-joint-draws.R` holds the
+  intervals to mgcv's.
 * `car::Anova()`, `performance::model_performance()` and
   `performance::check_model()` now reach illume's methods, as the README and
   the introduction always said they did. The methods were exported as

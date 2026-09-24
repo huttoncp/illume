@@ -229,11 +229,26 @@ ilm_joint_draws <- function(object, nsim, seed) {
   if (is.null(Q)) return(NULL)
   R <- tryCatch(Matrix::chol(Q), error = function(e) NULL)
   if (is.null(R)) return(NULL)
-  mu <- c(object$opt$par, object$sdr$par.random)
+  ## The joint precision is in the template's own parameter order, random
+  ## blocks where they are declared -- not the fixed parameters and then the
+  ## random ones. Centred as c(opt$par, par.random), every fixed parameter
+  ## declared after the random block (a dispersion, cut points, a zero part,
+  ## an AR term) moved the draws off their estimates: for a gaussian y ~ s(x),
+  ## a fit of 0.245 had a "95% interval" of -3.30 to -2.98. Each block is
+  ## centred by name instead; under REML beta is one of the random blocks.
+  rn <- rownames(Q)
+  pf <- object$opt$par; pr <- object$sdr$par.random
+  mu <- rep(NA_real_, length(rn))
+  for (nm in unique(rn)) {
+    src <- if (nm %in% names(pr)) pr[names(pr) == nm] else pf[names(pf) == nm]
+    at <- which(rn == nm)
+    if (length(src) != length(at)) return(NULL)
+    mu[at] <- src
+  }
   set.seed(seed)
   Z <- matrix(rnorm(nrow(Q) * nsim), nrow(Q), nsim)
   D <- as.matrix(Matrix::solve(R, Z))            # columns ~ N(0, Q^-1)
-  list(draws = sweep(D, 1L, mu, "+"), which = rownames(Q))
+  list(draws = sweep(D, 1L, mu, "+"), which = rn)
 }
 
 #' Predictions from a fitted model
