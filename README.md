@@ -158,7 +158,7 @@ came from the test suite** -- which is worth knowing about test suites.
 ## Working with other packages
 
 `car::Anova()` dispatches to the correct joint test, and
-`performance::model_performance()` and `check_model()` work directly.
+`performance::model_performance()` works directly.
 `marginaleffects` and the easystats stack each need one call:
 
 ```r

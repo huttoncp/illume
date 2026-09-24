@@ -4,12 +4,7 @@
 \alias{Anova.ilm_model}
 \title{car::Anova method}
 \usage{
-Anova.ilm_model(
-  mod,
-  type = c("II", "III", 2, 3),
-  test.statistic = "Chisq",
-  ...
-)
+\method{Anova}{ilm_model}(mod, type = c("II", "III", 2, 3), test.statistic = "Chisq", ...)
 }
 \arguments{
 \item{mod}{A fitted \code{"ilm_model"} object.}
@@ -27,4 +22,11 @@ An \code{"anova"} data frame.
 Lets \code{car::Anova(fit, type = 3)} dispatch to \code{\link[=ilm_anova]{ilm_anova()}}, so it uses the
 correct joint blocking across categories instead of \code{car}'s default, which
 would test only one category.
+}
+\details{
+Registered with car's generic when car is loaded. It used to be exported as
+an ordinary function, which R's method lookup does not reach, so
+\code{car::Anova()} fell back to its own tests: on a multinomial fit with a
+numeric predictor and a three-level factor, 1 and 2 degrees of freedom
+where the joint tests have 2 and 4.
 }

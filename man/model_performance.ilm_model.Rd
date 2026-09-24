@@ -4,7 +4,7 @@
 \alias{model_performance.ilm_model}
 \title{Fit indices for a multinomial mixed model}
 \usage{
-model_performance.ilm_model(model, metrics = "all", ..., verbose = TRUE)
+\method{model_performance}{ilm_model}(model, metrics = "all", ..., verbose = TRUE)
 }
 \arguments{
 \item{model}{A fitted \code{"ilm_model"} object.}

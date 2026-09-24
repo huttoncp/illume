@@ -471,7 +471,7 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
 #'
 #' These are built for a nominal categorical outcome rather than adapted from
 #' tools designed for continuous responses, because the usual residual plots have
-#' no clear meaning here. `performance::check_model()` routes to this function.
+#' no clear meaning here.
 #'
 #' @param object A fitted `"ilm_model"` object.
 #' @param nbins Integer. Bins for the calibration panel.
@@ -586,17 +586,6 @@ ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
   }
   invisible(list(rqr = u, calibration = cal, re = rm_))
 }
-
-#' performance::check_model method
-#'
-#' Routes `performance::check_model()` to [ilm_appraise()], so the panels are
-#' the ones built for this model rather than generic ones that would not apply.
-#'
-#' @param x A fitted `"ilm_model"` object.
-#' @param ... Passed to [ilm_appraise()].
-#' @return Invisibly, the result of [ilm_appraise()].
-#' @export
-check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 
 ## ---------------------------------------------------- targeted covariate checks
 ## WHY TARGETED.  Global summaries of the residuals have essentially NO power

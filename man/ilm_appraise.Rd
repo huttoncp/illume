@@ -31,7 +31,7 @@ check verdicts.
 \details{
 These are built for a nominal categorical outcome rather than adapted from
 tools designed for continuous responses, because the usual residual plots have
-no clear meaning here. \code{performance::check_model()} routes to this function.
+no clear meaning here.
 }
 \seealso{
 \code{\link[=ilm_check_ar]{ilm_check_ar()}} for temporal correlation,

@@ -369,7 +369,7 @@ ilm_null_ll <- function(object, restarts = 1L) {
 #' obtaining R-squared from generalized linear mixed-effects models. *Methods in
 #' Ecology and Evolution*, 4(2), 133--142. (The approach not used here, and why:
 #' it needs a distribution-specific variance.)
-#' @export
+#' @exportS3Method performance::model_performance
 model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = TRUE) {
   ll <- logLik(model); df <- attr(ll, "df"); n <- attr(ll, "nobs")
   ## the scoring rules exist for a categorical outcome only; elsewhere they

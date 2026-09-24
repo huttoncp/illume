@@ -430,12 +430,18 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
 #' correct joint blocking across categories instead of `car`'s default, which
 #' would test only one category.
 #'
+#' Registered with car's generic when car is loaded. It used to be exported as
+#' an ordinary function, which R's method lookup does not reach, so
+#' `car::Anova()` fell back to its own tests: on a multinomial fit with a
+#' numeric predictor and a three-level factor, 1 and 2 degrees of freedom
+#' where the joint tests have 2 and 4.
+#'
 #' @param mod A fitted `"ilm_model"` object.
 #' @param type `"II"`, `"III"`, `2` or `3`.
 #' @param test.statistic Ignored; present for compatibility.
 #' @param ... Passed to [ilm_anova()].
 #' @return An `"anova"` data frame.
-#' @export
+#' @exportS3Method car::Anova
 Anova.ilm_model <- function(mod, type = c("II", "III", 2, 3), test.statistic = "Chisq", ...) {
   type <- as.character(type)[1]
   ilm_anova(mod, type = if (type %in% c("3", "III")) "3" else "2", ...)
