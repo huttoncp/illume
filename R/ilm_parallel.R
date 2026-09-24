@@ -111,7 +111,12 @@ ilm_refit_many <- function(fit, ys, ncores = 1L, restarts = 2L, verbose = FALSE)
                                              restarts = restarts)),
              silent = TRUE)
     if (inherits(f, "try-error")) return(NULL)
-    if (f$opt$convergence != 0 || !isTRUE(f$sdr$pdHess)) return(NULL)
+    ## usable as a fit is judged anywhere else: a positive definite Hessian,
+    ## or a covariance at its boundary with the direction the data cannot
+    ## resolve held -- which has pdHess FALSE by design. Asking for pdHess
+    ## alone dropped every refit that landed on a boundary, and called a
+    ## rank-one multinomial model that recovers itself UNSTABLE: 19 of 30.
+    if (f$opt$convergence != 0 || !ilm_fixed_usable(f)) return(NULL)
     ilm_summarise_fit(f)          # small named numeric; the fit itself stays put
   }
   ilm_lapply(cl, seq_len(ncol(ys)), one)
