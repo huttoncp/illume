@@ -69,6 +69,11 @@
 - P-values in the prose are given to three significant figures, or as “p
   \< 0.001”; a factor level is named as a value (“tenure ‘rent’ rather
   than ‘own’”, not “tenurerent: being rent rather than own”).
+- Fixed: a number shorter than four characters came into
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)’s
+  sentences with spaces in front of it: “(95% interval 13 to 32)”.
+  Printing re-wraps the text, which hid it. The strings themselves,
+  which a report or a paste takes, carried it.
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   writes up a cluster profile from
   [`illumex::ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
