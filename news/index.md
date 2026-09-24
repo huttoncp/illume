@@ -3,6 +3,112 @@
 ## illume 0.0.8.9000
 
 - illume now requires illumex 0.0.8.9000.
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  says each effect in the response’s own units, over a change a reader
+  can picture: across the middle half of a numeric predictor, level by
+  level for a factor, with the model’s predictions at both ends,
+  averaged over the rows the model was fitted to as
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)’s
+  effects are. Where it said “a higher age is associated with a higher
+  value of income_k (estimate 0.610, 95% interval 0.493 to 0.726, p =
+  \<1e-04). In the units of the response: an increase of 0.610 on
+  average”, it now says “Across the middle half of age, predicted
+  income_k is 49.4 at 29 against 64.7 at 54: 15.2 higher (95% interval
+  12.3 to 18.1). That is 0.61 per unit of age.” A probability is given
+  as one (“57% at 29 against 36% at 54: 20 percentage points lower”),
+  with the odds ratio after it. Causal language, where a design licenses
+  it, reads as a change: “moving x across its middle half … raises
+  predicted y”. In a mixed model with a nonlinear link, it says that the
+  predictions hold the random effects at zero – a typical group – rather
+  than averaging over groups, which on the logit or log scale is not the
+  same.
+- The evidence for a term is its joint test, so a factor with several
+  levels gets one verdict, and so does a predictor in a multinomial
+  model, which used to get one per category, each against the average of
+  the categories – and could then report lower odds of a category beside
+  a higher probability of it. Its effect is now the predicted share of
+  every category at both ends.
+- P-values in the prose are given to three significant figures, or as “p
+  \< 0.001”; a factor level is named as a value (“tenure ‘rent’ rather
+  than ‘own’”, not “tenurerent: being rent rather than own”).
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  writes up a cluster profile from
+  [`illumex::ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
+  or
+  [`ilm_profile_na()`](https://huttoncp.github.io/illumex/reference/ilm_profile_na.html):
+  the clustering, a paragraph per cluster, the rows between clusters and
+  the variables that only add distance, and why none of it is a test.
+- Fixed: every REML fit predicted `NA`. Under REML the fixed effects sit
+  in the random block and the stored `beta` was built from a parameter
+  vector that did not hold them, so
+  [`predict()`](https://rdrr.io/r/stats/predict.html) – and with it
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md),
+  [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
+  and the effects in
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  – returned `NA` for every `ilm_model(reml = TRUE)` and every
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
+  which fits by REML. [`coef()`](https://rdrr.io/r/stats/coef.html) and
+  the standard errors were never affected.
+- [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html),
+  [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
+  and
+  [`performance::check_model()`](https://easystats.github.io/performance/reference/check_model.html)
+  now reach illume’s methods, as the README and the introduction always
+  said they did. The methods were exported as ordinary functions rather
+  than registered with the generics, and R’s method lookup does not find
+  those: [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html)
+  quietly fell back to its own tests – on a multinomial fit, 1 and 2
+  degrees of freedom where the joint tests have 2 and 4 –
+  `model_performance()` returned `NULL` with a warning, and
+  `check_model()` stopped with an error, because performance cannot read
+  these fits (not even after
+  [`ilm_register_insight()`](https://huttoncp.github.io/illume/reference/ilm_register_insight.md)).
+  They are now registered for whenever car and performance are loaded.
+  `check_model()` draws
+  [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)’s
+  panels, and its help page says whose they are.
+- The documentation says what the package fits.
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  is “Fit generalized linear and additive mixed models” rather than “Fit
+  a multinomial linear mixed model”, its `family` argument lists all
+  fifteen families, and
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`predict()`](https://rdrr.io/r/stats/predict.html), the fitted
+  values, the quantile residuals,
+  [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md),
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+  the fit indices and
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
+  no longer describe themselves as multinomial-only. Where something IS
+  about categories, it now says so.
+- `re_struct` is documented with examples in
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
+  and the regression-models vignette: one element per random term, named
+  by its grouping variable, holding `type` (and `rank`) for the
+  covariance across a multinomial outcome’s categories, and
+  `d_cor = FALSE` for an uncorrelated random slope in any family. An
+  element may leave `type` to its default now:
+  `list(subj = list(d_cor = FALSE))`, which is all an uncorrelated slope
+  needs outside a multinomial model, used to stop and ask for one.
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
+  example, which never ran, is replaced by ones that do.
+- [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
+  defaults to `family = "gaussian"`, as
+  [`glm.fit()`](https://rdrr.io/r/stats/glm.html) does, and to no random
+  terms (`re_list = list()`), so `ilm_fit(X, y)` is a linear model. Its
+  default was `"multinomial"`, where the package began. A call that
+  gives `J` three or more categories and no family is one written for
+  that default: it stops and asks for `family = "multinomial"` rather
+  than fitting a gaussian model to the category codes.
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  is unchanged: it reads the family off the response.
+- The parameter-aliasing check no longer starts a sentence with a
+  capitalised parameter name (“Retired:(Intercept) \<-\> retired:age
+  cannot be separated”); it reads “These data cannot separate
+  retired:(Intercept) from retired:age”.
 - A covariance term flagged at its boundary but curved in every
   direction always takes the recomputed Hessian now, as a fit with
   nothing at a boundary does. It still went to TMB’s own Hessian

@@ -1,16 +1,20 @@
 # performance::check_model method
 
-Routes
-[`performance::check_model()`](https://easystats.github.io/performance/reference/check_model.html)
-to
-[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
-so the panels are the ones built for this model rather than generic ones
-that would not apply.
+`performance::check_model(fit)` draws
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)'s
+panels. Its own checks cannot be drawn for these fits: they need support
+from the insight package that an `"ilm_model"` does not have, and
+without this method `check_model()` stops with an error – after
+[`ilm_register_insight()`](https://huttoncp.github.io/illume/reference/ilm_register_insight.md)
+too. The panels drawn instead are illume's, built for every family it
+fits, including a nominal outcome, where the usual residual plots have
+no clear meaning.
 
 ## Usage
 
 ``` r
-check_model.ilm_model(x, ...)
+# S3 method for class 'ilm_model'
+check_model(x, ...)
 ```
 
 ## Arguments
@@ -28,3 +32,7 @@ check_model.ilm_model(x, ...)
 
 Invisibly, the result of
 [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).
+
+## Details
+
+Registered with performance's generic when performance is loaded.

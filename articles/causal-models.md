@@ -172,7 +172,7 @@ fit <- ilm_dag_model(g, d)
 #>   no grouping structure found outside the graph
 #> [5/6] fitting 1 model (the mean structure is fixed by the graph)
 #>   set 1 of 1: recovery ~ treatment + severity
-#>       spread check: INCONCLUSIVE
+#>       spread check: OK
 #> [6/6] results
 ```
 
@@ -250,13 +250,15 @@ ilm_interpret(fit, ame = FALSE)
 #>   model of recovery, fitted to 800 observations.
 #> 
 #> What it says
-#>   treatment: very strong evidence that a higher treatment leads to a higher
-#>   value of recovery (estimate 1.246, 95% interval 1.088 to 1.405, p =
-#>   <1e-04).
+#>   treatment: very strong evidence (p < 0.001) that treatment affects
+#>   recovery. Moving treatment across its middle half, from 0 to 1, raises
+#>   predicted recovery from -0.0269 to 1.22: by 1.25. That is 1.25 per unit
+#>   of treatment.
 #> 
-#>   severity: very strong evidence that a higher severity leads to a lower
-#>   value of recovery (estimate -0.653, 95% interval -0.721 to -0.586, p =
-#>   <1e-04).
+#>   severity: very strong evidence (p < 0.001) that severity affects
+#>   recovery. Moving severity across its middle half, from -0.718 to 0.768,
+#>   lowers predicted recovery from 1.09 to 0.117: by 0.971. That is -0.653
+#>   per unit of severity.
 #> 
 #> What the checks found
 #>   The graph itself was tested against the data on 1 implied conditional
@@ -275,8 +277,10 @@ ilm_interpret(fit, ame = FALSE)
 #>   assumption you supplied, not something the data established.
 ```
 
-Note that this says “leads to” rather than “is associated with”, and
-says why. Without a design that identifies an effect,
+Note that this says “affects” rather than “is associated with”, and
+reads each effect as a change – moving a predictor across its middle
+half, and what that does to the predicted outcome – and says why.
+Without a design that identifies an effect,
 [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
 will not use causal language at all – and it tells you that the licence
 rests on the graph being right, which is an assumption you supplied
@@ -303,11 +307,11 @@ did <- ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
 #>   treatment starts at time = 5
 #>   4 pre-treatment periods
 #> [2/5] response
-#>   `y`: continuous values from -2.98 to 7.76 -> family "gaussian"
+#>   `y`: continuous values from -1.96 to 6.58 -> family "gaussian"
 #> [3/5] estimate
-#>   ATT = 1.0617  (0.6160, 1.5075)  p = <1e-04
+#>   ATT = 1.2867  (0.8699, 1.7035)  p = <1e-04
 #> [4/5] parallel trends, before treatment
-#>   difference in pre-treatment slope: 0.0076 (se 0.1480), p = 0.959 -- OK
+#>   difference in pre-treatment slope: -0.2166 (se 0.1345), p = 0.115 -- OK
 #> [5/5] event study
 #>   8 periods relative to treatment (reference -1); 0 pre-treatment coefficient(s) exclude zero
 ```
@@ -318,9 +322,9 @@ did
 #> <ilm_did> y ~ treatment  | 20 treated, 20 control units
 #>   family: gaussian   random intercept: unit  
 #> 
-#>   ATT    1.0617  ( 0.6160,  1.5075)  p = <1e-04
+#>   ATT    1.2867  ( 0.8699,  1.7035)  p = <1e-04
 #> 
-#>   parallel trends before treatment: OK  (slope difference 0.0076, p = 0.959)
+#>   parallel trends before treatment: OK  (slope difference -0.2166, p = 0.115)
 #>   event study: 8 periods, 0 pre-treatment coefficient(s) excluding zero  (ilm_plot_did)
 ```
 
@@ -352,7 +356,7 @@ bad$y <- bad$y + 0.35 * bad$treated * bad$time   # already diverging
 did_bad <- ilm_did(bad, "y", "unit", "time", treated = "treated",
                    post = "post", verbose = FALSE)
 did_bad$parallel$status
-#> [1] "FAIL"
+#> [1] "OK"
 ilm_plot_did(did_bad)
 ```
 
@@ -409,36 +413,37 @@ score <- 0.5 * run + 0.8 * (run >= 0) + rnorm(n, 0, 0.5)
 rd <- ilm_rdd(data.frame(run = run, score = score), "score", "run", cutoff = 0)
 #> == regression discontinuity ==
 #> [1/6] design
-#>   2000 rows: 994 below the cutoff, 1006 at or above
+#>   2000 rows: 1032 below the cutoff, 968 at or above
 #> [2/6] response and bandwidth
-#>   `score`: continuous values from -2.01 to 2.92 -> family "gaussian"
-#>   bandwidth 0.2352 (rule of thumb -- a starting point, not an optimum;
+#>   `score`: continuous values from -2.23 to 2.53 -> family "gaussian"
+#>   bandwidth 0.2317 (rule of thumb -- a starting point, not an optimum;
 #>     see $bandwidth, and rdrobust for a chosen one)
 #> [3/6] estimate
-#>   224 below and 248 above within the bandwidth
-#>   jump = 0.7963  (0.5732, 1.0194)  p = <1e-04
+#>   238 below and 219 above within the bandwidth
+#>   jump = 0.8777  (0.6827, 1.0726)  p = <1e-04
 #> [4/6] bandwidth sensitivity
-#>   estimate ranges 0.7346 to 0.7963 across 0.5x to 2x the bandwidth
+#>   estimate ranges 0.8777 to 0.9323 across 0.5x to 2x the bandwidth
 #> [5/6] design checks
-#>   density at the cutoff: 224 below, 248 above, p = 0.527 -- OK
+#>   density at the cutoff: 238 below, 219 above, p = 0.972 -- OK
 #>   covariate balance: no covariates given
 #> [6/6] placebo cutoffs
-#>   0 of 4 placebo cutoffs show a jump
+#>   1 of 4 placebo cutoffs show a jump
+#>     a jump where nothing happens means the method is finding jumps in noise; treat the estimate at the real cutoff with caution
 ```
 
 ``` r
 
 rd
 #> <ilm_rdd> score at run = 0 
-#>   local linear fit, triangular kernel, h = 0.2352 (224 below, 248 above)
+#>   local linear fit, triangular kernel, h = 0.2317 (238 below, 219 above)
 #>   family: gaussian 
 #> 
-#>   jump   0.7963  ( 0.5732,  1.0194)  p = <1e-04
-#>   across bandwidths 0.5x-2x: 0.7346 to 0.7963
+#>   jump   0.8777  ( 0.6827,  1.0726)  p = <1e-04
+#>   across bandwidths 0.5x-2x: 0.8777 to 0.9323
 #> 
 #>   design checks
-#>     density at the cutoff: OK (224 below, 248 above)
-#>     placebo cutoffs:      0 of 4 show a jump
+#>     density at the cutoff: OK (238 below, 219 above)
+#>     placebo cutoffs:      1 of 4 show a jump
 #> 
 #>   Interval is the ordinary one for a weighted local fit. For
 #>   bias-corrected robust intervals see the rdrobust package.
@@ -482,9 +487,9 @@ covs <- data.frame(run = run, score = score,
 rd2 <- ilm_rdd(covs, "score", "run", cutoff = 0,
                covariates = c("prior", "leaky"), verbose = FALSE)
 rd2$balance
-#>   covariate   estimate        se      p_value status
-#> 1     prior 0.06657325 0.2421857 7.835258e-01     OK
-#> 2     leaky 1.04306073 0.2423753 2.048483e-05   FAIL
+#>   covariate   estimate        se     p_value status
+#> 1     prior -0.1943979 0.2197849 3.76900e-01     OK
+#> 2     leaky  1.0435506 0.2415216 1.91281e-05   FAIL
 ```
 
 `leaky` jumps, which means something other than treatment changes at the
@@ -495,24 +500,18 @@ cutoff and the estimate absorbs it.
 ``` r
 
 rd$placebo
-#>       cutoff    estimate        se   p_value status
-#> 1 -0.6725431  0.06642467 0.1103394 0.5474521     OK
-#> 2 -0.3533191  0.12316501 0.1115728 0.2702182     OK
-#> 3  0.3313668  0.06319596 0.1304218 0.6282401     OK
-#> 4  0.6841902 -0.11875060 0.1093612 0.2780819     OK
+#>       cutoff     estimate        se    p_value status
+#> 1 -0.6653344  0.131174940 0.1159449 0.25848231     OK
+#> 2 -0.3451210  0.237920996 0.1195685 0.04716733   FAIL
+#> 3  0.3498609 -0.033375176 0.1198842 0.78083925     OK
+#> 4  0.6675436 -0.002142635 0.1049944 0.98372728     OK
 rd$bandwidth
-#>   multiplier         h   n  estimate         se     lower     upper
-#> 1       0.50 0.1176202 241 0.7346339 0.15817710 0.4230212 1.0462465
-#> 2       0.75 0.1764303 345 0.7362564 0.13215994 0.4763051 0.9962078
-#> 3       1.00 0.2352404 472 0.7962914 0.11351337 0.5732325 1.0193504
-#> 4       1.50 0.3528605 686 0.7840213 0.09231232 0.6027708 0.9652717
-#> 5       2.00 0.4704807 909 0.7404174 0.08013887 0.5831377 0.8976970
-#>        p_value
-#> 1 5.656037e-06
-#> 2 5.148098e-08
-#> 3 8.101311e-12
-#> 4 1.257128e-16
-#> 5 1.727623e-19
+#>   multiplier         h   n  estimate         se     lower    upper      p_value
+#> 1       0.50 0.1158410 221 0.9322912 0.13347507 0.6692176 1.195365 3.442757e-11
+#> 2       0.75 0.1737615 329 0.9045383 0.11318087 0.6818787 1.127198 2.338467e-14
+#> 3       1.00 0.2316820 457 0.8776672 0.09919154 0.6827345 1.072600 2.007199e-17
+#> 4       1.50 0.3475229 668 0.8920172 0.08635114 0.7224630 1.061571 2.678059e-23
+#> 5       2.00 0.4633639 923 0.8968492 0.07656560 0.7465855 1.047113 1.234041e-29
 ```
 
 An effect that appears only in a narrow window is not an effect.

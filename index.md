@@ -182,10 +182,13 @@ knowing about test suites.
 ## Working with other packages
 
 [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html) dispatches to
-the correct joint test, and
+the correct joint test,
 [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
-and `check_model()` work directly. `marginaleffects` and the easystats
-stack each need one call:
+works directly, and
+[`performance::check_model()`](https://easystats.github.io/performance/reference/check_model.html)
+draws
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)’s
+panels. `marginaleffects` and the easystats stack each need one call:
 
 ``` r
 

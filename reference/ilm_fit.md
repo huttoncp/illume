@@ -1,4 +1,4 @@
-# Fit a multinomial mixed model from a design matrix
+# Fit a model from a design matrix
 
 The computational engine. Most users should call
 [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
@@ -12,12 +12,12 @@ ilm_fit(
   X,
   y,
   J = NULL,
-  re_list,
+  re_list = list(),
   re_struct = NULL,
   ar = NULL,
   ylevels = NULL,
   weights = NULL,
-  family = "multinomial",
+  family = "gaussian",
   verbose = TRUE,
   restarts = 3L,
   joint = FALSE,
@@ -40,8 +40,9 @@ ilm_fit(
 
 - y:
 
-  Integer vector of length `N` giving the observed category, coded `1`
-  to `J`.
+  The response, of length `N`: for a multinomial or ordinal model the
+  observed category coded `1` to `J`, and for every other family the
+  numeric response.
 
 - J:
 
@@ -52,14 +53,18 @@ ilm_fit(
 
   Named list of random terms. Each element is a grouping vector (random
   intercept), a `list(group =, Z =)` (random slopes), or a
-  `list(basis =)` (a smooth, from `ilm_smooth()`).
+  `list(basis =)` (a smooth, from `ilm_smooth()`). The default, an empty
+  list, fits the fixed effects alone.
 
 - re_struct:
 
-  Optional named list of category covariance structures, named by term
-  as `re_list` is. A term it leaves out gets `"us"`, so only the terms
-  that differ need naming. Set `d_cor = FALSE` within an element to drop
-  an intercept-slope correlation.
+  Optional named list of covariance structures, named by term as
+  `re_list` is, each element a list: `type` (`"us"`, `"diag"`, or `"rr"`
+  with `rank`) for the covariance across a multinomial outcome's
+  categories, and `d_cor = FALSE` to drop an intercept-slope correlation
+  in any family. A term it leaves out gets `"us"` with its correlations,
+  so only the terms that differ need naming. See the section above and
+  the examples.
 
 - ar:
 
@@ -88,7 +93,11 @@ ilm_fit(
   [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md).
   See
   [`ilm_family()`](https://huttoncp.github.io/illume/reference/ilm_family.md)
-  for what each one assumes.
+  for what each one assumes. The default is `"gaussian"`, as it is for
+  [`stats::glm.fit()`](https://rdrr.io/r/stats/glm.html); a nominal
+  outcome needs `family = "multinomial"` and `J`.
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  reads the family off the response instead.
 
 - verbose:
 
@@ -175,17 +184,19 @@ ilm_fit(
 ## Value
 
 An object of class `"ilm_model"`: a list whose most useful elements are
-`checks` (the diagnostic table), `Sigma` (fitted category covariances),
-`beta` (fixed effects as a p-by-C matrix), `opt` (optimiser output),
-`sdr` ([`TMB::sdreport()`](https://rdrr.io/pkg/TMB/man/sdreport.html)
-output) and `ok` (whether every check passed).
+`checks` (the diagnostic table), `Sigma` (fitted random-effect
+covariances, across the categories for a multinomial model), `beta`
+(fixed effects as a p-by-C matrix), `opt` (optimiser output), `sdr`
+([`TMB::sdreport()`](https://rdrr.io/pkg/TMB/man/sdreport.html) output)
+and `ok` (whether every check passed).
 
 ## How the model is parameterised
 
-With `J` outcome categories there are `C = J - 1` free linear
-predictors. Coefficients use **sum-to-zero** coding, so each one is that
-category's deviation from the average across categories, not a contrast
-against a baseline. This differs from
+Every family but the multinomial has one linear predictor (`C = 1`). A
+multinomial outcome with `J` categories has `C = J - 1` free linear
+predictors, and its coefficients use **sum-to-zero** coding, so each one
+is that category's deviation from the average across categories, not a
+contrast against a baseline. This differs from
 [`nnet::multinom()`](https://rdrr.io/pkg/nnet/man/multinom.html) and
 `brms`.
 
@@ -196,9 +207,15 @@ one large Kronecker product, which keeps both memory and computation
 manageable and lets AR(1), spatial and i.i.d. structures share a single
 code path.
 
-## Choosing a category covariance structure
+## Choosing a covariance structure
 
-Each random term gets its own structure through `re_struct`:
+Each random term gets its own structure through `re_struct`, a list with
+one element per term, named as `re_list` names it; each element is
+itself a list, for example
+`re_struct = list(site = list(type = "rr", rank = 1))`. Its `type` sets
+the covariance across a multinomial outcome's `C` category dimensions,
+and with one of them – every other family – there is nothing for it to
+change:
 
 - `"us"`:
 
@@ -215,8 +232,10 @@ Each random term gets its own structure through `re_struct`:
   Costs fewer parameters **and** fewer latent values, which is usually
   the better trade when a term is stretched.
 
-If a structure is too rich for the data the pre-fit checks will say so
-and name a specific rank to try.
+Separately, `d_cor = FALSE` in an element drops the correlation between
+a random intercept and its slopes, which applies in every family. If a
+structure is too rich for the data the pre-fit checks will say so and
+name a specific rank to try.
 
 ## Models with no random effects
 
@@ -271,3 +290,39 @@ survey data. *Journal of the Royal Statistical Society, Series A*,
 for the formula interface,
 [`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md),
 [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md).
+
+## Examples
+
+``` r
+set.seed(1)
+n <- 300
+x <- rnorm(n)
+site <- factor(sample(20, n, TRUE))
+X <- cbind("(Intercept)" = 1, x = x)
+
+## a gaussian response, the default family, with a random intercept per site
+y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
+fit <- ilm_fit(X, y, re_list = list(site = site), verbose = FALSE)
+coef(fit)
+#> (Intercept)           x 
+#>   0.2797900   0.4601247 
+
+# \donttest{
+## a nominal outcome with four categories, coded 1 to 4, whose site
+## intercepts share one dimension across the three category dimensions
+u <- rnorm(20)[site]
+eta <- cbind(-u, u + 0.4 * x, 0.5 * u, -0.5 * u)
+k <- apply(exp(eta) / rowSums(exp(eta)), 1, function(p) sample(4, 1, prob = p))
+fit2 <- ilm_fit(X, k, J = 4, family = "multinomial",
+                re_list = list(site = site),
+                re_struct = list(site = list(type = "rr", rank = 1)),
+                verbose = FALSE)
+fit2$Sigma
+#> $site
+#>            [,1]       [,2]       [,3]
+#> [1,]  1.0896841 -1.1855208 -0.5753783
+#> [2,] -1.1855208  1.2897862  0.6259822
+#> [3,] -0.5753783  0.6259822  0.3038129
+#> 
+# }
+```

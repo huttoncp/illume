@@ -1,7 +1,10 @@
-# Randomised quantile residuals for a nominal outcome
+# Randomised quantile residuals
 
-Turns categorical outcomes into residuals that should be uniformly
-distributed when the model is right.
+Residuals that are uniformly distributed when the model is right, for
+every family: the distribution function at the observation for a
+continuous response, drawn uniformly across the jump for a discrete one,
+and for a nominal outcome, which has no order to take a distribution
+function along, the construction below.
 
 ## Usage
 
@@ -27,7 +30,7 @@ ilm_rqr(object, conditional = TRUE, seed = 1L)
 
 A numeric vector on the unit interval.
 
-## The obstacle, and the way around it
+## A nominal outcome – the obstacle, and the way around it
 
 Quantile residuals need a cumulative distribution function, and a CDF
 needs an ordering. Nominal categories have none – "red", "green", "blue"

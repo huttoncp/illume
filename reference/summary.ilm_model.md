@@ -1,4 +1,4 @@
-# Summarise a fitted multinomial mixed model
+# Summarise a fitted model
 
 Prints the model, fit statistics, random-effect covariances, a
 coefficient table with Wald tests, and – unusually for a

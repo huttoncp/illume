@@ -87,6 +87,9 @@ people who will not read a coefficient table.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'ilm_contrast'</span></span>
+<span><span class="fu">ilm_interpret</span><span class="op">(</span><span class="va">object</span>, causal <span class="op">=</span> <span class="cn">NULL</span>, ame <span class="op">=</span> <span class="cn">FALSE</span>, digits <span class="op">=</span> <span class="fl">3</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'ilm_profile'</span></span>
 <span><span class="fu">ilm_interpret</span><span class="op">(</span><span class="va">object</span>, causal <span class="op">=</span> <span class="cn">NULL</span>, ame <span class="op">=</span> <span class="cn">FALSE</span>, digits <span class="op">=</span> <span class="fl">3</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,8 +100,9 @@ people who will not read a coefficient table.</p>
 <dl><dt id="arg-object">object<a class="anchor" aria-label="anchor" href="#arg-object"></a></dt>
 <dd><p>An <code><a href="ilm_model.html">ilm_model()</a></code>, <code><a href="ilm_dag_model.html">ilm_dag_model()</a></code>, <code><a href="ilm_did.html">ilm_did()</a></code> or
 <code><a href="ilm_rdd.html">ilm_rdd()</a></code>; or the result of <code><a href="ilm_power.html">ilm_power()</a></code> or <code><a href="ilm_power_design.html">ilm_power_design()</a></code>, which
-is written up as a power analysis, or of <code><a href="ilm_contrast.html">ilm_contrast()</a></code>, written up as
-the comparisons it makes.</p></dd>
+is written up as a power analysis, of <code><a href="ilm_contrast.html">ilm_contrast()</a></code>, written up as the
+comparisons it makes, or of <code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile.html">ilm_profile()</a></code> or <code><a href="https://huttoncp.github.io/illumex/reference/ilm_profile_na.html">ilm_profile_na()</a></code>, written
+up as the profile of each cluster.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -111,8 +115,9 @@ the design, which is what you want.</p></dd>
 
 
 <dt id="arg-ame">ame<a class="anchor" aria-label="anchor" href="#arg-ame"></a></dt>
-<dd><p>Report average marginal effects on the response scale. Costs a
-delta-method calculation; worth it for anything with a link function.</p></dd>
+<dd><p>Give the effects intervals on the response scale, by the delta
+method. With <code>FALSE</code> the predictions are still reported, without them,
+which is quicker.</p></dd>
 
 
 <dt id="arg-digits">digits<a class="anchor" aria-label="anchor" href="#arg-digits"></a></dt>
@@ -127,6 +132,28 @@ delta-method calculation; worth it for anything with a link function.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>"ilm_interpretation"</code>: a list of sections, which
 <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> renders as wrapped text.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="how-an-effect-is-said">How an effect is said<a class="anchor" aria-label="anchor" href="#how-an-effect-is-said"></a></h2>
+
+
+
+<p>In the response's own units, over a change in the predictor a reader can
+picture: across the middle half of a number (its quartiles), level by level
+for a factor. "Across the middle half of age, predicted income is 49.4 at
+29 against 64.7 at 54: 15.2 higher (95% interval 12.3 to 18.1)", where the
+coefficient alone, 0.61, says nothing until the reader knows what a unit of
+age is and how much age varies. The predictions are averaged over the rows
+the model was fitted to, as <code><a href="ilm_ame.html">ilm_ame()</a></code>'s effects are, with any random
+effects at zero: in a mixed model they are a typical group's, and with a
+nonlinear link the text says so, since averaging over the groups instead
+– <code>predict(marginal = TRUE)</code> – gives different numbers. A probability is
+given as one, and a difference of two in percentage points, with the odds
+ratio after it for those who want it. The evidence is the term's joint
+test, so a factor with several levels, or a predictor in a multinomial
+model, gets one verdict rather than one per coefficient. A term that is not
+a plain variable – an interaction, a spline – is described by its
+coefficients.</p>
     </div>
     <div class="section level2">
     <h2 id="causal-language-is-licensed-not-assumed">Causal language is licensed, not assumed<a class="anchor" aria-label="anchor" href="#causal-language-is-licensed-not-assumed"></a></h2>
@@ -171,12 +198,12 @@ passed, not that the model is right.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   A gaussian model of y, fitted to 300 observations.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> What it says</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   x: very strong evidence that a higher x is associated with a higher value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   of y (estimate 0.450, 95% interval 0.321 to 0.579, p = &lt;1e-04).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   x: very strong evidence (p &lt; 0.001) that x is associated with y. Across</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   the middle half of x, predicted y is 0.0787 at -0.59 against 0.644 at</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.667: 0.565 higher. That is 0.45 per unit of x.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   gb: very strong evidence that being b rather than a is associated with a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   higher value of y (estimate 0.892, 95% interval 0.643 to 1.141, p =</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   &lt;1e-04).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   g: very strong evidence (p &lt; 0.001) that g is associated with y.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Predicted y is -0.0988 for 'a' and 0.793 for 'b': 0.892 higher for 'b'.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> What the checks found</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   All 5 fitting checks passed: the optimiser converged, the gradient is at</span>

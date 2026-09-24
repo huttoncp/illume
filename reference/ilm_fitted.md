@@ -1,6 +1,7 @@
-# Fitted category probabilities
+# Fitted values
 
-Fitted category probabilities
+The fitted mean for each observation: the probability of each category
+for a multinomial or ordinal outcome, the fitted value otherwise.
 
 ## Usage
 
@@ -23,4 +24,5 @@ ilm_fitted(object, conditional = TRUE)
 
 ## Value
 
-A matrix of probabilities with one column per category.
+A matrix with one row per observation: one column per category for a
+multinomial or ordinal outcome, one column otherwise.

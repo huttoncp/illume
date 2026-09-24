@@ -34,6 +34,9 @@ ilm_interpret(
 
 # S3 method for class 'ilm_contrast'
 ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+
+# S3 method for class 'ilm_profile'
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 ```
 
 ## Arguments
@@ -50,9 +53,13 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
   [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
   or
   [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md),
-  which is written up as a power analysis, or of
+  which is written up as a power analysis, of
   [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md),
-  written up as the comparisons it makes.
+  written up as the comparisons it makes, or of
+  [`ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
+  or
+  [`ilm_profile_na()`](https://huttoncp.github.io/illumex/reference/ilm_profile_na.html),
+  written up as the profile of each cluster.
 
 - ...:
 
@@ -65,8 +72,9 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 
 - ame:
 
-  Report average marginal effects on the response scale. Costs a
-  delta-method calculation; worth it for anything with a link function.
+  Give the effects intervals on the response scale, by the delta method.
+  With `FALSE` the predictions are still reported, without them, which
+  is quicker.
 
 - digits:
 
@@ -80,6 +88,26 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 
 An object of class `"ilm_interpretation"`: a list of sections, which
 [`print()`](https://rdrr.io/r/base/print.html) renders as wrapped text.
+
+## How an effect is said
+
+In the response's own units, over a change in the predictor a reader can
+picture: across the middle half of a number (its quartiles), level by
+level for a factor. "Across the middle half of age, predicted income is
+49.4 at 29 against 64.7 at 54: 15.2 higher (95% interval 12.3 to 18.1)",
+where the coefficient alone, 0.61, says nothing until the reader knows
+what a unit of age is and how much age varies. The predictions are
+averaged over the rows the model was fitted to, as
+[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)'s
+effects are, with any random effects at zero: in a mixed model they are
+a typical group's, and with a nonlinear link the text says so, since
+averaging over the groups instead – `predict(marginal = TRUE)` – gives
+different numbers. A probability is given as one, and a difference of
+two in percentage points, with the odds ratio after it for those who
+want it. The evidence is the term's joint test, so a factor with several
+levels, or a predictor in a multinomial model, gets one verdict rather
+than one per coefficient. A term that is not a plain variable – an
+interaction, a spline – is described by its coefficients.
 
 ## Causal language is licensed, not assumed
 
@@ -123,12 +151,12 @@ ilm_interpret(fit, ame = FALSE)
 #>   A gaussian model of y, fitted to 300 observations.
 #> 
 #> What it says
-#>   x: very strong evidence that a higher x is associated with a higher value
-#>   of y (estimate 0.450, 95% interval 0.321 to 0.579, p = <1e-04).
+#>   x: very strong evidence (p < 0.001) that x is associated with y. Across
+#>   the middle half of x, predicted y is 0.0787 at -0.59 against 0.644 at
+#>   0.667: 0.565 higher. That is 0.45 per unit of x.
 #> 
-#>   gb: very strong evidence that being b rather than a is associated with a
-#>   higher value of y (estimate 0.892, 95% interval 0.643 to 1.141, p =
-#>   <1e-04).
+#>   g: very strong evidence (p < 0.001) that g is associated with y.
+#>   Predicted y is -0.0988 for 'a' and 0.793 for 'b': 0.892 higher for 'b'.
 #> 
 #> What the checks found
 #>   All 5 fitting checks passed: the optimiser converged, the gradient is at

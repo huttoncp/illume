@@ -140,8 +140,12 @@ shipped with the installed package:
 [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html) dispatches to
 the correct joint test,
 [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
-and `check_model()` work, and `marginaleffects` and the easystats stack
-can each be enabled with one call:
+works,
+[`performance::check_model()`](https://easystats.github.io/performance/reference/check_model.html)
+draws the panels of
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+and `marginaleffects` and the easystats stack can each be enabled with
+one call:
 
 ``` r
 

@@ -182,10 +182,13 @@ knowing about test suites.
 ## Working with other packages
 
 [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html) dispatches to
-the correct joint test, and
+the correct joint test,
 [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
-and `check_model()` work directly. `marginaleffects` and the easystats
-stack each need one call:
+works directly, and
+[`performance::check_model()`](https://easystats.github.io/performance/reference/check_model.html)
+draws
+[`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)’s
+panels. `marginaleffects` and the easystats stack each need one call:
 
 ``` r
 
@@ -384,12 +387,12 @@ comes back is the same whatever was fitted.
   response; a family supplies only the piece that turns a linear
   predictor into a log-likelihood.
 - [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
-  : Fit a multinomial mixed model from a design matrix
+  : Fit a model from a design matrix
 - [`ilm_fourier()`](https://huttoncp.github.io/illume/reference/ilm_fourier.md)
   : Fourier terms for a cycle of known period
 - [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   [`ilm_model_formula()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
-  : Fit a multinomial linear mixed model
+  : Fit generalized linear and additive mixed models
 - [`ilm_squeeze()`](https://huttoncp.github.io/illume/reference/ilm_squeeze.md)
   : Move proportions off 0 and 1
 - [`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md)
@@ -460,7 +463,7 @@ and names a remedy that exists in this package when it is not.
   [`print(`*`<ilm_remedies>`*`)`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
   : Remedies for what a model's checks found
 - [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
-  : Randomised quantile residuals for a nominal outcome
+  : Randomised quantile residuals
 - [`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md)
   : Test residuals against a simulated reference
 - [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md)
@@ -583,7 +586,7 @@ Draws from a fitted model. Example data with a known structure,
 ilm_sim(), is illumex’s.
 
 - [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)
-  : Fitted category probabilities
+  : Fitted values
 - [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
   : Simulate new outcomes from a fitted model
 - [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
@@ -597,9 +600,9 @@ on an illume fit.
 - [`AIC(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
   [`BIC(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/AIC.ilm_model.md)
   : Information criteria
-- [`Anova.ilm_model()`](https://huttoncp.github.io/illume/reference/Anova.ilm_model.md)
+- [`Anova(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/Anova.ilm_model.md)
   : car::Anova method
-- [`check_model.ilm_model()`](https://huttoncp.github.io/illume/reference/check_model.ilm_model.md)
+- [`check_model(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/check_model.ilm_model.md)
   : performance::check_model method
 - [`coef(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/coef.ilm_model.md)
   [`vcov(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/coef.ilm_model.md)
@@ -619,17 +622,17 @@ on an illume fit.
 - [`logLik(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/logLik.ilm_model.md)
   [`nobs(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/logLik.ilm_model.md)
   : Log-likelihood, and number of observations
-- [`model_performance.ilm_model()`](https://huttoncp.github.io/illume/reference/model_performance.ilm_model.md)
-  : Fit indices for a multinomial mixed model
+- [`model_performance(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/model_performance.ilm_model.md)
+  : Fit indices for a fitted model
 - [`plot(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/plot.ilm_model.md)
   : Plot a fitted model
 - [`predict(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
-  : Predicted category probabilities
+  : Predictions from a fitted model
 - [`print(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/print.ilm_model.md)
   : Compact display of a fitted model
 - [`summary(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)
   [`print(`*`<summary.ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)
-  : Summarise a fitted multinomial mixed model
+  : Summarise a fitted model
 - [`terms(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_model-accessors.md)
   [`formula(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_model-accessors.md)
   [`model.frame(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_model-accessors.md)
