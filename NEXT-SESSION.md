@@ -1,4 +1,4 @@
-# Handoff — illume 0.0.7.9000
+# Handoff — illume 0.0.8.9000 (bump in progress)
 
 First written 2026-09-22 at the end of a session that ran out of headroom;
 rewritten at the end of the Opus 5.5 session that followed, the same day, and
@@ -8,6 +8,70 @@ done and committed (`8986280`); the power and marginal-means work is committed
 in `3f6e368`.
 
 Delete this file once the queue is empty.
+
+## Paused 2026-09-23, about 23:15, for a restart -- pick up here
+
+Everything is committed; nothing has been pushed since the docs PR.
+
+| repo    | branch               | state |
+|---------|----------------------|-------|
+| illume  | `docs-remedies-reml` | pushed, PR open, waiting for Craig's merge |
+| illume  | `bump-0.0.8.9000`    | local: no-flat Hessian fix and test (`9840442`), boundary SE study at 0.0.7.9000 (`939b6bd`), version 0.0.8.9000 (`4cc2aac`), first three 0.0.8.9000 studies (`044fec7`), this note |
+| illumex | `bump-0.0.8.9000`    | local, `00c0f3d`: version 0.0.8.9000 |
+| illumex | `time-features`      | local, `cc4d719`, stacked on illumex `bump-0.0.8.9000` |
+
+**Finishing the 0.0.8.9000 study set.** Done and committed: bench,
+boundary_se, coverage. The restart killed power mid-run: delete the partial,
+untracked `studies/runs/0.0.8.9000/power/`. Install illumex from its
+`bump-0.0.8.9000` branch (NOT `time-features`) and then illume from its
+`bump-0.0.8.9000` into a scratch library, put it first in `R_LIBS`, and from
+`illume/studies` run with R 4.4.3
+(`C:/Program Files/R/R-4.4.3/bin/x64/Rscript`), one after another:
+
+    Rscript scripts/power_study.R         2000 10  runs/0.0.8.9000/power
+    Rscript scripts/mclogit_compare.R     500 10   runs/0.0.8.9000/mclogit
+    Rscript scripts/messy_compare.R       400 10   runs/0.0.8.9000/messy
+    Rscript scripts/imputation_ablation.R 40 10    runs/0.0.8.9000/imputation
+    Rscript scripts/brms_compare.R        3        runs/0.0.8.9000/brms
+
+The whole set takes several hours. Then: `summarise_run.R` for 0.0.8.9000,
+`RUNINFO.dcf` (R 4.4.3, a date per study), illume's NEWS section for
+0.0.8.9000 (validation notes and the no-flat fix), `R CMD check` on both,
+push both bump branches and give the PR links -- illumex's first. Then queue
+item 4: reinstall illumex, then illume, at 0.0.8.9000 into Craig's main
+library. R 4.6.1 is installed (`C:/Program Files/R/R-4.6.1`), but its library
+is empty and filling it means downloading from CRAN: ask first.
+
+**illumex `time-features`: next steps.** Craig's goal for `ilm_reduce()`,
+`ilm_cluster()` and `ilm_profile()`: help a user find the subgroups in a
+sample and learn each one's feature profile ("high-income older adults"
+against "young students"). Judge the description work by that.
+
+- Built and committed: gated sin/cos cycles are the default (`time =
+  "cycles"`, with `"elapsed"` for very large data); clusters described in
+  dates; `ilm_var_contrib()` scores a date on the aspect used; the evidence
+  is in `dev/studies/`. After the default switch the affected test files
+  pass; `R CMD check` was clean just before it -- run it again.
+- Decided by Craig: no expanding dates into year/month/day/weekday parts;
+  drop-column or shuffle importance only if it is cheap enough.
+- Next, in order:
+  1. Describe every variable the way dates now are: a numeric one by its
+     middle half against all rows, a categorical one by its most
+     over-represented level against all rows -- in the sentences, and in a
+     per-cluster table.
+  2. Attach `ilm_describe_all(data, by = "cluster")` to the profile (Craig's
+     suggestion; grouping already works).
+  3. Propose building the sentences from the original variables
+     (catdes-style v-tests per variable and level) instead of from the
+     reduction's dimensions, which is closer to Craig's goal. Show him a
+     before and after first.
+  4. `ilm_glrm()` now defaults to `"cycles"`, so illume's GLRM imputation
+     runs the rhythm test for every imputation. Measure it; if it costs,
+     let `time` take an earlier fit's `$time` map and pass that from
+     `ilm_impute()`.
+  5. Full suite and `R CMD check`; a PR when Craig asks.
+
+---
 
 ---
 
