@@ -86,13 +86,26 @@ ilm_fmt_pct <- function(p)
 #'
 #' Standard errors come from the delta method: the effect is differentiated
 #' numerically with respect to the parameters and combined with their covariance.
-#' The parameter vector includes the covariance parameters, because a
-#' population-averaged prediction depends on them and pretending otherwise would
-#' understate the uncertainty.
+#' The parameter vector includes the covariance parameters, which the effect
+#' depends on when it is averaged over the random effects.
+#'
+#' @section Which effect, in a mixed model:
+#' By default the predictions hold the random effects at zero, so the effect is
+#' the one for a **typical group** -- the effect [ilm_interpret()] reports, and
+#' the one the coefficients describe. With `marginal = TRUE` the predictions
+#' are averaged over every random term, as `predict(marginal = TRUE)` does, and
+#' the effect is the one on the **population as a whole**. Through a nonlinear
+#' link the two differ: a logit's population-averaged effect is the flatter
+#' one. They answer different questions. The `marginaleffects` bridge averages
+#' over the random effects unless its option `ilm_model.marginal` is set to
+#' `FALSE`, so it matches `marginal = TRUE`.
 #'
 #' @param object An [ilm_model()].
 #' @param terms Which predictors. Default is every fixed-effect term.
 #' @param eps Relative step for the numerical derivatives.
+#' @param marginal Logical. `FALSE` (the default) for the effect in a typical
+#'   group, with the random effects at zero; `TRUE` for the effect averaged
+#'   over them. See "Which effect, in a mixed model".
 #' @return A data frame with `term`, `level`, `estimate`, `se`, `lower`,
 #'   `upper`, and `kind` (`"slope"` or `"contrast"`). For an outcome with
 #'   categories -- multinomial or ordinal -- there is also a `category` column
@@ -107,7 +120,7 @@ ilm_fmt_pct <- function(p)
 #' fit <- ilm_model(y ~ x + g, data = d, family = "binomial", verbose = FALSE)
 #' ilm_ame(fit)
 #' @export
-ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
+ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
@@ -133,9 +146,14 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
                                         type = "response"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
+  ## with marginal = TRUE a single linear predictor is averaged by quadrature
+  ## and a multinomial one by draws with a fixed seed, so every call -- at each
+  ## parameter perturbation and each side of each difference -- integrates
+  ## over the same thing and the differences are not noise
   mu <- function(dd) {
     p <- suppressWarnings(stats::predict(object, newdata = dd,
-                                         type = "response"))
+                                         type = "response",
+                                         marginal = isTRUE(marginal)))
     if (!is.null(cats)) as.matrix(p)
     else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
   }
