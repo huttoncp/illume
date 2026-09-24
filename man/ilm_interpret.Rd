@@ -8,6 +8,7 @@
 \alias{ilm_interpret.ilm_rdd}
 \alias{ilm_interpret.ilm_power}
 \alias{ilm_interpret.ilm_contrast}
+\alias{ilm_interpret.ilm_profile}
 \alias{iml_interpret}
 \title{Interpret a fitted model in words}
 \usage{
@@ -31,20 +32,24 @@ ilm_interpret(object, ...)
 )
 
 \method{ilm_interpret}{ilm_contrast}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+
+\method{ilm_interpret}{ilm_profile}(object, causal = NULL, ame = FALSE, digits = 3, ...)
 }
 \arguments{
 \item{object}{An \code{\link[=ilm_model]{ilm_model()}}, \code{\link[=ilm_dag_model]{ilm_dag_model()}}, \code{\link[=ilm_did]{ilm_did()}} or
 \code{\link[=ilm_rdd]{ilm_rdd()}}; or the result of \code{\link[=ilm_power]{ilm_power()}} or \code{\link[=ilm_power_design]{ilm_power_design()}}, which
-is written up as a power analysis, or of \code{\link[=ilm_contrast]{ilm_contrast()}}, written up as
-the comparisons it makes.}
+is written up as a power analysis, of \code{\link[=ilm_contrast]{ilm_contrast()}}, written up as the
+comparisons it makes, or of \code{ilm_profile()} or \code{ilm_profile_na()}, written
+up as the profile of each cluster.}
 
 \item{...}{Unused.}
 
 \item{causal}{Force causal or associational language. \code{NULL} decides from
 the design, which is what you want.}
 
-\item{ame}{Report average marginal effects on the response scale. Costs a
-delta-method calculation; worth it for anything with a link function.}
+\item{ame}{Give the effects intervals on the response scale, by the delta
+method. With \code{FALSE} the predictions are still reported, without them,
+which is quicker.}
 
 \item{digits}{Rounding.}
 
@@ -60,6 +65,24 @@ on, how strong the evidence is, what the diagnostics found, and what that
 implies for taking the estimates at face value. Intended for reporting to
 people who will not read a coefficient table.
 }
+\section{How an effect is said}{
+
+
+In the response's own units, over a change in the predictor a reader can
+picture: across the middle half of a number (its quartiles), level by level
+for a factor. "Across the middle half of age, predicted income is 49.4 at
+29 against 64.7 at 54: 15.2 higher (95\% interval 12.3 to 18.1)", where the
+coefficient alone, 0.61, says nothing until the reader knows what a unit of
+age is and how much age varies. The predictions are averaged over the rows
+the model was fitted to, as \code{\link[=ilm_ame]{ilm_ame()}}'s effects are; a probability is
+given as one, and a difference of two in percentage points, with the odds
+ratio after it for those who want it. The evidence is the term's joint
+test, so a factor with several levels, or a predictor in a multinomial
+model, gets one verdict rather than one per coefficient. A term that is not
+a plain variable -- an interaction, a spline -- is described by its
+coefficients.
+}
+
 \section{Causal language is licensed, not assumed}{
 
 

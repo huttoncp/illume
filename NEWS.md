@@ -1,3 +1,39 @@
+# illume 0.0.8.9000
+
+* `ilm_interpret()` says each effect in the response's own units, over a change
+  a reader can picture: across the middle half of a numeric predictor, level by
+  level for a factor, with the model's predictions at both ends, averaged over
+  the rows the model was fitted to as `ilm_ame()`'s effects are. Where it said
+  "a higher age is associated with a higher value of income_k (estimate 0.610,
+  95% interval 0.493 to 0.726, p = <1e-04). In the units of the response: an
+  increase of 0.610 on average", it now says "Across the middle half of age,
+  predicted income_k is 49.4 at 29 against 64.7 at 54: 15.2 higher (95%
+  interval 12.3 to 18.1). That is 0.61 per unit of age." A probability is given
+  as one ("57% at 29 against 36% at 54: 20 percentage points lower"), with the
+  odds ratio after it. Causal language, where a design licenses it, reads as a
+  change: "moving x across its middle half ... raises predicted y".
+* The evidence for a term is its joint test, so a factor with several levels
+  gets one verdict, and so does a predictor in a multinomial model, which used
+  to get one per category, each against the average of the categories -- and
+  could then report lower odds of a category beside a higher probability of it.
+  Its effect is now the predicted share of every category at both ends.
+* P-values in the prose are given to three significant figures, or as
+  "p < 0.001"; a factor level is named as a value ("tenure 'rent' rather than
+  'own'", not "tenurerent: being rent rather than own").
+* `ilm_interpret()` writes up a cluster profile from `illumex::ilm_profile()`
+  or `ilm_profile_na()`: the clustering, a paragraph per cluster, the rows
+  between clusters and the variables that only add distance, and why none of
+  it is a test.
+* Fixed: every REML fit predicted `NA`. Under REML the fixed effects sit in the
+  random block and the stored `beta` was built from a parameter vector that did
+  not hold them, so `predict()` -- and with it `ilm_ame()`, `ilm_scenario()`
+  and the effects in `ilm_interpret()` -- returned `NA` for every
+  `ilm_model(reml = TRUE)` and every `ilm_dag_model()`, which fits by REML.
+  `coef()` and the standard errors were never affected.
+* The parameter-aliasing check no longer starts a sentence with a capitalised
+  parameter name ("Retired:(Intercept) <-> retired:age cannot be separated");
+  it reads "These data cannot separate retired:(Intercept) from retired:age".
+
 # illume 0.0.7.9000
 
 Ten features, each validated against an outside implementation where one

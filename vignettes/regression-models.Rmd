@@ -774,6 +774,15 @@ and how far to trust the estimates:
 ilm_interpret(fit)
 ```
 
+Each effect is said over a change a reader can picture: across the middle half
+of a numeric predictor, level by level for a factor, with the model's predictions
+at both ends, averaged over the rows it was fitted to -- "across the middle half
+of age, predicted income is 49.4 at 29 against 64.7 at 54: 15.2 higher (95%
+interval 12.3 to 18.1)". A coefficient of 0.61 says nothing until the reader
+knows what a unit of age is and how much age varies; the middle half answers
+both. The strength of evidence is the term's joint test, so a factor with
+several levels, or a predictor in a multinomial model, gets one verdict.
+
 The prose is templated rather than generated, so the same fit gives the same
 words. It says nothing about bias that a diagnostic did not measure, and it uses
 causal language only when the object carries a design that licenses it --

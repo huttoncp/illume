@@ -46,6 +46,30 @@ ilm_evidence <- function(p) {
   else "little evidence"
 }
 
+## A p-value as the prose gives it: three significant figures down to 0.001,
+## and "< 0.001" below, where further digits say nothing a reader can use.
+#' @keywords internal
+#' @noRd
+ilm_fmt_p <- function(p, prefix = "p") {
+  if (is.na(p)) return(paste(prefix, "not available"))
+  if (p < 0.001) return(paste(prefix, "< 0.001"))
+  paste(prefix, "=", format(signif(p, 3), scientific = FALSE, drop0trailing = TRUE))
+}
+
+## A number as a reader writes it: three significant figures, and a thousands
+## separator where one helps.
+#' @keywords internal
+#' @noRd
+ilm_fmt_sig <- function(v)
+  formatC(signif(v, 3), format = "fg", digits = 3, big.mark = ",")
+
+## A probability as a share, with the ends said as such.
+#' @keywords internal
+#' @noRd
+ilm_fmt_pct <- function(p)
+  ifelse(p < 0.005, "under 1%", ifelse(p > 0.995, "over 99%",
+                                       paste0(round(100 * p), "%")))
+
 ## ---- average marginal effects ----------------------------------------------
 
 #' Average marginal effect on the response scale
@@ -189,6 +213,261 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4) {
   out
 }
 
+## ---- predictions at chosen values ----------------------------------------
+
+## Predictions averaged over the rows the model was fitted to, with one
+## predictor set to each of `values` for every row -- "if everyone in the data
+## were 29, and if everyone were 54" -- and the difference between the last and
+## the first. The same average ilm_ame() takes, so the two never tell a reader
+## different things about one effect, and the same delta-method intervals over
+## the full parameter vector. For an outcome with categories, one prediction
+## per category. `intervals = FALSE` skips the delta method, which is the
+## expensive part.
+#' @keywords internal
+#' @noRd
+ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4) {
+  mf <- object$model
+  x <- mf[[var]]
+  p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
+                                        type = "response"))
+  cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
+  fn <- function(obj) {
+    mu <- function(dd) {
+      p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response"))
+      if (!is.null(cats)) as.matrix(p)
+      else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
+    }
+    avg <- function(z) if (is.null(cats)) mean(z) else unname(colMeans(z))
+    pr <- lapply(values, function(val) {
+      dd <- mf
+      dd[[var]] <- if (is.numeric(x)) rep(val, nrow(mf))
+                   else factor(rep(val, nrow(mf)), levels = levels(factor(x)))
+      avg(mu(dd))
+    })
+    c(unlist(pr), pr[[length(pr)]] - pr[[1L]])
+  }
+  est <- fn(object)
+  se <- rep(NA_real_, length(est))
+  if (isTRUE(intervals)) {
+    b0 <- suppressWarnings(stats::coef(object, full = TRUE))
+    V <- tryCatch(suppressWarnings(stats::vcov(object, full = TRUE)),
+                  error = function(e) NULL)
+    if (!is.null(V) && length(b0) == nrow(V)) {
+      G <- matrix(NA_real_, length(est), length(b0))
+      for (j in seq_along(b0)) {
+        hj <- eps * max(abs(b0[j]), 1)
+        bp <- b0; bp[j] <- bp[j] + hj
+        bm <- b0; bm[j] <- bm[j] - hj
+        ep <- tryCatch(fn(ilm_rebuild(object, bp)), error = function(e) NULL)
+        em <- tryCatch(fn(ilm_rebuild(object, bm)), error = function(e) NULL)
+        if (is.null(ep) || is.null(em)) next
+        G[, j] <- (ep - em) / (2 * hj)
+      }
+      ok <- apply(is.finite(G), 1L, all)
+      vv <- rep(NA_real_, length(est))
+      if (any(ok)) {
+        gq <- G[ok, , drop = FALSE]
+        vv[ok] <- rowSums((gq %*% V) * gq)
+      }
+      se <- sqrt(pmax(vv, 0))
+    }
+  }
+  crit <- if (isTRUE(object$exact_df)) stats::qt(0.975, object$resid_df)
+          else stats::qnorm(0.975)
+  nc <- if (is.null(cats)) 1L else length(cats)
+  np <- length(values) * nc
+  mk <- function(i) data.frame(estimate = est[i], se = se[i],
+                               lower = est[i] - crit * se[i],
+                               upper = est[i] + crit * se[i])
+  pred <- cbind(data.frame(value = rep(as.character(values), each = nc),
+                           category = if (is.null(cats)) NA_character_
+                                      else rep(cats, length(values)),
+                           stringsAsFactors = FALSE), mk(seq_len(np)))
+  diff <- cbind(data.frame(category = if (is.null(cats)) NA_character_ else cats,
+                           stringsAsFactors = FALSE), mk(np + seq_len(nc)))
+  list(pred = pred, diff = diff, cats = cats)
+}
+
+## One verdict for a term: its coefficients tested jointly -- one for a number
+## or a two-level factor, and then the usual t or z test; several for a wider
+## factor, or for any term in a multinomial model, which has a coefficient per
+## category and used to get a verdict per category, each against the average
+## of the categories. `idx` indexes the fixed-effect coefficients.
+#' @keywords internal
+#' @noRd
+ilm_term_p <- function(object, idx) {
+  b <- stats::coef(object)[idx]
+  V <- stats::vcov(object)[idx, idx, drop = FALSE]
+  W <- tryCatch(as.numeric(t(b) %*% solve(V, b)), error = function(e) NA_real_)
+  q <- length(idx)
+  if (!is.finite(W)) return(NA_real_)
+  if (isTRUE(object$exact_df))
+    stats::pf(W / q, q, object$resid_df, lower.tail = FALSE)
+  else stats::pchisq(W, q, lower.tail = FALSE)
+}
+
+## What a binomial model predicts the probability OF, in words.
+#' @keywords internal
+#' @noRd
+ilm_event_words <- function(object, respname) {
+  y <- object$model[[respname]]
+  if (is.logical(y)) return(sprintf("%s is TRUE", respname))
+  if (is.factor(y) && nlevels(y) == 2L)
+    return(sprintf("%s is '%s'", respname, levels(y)[2L]))
+  if (is.numeric(y) && !is.matrix(y) && all(y %in% c(0, 1), na.rm = TRUE))
+    return(sprintf("%s is 1", respname))
+  NULL
+}
+
+## "a, b and c"
+#' @keywords internal
+#' @noRd
+ilm_and <- function(x) {
+  if (length(x) < 2L) return(x)
+  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
+}
+
+## The sentence for one predictor, in the response's own units: over the
+## middle half of a number, or level by level for a factor, the model's
+## predictions at both ends, averaged over the rows it was fitted to. An
+## estimate of 0.610 on its own says nothing until the reader knows what one
+## unit of the predictor is -- a year, a thousand dollars -- and how much the
+## predictor varies; the middle half answers both, and puts every predictor on
+## a footing a reader can compare. Language follows the licence: "is
+## associated with" and a comparison, unless the design licenses "affects" and
+## a change. NULL when the term is not a plain variable or the family's
+## predictions are not on a scale this can speak of; the caller then
+## describes the coefficients instead.
+#' @keywords internal
+#' @noRd
+ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
+                             intervals, inter = character(0)) {
+  cont <- fam %in% c("gaussian", "poisson", "nbinom", "beta")
+  prob <- identical(fam, "binomial")
+  catg <- fam %in% c("multinomial", "ordinal", "ordinal_probit", "ordinal_cloglog")
+  if (!(cont || prob || catg) || is.null(xv)) return(NULL)
+  event <- if (prob) ilm_event_words(object, respname)
+  if (prob && is.null(event)) return(NULL)
+  num <- is.numeric(xv)
+  if (num) {
+    vals <- unname(stats::quantile(xv, c(0.25, 0.75), type = 1, na.rm = TRUE))
+    span <- "middle half"
+    ## a predictor with a narrow middle, a mostly-zero count say, is said
+    ## over its range instead
+    if (vals[1] == vals[2]) { vals <- range(xv, na.rm = TRUE); span <- "range" }
+    if (vals[1] == vals[2]) return(NULL)
+  } else {
+    vals <- levels(factor(xv))
+    if (length(vals) < 2L) return(NULL)
+  }
+  ap <- ilm_avg_pred(object, vn, vals, intervals = intervals)
+  p <- ilm_term_p(object, idx)
+  s <- sprintf("%s: %s (%s) that %s %s %s.", vn, sub(",$", "", ilm_evidence(p)),
+               ilm_fmt_p(p), vn, if (is_causal) "affects" else "is associated with",
+               respname)
+  fmt <- if (cont) ilm_fmt_sig else ilm_fmt_pct
+  vlab <- if (num) ilm_fmt_sig(vals) else vals
+  what <- if (prob) sprintf("the predicted probability that %s", event)
+          else sprintf("predicted %s", respname)
+  ci_note <- FALSE
+  if (!catg) {
+    e <- ap$pred$estimate; dd <- ap$diff
+    up <- dd$estimate >= 0
+    sgn <- if (up) 1 else -1
+    ## percentage points to two figures, the interval with them
+    fnum <- if (prob) function(v) formatC(signif(v, 2), format = "fg", digits = 2)
+            else ilm_fmt_sig
+    sc <- if (prob) 100 else 1
+    mag <- paste0(fnum(sc * abs(dd$estimate)), if (prob) " percentage points" else "")
+    ci <- if (is.finite(dd$se)) {
+      lo <- sgn * sc * c(dd$lower, dd$upper)
+      ci_note <- dd$lower <= 0 && dd$upper >= 0
+      ## an interval on both sides of zero, said with its directions rather
+      ## than as "0.186 lower (-0.306 to 0.678)"
+      if (ci_note) {
+        dn <- if (up) c("lower", "higher") else c("higher", "lower")
+        sprintf(" (95%% interval from %s %s to %s %s)", fnum(abs(min(lo))), dn[1],
+                fnum(max(lo)), dn[2])
+      } else sprintf(" (95%% interval %s to %s)", fnum(min(lo)), fnum(max(lo)))
+    } else ""
+    if (num && !is_causal)
+      body <- sprintf("Across the %s of %s, %s is %s at %s against %s at %s: %s %s%s.",
+                      span, vn, what, fmt(e[1]), vlab[1], fmt(e[2]), vlab[2], mag,
+                      if (up) "higher" else "lower", ci)
+    else if (num)
+      body <- sprintf("Moving %s across its %s, from %s to %s, %s %s from %s to %s: by %s%s.",
+                      vn, span, vlab[1], vlab[2], if (up) "raises" else "lowers", what,
+                      fmt(e[1]), fmt(e[2]), mag, ci)
+    else if (length(vals) == 2L && !is_causal)
+      body <- sprintf("%s is %s for '%s' and %s for '%s': %s %s for '%s'%s.",
+                      ilm_cap(what), fmt(e[1]), vals[1], fmt(e[2]), vals[2], mag,
+                      if (up) "higher" else "lower", vals[2], ci)
+    else if (length(vals) == 2L)
+      body <- sprintf("Setting %s to '%s' rather than '%s' %s %s from %s to %s: by %s%s.",
+                      vn, vals[2], vals[1], if (up) "raises" else "lowers", what,
+                      fmt(e[1]), fmt(e[2]), mag, ci)
+    else
+      body <- sprintf("%s is %s.", ilm_cap(what),
+                      ilm_and(sprintf("%s for '%s'", fmt(e), vals)))
+  } else {
+    pr <- ap$pred
+    ks <- ap$cats
+    per <- function(k) pr$estimate[pr$category == k]
+    if (num && !is_causal)
+      body <- sprintf("Across the %s of %s, from %s to %s, the predicted share %s.",
+                      span, vn, vlab[1], vlab[2],
+                      ilm_and(sprintf("'%s' %s%s against %s", ks,
+                                      c("is ", rep("", length(ks) - 1L)),
+                                      vapply(ks, function(k) fmt(per(k)[1]), ""),
+                                      vapply(ks, function(k) fmt(per(k)[2]), ""))))
+    else if (num)
+      body <- sprintf("Moving %s across its %s, from %s to %s, changes the predicted shares: %s.",
+                      vn, span, vlab[1], vlab[2],
+                      ilm_and(sprintf("'%s' from %s to %s", ks,
+                                      vapply(ks, function(k) fmt(per(k)[1]), ""),
+                                      vapply(ks, function(k) fmt(per(k)[2]), ""))))
+    else if (length(vals) == 2L)
+      body <- sprintf("Predicted shares for '%s' against '%s': %s.", vals[1], vals[2],
+                      ilm_and(sprintf("'%s' %s", ks, vapply(ks, function(k)
+                        paste(fmt(per(k)), collapse = " against "), ""))))
+    else {
+      ## a list of levels inside a list of categories: semicolons between
+      ## the categories, so the two cannot be confused
+      it <- sprintf("'%s' %s", ks, vapply(ks, function(k) ilm_and(fmt(per(k))), ""))
+      body <- sprintf("Predicted shares for %s, in that order: %s.",
+                      ilm_and(sprintf("'%s'", vals)),
+                      paste0(paste(it[-length(it)], collapse = "; "), "; and ",
+                             it[length(it)]))
+    }
+  }
+  s <- paste(s, body)
+  ## a variable that also enters an interaction has no one effect: what is
+  ## said above is the average, and its coefficient is a conditional slope
+  if (length(inter)) {
+    others <- setdiff(unique(unlist(strsplit(inter, ":", fixed = TRUE))), vn)
+    s <- paste(s, sprintf("Its effect varies with %s (%s, below), so this is the average.",
+                          ilm_and(others), ilm_and(inter)))
+  }
+  ## the per-unit figure some readers want, once, after the comparison
+  if (length(idx) == 1L && !length(inter)) {
+    b <- stats::coef(object)[idx]
+    per_what <- if (num) sprintf("per unit of %s", vn)
+                else sprintf("for '%s' against '%s'", vals[2], vals[1])
+    s <- paste0(s, switch(fam,
+      gaussian = if (num) sprintf(" That is %s %s.", ilm_fmt_sig(b), per_what) else "",
+      binomial = sprintf(" (Odds ratio %s %s.)", ilm_fmt_sig(exp(b)), per_what),
+      poisson = , nbinom = sprintf(" (Rate ratio %s %s.)", ilm_fmt_sig(exp(b)), per_what),
+      ordinal = sprintf(" (A cumulative odds ratio of %s %s: the odds of a higher category rather than a lower one, at every cut point.)",
+                        ilm_fmt_sig(exp(b)), per_what),
+      ""))
+  }
+  if (is.finite(p) && p >= 0.05)
+    s <- paste(s, if (ci_note)
+      "The interval includes zero, which means the data are consistent with no effect -- not that there is none."
+      else "The data are consistent with no effect -- not that there is none.")
+  s
+}
+
 ## ---- the interpreter -------------------------------------------------------
 
 #' @keywords internal
@@ -228,6 +507,22 @@ ilm_scale_words <- function(fam) {
 #' implies for taking the estimates at face value. Intended for reporting to
 #' people who will not read a coefficient table.
 #'
+#' @section How an effect is said:
+#'
+#' In the response's own units, over a change in the predictor a reader can
+#' picture: across the middle half of a number (its quartiles), level by level
+#' for a factor. "Across the middle half of age, predicted income is 49.4 at
+#' 29 against 64.7 at 54: 15.2 higher (95% interval 12.3 to 18.1)", where the
+#' coefficient alone, 0.61, says nothing until the reader knows what a unit of
+#' age is and how much age varies. The predictions are averaged over the rows
+#' the model was fitted to, as [ilm_ame()]'s effects are; a probability is
+#' given as one, and a difference of two in percentage points, with the odds
+#' ratio after it for those who want it. The evidence is the term's joint
+#' test, so a factor with several levels, or a predictor in a multinomial
+#' model, gets one verdict rather than one per coefficient. A term that is not
+#' a plain variable -- an interaction, a spline -- is described by its
+#' coefficients.
+#'
 #' @section Causal language is licensed, not assumed:
 #'
 #' A regression coefficient is an association. This says "associated with"
@@ -249,12 +544,14 @@ ilm_scale_words <- function(fam) {
 #'
 #' @param object An [ilm_model()], [ilm_dag_model()], [ilm_did()] or
 #'   [ilm_rdd()]; or the result of [ilm_power()] or [ilm_power_design()], which
-#'   is written up as a power analysis, or of [ilm_contrast()], written up as
-#'   the comparisons it makes.
+#'   is written up as a power analysis, of [ilm_contrast()], written up as the
+#'   comparisons it makes, or of `ilm_profile()` or `ilm_profile_na()`, written
+#'   up as the profile of each cluster.
 #' @param causal Force causal or associational language. `NULL` decides from
 #'   the design, which is what you want.
-#' @param ame Report average marginal effects on the response scale. Costs a
-#'   delta-method calculation; worth it for anything with a link function.
+#' @param ame Give the effects intervals on the response scale, by the delta
+#'   method. With `FALSE` the predictions are still reported, without them,
+#'   which is quicker.
 #' @param digits Rounding.
 #' @param ... Unused.
 #' @return An object of class `"ilm_interpretation"`: a list of sections, which
@@ -328,6 +625,16 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     xv <- if (!is.null(object$model) && vn %in% names(object$model))
             object$model[[vn]] else NULL
     is_fac <- !is.null(xv) && !is.numeric(xv)
+    ## a plain variable is said in the response's units, over a change a
+    ## reader can picture; anything else -- an interaction, a spline basis --
+    ## by its coefficients, below
+    idx <- if (multi) as.vector(outer(k, (seq_along(cats) - 1L) * pX, "+")) else k
+    inter <- Filter(function(tt) tt != v &&
+                      vn %in% ilm_unbq(strsplit(tt, ":", fixed = TRUE)[[1]]), fixed)
+    said <- tryCatch(ilm_effect_prose(object, vn, xv, idx, fam, respname,
+                                      is_causal, isTRUE(ame), inter = unlist(inter)),
+                     error = function(e) NULL)
+    if (!is.null(said)) { lines <- c(lines, said); next }
     for (cc in seq_along(cats)) for (i in k) {
       ii <- if (multi) (cc - 1L) * pX + i else i
       nm <- rownames(ct)[ii]
@@ -341,22 +648,20 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
         x1 <- xn[i]
         if (startsWith(x1, v)) substring(x1, nchar(v) + 1L) else x1
       } else NA_character_
-      subj <- if (is_fac && nzchar(lvl)) sprintf("being %s rather than %s", lvl,
-                    levels(factor(xv))[1])
+      subj <- if (is_fac && nzchar(lvl)) sprintf("%s '%s' rather than '%s'", vn,
+                    lvl, levels(factor(xv))[1])
               else sprintf("a higher %s", vn)
       s <- if (multi)
-        sprintf("%s: %s that %s %s %s odds of %s, relative to the average of the categories (estimate %s, 95%% interval %s to %s, p = %s).",
+        sprintf("%s: %s that %s %s %s odds of %s, relative to the average of the categories (estimate %s, 95%% interval %s to %s, %s).",
                 nm, ev, subj, link_word,
                 if (est >= 0) "higher" else "lower", sQuote(cats[cc], FALSE),
-                ilm_fmt(est, digits), ilm_fmt(lo, digits),
-                ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
+                ilm_fmt_sig(est), ilm_fmt_sig(lo), ilm_fmt_sig(hi), ilm_fmt_p(p))
       else
-        sprintf("%s: %s that %s %s a %s %s of %s (estimate %s, 95%% interval %s to %s, p = %s).",
+        sprintf("%s: %s that %s %s a %s %s of %s (estimate %s, 95%% interval %s to %s, %s).",
                 nm, ev, subj, link_word,
                 if (est >= 0) "higher" else "lower",
                 if (isTRUE(object$ordinal)) "category" else "value", respname,
-                ilm_fmt(est, digits), ilm_fmt(lo, digits),
-                ilm_fmt(hi, digits), format.pval(p, digits = 2, eps = 1e-4))
+                ilm_fmt_sig(est), ilm_fmt_sig(lo), ilm_fmt_sig(hi), ilm_fmt_p(p))
       ## and what it means where the response lives
       if (!is.null(sw$ratio) && fam %in% c("binomial", "poisson", "nbinom"))
         s <- paste(s, sprintf("On the %s scale that is %s.", sw$ratio,
@@ -548,21 +853,21 @@ ilm_interpret.ilm_did <- function(object, causal = NULL, ame = FALSE,
     "A difference-in-differences comparison of %s across %d treated and %d control units, with treatment starting at %s = %s. Each unit's own level is modelled, so the estimate is a change relative to the control group's change rather than a level difference.",
     object$y, object$n_treated, object$n_control, object$time, object$treat_time)
   sec$effects <- sprintf(
-    "The treatment %s a change of %s in %s (95%% interval %s to %s, p = %s): %s.",
+    "The treatment %s a change of %s in %s (95%% interval %s to %s, %s): %s.",
     if (is.null(causal) || isTRUE(causal)) "produced" else "is associated with",
     ilm_fmt(a$estimate, digits), object$y, ilm_fmt(a$lower, digits),
-    ilm_fmt(a$upper, digits), format.pval(a$p_value, digits = 2, eps = 1e-4),
+    ilm_fmt(a$upper, digits), ilm_fmt_p(a$p_value),
     ilm_evidence(a$p_value))
   dl <- character()
   if (!is.null(object$parallel)) {
     st <- object$parallel$status
     dl <- c(dl, switch(st,
-      OK = sprintf("Parallel trends holds as far as it can be checked: over %d pre-treatment periods the two groups' slopes differed by %s, which is not distinguishable from zero (p = %s). That supports the design without proving it, since the assumption concerns a period that never happened.",
+      OK = sprintf("Parallel trends holds as far as it can be checked: over %d pre-treatment periods the two groups' slopes differed by %s, which is not distinguishable from zero (%s). That supports the design without proving it, since the assumption concerns a period that never happened.",
                    object$parallel$n_pre, ilm_fmt(object$parallel$diff_slope, digits),
-                   format.pval(object$parallel$p_value, digits = 2, eps = 1e-4)),
-      FAIL = sprintf("Parallel trends FAILS: the groups' pre-treatment slopes differed by %s (p = %s). They were already diverging before the treatment, so part of the estimate above is that divergence continuing rather than an effect. The estimate should not be read as a treatment effect until this is addressed.",
+                   ilm_fmt_p(object$parallel$p_value)),
+      FAIL = sprintf("Parallel trends FAILS: the groups' pre-treatment slopes differed by %s (%s). They were already diverging before the treatment, so part of the estimate above is that divergence continuing rather than an effect. The estimate should not be read as a treatment effect until this is addressed.",
                      ilm_fmt(object$parallel$diff_slope, digits),
-                     format.pval(object$parallel$p_value, digits = 2, eps = 1e-4)),
+                     ilm_fmt_p(object$parallel$p_value)),
       UNTESTED = sprintf("Parallel trends could NOT be checked: there %s only %d pre-treatment period%s. The assumption is doing all the work and no part of it has been verified.",
                          if (object$parallel$n_pre == 1L) "is" else "are",
                          object$parallel$n_pre,
@@ -613,9 +918,9 @@ ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
     object$y, object$running, ilm_fmt(object$cutoff, digits),
     ilm_fmt(object$h, 4), object$n_below, object$n_above)
   sec$effects <- sprintf(
-    "At the cutoff, %s jumps by %s (95%% interval %s to %s, p = %s): %s. This is a local effect -- it applies to units near the cutoff and says nothing about units far from it.",
+    "At the cutoff, %s jumps by %s (95%% interval %s to %s, %s): %s. This is a local effect -- it applies to units near the cutoff and says nothing about units far from it.",
     object$y, ilm_fmt(j$estimate, digits), ilm_fmt(j$lower, digits),
-    ilm_fmt(j$upper, digits), format.pval(j$p_value, digits = 2, eps = 1e-4),
+    ilm_fmt(j$upper, digits), ilm_fmt_p(j$p_value),
     ilm_evidence(j$p_value))
   dl <- character()
   dl <- c(dl, switch(object$density$status,
@@ -777,11 +1082,10 @@ ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
                       nrow(d), paste0(100 * lev, "%")),
       bonferroni = "adjusted by Bonferroni, which is conservative",
       "unadjusted, which suits comparisons chosen before the data were seen"))
-  sec$effects <- sprintf("%s: a difference of %s%s (%s%% interval %s to %s, %sp = %s) -- %s.",
+  sec$effects <- sprintf("%s: a difference of %s%s (%s%% interval %s to %s, %s) -- %s.",
     d$contrast, ilm_fmt(sc * d$estimate, digits), unit, 100 * lev,
     ilm_fmt(sc * d$lower, digits), ilm_fmt(sc * d$upper, digits),
-    if (adj == "none") "" else "adjusted ",
-    format.pval(d$p_adj, digits = 2, eps = 1e-4),
+    vapply(d$p_adj, ilm_fmt_p, "", prefix = if (adj == "none") "p" else "adjusted p"),
     ## the graded phrase is written for the middle of a sentence
     sub(",$", "", vapply(d$p_adj, ilm_evidence, "")))
   cav <- character()
@@ -804,6 +1108,66 @@ ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
                  object_class = "ilm_contrast"), class = "ilm_interpretation")
 }
 
+#' @rdname ilm_interpret
+#' @export
+ilm_interpret.ilm_profile <- function(object, causal = NULL, ame = FALSE,
+                                      digits = 3, ...) {
+  cr <- object$cluster; rr <- object$reduce; ct <- cr$clusters
+  na <- inherits(object, "ilm_profile_na")
+  k <- nrow(ct); n <- nrow(cr$ind_cluster)
+  meth <- switch(rr$method, pca = "principal component", mca = "correspondence",
+                 famd = "mixed-data", glrm = "low-rank", rr$method)
+  stab <- sum(as.character(ct$stability) == "stable")
+  sec <- list()
+  sec$model <- paste(
+    sprintf("%s rows fell into %d clusters, found by %s on %d dimensions of a %s reduction of %s.",
+            format(n, big.mark = ","), k,
+            if (identical(cr$method, "hclust")) "hierarchical clustering" else "k-means",
+            rr$ndim, meth, if (na) "which values are missing" else "the data"),
+    if (stab == k) sprintf("All %d come back when the rows are resampled.", k)
+    else sprintf("%d of the %d come back when the rows are resampled; the others may not be groups at all.",
+                 stab, k))
+  nd <- object$not_distinctive
+  sec$effects <- c(object$summary,
+    if (length(nd) && length(nd) <= 5L)
+      paste0("Not distinctive in any cluster: ", ilm_and(nd), ".")
+    else if (length(nd))
+      sprintf("Not distinctive in any cluster: %d of the %d variables.", length(nd),
+              attr(nd, "of")))
+  dl <- character()
+  amb <- sum(cr$ind_cluster$is_ambiguous)
+  if (amb)
+    dl <- c(dl, sprintf(
+      "%s row%s sit%s between two clusters (silhouette below %s) and could belong to either.",
+      format(amb, big.mark = ","), if (amb == 1L) "" else "s", if (amb == 1L) "s" else "",
+      format(cr$ambiguous_threshold)))
+  vc <- object$var_contrib
+  if (!is.null(vc)) {
+    dom <- attr(vc, "dominated_by")
+    dead <- vc$variable[vc$verdict == "no better than chance"]
+    if (!is.null(dom))
+      dl <- c(dl, sprintf(
+        "The clustering is a re-labelling of %s: it separates the clusters almost perfectly while nothing else does, so the descriptions above are all about it. If that is not the grouping wanted, leave it out with cols =.",
+        dom))
+    else if (length(dead))
+      dl <- c(dl, sprintf(
+        "%s separate%s the clusters no better than a shuffled label does, and still contribute%s distance to the clustering; refitting without %s may sharpen it.",
+        ilm_and(dead), if (length(dead) == 1L) "s" else "",
+        if (length(dead) == 1L) "s" else "", if (length(dead) == 1L) "it" else "them"))
+  }
+  sec$diagnostics <- dl
+  sec$caveats <- c(paste(
+    "These describe the clusters that were found. They are not tests: the",
+    "clusters were built from these same variables, so the variables that",
+    "built them will differ between them. Whether the grouping is real is what",
+    "the resampling above speaks to."), paste(
+    "A cluster label is not a variable to test in a later model against the",
+    "variables that defined it: that difference was put there by the",
+    "clustering."))
+  structure(list(sections = sec, family = NULL, causal = FALSE,
+                 object_class = class(object)[1]), class = "ilm_interpretation")
+}
+
 #' @export
 print.ilm_interpretation <- function(x, width = 76L, ...) {
   s <- x$sections
@@ -813,6 +1177,8 @@ print.ilm_interpretation <- function(x, width = 76L, ...) {
     ilm_rdd = "INTERPRETATION (regression discontinuity)",
     ilm_power = "INTERPRETATION (power analysis)",
     ilm_contrast = "INTERPRETATION (comparisons)",
+    ilm_profile = "INTERPRETATION (cluster profiles)",
+    ilm_profile_na = "INTERPRETATION (profiles of missing values)",
     "INTERPRETATION")
   cat(head, "\n", strrep("=", nchar(head)), "\n\n", sep = "")
   blk <- function(title, txt) {
@@ -820,8 +1186,9 @@ print.ilm_interpretation <- function(x, width = 76L, ...) {
     cat(title, "\n", sep = "")
     for (t in txt) cat(ilm_wrap(t, width, "  "), "\n\n", sep = "")
   }
-  blk("The model", s$model)
-  blk("What it says", s$effects)
+  prof <- x$object_class %in% c("ilm_profile", "ilm_profile_na")
+  blk(if (prof) "The clustering" else "The model", s$model)
+  blk(if (prof) "What each cluster is" else "What it says", s$effects)
   blk("What the checks found", s$diagnostics)
   blk("How far to trust it", s$caveats)
   invisible(x)

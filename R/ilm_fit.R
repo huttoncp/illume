@@ -1025,7 +1025,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
       sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair),
-      if (mx > 0.95) sprintf("%s cannot be separated by these data", pair) else "",
+      if (mx > 0.95) sprintf("these data cannot separate %s from %s", pnm[ij[1]], pnm[ij[2]]) else "",
       if (mx > 0.95) "remove one of the two competing terms from the model" else "")
   } else {
     ck <- ilm_add_check(ck, "parameter_aliasing", "INCONCLUSIVE",
@@ -2301,6 +2301,14 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
     ## restricting the likelihood to contrasts orthogonal to X buys
     sdr$cov.fixed <- Vfull
   }
+  ## The fixed effects, from where they actually are. `pe` is the native
+  ## parameter vector, which under REML does not hold beta -- it sits in the
+  ## random block and was pulled out above -- so `pe[pn == "beta"]` was empty
+  ## and matrix() filled the stored beta with NA. predict() reads it, and every
+  ## REML fit predicted NA: ilm_ame(), ilm_scenario() and the effects in
+  ## ilm_interpret() with it, including every ilm_dag_model(), which fits by
+  ## REML.
+  beta_hat <- matrix(if (reml) reml_beta else pe[pn == "beta"], p, C)
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  ## how many of those rows were checks of the DESIGN, made
                  ## before fitting: the same for every study of this design,
@@ -2358,7 +2366,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                      stats::median(ilm_disp_rows(
                        Zd, unname(pe[pn == "gamma"]),
                        if (isTRUE(disp_mu)) unname(pe[pn == "mu_pow"]) else NA_real_,
-                       fam, X, matrix(pe[pn == "beta"], p, C))),
+                       fam, X, beta_hat)),
                      fam$disp_names[1])
                  } else NULL,
                  disp_formula = if (has_dm) attr(Zd, "formula") else NULL,
@@ -2394,7 +2402,7 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                    stats::setNames(unname(ss[pn == "gzi"]), colnames(Zzi))
                  } else NULL,
                  jointPrecision = if (joint) sdr$jointPrecision else NULL,
-                 beta = matrix(pe[pn == "beta"], p, C),
+                 beta = beta_hat,
                  ## rho is the correlation ONE TIME UNIT apart under both
                  ## structures, so the two are directly comparable. For CAR(1)
                  ## the fitted parameter is log(range), and rho = exp(-1/range).
