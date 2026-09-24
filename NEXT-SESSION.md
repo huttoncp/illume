@@ -1,13 +1,52 @@
-# Handoff — illume 0.0.7.9000
+# Handoff — illume 0.0.8.9000 (bump in progress)
 
-First written 2026-09-22 at the end of a session that ran out of
-headroom; rewritten at the end of the Opus 5.5 session that followed,
-the same day, and updated on 2026-09-23 after the CI failure on R
-release (see “What the 2026-09-23 session did” at the end). Items 1 and
-2 of the original queue are done and committed (`8986280`); the power
-and marginal-means work is committed in `3f6e368`.
+First written 2026-09-22. Rewritten on 2026-09-24, during the session
+that finished the 0.0.8.9000 study set. The current state is in this
+first section. Everything below “Standing constraints” is history.
 
 Delete this file once the queue is empty.
+
+## Where things stand (2026-09-24, about 06:15)
+
+| repo | branch | state |
+|----|----|----|
+| illume | `docs-remedies-reml` | pushed; Craig to open and merge its PR |
+| illume | `bump-0.0.8.9000` | pushed; PR link given. Holds the version, the no-flat Hessian fix, the held-boundary fix ([`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md) and the study scripts), the imputation study fix, the full 0.0.8.9000 study set with RUNINFO and findings, and this note |
+| illume | `interpret-prose` | pushed after the bump was merged into it; PR link given. Holds the [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) rewrite, the car/performance registrations (`check_model()` now routes to [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md), as Craig decided), the docs scope, and [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)’s gaussian default |
+| illumex | `main` | bump and date features merged (PR \#3) |
+
+**Merge order:** docs, then bump, then `interpret-prose`. A trial merge
+of all three in that order is clean. R CMD check passed on both branches
+(R 4.4.3, `--as-cran`): 0 errors. There is one warning, from CRAN’s
+incoming check, about `Remotes` and illumex not being on CRAN, and notes
+for the unverifiable time and example timing.
+
+**The 0.0.8.9000 study set is complete.**
+`studies/runs/0.0.8.9000/RUNINFO.dcf` has the whole account. In brief:
+
+- **The usability rule changed mid-run.** Fits held at a boundary now
+  count, as `ilm_fixed_usable()` counts them. The cells that had lost
+  replicates were re-run, and the held fits cover at 0.942 to 0.955.
+- **The imputation study now finds its rank function in illumex.**
+- **Timings:** multinomial fits are about a fifth slower relative to
+  nnet than at 0.0.7.9000, and this is not yet explained.
+
+The re-runs used 5 workers, because Craig asked for at most 6 cores
+while other agents work alongside.
+
+**Next, in order:** 1. After Craig merges the three PRs, reinstall
+illumex and then illume into his library, with vignettes. R 4.6.1’s
+library is empty, and downloading from CRAN needs his permission. 2. At
+sprint end, remind Craig about the open data case study. Then the
+end-to-end illumex/illume experiment. 3. Then the docket (in memory as
+`illume-docket`): - `ilm_plot_model_pdp()`; - an outlier/influence check
+for the model diagnostics; - the multinomial slowdown; - the refit loops
+that trust nlminb’s stopping code; - a formula interface for
+[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md),
+which was advised against.
+
+A forecasting/prediction companion package is being planned in a
+parallel session. illume must never depend on it.
 
 ------------------------------------------------------------------------
 

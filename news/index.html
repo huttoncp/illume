@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.7.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,6 +46,16 @@
       <small>Source: <a href="https://github.com/huttoncp/illume/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.8.9000" id="illume-0089000">illume 0.0.8.9000<a class="anchor" aria-label="anchor" href="#illume-0089000"></a></h2>
+<ul><li>illume now requires illumex 0.0.8.9000.</li>
+<li>A covariance term flagged at its boundary but curved in every direction always takes the recomputed Hessian now, as a fit with nothing at a boundary does. It still went to TMB’s own Hessian whenever TMB called that positive definite, so its standard errors depended on the verdict the change below was meant to take out of the decision: 2 to 10% apart in one fit of the boundary study’s re-run.</li>
+<li>
+<code><a href="../reference/ilm_consistency.html">ilm_consistency()</a></code> counts a refit that lands on a covariance boundary. Such a refit has that direction held, so <code>pdHess</code> is <code>FALSE</code> by design and its fixed effects are usable, but the check asked for <code>pdHess</code> and dropped it. Since every boundary is held, that meant every refit at one: on a multinomial model whose subjects vary along one direction, 11 of 30 refits were dropped and the check reported the model “UNSTABLE”, unable to recover itself. It refits all 30.</li>
+<li>
+<code><a href="../reference/ilm_consistency.html">ilm_consistency()</a></code> calls a variance fitted at zero a boundary whenever the fit does – below 1e-3 – as well as when it is small beside the model’s largest. With one random term, that term was compared with itself, so a random intercept fitted at 0.0001 was reported as biased, and the Laplace approximation blamed, in a gaussian model, which has none.</li>
+<li>The study set was re-run for this version and reproduces 0.0.7.9000 wherever nothing changed (<code>studies/findings/</code>). Two of its scripts had fallen behind the package, and both are fixed. Four counted a fit as usable only when its Hessian was positive definite, which a fit held at a covariance boundary is not, by design: the coverage study’s “convergence rate” for a thin five-category model read 0.088 where 95% of its fits were usable. And the imputation study still looked for a function that moved to illumex. Counted as the package counts them, the multinomial cells cover at 0.946 to 0.954, and the fits held at a boundary, on their own, at 0.942 to 0.955.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.7.9000" id="illume-0079000">illume 0.0.7.9000<a class="anchor" aria-label="anchor" href="#illume-0079000"></a></h2>
 <p>Ten features, each validated against an outside implementation where one exists, and then a second round that arrived as defect reports from a separate project built against the package. It now covers the path from a sample-size calculation – with or without a pilot to base one on – to a scenario a stakeholder can act on.</p>
