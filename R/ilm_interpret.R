@@ -57,11 +57,13 @@ ilm_fmt_p <- function(p, prefix = "p") {
 }
 
 ## A number as a reader writes it: three significant figures, and a thousands
-## separator where one helps.
+## separator where one helps. Trimmed, because formatC()'s "fg" pads to a
+## common width -- 2.1 comes back as " 2.1" -- which in a sentence is a run of
+## spaces.
 #' @keywords internal
 #' @noRd
 ilm_fmt_sig <- function(v)
-  formatC(signif(v, 3), format = "fg", digits = 3, big.mark = ",")
+  trimws(formatC(signif(v, 3), format = "fg", digits = 3, big.mark = ","))
 
 ## A probability as a share, with the ends said as such.
 #' @keywords internal
@@ -393,7 +395,7 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     up <- dd$estimate >= 0
     sgn <- if (up) 1 else -1
     ## percentage points to two figures, the interval with them
-    fnum <- if (prob) function(v) formatC(signif(v, 2), format = "fg", digits = 2)
+    fnum <- if (prob) function(v) trimws(formatC(signif(v, 2), format = "fg", digits = 2))
             else ilm_fmt_sig
     sc <- if (prob) 100 else 1
     mag <- paste0(fnum(sc * abs(dd$estimate)), if (prob) " percentage points" else "")

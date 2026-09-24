@@ -283,3 +283,19 @@ test_that("a mixed model's effects say they are for a typical group", {
   fs <- ilm_model(ys ~ s(x), data = d, family = "gaussian", verbose = FALSE)
   expect_no_match(ilm_interpret(fs, ame = FALSE)$sections$model, "grouped by")
 })
+
+test_that("the numbers in the prose carry no padding", {
+  ## formatC()'s "fg" pads to a common width -- 2.1 came back as " 2.1" and
+  ## 5 as "   5" -- which in a sentence is a run of spaces: "(95% interval
+  ## 13 to  32)". Printing re-wraps the text and hid it; the strings
+  ## themselves, which a report or a paste takes, carried it.
+  expect_identical(ilm_fmt_sig(c(5, 2.1, 287, 0.61, 1230, -3)),
+                   c("5", "2.1", "287", "0.61", "1,230", "-3"))
+  set.seed(1); n <- 300
+  d <- data.frame(x = stats::runif(n, 0, 40))
+  d$b <- stats::rbinom(n, 1, stats::plogis(-1 + 0.05 * d$x))
+  f <- ilm_model(b ~ x, data = d, family = "binomial", verbose = FALSE)
+  txt <- unlist(ilm_interpret(f)$sections)
+  expect_match(paste(txt, collapse = " "), "percentage points", fixed = TRUE)
+  expect_false(any(grepl("[^ ]  +[0-9-]", txt)))
+})
