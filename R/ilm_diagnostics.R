@@ -479,6 +479,8 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
 #' every family -- including a nominal outcome, where the usual residual plots
 #' have no clear meaning.
 #'
+#' `performance::check_model()` draws these panels too.
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param nbins Integer. Bins for the calibration panel.
 #' @param B Integer. Simulated datasets for the bands.
@@ -592,6 +594,24 @@ ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
   }
   invisible(list(rqr = u, calibration = cal, re = rm_))
 }
+
+#' performance::check_model method
+#'
+#' `performance::check_model(fit)` draws [ilm_appraise()]'s panels. Its own
+#' checks cannot be drawn for these fits: they need support from the insight
+#' package that an `"ilm_model"` does not have, and without this method
+#' `check_model()` stops with an error -- after [ilm_register_insight()] too.
+#' The panels drawn instead are illume's, built for every family it fits,
+#' including a nominal outcome, where the usual residual plots have no clear
+#' meaning.
+#'
+#' Registered with performance's generic when performance is loaded.
+#'
+#' @param x A fitted `"ilm_model"` object.
+#' @param ... Passed to [ilm_appraise()].
+#' @return Invisibly, the result of [ilm_appraise()].
+#' @exportS3Method performance::check_model
+check_model.ilm_model <- function(x, ...) ilm_appraise(x, ...)
 
 ## ---------------------------------------------------- targeted covariate checks
 ## WHY TARGETED.  Global summaries of the residuals have essentially NO power

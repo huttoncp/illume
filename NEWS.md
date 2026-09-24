@@ -30,18 +30,18 @@
   and the effects in `ilm_interpret()` -- returned `NA` for every
   `ilm_model(reml = TRUE)` and every `ilm_dag_model()`, which fits by REML.
   `coef()` and the standard errors were never affected.
-* `car::Anova()` and `performance::model_performance()` now reach illume's
-  methods, as the README and the introduction always said they did. The
-  methods were exported as ordinary functions rather than registered with the
-  generics, and R's method lookup does not find those: `car::Anova()` quietly
-  fell back to its own tests -- on a multinomial fit, 1 and 2 degrees of
-  freedom where the joint tests have 2 and 4 -- and `model_performance()`
-  returned `NULL` with a warning. They are now registered for whenever car and
-  performance are loaded.
-* The `check_model()` method is gone, and with it the claim that
-  `performance::check_model()` routes to `ilm_appraise()`. It never did, for
-  the reason above, and making it do so would replace performance's own
-  checks; `ilm_appraise()` draws the panels built for these models.
+* `car::Anova()`, `performance::model_performance()` and
+  `performance::check_model()` now reach illume's methods, as the README and
+  the introduction always said they did. The methods were exported as
+  ordinary functions rather than registered with the generics, and R's
+  method lookup does not find those: `car::Anova()` quietly fell back to its
+  own tests -- on a multinomial fit, 1 and 2 degrees of freedom where the
+  joint tests have 2 and 4 -- `model_performance()` returned `NULL` with a
+  warning, and `check_model()` stopped with an error, because performance
+  cannot read these fits (not even after `ilm_register_insight()`). They are
+  now registered for whenever car and performance are loaded.
+  `check_model()` draws `ilm_appraise()`'s panels, and its help page says
+  whose they are.
 * The documentation says what the package fits. `ilm_model()` is "Fit
   generalized linear and additive mixed models" rather than "Fit a
   multinomial linear mixed model", its `family` argument lists all fifteen

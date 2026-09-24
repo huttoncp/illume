@@ -35,6 +35,8 @@ random-effects distance plot; and the model check verdicts.
 The residuals are \code{\link[=ilm_rqr]{ilm_rqr()}}'s, which are uniform under a correct model in
 every family -- including a nominal outcome, where the usual residual plots
 have no clear meaning.
+
+\code{performance::check_model()} draws these panels too.
 }
 \seealso{
 \code{\link[=ilm_check_ar]{ilm_check_ar()}} for temporal correlation,

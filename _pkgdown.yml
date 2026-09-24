@@ -161,6 +161,7 @@ reference:
   contents:
   - AIC.ilm_model
   - Anova.ilm_model
+  - check_model.ilm_model
   - coef.ilm_model
   - fixef.ilm_model
   - get_coef.ilm_model

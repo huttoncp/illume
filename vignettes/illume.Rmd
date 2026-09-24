@@ -131,7 +131,8 @@ source repository, which is not shipped with the installed package:
 ## Working with other packages
 
 `illume` fits into the usual ecosystem. `car::Anova()` dispatches to the correct
-joint test, `performance::model_performance()` works, and
+joint test, `performance::model_performance()` works,
+`performance::check_model()` draws the panels of `ilm_appraise()`, and
 `marginaleffects` and the easystats stack can each be enabled with one call:
 
 ```{r ecosystem, eval = FALSE}
