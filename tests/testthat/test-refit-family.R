@@ -1,9 +1,10 @@
 # Several functions refit the model internally: the LRT, the parametric
 # bootstrap, the simulation-calibrated diagnostics and the null-model
-# log-likelihood behind pseudo-R-squared.  ilm_fit() defaults to the
-# multinomial family, so an internal refit that forgets to pass the fitted
-# family is silently a DIFFERENT model -- and because the refit is wrapped in
-# try(), the failure surfaces as an empty table rather than an error.
+# log-likelihood behind pseudo-R-squared.  ilm_fit() has a default family
+# (gaussian; multinomial before 0.0.8.9000), so an internal refit that forgets
+# to pass the fitted family is silently a DIFFERENT model -- and because the
+# refit is wrapped in try(), the failure surfaces as an empty table rather
+# than an error.
 #
 # These tests pin the invariant: an internal refit must inherit the family and
 # the weights of the model it came from.
@@ -174,4 +175,17 @@ test_that("the reduced fit keeps the censoring it was fitted with", {
                                 as.numeric(logLik(without)))))
   # and the one the refit uses is the censored one
   expect_equal(with_c$n_censored, f$n_censored)
+})
+
+test_that("ilm_fit() defaults to a gaussian model with no random terms", {
+  set.seed(4); n <- 200
+  X <- cbind("(Intercept)" = 1, x = rnorm(n))
+  y <- 1 + 0.5 * X[, "x"] + rnorm(n)
+  f <- ilm_fit(X, y, verbose = FALSE)
+  expect_identical(f$family$name, "gaussian")
+  expect_equal(unname(coef(f)), unname(coef(lm(y ~ X[, "x"]))), tolerance = 1e-6)
+  ## a category count with no family is an old multinomial call: it stops
+  ## rather than fitting a gaussian model to the category codes
+  k <- sample(1:3, n, TRUE)
+  expect_error(ilm_fit(X, k, J = 3L, verbose = FALSE), "family = \"multinomial\"")
 })

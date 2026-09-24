@@ -1439,11 +1439,13 @@ ilm_print_checks <- function(ck, title) {
 #'   only; `NULL` for every other family.
 #' @param family Response distribution: a name, or the object returned by
 #'   [ilm_family()]. See [ilm_family()] for what each one assumes. The default
-#'   is `"multinomial"`, where the package began; [ilm_model()] reads it off
-#'   the response instead.
+#'   is `"gaussian"`, as it is for [stats::glm.fit()]; a nominal outcome needs
+#'   `family = "multinomial"` and `J`. [ilm_model()] reads the family off the
+#'   response instead.
 #' @param re_list Named list of random terms. Each element is a grouping vector
 #'   (random intercept), a `list(group =, Z =)` (random slopes), or a
-#'   `list(basis =)` (a smooth, from `ilm_smooth()`).
+#'   `list(basis =)` (a smooth, from `ilm_smooth()`). The default, an empty
+#'   list, fits the fixed effects alone.
 #' @param re_struct Optional named list of covariance structures, named by term
 #'   as `re_list` is, each element a list: `type` (`"us"`, `"diag"`, or `"rr"`
 #'   with `rank`) for the covariance across a multinomial outcome's categories,
@@ -1539,10 +1541,9 @@ ilm_print_checks <- function(ck, title) {
 #' site <- factor(sample(20, n, TRUE))
 #' X <- cbind("(Intercept)" = 1, x = x)
 #'
-#' ## a gaussian response with a random intercept per site
+#' ## a gaussian response, the default family, with a random intercept per site
 #' y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
-#' fit <- ilm_fit(X, y, family = "gaussian", re_list = list(site = site),
-#'                verbose = FALSE)
+#' fit <- ilm_fit(X, y, re_list = list(site = site), verbose = FALSE)
 #' coef(fit)
 #'
 #' \donttest{
@@ -1558,14 +1559,22 @@ ilm_print_checks <- function(ck, title) {
 #' fit2$Sigma
 #' }
 #' @export
-ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
-                     ylevels = NULL, weights = NULL, family = "multinomial",
+ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NULL,
+                     ylevels = NULL, weights = NULL, family = "gaussian",
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
                      rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle"),
                      reml = FALSE, boundary = c("hold", "avoid")) {
   zi_type <- match.arg(zi_type)
   boundary <- match.arg(boundary)
+  ## A category count with no family is a multinomial call written when that
+  ## was the default. Fitting a gaussian model to its category codes would
+  ## return numbers that look like an answer.
+  if (missing(family) && !is.null(J) && J >= 3L)
+    stop("`J` gives ", J, " categories but `family` is not given, and the ",
+         "default is \"gaussian\". For a nominal outcome, say ",
+         "family = \"multinomial\"; for an ordered one, family = \"ordinal\".",
+         call. = FALSE)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Integrating the fixed effects out under a flat prior is available for any
   ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-

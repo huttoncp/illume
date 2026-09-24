@@ -9,12 +9,12 @@ ilm_fit(
   X,
   y,
   J = NULL,
-  re_list,
+  re_list = list(),
   re_struct = NULL,
   ar = NULL,
   ylevels = NULL,
   weights = NULL,
-  family = "multinomial",
+  family = "gaussian",
   verbose = TRUE,
   restarts = 3L,
   joint = FALSE,
@@ -40,7 +40,8 @@ only; \code{NULL} for every other family.}
 
 \item{re_list}{Named list of random terms. Each element is a grouping vector
 (random intercept), a \code{list(group =, Z =)} (random slopes), or a
-\code{list(basis =)} (a smooth, from \code{ilm_smooth()}).}
+\code{list(basis =)} (a smooth, from \code{ilm_smooth()}). The default, an empty
+list, fits the fixed effects alone.}
 
 \item{re_struct}{Optional named list of covariance structures, named by term
 as \code{re_list} is, each element a list: \code{type} (\code{"us"}, \code{"diag"}, or \code{"rr"}
@@ -66,8 +67,9 @@ across subjects. These are \strong{not} sampling weights; see the
 
 \item{family}{Response distribution: a name, or the object returned by
 \code{\link[=ilm_family]{ilm_family()}}. See \code{\link[=ilm_family]{ilm_family()}} for what each one assumes. The default
-is \code{"multinomial"}, where the package began; \code{\link[=ilm_model]{ilm_model()}} reads it off
-the response instead.}
+is \code{"gaussian"}, as it is for \code{\link[stats:glm]{stats::glm.fit()}}; a nominal outcome needs
+\code{family = "multinomial"} and \code{J}. \code{\link[=ilm_model]{ilm_model()}} reads the family off the
+response instead.}
 
 \item{verbose}{Logical. Print the checks while fitting.}
 
@@ -204,10 +206,9 @@ x <- rnorm(n)
 site <- factor(sample(20, n, TRUE))
 X <- cbind("(Intercept)" = 1, x = x)
 
-## a gaussian response with a random intercept per site
+## a gaussian response, the default family, with a random intercept per site
 y <- 0.5 * x + rnorm(20)[site] + rnorm(n)
-fit <- ilm_fit(X, y, family = "gaussian", re_list = list(site = site),
-               verbose = FALSE)
+fit <- ilm_fit(X, y, re_list = list(site = site), verbose = FALSE)
 coef(fit)
 
 \donttest{

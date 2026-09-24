@@ -57,6 +57,13 @@
   now: `list(subj = list(d_cor = FALSE))`, which is all an uncorrelated slope
   needs outside a multinomial model, used to stop and ask for one.
   `ilm_model()`'s example, which never ran, is replaced by ones that do.
+* `ilm_fit()` defaults to `family = "gaussian"`, as `glm.fit()` does, and to
+  no random terms (`re_list = list()`), so `ilm_fit(X, y)` is a linear model.
+  Its default was `"multinomial"`, where the package began. A call that gives
+  `J` three or more categories and no family is one written for that default:
+  it stops and asks for `family = "multinomial"` rather than fitting a
+  gaussian model to the category codes. `ilm_model()` is unchanged: it reads
+  the family off the response.
 * The parameter-aliasing check no longer starts a sentence with a capitalised
   parameter name ("Retired:(Intercept) <-> retired:age cannot be separated");
   it reads "These data cannot separate retired:(Intercept) from retired:age".
