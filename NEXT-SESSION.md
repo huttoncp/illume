@@ -1,90 +1,101 @@
 # Handoff — illume 0.0.8.9000 (bump in progress)
 
-First written 2026-09-22 at the end of a session that ran out of headroom;
-rewritten at the end of the Opus 5.5 session that followed, the same day, and
-updated on 2026-09-23 after the CI failure on R release (see "What the
-2026-09-23 session did" at the end). Items 1 and 2 of the original queue are
-done and committed (`8986280`); the power and marginal-means work is committed
-in `3f6e368`.
+First written 2026-09-22. Rewritten on 2026-09-24, during the session that
+finished the 0.0.8.9000 study set. The current state is in this first section.
+Everything below "Standing constraints" is history.
 
 Delete this file once the queue is empty.
 
-## Paused 2026-09-23, about 23:15, for a restart -- pick up here
-
-Everything is committed; nothing has been pushed since the docs PR.
+## Where things stand (2026-09-24, about 03:40)
 
 | repo    | branch               | state |
 |---------|----------------------|-------|
-| illume  | `docs-remedies-reml` | pushed, PR open, waiting for Craig's merge |
-| illume  | `bump-0.0.8.9000`    | local: no-flat Hessian fix and test (`9840442`), boundary SE study at 0.0.7.9000 (`939b6bd`), version 0.0.8.9000 (`4cc2aac`), first three 0.0.8.9000 studies (`044fec7`), this note |
-| illumex | `bump-0.0.8.9000`    | local, `00c0f3d`: version 0.0.8.9000 |
-| illumex | `time-features`      | local, `cc4d719`, stacked on illumex `bump-0.0.8.9000` |
+| illume  | `docs-remedies-reml` | pushed; Craig to open and merge its PR (trial merge clean) |
+| illume  | `bump-0.0.8.9000`    | local, not pushed. Holds: the no-flat Hessian fix; the boundary SE study; the version; the first three studies; the held-boundary fix (`24038bf`); the imputation study fix (`c9cba94`); this note |
+| illume  | `interpret-prose`    | local, not pushed, stacked on an EARLIER bump commit (`b78cbe8`). Holds: the `ilm_interpret()` rewrite; the car/performance registration; the docs scope; the multinomial test fix; `ilm_fit()`'s gaussian default (`2c6d81f`). `R CMD check` clean at `b796037` |
+| illumex | `main`               | bump and time features merged (PR #3, `ff3a58e`) |
 
-**Finishing the 0.0.8.9000 study set.** Done and committed: bench,
-boundary_se, coverage. The restart killed power mid-run: delete the partial,
-untracked `studies/runs/0.0.8.9000/power/`. Install illumex from its
-`bump-0.0.8.9000` branch (NOT `time-features`) and then illume from its
-`bump-0.0.8.9000` into a scratch library, put it first in `R_LIBS`, and from
-`illume/studies` run with R 4.4.3
-(`C:/Program Files/R/R-4.4.3/bin/x64/Rscript`), one after another:
+**The 0.0.8.9000 study set.** All eight studies ran against the bump builds in
+the scratch library (`split-lib`). The first run found two defects in the
+study scripts. Both are fixed on the bump branch.
 
-    Rscript scripts/power_study.R         2000 10  runs/0.0.8.9000/power
-    Rscript scripts/mclogit_compare.R     500 10   runs/0.0.8.9000/mclogit
-    Rscript scripts/messy_compare.R       400 10   runs/0.0.8.9000/messy
-    Rscript scripts/imputation_ablation.R 40 10    runs/0.0.8.9000/imputation
-    Rscript scripts/brms_compare.R        3        runs/0.0.8.9000/brms
+1. **The usability rule.** The coverage, power, mclogit and messy scripts
+   counted a fit as usable only when `pdHess` was TRUE. A fit with a boundary
+   direction held has `pdHess` FALSE by design, and since option C every
+   boundary is held. As a result, coverage kept 176 of 2000 `mn_J5_thin`
+   replicates.
+   - The saved replicates show the dropped fits cover at nominal. All fits
+     together cover at 0.945 in `mn_J5_thin` and 0.954 in `mn_J3_ar`.
+   - The same rule already understated 0.0.7.9000's rates.
+   - `ilm_consistency()` had the same rule, and called a model UNSTABLE. It
+     is fixed in the same commit.
+2. **The imputation study.** `imputation_ablation.R` called
+   `illume:::ilm_anom_rank()`, which moved to illumex in the split.
+   `lowrank_pa` fitted 0 of 40 in three cells.
 
-The whole set takes several hours. Then: `summarise_run.R` for 0.0.8.9000,
-`RUNINFO.dcf` (R 4.4.3, a date per study), illume's NEWS section for
-0.0.8.9000 (validation notes and the no-flat fix), `R CMD check` on both,
-push both bump branches and give the PR links -- illumex's first. Then queue
-item 4: reinstall illumex, then illume, at 0.0.8.9000 into Craig's main
-library. R 4.6.1 is installed (`C:/Program Files/R/R-4.6.1`), but its library
-is empty and filling it means downloading from CRAN: ask first.
+**The re-runs.** They use the bump branch's scripts and write over the first
+run's outputs in the main tree's `studies/runs/0.0.8.9000/`:
 
-**illumex `time-features`: next steps.** Craig's goal for `ilm_reduce()`,
-`ilm_cluster()` and `ilm_profile()`: help a user find the subgroups in a
-sample and learn each one's feature profile ("high-income older adults"
-against "young students"). Judge the description work by that.
+- coverage: the 9 cells that lost fits;
+- power: 4 cells;
+- messy: all regimes;
+- imputation: then the whole study.
 
-- Built and committed: gated sin/cos cycles are the default (`time =
-  "cycles"`, with `"elapsed"` for very large data); clusters described in
-  dates; `ilm_var_contrib()` scores a date on the aspect used; the evidence
-  is in `dev/studies/`. After the default switch the affected test files
-  pass; `R CMD check` was clean just before it -- run it again.
-- Decided by Craig: no expanding dates into year/month/day/weekday parts;
-  drop-column or shuffle importance only if it is cheap enough.
-- Next, in order:
-  1. Describe every variable in each cluster's profile. **Craig's direction
-     (2026-09-23): for a categorical variable, the frequency of each of its
-     values among the cluster's members, to show how common or rare each
-     category is in that cluster** (wording other than common/rare is fine),
-     unless there is a better idea. Refinement to put to him: show each share
-     beside its share among all rows ("72% web (all rows 41%)"), since a
-     category that is common everywhere does not set a cluster apart. A
-     numeric variable by its middle half against all rows, as dates are
-     already. In the sentences and in a per-cluster table.
-  2. Attach `ilm_describe_all(data, by = "cluster")` to the profile (Craig's
-     suggestion; grouping already works).
-  3. Propose building the sentences from the original variables
-     (catdes-style v-tests per variable and level) instead of from the
-     reduction's dimensions, which is closer to Craig's goal. Show him a
-     before and after first.
-  4. **A prose description of the cluster profiles, as an option -- Craig
-     wants to see this when the session resumes.** He suggested
-     `ilm_interpret()` produce it, called internally by `ilm_profile()`.
-     Constraint: `ilm_interpret()` is in illume, and illumex must never
-     depend on illume, so `ilm_profile()` cannot call it. Options to put to
-     him: build the prose in illumex (an argument to `ilm_profile()`, or
-     its print method), and give illume's `ilm_interpret()` a method for an
-     `ilm_profile` that uses it.
-  5. `ilm_glrm()` now defaults to `"cycles"`, so illume's GLRM imputation
-     runs the rhythm test for every imputation. Measure it; if it costs,
-     let `time` take an earlier fit's `$time` map and pass that from
-     `ilm_impute()`.
-  6. Full suite and `R CMD check`; a PR when Craig asks.
+The first run's outputs are saved in the session scratchpad (`first_run_0089/`)
+for the before/after comparison.
 
----
+**What needs no re-run:**
+- mclogit lost no fits (500/500 at both versions).
+- bench, boundary_se, mclogit and brms reproduce 0.0.7.9000's estimates
+  exactly.
+- bench timings are about 20% longer for every package, lme4 and glmmTMB
+  included, which points to machine load.
+
+If the session died mid-run, check the file times and row counts under
+`studies/runs/0.0.8.9000/`. Then re-run whatever is missing, from `studies/`,
+with the bump branch's scripts:
+
+    Rscript scripts/coverage_study.R 2000 10 runs/0.0.8.9000/coverage mn_J5_thin,mn_J3_ar,mn_J5_mid,mn_J5_rich,mn_J3_thin,mn_J5_vrich,mn_J3_rich,gauss_car1,rp_flex
+    Rscript scripts/power_study.R 2000 10 runs/0.0.8.9000/power 0,0.1,0.2,0.3,0.5 mn_J3_rich,mn_J3_thin,gauss_car1,rp_flex
+    Rscript scripts/messy_compare.R 400 10 runs/0.0.8.9000/messy
+    Rscript scripts/imputation_ablation.R 40 10 runs/0.0.8.9000/imputation
+
+A cell-limited power run merges into the existing `power_summary.csv`, so the
+first run's copy must be present.
+
+**Then, in order:**
+
+1. On the bump branch:
+   - commit the CSVs, with messy's console log as `log.txt`;
+   - write `RUNINFO.dcf`: R 4.4.3, a date per study, and notes on the rule
+     change with its before/after, the imputation fix and the bench timings;
+   - run `summarise_run.R` for 0.0.8.9000;
+   - add the NEWS validation notes.
+2. Run `R CMD check` on the bump, push it, and give Craig the PR link.
+3. Merge the bump into `interpret-prose`, keeping one 0.0.8.9000 section in
+   NEWS. Check, push, and give the PR link.
+4. After Craig merges, reinstall illumex and then illume into his library.
+   R 4.6.1's library is empty, and downloads need his permission.
+5. At sprint end, remind Craig about the open data case study. Then the
+   end-to-end experiment.
+
+**Craig's batched ideas (2026-09-24), for after the sprint:**
+
+- `ilm_plot_model_pdp()`: partial dependence for several terms in one call.
+- An outlier/influence check in `ilm_model()`'s residual diagnostics. None
+  exists.
+- `check_model()`: it errors today because insight does not support the
+  class, so the only working route is to `ilm_appraise()`. That is Craig's
+  call.
+- A formula interface for `ilm_fit()`: advised against, since `ilm_model()`
+  already takes a formula or a matrix.
+- A forecasting/prediction companion package, being planned in a parallel
+  session. illume must never depend on it.
+
+**Noticed while fixing the usability rule:** the refit loops in `ilm_pb.R`,
+`ilm_check.R`, `ilm_check_ar.R`, `ilm_diagnostics.R` and `ilm_ic.R` drop a
+refit on nlminb's stopping code alone. The studies found that code unreliable
+("false convergence" at a small gradient), so this is worth measuring.
 
 ---
 
