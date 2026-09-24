@@ -226,10 +226,13 @@ ilm_model_formula(
   a variance of zero, or a correlation of +/-1 – where the likelihood is
   flat and cannot say where in that direction the truth is. `"hold"`,
   the default, is maximum likelihood: an estimate that lands there is
-  held at it, the rest of the fit's uncertainty is computed around it,
-  and the fixed effects remain usable (see the BOUNDARY verdict in
+  held at it in the direction that reached the edge, the rest of the
+  fit's uncertainty is computed around it, and the fixed effects remain
+  usable (see the BOUNDARY verdict in
   [`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)).
-  `"avoid"` adds the boundary-avoiding penalty of Chung et al.
+  Their standard errors are then those of the reduced model the boundary
+  implies – a covariance of lower rank, or the term dropped – on every
+  platform. `"avoid"` adds the boundary-avoiding penalty of Chung et al.
   (2013, 2015) – half the log-determinant of each grouping term's
   covariance – which keeps every estimate strictly inside its range; in
   one dimension it is a gamma(2) prior on the standard deviation. The

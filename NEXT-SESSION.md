@@ -373,12 +373,18 @@ RTMB 1.x, where the same fit stops at -9.9 and is fine.
   cancellation. No floor there, because Ld is in the slope’s units
   relative to the intercept’s, so any fixed floor is scale-dependent.
   Not seen failing yet.
-- **tmb vs boundary is a coin toss for boundary fits.** Whether TMB’s
-  own Hessian is positive definite at a boundary decides whether the
-  fixed effects’ SEs carry the covariance’s uncertainty (“tmb”) or are
-  conditional on it (“boundary”, as lme4). The floor flipped 42 of 144
-  fits each way, and the SEs moved by up to 5% (10% in one). Worth
-  deciding one rule.
+- **tmb vs boundary was a coin toss for boundary fits – DECIDED AND
+  BUILT.** Whether TMB’s own Hessian was positive definite at a boundary
+  decided whether the fixed effects’ SEs carried the covariance’s
+  uncertainty (“tmb”) or were conditional on it (“boundary”, as lme4).
+  Three rules were measured on 4,000 fits
+  (`studies/scripts/boundary_se.R`): A hold the whole term, B the status
+  quo, and C hold only the flat directions. Craig chose C on 2026-09-23.
+  `ilm_hess_recover()` now holds only the eigen-directions of the
+  boundary terms’ block with curvature below `ilm_flat_rel` (1e-3) of
+  its largest, whatever TMB said, which gives the reduced model’s
+  standard errors. Next: the 0.0.8.9000 bump, with the full study set
+  re-run (boundary_se included), then reinstall both packages locally.
 - The pilot’s “usable” (convergence code 0) is stricter than illume’s
   `ok`, which grades code 8 with a small gradient WARN; the messy study
   should count fits the illume way when it is next run.
