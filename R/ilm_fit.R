@@ -875,15 +875,17 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   if (identical(how, "boundary") && !anyNaN) {
     hq <- paste(sQuote(held, FALSE), collapse = ", ")
     ck <- ilm_add_check(ck, "hessian", "BOUNDARY",
-      sprintf("not positive definite along the covariance of %s, which is held at its estimate", hq),
+      sprintf("flat along the covariance of %s, where it reaches its boundary; that direction is held at its estimate", hq),
       paste0("the covariance of ", hq, " sits at the edge of its range -- a ",
              "variance of zero, or a correlation of +/-1 -- so the likelihood ",
-             "is flat in that direction and that covariance has no standard error"),
+             "is flat in the direction that reaches it, which has no standard error"),
       paste0("the fixed effects, their standard errors and tests ARE usable: ",
-             "they are computed with that covariance held at its estimate, as ",
-             "lme4 does when the full Hessian fails. The covariance itself is ",
-             "not. If the term is not needed, drop it: at a variance of zero ",
-             "the fixed effects do not change"))
+             "only the direction the data cannot resolve is held, and ",
+             "everything else is estimated, which gives the standard errors of ",
+             "the model the boundary reduces this one to -- a covariance of ",
+             "lower rank, or the term dropped. The covariance itself is not to ",
+             "be read. If the term is not needed, drop it: at a variance of ",
+             "zero the fixed effects do not change"))
   } else
   ck <- ilm_add_check(ck, "hessian",
     if (!pd || anyNaN) "FAIL" else "OK",
@@ -1063,18 +1065,20 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
 ## of zero, a correlation of +/-1, an AR(1) correlation at its limit -- the
 ## likelihood is flat in that direction and no Hessian over EVERY parameter is
 ## positive definite, however accurately it is computed. The fixed effects are
-## still identified, though, and their covariance holding that term's
-## covariance at its estimate is well defined: the Hessian with those rows and
-## columns removed. That is what lme4 falls back to for a GLMM whose full
-## Hessian fails, and at a variance of zero it is the covariance of the model
-## without the term -- which is the model the data are describing.
+## still identified, though, and their covariance holding the flat direction
+## at its estimate is well defined: the Hessian with that direction removed.
+## At a variance of zero it is the covariance of the model without the term,
+## and at a correlation of +/-1 that of the model with a covariance of lower
+## rank -- which is the model the data are describing (see ilm_hess_recover()).
 ##
-## Only covariance parameters are ever held, and only whole terms, the ones at
-## the boundary first. If what is left is still singular -- separation,
-## aliased columns, a dispersion that ran off -- nothing is held, and the fit
-## stays a failure. glmmTMB accepts any Hessian whose smallest eigenvalue beats
-## machine epsilon, which lets a boundary variance through with a standard
-## error in the billions; a boundary is treated as one here instead.
+## Only covariance parameters are ever held: the flat directions of the terms
+## at the boundary, and failing that whole terms, the ones at the boundary
+## first -- as lme4 falls back to for a GLMM whose full Hessian fails. If what
+## is left is still singular -- separation, aliased columns, a dispersion that
+## ran off -- nothing is held, and the fit stays a failure. glmmTMB accepts
+## any Hessian whose smallest eigenvalue beats machine epsilon, which lets a
+## boundary variance through with a standard error in the billions; a
+## boundary is treated as one here instead.
 
 ## Hessian of `fn` from its exact gradient: central differences at steps s and
 ## s/2, combined so the leading error term cancels.
@@ -1195,31 +1199,62 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
   o2
 }
 
-## The three outcomes: "recomputed" (the accurate Hessian is positive definite
-## and nothing is at a boundary, so the fit is fully usable), "boundary" (the
-## terms in `held` are held at their estimates and everything else is
-## usable), or "none" (still a failure). A fit TMB was already happy with is
-## "tmb". The sdreport comes back redone from the Hessian that was accepted, so
-## everything derived from it -- thresholds, rho, the joint precision REML and
-## smooths need -- is consistent with it.
+## The outcomes: "recomputed" (the accurate Hessian is positive definite and
+## nothing is at a boundary, so the fit is fully usable), "boundary" (the
+## terms in `held` have the directions in which their covariance cannot be
+## resolved held at the estimate, and everything else is usable), or "none"
+## (still a failure). A fit TMB was already happy with, with nothing at a
+## boundary, is "tmb". The sdreport comes back redone from the Hessian that
+## was accepted, so everything derived from it -- thresholds, rho, the joint
+## precision REML and smooths need -- is consistent with it.
+##
+## AT A BOUNDARY, ONLY THE FLAT DIRECTIONS ARE HELD. A covariance at the edge
+## of its range is flat in the direction that reaches the edge -- a variance
+## going to zero, a correlation to +/-1 -- and curved in every other: at a
+## correlation of 1 both standard deviations are still estimated, with real
+## uncertainty. The maximum-likelihood fit there IS the reduced model -- a
+## covariance of lower rank, or the term dropped -- and the reduced model's
+## standard errors are the Hessian with only the flat directions removed:
+## the eigenvectors of the boundary terms' block whose curvature is below
+## ilm_flat_rel of the block's largest. That is what is done, whatever TMB
+## made of its own Hessian. Measured on 4,000 simulated fits, 1,433 of them
+## at a boundary (studies/scripts/boundary_se.R):
+##   - it reproduced the reduced model, refitted, to a median ratio of 1.000;
+##   - holding the whole term instead, as lme4 does, understated the standard
+##     errors -- by up to 45% in the worst fit -- and covered least in every
+##     regime at a boundary (0.938 against 0.947 when the truth was rank one);
+##   - letting TMB's verdict decide, as this function used to, split the
+##     boundary fits about evenly between those two, so the same data could
+##     get standard errors 10% apart on two platforms; and where TMB called
+##     its Hessian positive definite it held nothing at all, which passed
+##     four fits with a quasi-separated category at standard errors of up to
+##     2.9e6.
+## Every boundary fit had a gap of at least 2.3 decades between its flat and
+## its curved eigenvalues, and thresholds of 1e-3 and 1e-4 gave the same
+## coverage.
+ilm_flat_rel <- 1e-3
+
 #' @keywords internal
 #' @noRd
 ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
-  if (isTRUE(sdr$pdHess)) return(list(sdr = sdr, how = "tmb", held = character(0)))
-  out <- list(sdr = sdr, how = "none", held = character(0))
+  flagged <- length(cb$flagged) > 0L
+  if (isTRUE(sdr$pdHess) && !flagged)
+    return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
+  out <- list(sdr = sdr, how = "none", held = character(0), flat = 0L)
   if (!length(opt$par)) return(out)
   ## Only at a stationary point. A Hessian differenced where the gradient is
   ## not zero is not the curvature at a maximum, and its inverse is not a
   ## covariance: from a fit stopped at a gradient of 1.08 it gave standard
   ## errors of 0. The line is the gradient check's own FAIL line, so a fit it
   ## would call usable is never refused here.
-  g0 <- tryCatch(abs(as.numeric(obj$gr(opt$par))), error = function(e) NULL)
+  gs <- tryCatch(as.numeric(obj$gr(opt$par)), error = function(e) NULL)
   H <- tryCatch(ilm_hessian(function(p) as.numeric(obj$gr(p)), opt$par),
                 error = function(e) NULL)
   ## those gradient calls moved the tape; put it back at the optimum
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
-  if (is.null(H) || !all(is.finite(H)) || is.null(g0) || !all(is.finite(g0)))
+  if (is.null(H) || !all(is.finite(H)) || is.null(gs) || !all(is.finite(gs)))
     return(out)
+  g0 <- abs(gs); n <- nrow(H)
   ## Positive definite on a scale-free test, not merely chol()-able. Finite
   ## differences leave an exactly singular Hessian slightly positive, so an
   ## aliased pair of columns (x2 = 2 * x1) passed chol() and was "rescued";
@@ -1239,31 +1274,76 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
   redo <- function(Hm) tryCatch(suppressWarnings(
     sdreport(obj, par.fixed = opt$par, hessian.fixed = Hm,
              getJointPrecision = joint)), error = function(e) NULL)
-  ## a boundary variance is handled as one whatever the Hessian says: an
-  ## inverse that is merely positive definite gives it a standard error in the
-  ## billions, which is a number rather than information
-  if (!length(cb$flagged) && max(g0) <= 1e-2 && pd(H)) {
-    s2 <- redo(H)
-    if (!is.null(s2) && isTRUE(s2$pdHess))
-      return(list(sdr = s2, how = "recomputed", held = character(0)))
+  ## A parameter lying along a held direction has no standard error. And the
+  ## model's own Hessian was not usable as it stood, which stays on the
+  ## record; what IS usable is said by `how`.
+  held_sdr <- function(s2, lead) {
+    cf <- s2$cov.fixed; cf[lead, ] <- NA_real_; cf[, lead] <- NA_real_
+    s2$cov.fixed <- cf; s2$pdHess <- FALSE
+    s2
   }
+
+  ## the flat directions of the boundary terms' block
+  e <- NULL; flat <- logical(0); d <- integer(0)
+  if (flagged) {
+    d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
+    if (length(d) && !any(cb$keep %in% d)) {
+      e <- eigen(H[d, d, drop = FALSE], symmetric = TRUE)
+      flat <- e$values < ilm_flat_rel * max(e$values[1], 1e-8)
+    }
+  }
+  if (!any(flat)) {
+    ## nothing at a boundary, or a boundary term curved in every direction:
+    ## the whole Hessian, TMB's or the accurate one, is the covariance
+    if (isTRUE(sdr$pdHess))
+      return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
+    if (max(g0) <= 1e-2 && pd(H)) {
+      s2 <- redo(H)
+      if (!is.null(s2) && isTRUE(s2$pdHess))
+        return(list(sdr = s2, how = "recomputed", held = character(0), flat = 0L))
+    }
+  } else {
+    ## An orthonormal basis: every other parameter as it is, then the block's
+    ## curved directions, then its flat ones. Built in that basis with the
+    ## flat directions cut loose from the rest, the Hessian's inverse is
+    ## exactly the covariance with them held, for ANY curvature given to
+    ## them -- so a moderate one keeps the matrix well conditioned, where a
+    ## huge one along a rotated direction would cost the fixed effects digits.
+    kp <- setdiff(seq_len(n), d); nk <- n - sum(flat)
+    Q <- matrix(0, n, n)
+    Q[cbind(kp, seq_along(kp))] <- 1
+    Q[d, length(kp) + seq_len(sum(!flat))] <- e$vectors[, !flat, drop = FALSE]
+    Q[d, nk + seq_len(sum(flat))] <- e$vectors[, flat, drop = FALSE]
+    Qk <- Q[, seq_len(nk), drop = FALSE]
+    Hk <- crossprod(Qk, H %*% Qk); Hk <- (Hk + t(Hk)) / 2
+    if (max(abs(crossprod(Qk, gs))) <= 1e-2 && pd(Hk)) {
+      B <- matrix(0, n, n)
+      B[seq_len(nk), seq_len(nk)] <- Hk
+      fl <- nk + seq_len(sum(flat))
+      B[cbind(fl, fl)] <- max(1, abs(diag(H)))
+      Hm <- Q %*% B %*% t(Q); Hm <- (Hm + t(Hm)) / 2
+      s2 <- redo(Hm)
+      if (!is.null(s2))
+        return(list(sdr = held_sdr(s2, rowSums(Q[, fl, drop = FALSE]^2) > 1e-2),
+                    how = "boundary", held = cb$flagged, flat = sum(flat)))
+    }
+  }
+  ## Otherwise whole terms are held, the ones at the boundary first: their
+  ## rows and columns cut loose, with a curvature so large that no
+  ## uncertainty is carried through from them. If that fails too, the fit
+  ## has no usable standard errors -- whatever TMB said of its Hessian.
   for (on in unique(Filter(length, list(cb$flagged, names(cb$blocks))))) {
-    d <- unlist(cb$blocks[on], use.names = FALSE)
-    if (!length(d) || any(cb$keep %in% d)) next
-    kp <- setdiff(seq_len(nrow(H)), d)
+    dd <- unlist(cb$blocks[on], use.names = FALSE)
+    if (!length(dd) || any(cb$keep %in% dd)) next
+    kp <- setdiff(seq_len(n), dd)
     if (!length(kp) || max(g0[kp]) > 1e-2 || !pd(H[kp, kp, drop = FALSE])) next
-    ## held: its rows and columns cut loose, with a curvature so large that
-    ## no uncertainty is carried through from it
-    Hm <- H; Hm[d, ] <- 0; Hm[, d] <- 0
-    Hm[cbind(d, d)] <- 1e12 * max(1, abs(diag(H)))
+    Hm <- H; Hm[dd, ] <- 0; Hm[, dd] <- 0
+    Hm[cbind(dd, dd)] <- 1e12 * max(1, abs(diag(H)))
     s2 <- redo(Hm)
     if (is.null(s2)) next
-    cf <- s2$cov.fixed; cf[d, ] <- NA_real_; cf[, d] <- NA_real_
-    s2$cov.fixed <- cf
-    ## the model's own Hessian was not positive definite, and that stays on
-    ## the record; what is usable is said by `how`
-    s2$pdHess <- FALSE
-    return(list(sdr = s2, how = "boundary", held = on))
+    lead <- logical(n); lead[dd] <- TRUE
+    return(list(sdr = held_sdr(s2, lead), how = "boundary", held = on,
+                flat = length(dd)))
   }
   out
 }
@@ -2233,9 +2313,12 @@ ilm_fit <- function(X, y, J = NULL, re_list, re_struct = NULL, ar = NULL,
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
                  ## how the standard errors were obtained: "tmb" (the first
                  ## Hessian was fine), "recomputed" (a more accurate one was),
-                 ## "boundary" (the covariance of the terms in hessian_held is
-                 ## held at its estimate) or "none"; see ilm_hess_recover()
+                 ## "boundary" (the directions in which the covariance of the
+                 ## terms in hessian_held cannot be resolved -- hessian_flat
+                 ## of them -- are held at the estimate) or "none"; see
+                 ## ilm_hess_recover()
                  hessian_how = hess$how, hessian_held = hess$held,
+                 hessian_flat = hess$flat,
                  ## terms whose covariance sits at the edge of its range,
                  ## held or not; see ilm_cov_blocks()
                  boundary_terms = cb$flagged,

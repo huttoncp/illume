@@ -321,7 +321,11 @@ ilm_trust_text <- function(held, boundary = character(0), avoided = FALSE) {
          "interpreted. The fixed effects, their standard errors and tests are ",
          "still usable",
          if (length(held))
-           ": they are computed with that covariance held at its estimate, as lme4 does when the full Hessian fails"
+           paste0(": only the direction in which that covariance cannot be ",
+                  "resolved is held at its estimate, and everything else is ",
+                  "estimated, which gives the standard errors of the model the ",
+                  "boundary reduces this one to -- a covariance of lower rank, ",
+                  "or the term dropped")
          else ": the Hessian behind them is positive definite",
          ". If the term is not needed, drop it; if it is, a simpler structure ",
          "for it (re_struct \"diag\", or \"rr\" with a lower rank) may be ",
@@ -351,10 +355,12 @@ ilm_trust_note <- function(held, boundary = character(0), avoided = FALSE) {
   cat("  >> BOUNDARY. What can be trusted:\n",
       "     - the fixed effects above, their standard errors and tests: yes.\n",
       if (length(held))
-        paste0("       They are computed with the covariance of ",
-               paste(sprintf("`%s`", held), collapse = ", "),
-               " held at its\n",
-               "       estimate, as lme4 does when the full Hessian fails.\n")
+        paste0("       Only the direction in which the covariance of ",
+               paste(sprintf("`%s`", held), collapse = ", "), "\n",
+               "       cannot be resolved is held at its estimate; everything else\n",
+               "       is estimated, which gives the standard errors of the model\n",
+               "       the boundary reduces this one to (a covariance of lower\n",
+               "       rank, or the term dropped).\n")
       else
         "       The Hessian behind them is positive definite.\n",
       "     - the covariance of ", hq, ": no. It sits at the edge of its\n",

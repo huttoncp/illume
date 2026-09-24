@@ -241,10 +241,11 @@ remain the only things that have ever found a defect here.
   likelihood is flat in that direction and the Hessian over every parameter is
   singular however well the fixed effects are determined. The whole fit used to
   be graded FAIL, standard errors and all. Now the covariance of that term is
-  held at its estimate and the rest of the Hessian inverted -- what lme4 falls
-  back to for a GLMM -- and the fit says, in `summary()` and `print()`, what can
-  be trusted: the fixed effects, their standard errors and tests, yes; that
-  covariance, no. The check reads BOUNDARY, not FAIL.
+  held at its estimate in the direction the data cannot resolve and the rest
+  of the Hessian inverted (the next section says why only that direction),
+  and the fit says, in `summary()` and `print()`, what can be trusted: the
+  fixed effects, their standard errors and tests, yes; that covariance, no.
+  The check reads BOUNDARY, not FAIL.
 * Measured on the messy-data regime with a true random-effect SD of 0.05, on
   the study's own 400 seeds: fits with usable fixed effects rose from **63.3%
   to 97.5%**. The 128 newly usable ones cover at **0.944**, and their standard
@@ -295,6 +296,56 @@ remain the only things that have ever found a defect here.
   is not a covariance, and it was what gave those standard errors of 0. The
   line is the gradient check's own FAIL line, so no fit it calls usable is
   refused.
+
+## At a boundary, only the flat direction is held
+
+* A covariance at its boundary is flat only in the direction that reaches
+  it. At a correlation of 1, both standard deviations are still estimated,
+  with real uncertainty. The fixed effects' standard errors now hold only
+  that direction and estimate everything else. The direction is the
+  eigenvectors of the term's block of the Hessian with curvature below 1e-3
+  of its largest. The standard errors are then those of the reduced model
+  the boundary implies: a covariance of lower rank, or the term dropped.
+* Before, TMB's verdict on its own Hessian decided. If it called the Hessian
+  positive definite, everything was inverted; if not, the whole term was
+  held, as lme4 does. At a boundary that verdict is noise, so the same data
+  took different routes on different platforms: R 4.4 held a fit in
+  `test-boundary.R` that R 4.6.1 did not, and standard errors could differ by
+  up to 10%. The old rule also passed four fits with a quasi-separated
+  category as usable, with standard errors of up to 2.9e6. Both problems are
+  gone: a boundary is held the same way whatever TMB said.
+* Measured on 4,000 simulated fits across ten regimes:
+  * the messy-data study's six regimes;
+  * a rank-one multinomial covariance;
+  * binomial random slopes with a slope SD of 0, a slope SD of 0.25, and an
+    intercept-slope correlation of 1.
+
+  Each dataset was fitted once, and the standard errors were computed all
+  three ways at the same optimum (`studies/scripts/boundary_se.R`). Among the
+  1,433 fits at a boundary:
+  * Holding only the flat direction reproduced the reduced model, refitted,
+    to a median ratio of **1.000**.
+  * Holding the whole term understated the standard errors, by 0.3-2%
+    typically and by up to 45% in the worst fit. It covered least in every
+    regime. With a rank-one truth, coverage was 0.938 for the whole-term
+    hold, 0.943 for the old rule and **0.947** for the flat direction. With an
+    intercept-slope correlation of 1 it was 0.943, 0.945 and **0.951**.
+  * The flat-direction hold covered 33 intervals that the whole-term hold
+    missed, and never the reverse.
+
+  The differences are about a point of coverage at most. The regime with
+  everything wrong at once under-covers under all three rules (0.904 to
+  0.910). That comes from the rare category's bias, which no choice of
+  standard error touches.
+* The threshold is not delicate. Every fit at a boundary had a gap of at
+  least 2.3 orders of magnitude between its flat and its curved directions,
+  and thresholds of 1e-3 and 1e-4 gave the same coverage.
+* For a random slope at a variance of zero, the standard errors now come out
+  about 1% above those of the random-intercept model, rather than equal to
+  them. The intercept-slope covariance sits at zero but is curved, so its
+  uncertainty is kept.
+* AR(1) and CAR(1) terms at a correlation of +/-1 are held the same way, but
+  they were not part of the measurement.
 
 ## Or keep it off the boundary
 
