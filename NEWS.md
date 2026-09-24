@@ -1,5 +1,6 @@
 # illume 0.0.8.9000
 
+* illume now requires illumex 0.0.8.9000.
 * `ilm_interpret()` says each effect in the response's own units, over a change
   a reader can picture: across the middle half of a numeric predictor, level by
   level for a factor, with the model's predictions at both ends, averaged over
@@ -67,6 +68,24 @@
 * The parameter-aliasing check no longer starts a sentence with a capitalised
   parameter name ("Retired:(Intercept) <-> retired:age cannot be separated");
   it reads "These data cannot separate retired:(Intercept) from retired:age".
+* A covariance term flagged at its boundary but curved in every direction
+  always takes the recomputed Hessian now, as a fit with nothing at a
+  boundary does. It still went to TMB's own Hessian whenever TMB called that
+  positive definite, so its standard errors depended on the verdict the
+  change below was meant to take out of the decision: 2 to 10% apart in one
+  fit of the boundary study's re-run.
+* `ilm_consistency()` counts a refit that lands on a covariance boundary.
+  Such a refit has that direction held, so `pdHess` is `FALSE` by design and
+  its fixed effects are usable, but the check asked for `pdHess` and dropped
+  it. Since every boundary is held, that meant every refit at one: on a
+  multinomial model whose subjects vary along one direction, 11 of 30 refits
+  were dropped and the check reported the model "UNSTABLE", unable to recover
+  itself. It refits all 30.
+* `ilm_consistency()` calls a variance fitted at zero a boundary whenever the
+  fit does -- below 1e-3 -- as well as when it is small beside the model's
+  largest. With one random term, that term was compared with itself, so a
+  random intercept fitted at 0.0001 was reported as biased, and the Laplace
+  approximation blamed, in a gaussian model, which has none.
 
 # illume 0.0.7.9000
 

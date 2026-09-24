@@ -40,6 +40,13 @@ dir.create(OUTDIR, showWarnings = FALSE, recursive = TRUE)
 M_IMP <- 10L        # imputations per replicate
 ALPHA <- 0.05
 
+## The parallel-analysis rank is internal to illumex, where it moved from
+## illume in the split. Resolved here, before any replicate: inside one, a
+## missing function is an error that run() records as NA, and at 0.0.8.9000
+## that emptied lowrank_pa in the four cells with enough complete rows to
+## call it -- 0 of 40 fits where 0.0.7.9000 had 40.
+invisible(getFromNamespace("ilm_anom_rank", "illumex"))
+
 ## ---- the designs -----------------------------------------------------------
 ## Chosen so the methods disagree. A low-rank structure is where the low-rank
 ## methods should win; full rank is where imposing one should hurt; p > n is
@@ -183,7 +190,7 @@ one_rep <- function(rep_id, cell) {
     Xc <- as.matrix(d[num_pred])
     cc <- stats::complete.cases(Xc)
     kk <- if (sum(cc) > 10L)
-      illume:::ilm_anom_rank(scale(Xc[cc, , drop = FALSE])) else 2L
+      illumex:::ilm_anom_rank(scale(Xc[cc, , drop = FALSE])) else 2L
     ilm_impute(d, m = M_IMP, method = "lowrank", ncp = kk, verbose = FALSE,
                progress = FALSE)
   })

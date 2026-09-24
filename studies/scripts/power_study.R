@@ -64,7 +64,21 @@ cells <- list(
        N = 600)
 )
 names(cells) <- vapply(cells, function(z) z$name, "")
+all_cells <- names(cells)
 if (!is.null(ONLY)) cells <- cells[ONLY]
+
+## A run limited to some cells keeps the other cells' rows from the summary
+## already in OUTDIR, in the order the cells are listed above, rather than
+## replacing it with a summary of only the cells it re-ran.
+prev <- file.path(OUTDIR, "power_summary.csv")
+rest <- if (!is.null(ONLY) && file.exists(prev)) {
+  p <- utils::read.csv(prev, stringsAsFactors = FALSE)
+  p[!p$cell %in% ONLY, , drop = FALSE]
+} else NULL
+with_rest <- function(r) {
+  a <- rbind(rest, r)
+  a[order(match(a$cell, all_cells), a$delta), , drop = FALSE]
+}
 
 truth_of <- function(cell, delta) {
   C <- if (identical(cell$family, "multinomial")) cell$J - 1L else 1L
@@ -223,7 +237,11 @@ run_rep <- function(i, cell, delta, do_lrt) {
   ## on flexible parametric fits a third of the replicates reported it while
   ## sitting at a small gradient and recovering the right coefficients.
   gst <- f$checks$status[f$checks$check == "gradient"]
-  ok <- (!length(gst) || gst != "FAIL") && isTRUE(f$sdr$pdHess)
+  ## and usable standard errors as the package says: a positive definite
+  ## Hessian, or a covariance at its boundary with that direction held,
+  ## which has pdHess FALSE by design
+  ok <- (!length(gst) || gst != "FAIL") &&
+        (isTRUE(f$sdr$pdHess) || length(f$hessian_held) > 0L)
   w <- tryCatch(suppressWarnings(pval_x1(illume::ilm_anova(f, type = 3))),
                 error = function(e) NA_real_)
   l <- if (do_lrt)
@@ -273,7 +291,7 @@ for (cell in cells) for (delta in DELTAS) {
               cell$name, delta, sum(usew), NREP, r$rej_wald,
               if (do_lrt) sprintf("  rej(LRT) %.4f", r$rej_lrt) else "", el))
   flush.console()
-  write.csv(do.call(rbind, rows), file.path(OUTDIR, "power_summary.csv"),
-            row.names = FALSE)
+  write.csv(with_rest(do.call(rbind, rows)),
+            file.path(OUTDIR, "power_summary.csv"), row.names = FALSE)
 }
 cat("done\n")

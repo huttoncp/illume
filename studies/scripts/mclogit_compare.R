@@ -78,7 +78,11 @@ run_rep <- function(i, rg) {
   t_ill <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   b_ill <- rep(NA_real_, nb); s_ill <- rep(NA_real_, nb); ok_ill <- FALSE
   if (!is.null(f)) {
-    ok_ill <- isTRUE(f$opt$convergence == 0L) && isTRUE(f$sdr$pdHess)
+    ## usable as the package says: a positive definite Hessian, or a
+    ## covariance at its boundary with the unresolvable direction held,
+    ## which has pdHess FALSE by design
+    ok_ill <- isTRUE(f$opt$convergence == 0L) &&
+              (isTRUE(f$sdr$pdHess) || length(f$hessian_held) > 0L)
     if (ok_ill) {
       b_ill <- as.vector(to_baseline(matrix(coef(f), P4, C)))
       ## The baseline contrasts are a linear map of the sum-to-zero

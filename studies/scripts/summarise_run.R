@@ -47,7 +47,30 @@ md_table <- function(df, digits = 3) {
 read_all <- function(dir, pat) {
   fs <- list.files(dir, pattern = pat, full.names = TRUE)
   if (!length(fs)) return(NULL)
-  do.call(rbind, lapply(fs, utils::read.csv, stringsAsFactors = FALSE))
+  ds <- lapply(fs, utils::read.csv, stringsAsFactors = FALSE)
+  ## a cell re-run by a later version of its script can carry columns the
+  ## others do not; those are NA where they were not recorded
+  nm <- unique(unlist(lapply(ds, names)))
+  do.call(rbind, lapply(ds, function(x) { x[setdiff(nm, names(x))] <- NA; x[nm] }))
+}
+
+## The fits used with a covariance direction held at its boundary, which the
+## package calls usable and the coverage study counts from 0.0.8.9000 on,
+## with their coverage on their own. NULL where the run did not record them.
+held_line <- function(d, order) {
+  if (!"n_held" %in% names(d)) return(NULL)
+  h <- do.call(rbind, lapply(order, function(cl) {
+    x <- d[d$cell == cl, ]
+    if (is.na(x$n_held[1]) || x$n_held[1] == 0) return(NULL)
+    data.frame(cell = cl, n = x$n_held[1], used = x$n_used[1],
+               cover = mean(x$coverage_held))
+  }))
+  if (is.null(h)) return(NULL)
+  paste0("Fits with a covariance direction held at its boundary have usable ",
+         "fixed-effect standard errors, as the package says, and count as ",
+         "converged: ", paste(sprintf("%s %d of %d used (coverage %s)", h$cell,
+                                      h$n, h$used, num(h$cover)), collapse = "; "),
+         ".")
 }
 
 ## ---- one block of findings per study type ---------------------------------
@@ -75,6 +98,7 @@ summarise_study <- function(dir, study) {
              num(min(s$worst_coef)), " (", s$cell[which.min(s$worst_coef)], ")."),
       paste0("Lowest convergence rate: ", num(min(s$conv_rate)), " (",
              s$cell[which.min(s$conv_rate)], ")."),
+      held_line(d, s$cell),
       "",
       "Coverage in cells with convergence failures is CONDITIONAL ON CONVERGENCE:",
       "failed fits are excluded, so if failure correlates with extreme estimates",

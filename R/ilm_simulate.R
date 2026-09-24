@@ -255,7 +255,12 @@ ilm_consistency <- function(fit, B = 50L, seed = 1L, ncores = 1L, verbose = TRUE
   is_sd <- grepl("^sd_", names(p0))
   if (any(is_sd)) {
     big <- max(p0[is_sd], na.rm = TRUE)
-    near0 <- is_sd & p0 < 0.05 * big
+    ## Small beside the largest, or below the 1e-3 at which the fit itself
+    ## calls a variance zero. Beside itself alone, a model's only standard
+    ## deviation is never small: a random intercept fitted at 0.0001 was
+    ## reported as biased (z = 5.00, FAIL) and the Laplace approximation
+    ## blamed, in a gaussian model, which has none.
+    near0 <- is_sd & (p0 < 0.05 * big | p0 < 1e-3)
     st[near0 & st %in% c("WARN", "FAIL")] <- "BOUNDARY"
   }
   res <- data.frame(parameter = names(p0), fitted = round(p0, 4),
