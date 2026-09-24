@@ -157,3 +157,36 @@ test_that("the variance components survive the layout rewrite", {
   expect_lt(sqrt(f$Sigma[[1]][1, 1]), 10)     # not the corrupted 45.76
   expect_identical(names(coef(f)), f$pnames[seq_along(coef(f))])
 })
+
+test_that("a REML fit's random effects are read as random effects", {
+  ## Under REML the fixed effects are integrated out with the random ones, and
+  ## TMB puts them FIRST in par.random. Read by position, every random effect
+  ## was the entry p * C places before it: the conditional predictor of a
+  ## gaussian model with an intercept no longer averaged to the response, and
+  ## a smooth's predictions came out upside down.
+  skip_if_not_installed("lme4")
+  d <- reml_data(20, 6)
+  for (reml in c(FALSE, TRUE)) {
+    f <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                   reml = reml, verbose = FALSE)
+    m <- lme4::lmer(y ~ grp + x + (1 | id), data = d, REML = reml)
+    b <- illume:::ilm_Bhat_term(f, 1L)[, 1]
+    expect_equal(b, unname(lme4::ranef(m)$id[, 1]), tolerance = 1e-4,
+                 label = paste("modes, reml =", reml))
+    ## with an intercept the normal equations make the conditional residuals
+    ## sum to zero
+    expect_equal(mean(illume:::ilm_eta_hat(f, TRUE)), mean(d$y), tolerance = 1e-6,
+                 label = paste("centring, reml =", reml))
+  }
+  ## a smooth: its penalised coefficients are random effects too
+  skip_if_not_installed("mgcv")
+  set.seed(5)
+  ds <- data.frame(x = stats::runif(200, 0, 3))
+  ds$y <- sin(2 * ds$x) + stats::rnorm(200, 0, 0.3)
+  fr <- ilm_model(y ~ s(x), data = ds, family = "gaussian", reml = TRUE,
+                  verbose = FALSE)
+  g <- mgcv::gam(y ~ s(x), data = ds, method = "REML")
+  nd <- data.frame(x = c(0.25, 0.8, 1.5, 2.2, 2.8))
+  expect_equal(unname(predict(fr, newdata = nd)[, 1]),
+               as.numeric(stats::predict(g, newdata = nd)), tolerance = 1e-3)
+})
