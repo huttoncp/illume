@@ -26,7 +26,9 @@ nothing was integrated out, Satterthwaite for a gaussian mixed model, and
 }
 \value{
 A list with \code{df}, the \code{method} actually used, and for
-Kenward-Roger the adjusted covariance \code{V}.
+Kenward-Roger the adjusted covariance \code{V} and \code{scale}, the factor by which
+the Wald F formed with \code{V} is multiplied before it is referred to
+F(q, df).
 }
 \description{
 Turns a Wald statistic into an F or t test by working out how much the
@@ -42,10 +44,16 @@ applies to every structure this package fits, and it is what \code{lmerTest}
 reports.
 
 \code{"kenward-roger"} also inflates the covariance for the uncertainty in the
-variance components, which matters most when clusters are few. It costs
-second derivatives, and it is only defined where the marginal covariance is
-linear in the variance components -- random intercepts and slopes with a
-single residual variance. Asked for elsewhere it stops and says why.
+variance components, which matters most when clusters are few, and gives
+an F test its own denominator df and scale factor (Kenward and Roger 1997).
+It is computed as \code{pbkrtest} computes it, and agrees with it. It needs a
+REML fit (\code{reml = TRUE}) of a gaussian model whose random terms are
+intercepts and slopes -- correlated or not, nested or crossed -- with one
+residual variance and no weights, and it forms the covariance of all the
+observations, so it stops above 4000 rows. Asked for elsewhere it stops and
+says why. For one contrast its scale is exactly 1: the t statistic is the
+estimate over its standard error from the adjusted covariance \code{V}, on the
+df returned.
 
 \code{"residual"} is \code{N - p}, which is exact with nothing integrated out and
 optimistic otherwise. \code{"asymptotic"} returns \code{Inf}, recovering the
@@ -67,6 +75,14 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 L <- c(0, 1)                      # the slope on income
 ilm_denom_df(f, L)
+}
+\references{
+Kenward, M. G., & Roger, J. H. (1997). Small sample inference for fixed
+effects from restricted maximum likelihood. \emph{Biometrics}, 53(3), 983--997.
+
+Halekoh, U., & Hojsgaard, S. (2014). A Kenward-Roger approximation and
+parametric bootstrap methods for tests in linear mixed models: the R
+package pbkrtest. \emph{Journal of Statistical Software}, 59(9), 1--30.
 }
 \seealso{
 \code{\link[=ilm_anova]{ilm_anova()}}, \code{\link[=ilm_emmeans]{ilm_emmeans()}}, \code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}}.

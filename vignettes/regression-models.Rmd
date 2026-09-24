@@ -181,10 +181,12 @@ degrees of freedom -- Satterthwaite by default, Kenward-Roger where it applies
 ilm_denom_df(fit_gaussian, L)                       # for one contrast
 ```
 
-Satterthwaite works for every structure this package fits. Kenward-Roger is
-only defined where the marginal covariance is linear in the variance
-components -- random intercepts and slopes with a single residual variance --
-and says so rather than returning a number it cannot stand behind.
+Satterthwaite works for every structure this package fits. Kenward-Roger
+also inflates the standard errors for the uncertainty in the variance
+components, and agrees with `pbkrtest`. It needs a REML fit
+(`reml = TRUE`) whose random terms are intercepts and slopes with one
+residual variance, and says so rather than returning a number it cannot
+stand behind.
 
 For **any other family**, including the multinomial here, neither approximation
 is derived and neither is offered. `ilm_pb_lrt()` replaces the assumed

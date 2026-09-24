@@ -82,6 +82,7 @@ Suggests:
     ordinal,
     afex,
     lmerTest,
+    pbkrtest,
     MASS,
     nnet
 Remotes: huttoncp/illumex

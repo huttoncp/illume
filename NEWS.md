@@ -1,6 +1,32 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
+  - **The covariance shrank.** Its "inflated" covariance was built from
+    differences of the fixed-effect covariance with the wrong algebra: the Q
+    term had the wrong sign and the P-Phi-P term was missing. So the
+    covariance came out smaller than the unadjusted one, by a factor of
+    1 - 4/n for a single variance component.
+  - **The df were Satterthwaite's.** Its df were Satterthwaite's formula
+    applied to that matrix, not Kenward and Roger's. Its one test asserted
+    only that the df were below Satterthwaite's, which the defect
+    guaranteed.
+  - **The gate did not refuse.** It claimed to refuse a correlated random
+    slope but tested the category width, which is always 1.
+
+  It is now computed as `pbkrtest` computes it: from the covariance of the
+  observations, with Kenward and Roger's own df and F scaling. It agrees
+  with `pbkrtest` to 2e-6 in df and 3e-8 in the F scaling, and in the
+  adjusted covariance to within the two fits' REML difference. That holds
+  for a random intercept, correlated and uncorrelated random slopes, and
+  crossed factors. In a balanced design it reproduces the exact test: 6 df,
+  to 1e-8.
+
+  A correlated slope is linear in its covariance's elements, so it is now
+  covered. Kenward-Roger now needs a REML fit (`reml = TRUE`), because it
+  is derived for REML estimates. It stops for smooths, weights and more
+  than 4000 rows. `ilm_trends(df = "kenward-roger")` now uses the adjusted
+  standard errors as well as the df. Found in a review.
 * `ilm_rw1()` fits a random walk over time, the local-level model of
   time-series analysis. Each group's walk is held at zero at its first time,
   so the fixed effects give its level there, and each step after that adds an
