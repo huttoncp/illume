@@ -214,6 +214,69 @@ summarise_study <- function(dir, study) {
       "method can reconstruct hidden cells as well as the best one and still",
       "cover at half the nominal rate.")
 
+  } else if (study == "boundary_se") {
+    ## Which standard errors the fixed effects get when a random-effect
+    ## covariance sits at its boundary. Every dataset is fitted once and its
+    ## covariance computed under each rule at the same optimum, so the rules
+    ## differ in their intervals and nothing else. B is the fit's own: the
+    ## rule the package used at that version. C3 is the one adopted at
+    ## 0.0.7.9000 -- only the flat directions held, at the 1e-3 threshold.
+    cv <- read_all(dir, "^boundary_se_cover.csv$"); if (is.null(cv)) return(NULL)
+    rt <- read_all(dir, "^boundary_se_ratio.csv$")
+    pr <- read_all(dir, "^boundary_se_paired.csv$")
+    at <- unique(cv$regime[cv$boundary > 0])
+    pick <- function(rule, col) vapply(at, function(r)
+      cv[[col]][cv$regime == r & cv$rule == rule][1], 0)
+    tab <- data.frame(regime = at, fits = pick("B", "n"),
+                      at_boundary = pick("B", "boundary"),
+                      cover_A = pick("A", "cover_boundary"),
+                      cover_B = pick("B", "cover_boundary"),
+                      cover_C3 = pick("C3", "cover_boundary"),
+                      se_sd_A = pick("A", "se_sd"), se_sd_C3 = pick("C3", "se_sd"),
+                      stringsAsFactors = FALSE)
+    nb <- sum(tab$at_boundary)
+    best <- sum(abs(tab$cover_C3 - 0.95) <= abs(tab$cover_A - 0.95))
+    low <- tab$regime[which.min(tab$cover_C3)]
+    same_B <- !is.null(rt) && all(abs(c(rt$B_C3_min, rt$B_C3_max) - 1) < 1e-3)
+    ref <- if (is.null(rt)) NULL else rt[rt$refits > 0, ]
+    c(paste0("Standard errors of the fixed effects when a random-effect covariance ",
+             "sits at its boundary, under three rules computed at the same optimum:"),
+      "A holds the whole boundary term; B is the fit's own, the rule the package",
+      "used at this version; C3 holds only the directions with curvature below",
+      "1e-3 of the term's largest. Coverage of 95% intervals among the fits at a",
+      "boundary; se_sd is mean SE over the SD of the estimates across all usable fits.",
+      "", md_table(tab), "",
+      paste0(nb, " of ", sum(tab$fits), " fits ended at a boundary, in the ",
+             nrow(tab), " of ", length(unique(cv$regime)), " regimes where any did. ",
+             "C3's coverage is at least as close to 0.95 as A's in ", best, " of those ",
+             nrow(tab), "; its lowest is ", num(min(tab$cover_C3)), " (", low, ")."),
+      if (!is.null(rt))
+        paste0("Against C3, A's standard errors run a median ",
+               num(min(rt$A_C3_median)), " to ", num(max(rt$A_C3_median)),
+               " times as large by regime, and as little as ", num(min(rt$A_C3_min)),
+               " in the worst fit."),
+      if (!is.null(rt))
+        if (same_B) "B equals C3 in every boundary fit, to three decimals: the rule in use is the rule measured."
+        else paste0("B, the rule in use at this version, runs ", num(min(rt$B_C3_min)),
+                    " to ", num(max(rt$B_C3_max)), " times C3's."),
+      if (!is.null(ref) && nrow(ref))
+        paste0("Where the reduced model could be refitted (", sum(ref$refits),
+               " fits), C3 matched it to a ratio of ", num(min(ref$C3_refit_min)),
+               " to ", num(max(ref$C3_refit_max)), "."),
+      if (!is.null(pr))
+        paste0("Paired, C3 covered ", sum(pr$C3_not_A), " intervals that A missed, ",
+               "and A covered ", sum(pr$A_not_C3), " that C3 missed."),
+      if (!is.null(rt))
+        paste0("Every boundary fit had a gap of at least ", num(min(rt$gap_decades_min), 1),
+               " orders of magnitude between its flat and curved directions; ",
+               "thresholds of 1e-3 and 1e-4 chose differently in ",
+               sum(rt$threshold_disagree), " of ", nb, " fits."),
+      "",
+      "CAVEAT that must travel with this result: a regime can under-cover under",
+      "every rule, and when it does the cause is not the choice of standard",
+      "error -- in `combined` it is the rare category's bias. AR(1) and CAR(1)",
+      "terms are held the same way but are not part of this study.")
+
   } else if (study == "messy") {
     ## Every sentence below is computed from the csv, the ones that go against
     ## illume included, so a re-run at a later version says what THAT run

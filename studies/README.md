@@ -84,6 +84,8 @@ findings and update that version's NEWS entry in the same commit.
 | `mclogit_compare.R` | illume (Laplace) vs mclogit (PQL) for multinomial mixed models | 2,000 fits |
 | `messy_compare.R` | The same comparison on data that misbehave: lopsided clusters, a rare category, a variance at its boundary, non-normal random effects | 4,800 fits |
 | `brms_compare.R` | Does illume agree with an independent implementation of the same likelihood? | 3 fits + MCMC |
+| `imputation_ablation.R` | Which imputation method gives a downstream coefficient intervals that cover? | 6 designs x 5 methods |
+| `boundary_se.R` | When a random-effect covariance sits at its boundary, which standard errors should the fixed effects get? Each fit's covariance is computed under three rules at the same optimum | 4,000 fits, ~9 min |
 
 Write output into `runs/<version>/<study>/`, which is the layout the summariser
 and pruner expect, and record the run in `runs/<version>/RUNINFO.dcf`:

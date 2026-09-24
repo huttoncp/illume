@@ -19,16 +19,19 @@
 ## on B -- the fit's own standard errors -- IS C3, and a re-run checks that
 ## it is: B should equal C3 in every boundary fit, and A still shows what
 ## holding the whole term would cost.
-## Not yet wired into summarise_run.R: the tables are printed at the end of
-## this script.
+## The tables go to csv beside the raw output, for summarise_run.R. Like the
+## other studies this needs illume INSTALLED: the workers call library(illume).
+## (The first run loaded the working tree with devtools::load_all() instead.)
 ##
-## Usage: Rscript boundary_se.R <nrep> <ncore> <outdir> <package root>
+## Usage: Rscript boundary_se.R <nrep> <ncore> <outdir> [summarise]
+##   with `summarise`, nothing is fitted: the tables are rebuilt from the
+##   boundary_se.rds already in <outdir>
 ## ---------------------------------------------------------------------------
 args  <- commandArgs(trailingOnly = TRUE)
 NREP  <- if (length(args) >= 1) as.integer(args[1]) else 400L
 NCORE <- if (length(args) >= 2) as.integer(args[2]) else 10L
 sp    <- if (length(args) >= 3) args[3] else "."
-pkg   <- normalizePath(if (length(args) >= 4) args[4] else ".")
+SUMMARISE <- length(args) >= 4 && identical(args[4], "summarise")
 dir.create(sp, showWarnings = FALSE, recursive = TRUE)
 J <- 3L; C <- J - 1L; P4 <- 4L; NCL <- 60L; PER <- 8L; NTOT <- NCL * PER
 
@@ -102,14 +105,14 @@ pd <- function(M) {
 }
 three_cov <- function(f) {
   pn <- names(f$opt$par); ib <- which(pn == "beta")
-  cb <- ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk, f$toff,
-                       f$ar, f$opt$par, pn)
+  cb <- illume:::ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk,
+                                f$toff, f$ar, f$opt$par, pn)
   cf <- f$sdr$cov.fixed
   VB <- if (!is.null(cf) && all(dim(cf) >= max(ib))) cf[ib, ib, drop = FALSE] else NULL
   out <- list(flagged = cb$flagged, how = f$hessian_how, B = VB, A = VB, C = VB,
               C3 = VB, nflat = NA_integer_, nflat3 = NA_integer_, ev = NULL)
   if (!length(cb$flagged)) return(out)
-  H <- tryCatch(ilm_hessian(function(p) as.numeric(f$obj$gr(p)), f$opt$par),
+  H <- tryCatch(illume:::ilm_hessian(function(p) as.numeric(f$obj$gr(p)), f$opt$par),
                 error = function(e) NULL)
   g0 <- tryCatch(abs(as.numeric(f$obj$gr(f$opt$par))), error = function(e) NULL)
   invisible(tryCatch(f$obj$fn(f$opt$par), error = function(e) NULL))
@@ -175,7 +178,7 @@ one <- function(job) {
       else ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "multinomial",
                      verbose = FALSE, re_struct = list(g = list(type = "rr", rank = rk))))),
       error = function(e) NULL)
-    if (!is.null(fr) && isTRUE(fr$sdr$pdHess))
+    if (!is.null(fr) && isTRUE(fr$ok))
       se_red <- se(fr$sdr$cov.fixed[names(fr$opt$par) == "beta",
                                     names(fr$opt$par) == "beta", drop = FALSE])
   } else if (length(tc$flagged) && !mn) {
@@ -185,7 +188,7 @@ one <- function(job) {
       fr <- tryCatch(suppressMessages(suppressWarnings(
         ilm_model(y ~ x + (1 | g), data = dd, family = "binomial", verbose = FALSE))),
         error = function(e) NULL)
-      if (!is.null(fr) && isTRUE(fr$sdr$pdHess))
+      if (!is.null(fr) && isTRUE(fr$ok))
         se_red <- se(fr$sdr$cov.fixed[names(fr$opt$par) == "beta",
                                       names(fr$opt$par) == "beta", drop = FALSE])
     }
@@ -201,34 +204,40 @@ one <- function(job) {
        grad = max(abs(as.numeric(f$obj$gr(f$opt$par)))))
 }
 
-jobs <- do.call(rbind, lapply(regimes, function(r)
-  data.frame(regime = r, i = seq_len(NREP), stringsAsFactors = FALSE)))
-cl <- parallel::makeCluster(NCORE)
-parallel::clusterExport(cl, c("pkg", "mn_regimes", "sl_regimes", "beta_sl", "truth_B",
-                              "to_baseline", "cluster_sizes", "draw_re", "gen_mn", "gen_sl",
-                              "J", "C", "P4", "NCL", "PER", "NTOT", "pd", "three_cov"))
-invisible(parallel::clusterEvalQ(cl, suppressMessages(devtools::load_all(pkg, quiet = TRUE))))
-t0 <- Sys.time()
-res <- parallel::parLapply(cl, split(jobs, seq_len(nrow(jobs))), one)
-parallel::stopCluster(cl)
-saveRDS(res, file.path(sp, "boundary_se.rds"))
-cat("elapsed", format(Sys.time() - t0), "\n")
+if (!SUMMARISE) {
+  jobs <- do.call(rbind, lapply(regimes, function(r)
+    data.frame(regime = r, i = seq_len(NREP), stringsAsFactors = FALSE)))
+  cl <- parallel::makeCluster(NCORE)
+  parallel::clusterExport(cl, c("mn_regimes", "sl_regimes", "beta_sl", "truth_B",
+                                "to_baseline", "cluster_sizes", "draw_re", "gen_mn",
+                                "gen_sl", "J", "C", "P4", "NCL", "PER", "NTOT", "pd",
+                                "three_cov"))
+  invisible(parallel::clusterEvalQ(cl, suppressPackageStartupMessages(library(illume))))
+  t0 <- Sys.time()
+  res <- parallel::parLapply(cl, split(jobs, seq_len(nrow(jobs))), one)
+  parallel::stopCluster(cl)
+  saveRDS(res, file.path(sp, "boundary_se.rds"))
+  cat("elapsed", format(Sys.time() - t0), "\n")
+} else res <- readRDS(file.path(sp, "boundary_se.rds"))
 
 ## ---- what it found ----------------------------------------------------------
-truth <- function(r) if (r %in% c("slope_zero", "slope_small", "slope_cor1")) c(-0.3, 0.5) else
+## Written as csv beside the raw output, for scripts/summarise_run.R to turn
+## into findings/boundary_se.md, and printed. C3 -- C at the 1e-3 threshold --
+## is the rule the package adopted; C at 1e-4 is kept beside it to show the
+## threshold does not matter.
+truth <- function(r) if (r %in% names(sl_regimes)) beta_sl else
   as.vector(to_baseline(truth_B(r %in% c("rare", "combined"))))
 regs <- unique(vapply(res, `[[`, "", "regime"))
 z <- qnorm(0.975)
-
 cat("fits that errored:", sum(!vapply(res, `[[`, TRUE, "ok")), "of", length(res), "\n\n")
-rows <- list()
-for (r in regs) {
+
+cover <- do.call(rbind, lapply(regs, function(r) {
   rr <- Filter(function(x) x$regime == r && isTRUE(x$ok), res)
   tv <- truth(r)
   fl <- vapply(rr, `[[`, TRUE, "flagged")
   how <- vapply(rr, `[[`, "", "how")
-  ## usable under each option: B as the package decides; A and C where their
-  ## covariance exists (unflagged fits use B's for all three)
+  ## usable under each rule: B as the package decided; A and C where their
+  ## covariance exists (a fit at no boundary has B's under every rule)
   use <- function(o) vapply(rr, function(x) {
     s <- x[[paste0("se_", o)]]
     isTRUE(x$conv) && all(is.finite(s)) && all(s > 0) &&
@@ -236,70 +245,70 @@ for (r in regs) {
   }, TRUE)
   cov_of <- function(o, keep) {
     ok <- which(keep)
-    if (!length(ok)) return(c(NA, 0))
-    hit <- unlist(lapply(rr[ok], function(x) abs(x$b - tv) <= z * x[[paste0("se_", o)]]))
-    c(mean(hit), length(ok))
+    if (!length(ok)) return(NA_real_)
+    mean(unlist(lapply(rr[ok], function(x) abs(x$b - tv) <= z * x[[paste0("se_", o)]])))
   }
-  for (o in c("B", "A", "C", "C3")) {
-    u <- use(o)
-    ## all usable fits, and the flagged (boundary) ones alone
-    a <- cov_of(o, u); f <- cov_of(o, u & fl)
-    ## SE calibration over all usable fits: mean SE / SD of the estimates
-    ok <- which(u)
+  do.call(rbind, lapply(c("B", "A", "C", "C3"), function(o) {
+    u <- use(o); ok <- which(u)
     Bm <- do.call(rbind, lapply(rr[ok], `[[`, "b"))
     Sm <- do.call(rbind, lapply(rr[ok], function(x) x[[paste0("se_", o)]]))
-    rows[[length(rows) + 1L]] <- data.frame(
-      regime = r, opt = o, n = length(rr), flagged = sum(fl),
-      tmb = sum(fl & how == "tmb"), held = sum(fl & how == "boundary"),
-      usable = sum(u), cover_all = round(a[1], 4), usable_flag = sum(u & fl),
-      cover_flag = round(f[1], 4), se_sd = round(mean(colMeans(Sm) / apply(Bm, 2, sd)), 3))
-  }
-}
-tab <- do.call(rbind, rows)
-print(tab, row.names = FALSE)
+    data.frame(regime = r, rule = o, n = length(rr), boundary = sum(fl),
+               tmb = sum(fl & how == "tmb"), held = sum(fl & how == "boundary"),
+               usable = sum(u), cover_all = cov_of(o, u),
+               usable_boundary = sum(u & fl), cover_boundary = cov_of(o, u & fl),
+               se_sd = mean(colMeans(Sm) / apply(Bm, 2, stats::sd)),
+               stringsAsFactors = FALSE)
+  }))
+}))
 
-cat("\n---- among flagged fits usable under A, B and C alike: SE ratios to C\n")
-for (r in regs) {
+## SE ratios among boundary fits usable under every rule, the flatness gap,
+## and the reduced model refitted where the package can fit it
+ratio <- do.call(rbind, lapply(regs, function(r) {
   rr <- Filter(function(x) x$regime == r && isTRUE(x$ok) && x$flagged, res)
-  if (!length(rr)) next
-  all3 <- Filter(function(x) all(is.finite(c(x$se_A, x$se_B, x$se_C))) && isTRUE(x$usable_B), rr)
-  if (!length(all3)) next
-  rA <- unlist(lapply(all3, function(x) x$se_A / x$se_C))
-  rB <- unlist(lapply(all3, function(x) x$se_B / x$se_C))
-  rC3 <- unlist(lapply(Filter(function(x) all(is.finite(x$se_C3)), all3),
-                       function(x) x$se_C3 / x$se_C))
-  red <- Filter(function(x) all(is.finite(x$se_red)), all3)
-  rR <- unlist(lapply(red, function(x) x$se_C / x$se_red))
-  howv <- vapply(all3, `[[`, "", "how")
-  rBt <- unlist(lapply(all3[howv == "tmb"], function(x) x$se_B / x$se_C))
-  rBh <- unlist(lapply(all3[howv == "boundary"], function(x) x$se_B / x$se_C))
-  q <- function(v) if (length(v)) sprintf("%.3f [%.3f, %.3f]", median(v), min(v), max(v)) else "-"
-  cat(sprintf("%-11s n=%3d  A/C %s  B/C %s (tmb %s | held %s)  C3/C %s  C/reduced-refit %s (n=%d)\n",
-              r, length(all3), q(rA), q(rB), q(rBt), q(rBh), q(rC3), q(rR), length(red)))
-}
+  all4 <- Filter(function(x) isTRUE(x$usable_B) &&
+                   all(is.finite(c(x$se_A, x$se_B, x$se_C, x$se_C3))), rr)
+  if (!length(all4)) return(NULL)
+  q <- function(v) if (length(v)) c(stats::median(v), min(v), max(v)) else rep(NA_real_, 3)
+  rA <- q(unlist(lapply(all4, function(x) x$se_A / x$se_C3)))
+  rB <- q(unlist(lapply(all4, function(x) x$se_B / x$se_C3)))
+  red <- Filter(function(x) all(is.finite(x$se_red)), all4)
+  rR <- q(unlist(lapply(red, function(x) x$se_C3 / x$se_red)))
+  ev <- Filter(function(x) length(x$ev), rr)
+  gap <- vapply(ev, function(x) {
+    e <- sort(pmax(x$ev / max(x$ev[1], 1e-8), 1e-12)); max(diff(log10(e)))
+  }, 0)
+  data.frame(regime = r, fits = length(all4),
+             A_C3_median = rA[1], A_C3_min = rA[2],
+             B_C3_median = rB[1], B_C3_min = rB[2], B_C3_max = rB[3],
+             refits = length(red), C3_refit_median = rR[1],
+             C3_refit_min = rR[2], C3_refit_max = rR[3],
+             gap_decades_min = min(gap), gap_decades_median = stats::median(gap),
+             threshold_disagree = sum(vapply(rr, function(x)
+               isTRUE(x$nflat != x$nflat3), TRUE)),
+             stringsAsFactors = FALSE)
+}))
 
-cat("\n---- how flat is flat: block eigenvalues of flagged fits\n")
-for (r in regs) {
-  rr <- Filter(function(x) x$regime == r && isTRUE(x$ok) && x$flagged && length(x$ev), res)
-  if (!length(rr)) next
-  flat_max <- unlist(lapply(rr, function(x) { e <- x$ev; m <- max(e[1], 1e-8)
-    f <- e[e < 1e-4 * m]; if (length(f)) max(f / m) else NA }))
-  id_min <- unlist(lapply(rr, function(x) { e <- x$ev; m <- max(e[1], 1e-8)
-    k <- e[e >= 1e-4 * m]; if (length(k)) min(k / m) else NA }))
-  gap <- unlist(lapply(rr, function(x) { e <- sort(x$ev / max(x$ev[1], 1e-8)); d <- diff(log10(pmax(e, 1e-12))); max(d) }))
-  n4 <- vapply(rr, function(x) x$nflat, 1L); n3 <- vapply(rr, function(x) x$nflat3, 1L)
-  cat(sprintf("%-11s n=%3d  largest flat/max %.1e  smallest kept/max %.1e  flat count disagrees (1e-4 vs 1e-3): %d\n",
-              r, length(rr), max(flat_max, na.rm = TRUE), min(id_min, na.rm = TRUE), sum(n4 != n3)))
-}
-
-cat("\n---- paired coverage, flagged fits usable under both: C against A\n")
-for (r in regs) {
+## paired: the same intervals under A and under C, and C3
+paired <- do.call(rbind, lapply(regs, function(r) {
   rr <- Filter(function(x) x$regime == r && isTRUE(x$ok) && x$flagged &&
-                 all(is.finite(c(x$se_A, x$se_C))), res)
-  if (!length(rr)) next
+                 all(is.finite(c(x$se_A, x$se_C, x$se_C3))), res)
+  if (!length(rr)) return(NULL)
   tv <- truth(r)
-  cA <- unlist(lapply(rr, function(x) abs(x$b - tv) <= z * x$se_A))
-  cC <- unlist(lapply(rr, function(x) abs(x$b - tv) <= z * x$se_C))
-  cat(sprintf("%-11s fits %3d  intervals %4d  A %.4f  C %.4f   C covers where A misses: %d; A where C misses: %d\n",
-              r, length(rr), length(cA), mean(cA), mean(cC), sum(cC & !cA), sum(cA & !cC)))
-}
+  hit <- function(o) unlist(lapply(rr, function(x) abs(x$b - tv) <= z * x[[paste0("se_", o)]]))
+  cA <- hit("A"); cC <- hit("C"); c3 <- hit("C3")
+  data.frame(regime = r, fits = length(rr), intervals = length(cA),
+             cover_A = mean(cA), cover_C = mean(cC), cover_C3 = mean(c3),
+             C_not_A = sum(cC & !cA), A_not_C = sum(cA & !cC),
+             C3_not_A = sum(c3 & !cA), A_not_C3 = sum(cA & !c3),
+             stringsAsFactors = FALSE)
+}))
+
+utils::write.csv(cover, file.path(sp, "boundary_se_cover.csv"), row.names = FALSE)
+utils::write.csv(ratio, file.path(sp, "boundary_se_ratio.csv"), row.names = FALSE)
+utils::write.csv(paired, file.path(sp, "boundary_se_paired.csv"), row.names = FALSE)
+num <- vapply(cover, is.numeric, TRUE); cover[num] <- lapply(cover[num], round, 4)
+print(cover, row.names = FALSE)
+num <- vapply(ratio, is.numeric, TRUE); ratio[num] <- lapply(ratio[num], round, 3)
+print(ratio, row.names = FALSE)
+num <- vapply(paired, is.numeric, TRUE); paired[num] <- lapply(paired[num], round, 4)
+print(paired, row.names = FALSE)
