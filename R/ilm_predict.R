@@ -197,17 +197,39 @@ ilm_re_draws <- function(A, B, ndraw, C) {
 ## Gauss-Hermite nodes and weights for E[f(Z)], Z ~ N(0, 1), by the
 ## Golub-Welsch eigenvalue method: E[f(Z)] ~ sum(w * f(z)). With one linear
 ## predictor, a row's whole latent contribution is a single normal, so its
-## average over the random effects is a one-dimensional integral, and 40 points
-## do it to the digits a probability is ever quoted to.
+## average over the random effects is a one-dimensional integral.
+##
+## HOW MANY NODES. A fixed 40 was exact to 1e-15 at a latent SD of 1 but
+## drifted as the SD grew: through a logit, 4e-6 at an SD of 3 and 2e-5 at
+## 3.5, because the inverse link's transition gets narrow against the spacing
+## of the nodes. A complementary log-log is harder still: 3e-7 at 80 nodes and
+## an SD of 2. So the count grows with the largest SD being integrated over,
+## 40 * SD^2 in steps of 40 and capped at 800. Measured against integrate()
+## over linear predictors from -8 to 8: through a logit, better than 1e-12 up
+## to an SD of 6; through a complementary log-log, better than 1e-9 up to 5
+## and 4e-8 at 6; a log link, better than 1e-11. The rules are cached,
+## because the delta method asks for the same one many times.
+ilm_gh_cache <- new.env(parent = emptyenv())
+
 #' @keywords internal
 #' @noRd
 ilm_gh <- function(n = 40L) {
+  key <- as.character(n)
+  if (!is.null(ilm_gh_cache[[key]])) return(ilm_gh_cache[[key]])
   i <- seq_len(n - 1L)
   J <- matrix(0, n, n)
   J[cbind(i, i + 1L)] <- J[cbind(i + 1L, i)] <- sqrt(i / 2)
   e <- eigen(J, symmetric = TRUE)
-  list(z = sqrt(2) * e$values, w = e$vectors[1L, ]^2)
+  r <- list(z = sqrt(2) * e$values, w = e$vectors[1L, ]^2)
+  assign(key, r, envir = ilm_gh_cache)
+  r
 }
+
+## The node count for a largest latent SD of `s`.
+#' @keywords internal
+#' @noRd
+ilm_gh_n <- function(s)
+  as.integer(min(800, 40 * max(1, ceiling(max(s, 0, na.rm = TRUE)^2))))
 
 #' Convert linear predictors to category probabilities
 #'
@@ -307,8 +329,10 @@ ilm_joint_draws <- function(object, nsim, seed) {
 #'
 #' With **one linear predictor** -- every family but the multinomial -- a row's
 #' whole latent contribution is a single normal, and the average is taken by
-#' Gauss-Hermite quadrature: exact for any purpose, the same on every call, and
-#' free of `ndraw`. A multinomial outcome has one dimension per category, and
+#' Gauss-Hermite quadrature, with more nodes as the latent SD grows: better
+#' than 1e-12 through a logit up to an SD of 6 on the link scale, and better
+#' than 1e-9 through a complementary log-log up to 5. It is the same on every
+#' call, and free of `ndraw`. A multinomial outcome has one dimension per category, and
 #' is averaged over `ndraw` draws with common random numbers.
 #'
 #' @section Uncertainty:
@@ -473,7 +497,7 @@ predict.ilm_model <- function(object, newdata = NULL,
     if (ordinal) {
       if (!integ)
         return(ilm_ord_probs(eta[, 1], object$zeta, object$family$pfun))
-      gh <- ilm_gh(); P <- 0
+      gh <- ilm_gh(ilm_gh_n(sqrt(max(vrow)))); P <- 0
       for (q in seq_along(gh$z))
         P <- P + gh$w[q] * ilm_ord_probs(eta[, 1] + sqrt(vrow) * gh$z[q],
                                          object$zeta, object$family$pfun)
@@ -485,7 +509,7 @@ predict.ilm_model <- function(object, newdata = NULL,
     if (!multinom) {
       ## the zero part inside the integral: a hurdle's mean is not linear in
       ## the count mean, so it cannot be applied to the average afterwards
-      gh <- ilm_gh(); P <- 0
+      gh <- ilm_gh(ilm_gh_n(sqrt(max(vrow)))); P <- 0
       for (q in seq_along(gh$z))
         P <- P + gh$w[q] * zi_adj(linkinv(eta[, 1] + sqrt(vrow) * gh$z[q]))
       return(matrix(P, ncol = 1L))

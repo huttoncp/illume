@@ -92,8 +92,10 @@ value has the stationary distribution, whatever the time.
 
 With \strong{one linear predictor} -- every family but the multinomial -- a row's
 whole latent contribution is a single normal, and the average is taken by
-Gauss-Hermite quadrature: exact for any purpose, the same on every call, and
-free of \code{ndraw}. A multinomial outcome has one dimension per category, and
+Gauss-Hermite quadrature, with more nodes as the latent SD grows: better
+than 1e-12 through a logit up to an SD of 6 on the link scale, and better
+than 1e-9 through a complementary log-log up to 5. It is the same on every
+call, and free of \code{ndraw}. A multinomial outcome has one dimension per category, and
 is averaged over \code{ndraw} draws with common random numbers.
 }
 

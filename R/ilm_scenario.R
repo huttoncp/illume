@@ -126,9 +126,10 @@ ilm_scen_support <- function(mf, scen, vars) {
 #' In a mixed model each unit's prediction is averaged over every random term
 #' -- intercepts, slopes, an AR or CAR latent -- as `predict(marginal = TRUE)`
 #' does, so the result is a population mean rather than the value for a group
-#' whose random effect happens to be zero. The interval draws the whole
-#' parameter vector, variance components included, since that average depends
-#' on them.
+#' whose random effect happens to be zero. The estimate is that mean at the
+#' fitted parameters, so it matches `predict()` exactly and does not depend on
+#' `seed` or `sims`; the interval comes from draws of the whole parameter
+#' vector, variance components included, since the average depends on them.
 #'
 #' @section Extrapolation:
 #'
@@ -228,7 +229,12 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
 
   a <- (1 - level) / 2
   res <- grid
-  res$estimate <- colMeans(draws)
+  ## The estimate is the population mean AT THE FIT, as predict() gives it;
+  ## the draws give the interval. It was the mean of the draws, which moved
+  ## with the seed and, through a nonlinear link, was pulled towards the
+  ## middle -- Jensen's inequality over the parameter uncertainty.
+  est <- vapply(nds, function(nd) ilm_scen_mean(object, nd, mixed), 0)
+  res$estimate <- est
   res$lower <- apply(draws, 2L, stats::quantile, a, na.rm = TRUE)
   res$upper <- apply(draws, 2L, stats::quantile, 1 - a, na.rm = TRUE)
 
@@ -251,7 +257,7 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
       ct <- data.frame(
         contrast = vapply(seq_len(nrow(prs)), function(i)
           paste(lab(prs[i, 2L]), "-", lab(prs[i, 1L])), ""),
-        estimate = colMeans(dd),
+        estimate = est[prs[, 2L]] - est[prs[, 1L]],
         lower = apply(dd, 2L, stats::quantile, a, na.rm = TRUE),
         upper = apply(dd, 2L, stats::quantile, 1 - a, na.rm = TRUE),
         p = apply(dd, 2L, function(z)

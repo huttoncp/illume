@@ -163,3 +163,42 @@ test_that("ilm_ame() reports a typical group's effect, or the population's when 
   expect_lt(a1$estimate, a0$estimate)
   expect_true(is.finite(a1$se) && a1$se > 0)
 })
+
+test_that("the quadrature holds at a large latent SD", {
+  ## a fixed 40 nodes drifted to about 1e-5 here; the node count now grows
+  ## with the SD being integrated over
+  set.seed(3); n <- 400
+  d <- data.frame(x = rnorm(n), g = factor(rep(1:40, each = 10)))
+  d$y <- rbinom(n, 1, plogis(-0.4 + 0.8 * d$x + rnorm(40, 0, 1.5)[d$g]))
+  f <- ilm_model(y ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
+  f$Sigma[["g"]][1, 1] <- 3.4^2
+  gr <- data.frame(x = c(-2, 0, 2))
+  pm <- as.numeric(predict(f, newdata = gr, type = "response", marginal = TRUE))
+  ex <- vapply(gr$x, function(z) {
+    e <- sum(c(1, z) * stats::coef(f))
+    stats::integrate(function(u) stats::plogis(e + u) * stats::dnorm(u, 0, 3.4),
+                     -Inf, Inf, rel.tol = 1e-12)$value
+  }, 0)
+  expect_lt(max(abs(pm - ex)), 1e-9)
+})
+
+test_that("a scenario's estimate is the population mean at the fit", {
+  set.seed(12); ng <- 60
+  d <- data.frame(x = rnorm(ng * 10), g = factor(rep(seq_len(ng), each = 10)))
+  d$y <- rbinom(nrow(d), 1, plogis(0.2 + 0.8 * d$x + rnorm(ng, 0, 1.5)[d$g]))
+  f <- ilm_model(y ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
+  s1 <- ilm_scenario(f, x = c(-1, 1), sims = 60, seed = 1, contrast = "first",
+                     progress = FALSE)
+  s2 <- ilm_scenario(f, x = c(-1, 1), sims = 90, seed = 2, contrast = "first",
+                     progress = FALSE)
+  pm <- vapply(c(-1, 1), function(v) {
+    nd <- f$model; nd$x <- v
+    mean(predict(f, newdata = nd, type = "response", marginal = TRUE))
+  }, 0)
+  ## the value at the fit, whatever the seed or the number of draws
+  expect_equal(s1$estimate, pm, tolerance = 1e-12)
+  expect_identical(s1$estimate, s2$estimate)
+  expect_equal(attr(s1, "contrasts")$estimate, pm[2] - pm[1], tolerance = 1e-12)
+  ## and the draws still give an interval around it
+  expect_true(all(s1$lower < s1$estimate & s1$estimate < s1$upper))
+})
