@@ -55,21 +55,34 @@ against "young students"). Judge the description work by that.
 - Decided by Craig: no expanding dates into year/month/day/weekday parts;
   drop-column or shuffle importance only if it is cheap enough.
 - Next, in order:
-  1. Describe every variable the way dates now are: a numeric one by its
-     middle half against all rows, a categorical one by its most
-     over-represented level against all rows -- in the sentences, and in a
-     per-cluster table.
+  1. Describe every variable in each cluster's profile. **Craig's direction
+     (2026-09-23): for a categorical variable, the frequency of each of its
+     values among the cluster's members, to show how common or rare each
+     category is in that cluster** (wording other than common/rare is fine),
+     unless there is a better idea. Refinement to put to him: show each share
+     beside its share among all rows ("72% web (all rows 41%)"), since a
+     category that is common everywhere does not set a cluster apart. A
+     numeric variable by its middle half against all rows, as dates are
+     already. In the sentences and in a per-cluster table.
   2. Attach `ilm_describe_all(data, by = "cluster")` to the profile (Craig's
      suggestion; grouping already works).
   3. Propose building the sentences from the original variables
      (catdes-style v-tests per variable and level) instead of from the
      reduction's dimensions, which is closer to Craig's goal. Show him a
      before and after first.
-  4. `ilm_glrm()` now defaults to `"cycles"`, so illume's GLRM imputation
+  4. **A prose description of the cluster profiles, as an option -- Craig
+     wants to see this when the session resumes.** He suggested
+     `ilm_interpret()` produce it, called internally by `ilm_profile()`.
+     Constraint: `ilm_interpret()` is in illume, and illumex must never
+     depend on illume, so `ilm_profile()` cannot call it. Options to put to
+     him: build the prose in illumex (an argument to `ilm_profile()`, or
+     its print method), and give illume's `ilm_interpret()` a method for an
+     `ilm_profile` that uses it.
+  5. `ilm_glrm()` now defaults to `"cycles"`, so illume's GLRM imputation
      runs the rhythm test for every imputation. Measure it; if it costs,
      let `time` take an earlier fit's `$time` map and pass that from
      `ilm_impute()`.
-  5. Full suite and `R CMD check`; a PR when Craig asks.
+  6. Full suite and `R CMD check`; a PR when Craig asks.
 
 ---
 
