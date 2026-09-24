@@ -1,0 +1,62 @@
+Version: 0.0.8.9000
+Date: 2026-09-23
+R: 4.4.3
+Studies: bench, boundary_se, coverage, power, mclogit, messy, imputation, brms
+Date.coverage: 2026-09-23 and 2026-09-24
+Date.power: 2026-09-23 and 2026-09-24
+Date.mclogit: 2026-09-24
+Date.messy: 2026-09-24
+Date.imputation: 2026-09-24
+Date.brms: 2026-09-24
+Note: A COMPLETE retention set, at the parameters 0.0.7.9000 used: coverage
+ and power 2000 replicates, mclogit 500, messy 400, boundary_se 400 per
+ regime, bench 160, imputation 40, brms 3. Run against the 0.0.8.9000 builds
+ of illume and illumex, installed in a scratch library; illumex's date
+ features merged after them and are not in it. bench, boundary_se and most of
+ coverage ran on 2026-09-23, the rest on 2026-09-24.
+Note: The rule for a usable fit changed during this run, and every cell it
+ could change was re-run. The coverage, power, mclogit and messy scripts
+ counted an illume fit only when TMB called its Hessian positive definite
+ (pdHess). A fit whose covariance sits at its boundary has the direction the
+ data cannot resolve held and pdHess FALSE by design, and the package's own
+ rule, ilm_fixed_usable(), counts it. Holding only the flat direction
+ (adopted at 0.0.7.9000) holds every boundary fit, so the first run, with the
+ old rule, kept 176 of 2000 mn_J5_thin replicates (conv_rate 0.088), 421 of
+ 2000 in mn_J3_ar and 57 of 400 fits in messy's flat_re. The scripts now ask
+ what the package asks. The cells that had lost replicates were re-run on
+ 2026-09-24 -- nine of coverage, four of power and all of messy. Every other
+ cell had kept all of its replicates, which the new rule cannot change, and
+ mclogit lost none. The same rule understated 0.0.7.9000 too: its conv_rate
+ column is the share with pdHess, not the share usable (see its messy note).
+Note: Counted as the package counts them, the multinomial coverage cells use
+ 95.4% to 100% of their replicates and cover at 0.946 to 0.954. Most of those
+ fits are held at a boundary -- 1731 of 1907 in mn_J5_thin, 1579 of 2000 in
+ mn_J3_ar, 1365 of 1979 in mn_J5_mid, 669 of 1998 in mn_J5_rich -- and the
+ held fits alone cover at 0.942 to 0.955 in those four cells: the
+ flat-direction hold measured on its own fits. The re-run cells' CSVs record
+ n_held and coverage_held.
+Note: In power, mn_J3_thin uses 2000 replicates at every effect size where
+ the first run used 1851 to 1893; its size is 0.045 (Wald) and 0.055 (LRT),
+ and its power is within 0.003 of 0.0.7.9000's. Type I error ranges over
+ 0.042 to 0.061 (Wald) across the 13 cells, as at 0.0.7.9000. In messy,
+ flat_re (a true SD of 0.05) uses 395 of 400 fits, where 0.0.7.9000 used 253
+ -- its note predicted 97.5% -- and covers at 0.947, level with mclogit;
+ rare uses 395 and combined 397, covering at 0.930 and 0.942 against
+ mclogit's 0.853 and 0.894.
+Note: The imputation study's lowrank_pa route called illume:::ilm_anom_rank(),
+ which moved to illumex in the split. Inside a replicate the error became NA,
+ so the first run fitted lowrank_pa in 0 of 40 replicates in three cells and
+ 13 of 40 in a fourth. The script now takes the function from illumex and
+ resolves it before any replicate runs, so a future move stops the study.
+ Re-run on 2026-09-24, every method, lowrank_pa included, reproduces
+ 0.0.7.9000 exactly.
+Note: bench, boundary_se, mclogit and brms reproduce 0.0.7.9000's estimates
+ exactly. In boundary_se the fit's own rule (B) now equals C3 in every
+ boundary fit, as adopting C intended; at 0.0.7.9000 it ran 0.547 to 1.340
+ times C3's. Bench timings are longer for every package -- gaussian_mm by
+ 1.20 to 1.21 times in illume, lme4 and glmmTMB alike -- which is load on the
+ machine rather than a change in illume. Multinomial fits are the exception:
+ illume's went from 9.1 to 10.7 times nnet's time at J = 3 and from 5.8 to
+ 7.2 at J = 5, about a fifth slower relative to nnet. Not yet explained.
+Note: From 04:15 on 2026-09-24 the re-runs used 5 workers rather than 10.
+ Every replicate sets its own seed, so only the secs columns are affected.

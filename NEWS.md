@@ -19,6 +19,16 @@
   largest. With one random term, that term was compared with itself, so a
   random intercept fitted at 0.0001 was reported as biased, and the Laplace
   approximation blamed, in a gaussian model, which has none.
+* The study set was re-run for this version and reproduces 0.0.7.9000
+  wherever nothing changed (`studies/findings/`). Two of its scripts had
+  fallen behind the package, and both are fixed. Four counted a fit as usable
+  only when its Hessian was positive definite, which a fit held at a
+  covariance boundary is not, by design: the coverage study's "convergence
+  rate" for a thin five-category model read 0.088 where 95% of its fits were
+  usable. And the imputation study still looked for a function that moved to
+  illumex. Counted as the package counts them, the multinomial cells cover at
+  0.946 to 0.954, and the fits held at a boundary, on their own, at 0.942 to
+  0.955.
 
 # illume 0.0.7.9000
 
