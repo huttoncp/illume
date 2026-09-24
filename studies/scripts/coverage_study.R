@@ -600,7 +600,13 @@ run_rep <- function(i, cell) {
   ## sitting at a gradient of 3.7e-03 and recovering the same coefficients as
   ## the ones that reported success. Judging on the code discarded them.
   gst <- f$checks$status[f$checks$check == "gradient"]
-  ok <- (!length(gst) || gst != "FAIL") && isTRUE(f$sdr$pdHess) &&
+  ## Usable standard errors are the ones the package calls usable: a positive
+  ## definite Hessian, or a covariance at its boundary with the direction the
+  ## data cannot resolve held. The second has pdHess FALSE by design, and
+  ## since 0.0.8.9000 every boundary fit is held, so asking for pdHess alone
+  ## kept 176 of 2000 mn_J5_thin replicates -- the ones away from a boundary.
+  held <- length(f$hessian_held) > 0L
+  ok <- (!length(gst) || gst != "FAIL") && (isTRUE(f$sdr$pdHess) || held) &&
         length(s) == length(b) && all(is.finite(s)) && all(s > 0)
   crit <- if (isTRUE(f$exact_df)) qt(1 - (1 - LEVEL) / 2, f$resid_df)
           else qnorm(1 - (1 - LEVEL) / 2)
@@ -617,7 +623,7 @@ run_rep <- function(i, cell) {
     b <- b[ix]; s <- s[ix]
   }
   list(ok = ok, err = NA_character_, b = unname(b), s = unname(s),
-       crit = crit, nm = names(b))
+       crit = crit, nm = names(b), held = held)
 }
 
 ## ---- run each cell ---------------------------------------------------------
@@ -688,6 +694,12 @@ for (cell in cells) {
     stringsAsFactors = FALSE)
   out$se_ratio <- out$mean_se / out$emp_sd
   out$mc_se    <- sqrt(out$coverage * (1 - out$coverage) / out$n_used)
+  ## the replicates used with a covariance direction held at its boundary,
+  ## and their coverage on their own
+  heldv <- vapply(res, function(z) isTRUE(z$held), TRUE)[keep]
+  out$n_held <- sum(heldv)
+  out$coverage_held <- if (any(heldv)) colMeans(cov_i[heldv, , drop = FALSE])
+                       else NA_real_
   out$secs     <- el
   ## the latent budget this cell was built to sit at, carried into the results
   ## so the table can be read against it directly

@@ -1293,10 +1293,12 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     }
   }
   if (!any(flat)) {
-    ## nothing at a boundary, or a boundary term curved in every direction:
-    ## the whole Hessian, TMB's or the accurate one, is the covariance
-    if (isTRUE(sdr$pdHess))
-      return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
+    ## Nothing at a boundary, or a boundary term curved in every direction:
+    ## the accurate Hessian is the covariance, and never TMB's, whose verdict
+    ## is the thing that is noise here. A boundary term with no direction flat
+    ## enough to hold still has one nearly flat -- the study's one case had
+    ## its smallest at 2.5e-3 of the largest -- and TMB's differencing at a
+    ## step of 1e-3 put those standard errors 2 to 10% off the accurate ones.
     if (max(g0) <= 1e-2 && pd(H)) {
       s2 <- redo(H)
       if (!is.null(s2) && isTRUE(s2$pdHess))

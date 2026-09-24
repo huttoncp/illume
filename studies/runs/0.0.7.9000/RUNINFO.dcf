@@ -1,8 +1,9 @@
 Version: 0.0.7.9000
 Date: 2026-09-21
 R: 4.4.3
-Studies: coverage, power, mclogit, bench, brms, imputation, messy
+Studies: coverage, power, mclogit, bench, brms, imputation, messy, boundary_se
 Date.messy: 2026-09-22
+Date.boundary_se: 2026-09-23
 Note: A COMPLETE retention set. All five standing studies were re-run at this
  version alongside the new imputation ablation, at the same parameters as
  0.0.2.9000 so the two are directly comparable: coverage and power 2000
@@ -43,3 +44,11 @@ Note: The messy-data comparison (messy) was run a day after the rest of the
  variance boundary have since been reported rather than refused, which on the
  same seeds raises the usable share with a true SD of 0.05 from 63.3% to
  97.5% (see NEWS); the numbers recorded here are the ones measured at the time.
+Note: The boundary standard-error study (boundary_se) was run on 2026-09-23,
+ 400 replicates per regime, to choose how the fixed effects' standard errors
+ are computed when a random-effect covariance sits at its boundary: A, hold the
+ whole term; B, the rule then in use, which let TMB's own verdict on its
+ Hessian decide; C, hold only the directions the data cannot resolve. It
+ loaded the working tree with devtools::load_all() rather than the installed
+ package. C was adopted the same day (at the 1e-3 threshold, C3 in the
+ tables), so B here is the OLD rule; from 0.0.8.9000 B is C3.
