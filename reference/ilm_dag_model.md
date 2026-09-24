@@ -79,8 +79,10 @@ ilm_dag_model(
   at: the fixed effects are not being selected, so the one thing REML
   forbids – comparing likelihoods across different fixed structures –
   never arises, and its unbiased variance components are simply better.
-  Ignored for non-gaussian responses, where restricted likelihood has no
-  meaning.
+  Applied to gaussian responses only: for any other family the
+  restricted likelihood is only approximate (see
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)),
+  so this route stays with maximum likelihood there.
 
 - ...:
 

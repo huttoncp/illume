@@ -240,7 +240,7 @@ meaningless even though nothing in the output looks wrong.</p>
 <span><span class="co">#&gt; 4                                                       20.0 observations per level</span></span>
 <span><span class="co">#&gt; 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)</span></span>
 <span><span class="co">#&gt; 6                                          nlminb code 0 (relative convergence (4))</span></span>
-<span><span class="co">#&gt; 7                                                         max |gradient| = 1.62e-04</span></span>
+<span><span class="co">#&gt; 7                                                         max |gradient| = 1.64e-04</span></span>
 <span><span class="co">#&gt; 8              positive definite: TRUE; non-finite or non-positive variances: FALSE</span></span></code></pre></div>
 <p>Each check has one of five statuses. <code>OK</code> and
 <code>FAIL</code> are self-explanatory. <code>WARN</code> means
@@ -257,6 +257,12 @@ suggested remedy:</p>
 <code class="sourceCode R"><span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">checks</span><span class="op">[</span><span class="va">fit</span><span class="op">$</span><span class="va">checks</span><span class="op">$</span><span class="va">status</span> <span class="op">!=</span> <span class="st">"OK"</span>, <span class="op">]</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">bad</span><span class="op">)</span><span class="op">)</span> <span class="va">bad</span><span class="op">[</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"check"</span>, <span class="st">"cause"</span>, <span class="st">"suggestion"</span><span class="op">)</span><span class="op">]</span> <span class="kw">else</span> <span class="st">"all checks passed"</span></span>
 <span><span class="co">#&gt; [1] "all checks passed"</span></span></code></pre></div>
+<p>A suggestion in words still has to be turned into code, and
+<code><a href="../reference/ilm_remedies.html">ilm_remedies()</a></code> does that: it lists a remedy for every check
+that is not <code>OK</code>, each written as the change to
+<code><a href="../reference/ilm_model.html">ilm_model()</a></code> that makes it, and
+<code><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> refits with the one you choose. <em>When
+there are many categories</em>, below, shows both.</p>
 <div class="section level3">
 <h3 id="the-most-useful-check">The most useful check<a class="anchor" aria-label="anchor" href="#the-most-useful-check"></a>
 </h3>
@@ -338,9 +344,18 @@ Once set, <code>ilm_anova(test = "LRT")</code> and
 that are not comparable, and so does <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> – a
 sandwich needs per-observation scores, and integrating the coefficients
 out leaves none.</p>
-<p><code><a href="../reference/ilm_dag_model.html">ilm_dag_model()</a></code> and <code><a href="../reference/ilm_aov_ez.html">ilm_aov_ez()</a></code> default to
-REML, because in both the fixed effects were fixed before any data were
-seen: by the graph in one case and by the design in the other.</p>
+<p>For a gaussian response this is REML exactly: the Laplace
+approximation to the restricted likelihood is exact for a linear model,
+and the variance components agree with <code>lme4</code> to 1e-05.
+<code>reml = TRUE</code> works for every other family too, as it does in
+<code>glmmTMB</code>, but there the same integral is only approximately
+a restricted likelihood. It reduces the downward bias without REML’s
+exact properties, and <code>fit$reml_exact</code> says which of the two
+a fit has.</p>
+<p><code><a href="../reference/ilm_dag_model.html">ilm_dag_model()</a></code> (for a gaussian response) and
+<code><a href="../reference/ilm_aov_ez.html">ilm_aov_ez()</a></code> default to REML, because in both the fixed
+effects were fixed before any data were seen: by the graph in one case
+and by the design in the other.</p>
 </div>
 <div class="section level2">
 <h2 id="predictions">Predictions<a class="anchor" aria-label="anchor" href="#predictions"></a>
@@ -558,7 +573,94 @@ covariance with fewer dimensions:</p>
 <span>          re_struct <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>subj <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"rr"</span>, rank <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>This saves parameters <em>and</em> latent values, and the latter is
 usually the bigger gain. When a structure is too rich for the data, the
-checks say so and name a specific rank to try.</p>
+checks say so and name a specific rank to try. Five categories and
+twenty subjects is such a case: an unstructured covariance for
+<code>subj</code> has 10 parameters, and there are two subjects for each
+of them.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span></span>
+<span><span class="va">d5</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>subj <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span>, each <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span>, x1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">300</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># the subjects differ along one dimension, shared by the four linear predictors</span></span>
+<span><span class="va">eta5</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/outer.html" class="external-link">outer</a></span><span class="op">(</span><span class="fl">0.4</span> <span class="op">*</span> <span class="va">d5</span><span class="op">$</span><span class="va">x1</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1</span>, <span class="op">-</span><span class="fl">1</span>, length.out <span class="op">=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/outer.html" class="external-link">outer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">20</span><span class="op">)</span><span class="op">[</span><span class="va">d5</span><span class="op">$</span><span class="va">subj</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="op">-</span><span class="fl">0.8</span>, length.out <span class="op">=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">P5</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">eta5</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/contrast.html" class="external-link">contr.sum</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>; <span class="va">P5</span> <span class="op">&lt;-</span> <span class="va">P5</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">P5</span><span class="op">)</span></span>
+<span><span class="va">d5</span><span class="op">$</span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">P5</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">letters</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, <span class="fl">1</span>, prob <span class="op">=</span> <span class="va">p</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">f5</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d5</span>, family <span class="op">=</span> <span class="st">"multinomial"</span>,</span>
+<span>                verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ilm_model(): the random-effect covariance of `subj` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.</span></span>
+<span><span class="va">rem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_remedies.html">ilm_remedies</a></span><span class="op">(</span><span class="va">f5</span><span class="op">)</span></span>
+<span><span class="va">rem</span></span>
+<span><span class="co">#&gt; 6 remedies</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [1] structural -- re_levels[subj] (FAIL)</span></span>
+<span><span class="co">#&gt;     give 'subj' a reduced-rank category covariance, rr(1): 4 parameters</span></span>
+<span><span class="co">#&gt;     instead of 10</span></span>
+<span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 1L))</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [2] structural -- latent_budget (WARN)</span></span>
+<span><span class="co">#&gt;     give 'subj', the term with the most latent values, a category</span></span>
+<span><span class="co">#&gt;     covariance of rank 3 (rr(3)), which cuts its latent values from 80 to</span></span>
+<span><span class="co">#&gt;     60</span></span>
+<span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 3L))</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [3] structural -- hessian, sigma_rank[subj] (BOUNDARY, BOUNDARY)</span></span>
+<span><span class="co">#&gt;     refit with boundary = "avoid", a small penalty that keeps every</span></span>
+<span><span class="co">#&gt;     random-effect covariance inside its range. Each variance is then</span></span>
+<span><span class="co">#&gt;     assumed nonzero rather than estimated at zero, so do not test whether</span></span>
+<span><span class="co">#&gt;     it is; it comes out larger, and for a binary or categorical outcome the</span></span>
+<span><span class="co">#&gt;     fixed effects come out a little further from zero -- markedly so when a</span></span>
+<span><span class="co">#&gt;     category is rare</span></span>
+<span><span class="co">#&gt;     change: boundary = "avoid"</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [4] structural -- sigma_rank[subj] (BOUNDARY)</span></span>
+<span><span class="co">#&gt;     give 'subj' a category covariance of rank 2 (rr(2)) in place of us: the</span></span>
+<span><span class="co">#&gt;     directions dropped have no variance</span></span>
+<span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 2L))</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [5] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
+<span><span class="co">#&gt;     pool levels of 'subj' that belong together, so that each level carries</span></span>
+<span><span class="co">#&gt;     more observations; the grouping then means something different, so</span></span>
+<span><span class="co">#&gt;     choose the pooling by what the levels are</span></span>
+<span><span class="co">#&gt;     by hand: not something a refit can do</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [6] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
+<span><span class="co">#&gt;     drop 'subj' from the model. Its variance is not zero, so the standard</span></span>
+<span><span class="co">#&gt;     errors stop accounting for the grouping, and for a non-gaussian</span></span>
+<span><span class="co">#&gt;     response the fixed effects change meaning</span></span>
+<span><span class="co">#&gt;     change: formula = y ~ x1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Refit with one by ilm_apply_remedy(fit, &lt;this list&gt;, id). Numerical is the</span></span>
+<span><span class="co">#&gt; same model fitted harder; structural changes the random-effect or variance</span></span>
+<span><span class="co">#&gt; structure and not what the fixed effects mean; estimand changes what they</span></span>
+<span><span class="co">#&gt; estimate or what their standard errors account for, so apply one of those</span></span>
+<span><span class="co">#&gt; only by choice.</span></span></code></pre></div>
+<p>Each remedy is the change that makes it, and its tier says what
+applying it would change: <code>structural</code> alters the covariance
+and leaves the fixed effects meaning what they did, while
+<code>estimand</code> would change what they estimate. Three remedies
+name a rank, because three checks ask three questions:
+<code>re_levels</code> what twenty subjects can support,
+<code>latent_budget</code> what the whole model can, and
+<code>sigma_rank</code> how many dimensions of the estimated covariance
+have any variance. The first is fixed by the design before anything is
+estimated, so it is the one to try, and the refit’s own checks say
+whether it was enough:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">f5r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy</a></span><span class="op">(</span><span class="va">f5</span>, <span class="va">rem</span>, <span class="va">rem</span><span class="op">$</span><span class="va">id</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith</a></span><span class="op">(</span><span class="va">rem</span><span class="op">$</span><span class="va">check</span>, <span class="st">"re_levels"</span><span class="op">)</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ilm_apply_remedy(): refitted with re_struct = list(subj = list(type = "rr", rank = 1L)).</span></span>
+<span><span class="co">#&gt;   re_levels[subj]: FAIL -&gt; WARN</span></span>
+<span><span class="co">#&gt;   not OK after the refit: re_levels[subj] (WARN)</span></span>
+<span><span class="va">f5r</span><span class="op">$</span><span class="va">checks</span><span class="op">[</span><span class="va">f5r</span><span class="op">$</span><span class="va">checks</span><span class="op">$</span><span class="va">status</span> <span class="op">!=</span> <span class="st">"OK"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"check"</span>, <span class="st">"status"</span>, <span class="st">"detail"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;             check status</span></span>
+<span><span class="co">#&gt; 3 re_levels[subj]   WARN</span></span>
+<span><span class="co">#&gt;                                                                    detail</span></span>
+<span><span class="co">#&gt; 3 20 levels for 4 covariance parameters (5.0 per parameter); rr(1), C = 4</span></span></code></pre></div>
+<p>The level check now warns rather than fails – four parameters from
+twenty subjects is five subjects each, short of the six it asks for –
+and the covariance no longer sits at its boundary. The refit went
+through the model’s own call, so everything else about it is as it was,
+and <code>f5r$remedy_log</code> records how it was reached.</p>
 </div>
 <div class="section level2">
 <h2 id="checking-the-fitted-model">Checking the fitted model<a class="anchor" aria-label="anchor" href="#checking-the-fitted-model"></a>
@@ -566,21 +668,21 @@ checks say so and name a specific rank to try.</p>
 <p><code><a href="../reference/ilm_appraise.html">ilm_appraise()</a></code> draws diagnostic panels built for a
 categorical outcome rather than borrowed from tools designed for
 continuous responses:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_appraise.html">ilm_appraise</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <p>Two further checks are worth knowing about, because broad residual
 summaries have very little power to detect the problems they address.
 <code><a href="../reference/ilm_check_omitted.html">ilm_check_omitted()</a></code> tests variables you did <em>not</em>
 include, and <code><a href="../reference/ilm_check_ar.html">ilm_check_ar()</a></code> tests for leftover correlation
 over time:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_omitted.html">ilm_check_omitted</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">dd</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_check_ar.html">ilm_check_ar</a></span><span class="op">(</span><span class="va">fit</span>, time <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">time</span>, group <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">subj</span><span class="op">)</span></span></code></pre></div>
 <p>And <code><a href="../reference/ilm_consistency.html">ilm_consistency()</a></code> asks the most direct question
 available: can the model recover itself from data it generated? If not,
 the fitting method is not reliable for this model and this amount of
 data.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_consistency.html">ilm_consistency</a></span><span class="op">(</span><span class="va">fit</span>, B <span class="op">=</span> <span class="fl">50</span>, ncores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -592,7 +694,7 @@ need opposite remedies.</p>
 <p><code><a href="../reference/ilm_plot_acf.html">ilm_plot_acf()</a></code> draws the residual autocorrelation and
 partial autocorrelation by lag, within group, with a verdict on each
 lag:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_plot_acf.html">ilm_plot_acf</a></span><span class="op">(</span><span class="va">fit</span>, time <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">time</span>, group <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">subj</span>, maxlag <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span></code></pre></div>
 <p>Three things make this not <code><a href="https://rdrr.io/r/stats/acf.html" class="external-link">stats::acf()</a></code>:</p>
 <ul>
@@ -618,7 +720,7 @@ mean something. When visits fall where they fall, use
 <code>rho</code> raised to the gap between them, which is
 <code>nlme</code>’s <code>corCAR1()</code> and reduces to AR(1) when
 every gap is one.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
 <span>          ar <span class="op">=</span> <span class="fu"><a href="../reference/ilm_car1.html">ilm_car1</a></span><span class="op">(</span><span class="va">dd</span><span class="op">$</span><span class="va">day</span>, <span class="va">dd</span><span class="op">$</span><span class="va">subj</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Both constructors report their <strong>latent budget</strong> before
@@ -641,7 +743,7 @@ observations each drawn from thirty possible times, it found 53 pairs at
 lag 1, five at lag 2 and none beyond. <code><a href="../reference/ilm_variogram.html">ilm_variogram()</a></code> bins
 every within-group pair by how far apart it is instead, and uses all
 900.</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_variogram.html">ilm_variogram</a></span><span class="op">(</span><span class="va">fit</span>, time <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">day</span>, group <span class="op">=</span> <span class="va">dd</span><span class="op">$</span><span class="va">subj</span><span class="op">)</span></span></code></pre></div>
 <p>It distinguishes three shapes, because they need three different
 remedies:</p>
@@ -687,7 +789,7 @@ so the further apart they are.</p>
 <p>The same function takes coordinates instead of a time, because
 separation in space and separation in time are the same statistic over a
 different distance:</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_variogram.html">ilm_variogram</a></span><span class="op">(</span><span class="va">fit</span>, coords <span class="op">=</span> <span class="va">dd</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"easting"</span>, <span class="st">"northing"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p>The remedy it names is different, and deliberately so. illume fits no
 spatial covariance — no Matern field, no exponential one — so the advice
@@ -734,13 +836,13 @@ rather than reaching for AR(1), which cannot represent a cycle at
 all.</p>
 <p>The remedy is ordinary fixed effects; there is no new likelihood
 involved, only the right columns:</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="../reference/ilm_fourier.html">ilm_fourier</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">12</span>, period <span class="op">=</span> <span class="fl">12</span>, K <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       sin1  cos1  sin2 cos2</span></span>
 <span><span class="co">#&gt; [1,] 0.500 0.866 0.866  0.5</span></span>
 <span><span class="co">#&gt; [2,] 0.866 0.500 0.866 -0.5</span></span>
 <span><span class="co">#&gt; [3,] 1.000 0.000 0.000 -1.0</span></span></code></pre></div>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># a smooth annual cycle in monthly data</span></span>
 <span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="fu"><a href="../reference/ilm_fourier.html">ilm_fourier</a></span><span class="op">(</span><span class="va">month</span>, <span class="fl">12</span>, K <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>,</span>
 <span>          family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
@@ -769,7 +871,7 @@ expect, not on the basis.</p>
 <p><code><a href="../reference/ilm_check_variance.html">ilm_check_variance()</a></code> reports two patterns, and both have
 the same remedy: model the logarithm of the dispersion instead of
 treating it as one number.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># a separate spread per group</span></span>
 <span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
 <span>          dispformula <span class="op">=</span> <span class="op">~</span> <span class="va">site</span><span class="op">)</span></span>
@@ -810,7 +912,7 @@ scale that tops out, a score capped at 100, a measurement beyond an
 instrument’s range.</p>
 <p><code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">ilm_describe()</a></code> names the pile-up before you model
 it:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fl">0.5</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">1500</span>, <span class="fl">0</span>, <span class="fl">1.4</span><span class="op">)</span></span>
 <span><span class="va">d0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>unbounded <span class="op">=</span> <span class="va">y</span>, capped <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">pmin</a></span><span class="op">(</span><span class="va">y</span>, <span class="fl">1.2</span><span class="op">)</span><span class="op">)</span></span>
@@ -824,7 +926,7 @@ it:</p>
 <p>and <code><a href="../reference/ilm_censor.html">ilm_censor()</a></code> is the remedy. A censored observation
 contributes the probability of the interval it is known to lie in rather
 than a density at a value it was never observed at:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
 <span>          censor <span class="op">=</span> <span class="fu"><a href="../reference/ilm_censor.html">ilm_censor</a></span><span class="op">(</span><span class="va">dd</span><span class="op">$</span><span class="va">y</span>, upper <span class="op">=</span> <span class="fl">1.2</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>With no random effects this is the Tobit model, and it agrees with
@@ -853,7 +955,7 @@ with a different error distribution:</p>
 <p><code>"weibull"</code>, <code>"lognormal"</code> and
 <code>"loglogistic"</code>, for <code>W</code> extreme-value, normal and
 logistic respectively.</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">time</span> <span class="op">~</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">age</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">centre</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"weibull"</span>,</span>
 <span>          censor <span class="op">=</span> <span class="fu"><a href="../reference/ilm_surv.html">ilm_surv</a></span><span class="op">(</span><span class="va">dd</span><span class="op">$</span><span class="va">time</span>, <span class="va">dd</span><span class="op">$</span><span class="va">event</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/ilm_surv.html">ilm_surv()</a></code> takes <code>event</code> in the convention
@@ -877,7 +979,7 @@ came back at 0.729.</p>
 <div class="section level3">
 <h3 id="survival-curves-and-whether-the-family-was-right">Survival curves, and whether the family was right<a class="anchor" aria-label="anchor" href="#survival-curves-and-whether-the-family-was-right"></a>
 </h3>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_plot_survival.html">ilm_plot_survival</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">dd</span><span class="op">$</span><span class="va">time</span>, <span class="va">dd</span><span class="op">$</span><span class="va">event</span><span class="op">)</span></span></code></pre></div>
 <p>The fitted curve is drawn over the Kaplan-Meier estimate, which
 assumes nothing about the shape of the baseline. Where the two part
@@ -920,7 +1022,7 @@ the <code>x</code> row came back at a chi-square of 167 under
 same model, same data. Only the second is what a Type III main effect is
 supposed to mean, so <code><a href="../reference/ilm_anova.html">ilm_anova()</a></code> warns and names the
 fix:</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">g</span> <span class="op">*</span> <span class="va">x</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
 <span>          contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>g <span class="op">=</span> <span class="st">"contr.sum"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><code>type = 2</code> sidesteps the question entirely, at the cost of
@@ -932,7 +1034,7 @@ in an interaction it has no single effect, so
 the interacting factor – or, for a numeric partner, one per quartile –
 and says so underneath rather than quietly showing you the modal
 level:</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_plot_model.html">ilm_plot_model</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"effect"</span>, term <span class="op">=</span> <span class="st">"x"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -941,7 +1043,7 @@ level:</p>
 <p>Everything above estimates associations. Three designs turn one into
 a causal claim, each naming an assumption and letting it be partly
 checked:</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># the regression a causal graph implies, with the graph itself tested</span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_dag.html">ilm_dag</a></span><span class="op">(</span><span class="st">"dag { x [exposure] ; y [outcome] ; z -&gt; x -&gt; y ; z -&gt; y }"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_dag_model.html">ilm_dag_model</a></span><span class="op">(</span><span class="va">g</span>, <span class="va">d</span><span class="op">)</span></span>
@@ -962,7 +1064,7 @@ over it. Only the error structure is adjusted when a diagnostic asks.
 <p><code><a href="../reference/ilm_interpret.html">ilm_interpret()</a></code> writes out what a model says – each
 effect on the scale the response is measured on, how strong the evidence
 is, what the diagnostics found, and how far to trust the estimates:</p>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_interpret.html">ilm_interpret</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <p>Each effect is said over a change a reader can picture: across the
 middle half of a numeric predictor, level by level for a factor, with
@@ -983,7 +1085,7 @@ model with a link function: the average marginal effect on the response
 scale. An odds ratio of 2 can be a 3-point change in probability or a
 20-point one depending on where the data sit, so the change in
 probability is what gets reported.</p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_ame.html">ilm_ame</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -994,7 +1096,7 @@ pays for it in parameters: a multinomial spends <code>J - 1</code>
 coefficients per predictor where a cumulative link model spends one.
 Treated as a number it invents a spacing the categories do not have –
 “agree” is not twice “neutral”.</p>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">rating</span> <span class="op">~</span> <span class="va">dose</span> <span class="op">+</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_thresholds.html">ilm_thresholds</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <p>The model is <code>P(Y &lt;= j) = F(threshold_j - eta)</code>, so the
@@ -1006,7 +1108,7 @@ convention beside the thresholds. <code>"ordinal_probit"</code> and
 <code>"ordinal_cloglog"</code> change the link.</p>
 <p>One coefficient describing every cut is the proportional-odds
 assumption, and it is an assumption:</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_proportional.html">ilm_check_proportional</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <p>If a term acts differently at different cuts, the remedy is
 <code>family = "multinomial"</code>, which spends more coefficients and
@@ -1021,7 +1123,7 @@ accommodate one predictor may cost more than it buys.</p>
 <p>More zeros than a count model expects is the one misspecification a
 residual plot cannot show, because a zero is a perfectly ordinary value
 of a count.</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">visits</span> <span class="op">~</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"poisson"</span>, ziformula <span class="op">=</span> <span class="op">~</span> <span class="va">insured</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_zi_coef.html">ilm_zi_coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
@@ -1044,7 +1146,7 @@ of time, a score already scaled to the unit interval – has no
 denominator for a binomial fit, and a gaussian one puts mass outside
 <code>[0, 1]</code> and assumes a spread that does not shrink at the
 ends.</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">cover</span> <span class="op">~</span> <span class="va">elevation</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"beta"</span><span class="op">)</span></span></code></pre></div>
 <p>The parameterisation is a mean and a <strong>precision</strong>, so a
 larger dispersion parameter means <em>less</em> spread – the opposite of
@@ -1064,7 +1166,7 @@ reports how far it moved things.</p>
 response to demand, an exposure measured with error. If an instrument is
 available – something that moves the regressor without acting on the
 outcome any other way – <code><a href="../reference/ilm_iv.html">ilm_iv()</a></code> uses it.</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_iv.html">ilm_iv</a></span><span class="op">(</span><span class="va">earnings</span> <span class="op">~</span> <span class="va">schooling</span> <span class="op">+</span> <span class="va">age</span> <span class="op">|</span> <span class="va">distance</span> <span class="op">+</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">dd</span><span class="op">)</span></span></code></pre></div>
 <p>Everything to the right of the bar is the <strong>full</strong> list
 of exogenous variables, instruments and covariates alike. Leaving a
@@ -1086,7 +1188,7 @@ unbounded, which is the honest answer a Wald interval hides.</p>
 treats weights as frequencies they give standard errors too small by at
 least <code>sqrt(n / sum(w))</code>, because the likelihood believes it
 saw <code>sum(w)</code> observations.</p>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_design.html">ilm_design</a></span><span class="op">(</span><span class="va">dd</span>, weights <span class="op">=</span> <span class="op">~</span> <span class="va">wt</span>, ids <span class="op">=</span> <span class="op">~</span> <span class="va">psu</span>, strata <span class="op">=</span> <span class="op">~</span> <span class="va">stratum</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"binomial"</span>, design <span class="op">=</span> <span class="va">des</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_svy_coef.html">ilm_svy_coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
@@ -1102,7 +1204,7 @@ the number of rows.</p>
 </h2>
 <p>How much of an effect runs <strong>through</strong> something
 else.</p>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">stress</span> <span class="op">~</span> <span class="va">treat</span> <span class="op">+</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
 <span><span class="va">fy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">outcome</span> <span class="op">~</span> <span class="va">treat</span> <span class="op">*</span> <span class="va">stress</span> <span class="op">+</span> <span class="va">age</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
 <span><span class="va">md</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_mediate.html">ilm_mediate</a></span><span class="op">(</span><span class="va">fm</span>, <span class="va">fy</span>, treat <span class="op">=</span> <span class="st">"treat"</span>, mediator <span class="op">=</span> <span class="st">"stress"</span><span class="op">)</span></span>
@@ -1126,7 +1228,7 @@ with the predictors you did measure.</p>
 </h2>
 <p>When the mean structure is credible but the variance structure is
 not, and you would rather not say what the right one is:</p>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_robust.html">ilm_robust</a></span><span class="op">(</span><span class="va">fit</span>, <span class="op">~</span> <span class="va">school</span><span class="op">)</span></span></code></pre></div>
 <p>The defaults are CR2 with a t reference on Bell-McCaffrey degrees of
 freedom, because that is what covers: with a cluster-level predictor and

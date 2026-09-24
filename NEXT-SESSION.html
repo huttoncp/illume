@@ -51,37 +51,48 @@
 <p>First written 2026-09-22. Rewritten on 2026-09-24, during the session that finished the 0.0.8.9000 study set. The current state is in this first section. Everything below “Standing constraints” is history.</p>
 <p>Delete this file once the queue is empty.</p>
 <div class="section level2">
-<h2 id="where-things-stand-2026-09-24-about-0615">Where things stand (2026-09-24, about 06:15)<a class="anchor" aria-label="anchor" href="#where-things-stand-2026-09-24-about-0615"></a></h2>
-<table class="table"><colgroup><col width="23%"><col width="57%"><col width="18%"></colgroup><thead><tr><th>repo</th>
-<th>branch</th>
-<th>state</th>
-</tr></thead><tbody><tr><td>illume</td>
-<td><code>docs-remedies-reml</code></td>
-<td>pushed; Craig to open and merge its PR</td>
-</tr><tr><td>illume</td>
-<td><code>bump-0.0.8.9000</code></td>
-<td>pushed; PR link given. Holds the version, the no-flat Hessian fix, the held-boundary fix (<code><a href="reference/ilm_consistency.html">ilm_consistency()</a></code> and the study scripts), the imputation study fix, the full 0.0.8.9000 study set with RUNINFO and findings, and this note</td>
-</tr><tr><td>illume</td>
-<td><code>interpret-prose</code></td>
-<td>pushed after the bump was merged into it; PR link given. Holds the <code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code> rewrite, the car/performance registrations (<code>check_model()</code> now routes to <code><a href="reference/ilm_appraise.html">ilm_appraise()</a></code>, as Craig decided), the docs scope, and <code><a href="reference/ilm_fit.html">ilm_fit()</a></code>’s gaussian default</td>
-</tr><tr><td>illumex</td>
-<td><code>main</code></td>
-<td>bump and date features merged (PR #3)</td>
-</tr></tbody></table><p><strong>Merge order:</strong> docs, then bump, then <code>interpret-prose</code>. A trial merge of all three in that order is clean. R CMD check passed on both branches (R 4.4.3, <code>--as-cran</code>): 0 errors. There is one warning, from CRAN’s incoming check, about <code>Remotes</code> and illumex not being on CRAN, and notes for the unverifiable time and example timing.</p>
-<p><strong>The 0.0.8.9000 study set is complete.</strong> <code>studies/runs/0.0.8.9000/RUNINFO.dcf</code> has the whole account. In brief:</p>
+<h2 id="where-things-stand-2026-09-24-about-1100">Where things stand (2026-09-24, about 11:00)<a class="anchor" aria-label="anchor" href="#where-things-stand-2026-09-24-about-1100"></a></h2>
 <ul><li>
-<strong>The usability rule changed mid-run.</strong> Fits held at a boundary now count, as <code>ilm_fixed_usable()</code> counts them. The cells that had lost replicates were re-run, and the held fits cover at 0.942 to 0.955.</li>
-<li><strong>The imputation study now finds its rank function in illumex.</strong></li>
+<strong>Merged:</strong> the 0.0.8.9000 bump (PR #6) and the interpretation work (PR #7).</li>
 <li>
-<strong>Timings:</strong> multinomial fits are about a fifth slower relative to nnet than at 0.0.7.9000, and this is not yet explained.</li>
-</ul><p>The re-runs used 5 workers, because Craig asked for at most 6 cores while other agents work alongside.</p>
-<p><strong>Next, in order:</strong> 1. After Craig merges the three PRs, reinstall illumex and then illume into his library, with vignettes. R 4.6.1’s library is empty, and downloading from CRAN needs his permission. 2. At sprint end, remind Craig about the open data case study. Then the end-to-end illumex/illume experiment. 3. Then the docket (in memory as <code>illume-docket</code>): - <code>ilm_plot_model_pdp()</code>; - an outlier/influence check for the model diagnostics; - the multinomial slowdown; - the refit loops that trust nlminb’s stopping code; - a formula interface for <code><a href="reference/ilm_fit.html">ilm_fit()</a></code>, which was advised against.</p>
-<p>A forecasting/prediction companion package is being planned in a parallel session. illume must never depend on it.</p>
-<hr></div>
+<strong>To open and merge:</strong>
+<ul><li>
+<code>docs-remedies-reml</code>, never opened as a PR;</li>
+<li>
+<code>joint-draws-order</code>, which fixes the joint draws behind <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>’s intervals (D1) and keeps other projects out of these notes.</li>
+</ul></li>
+<li>
+<strong>Then, queue item 4:</strong> reinstall illumex, then illume, into Craig’s R 4.4 and R 4.6.1 libraries.
+<ul><li>Build each package once with R 4.4, vignettes included: <code>pkgbuild::build(vignettes = TRUE)</code>, with <code>RSTUDIO_PANDOC</code> set.</li>
+<li>Install the same tarballs into both libraries. Neither package has compiled code.</li>
+<li>R 4.6.1’s library already has the six runtime dependencies from CRAN: collapse, Rcpp, RcppEigen, RTMB, TMB and tinyplot.</li>
+</ul></li>
+<li>
+<strong>At sprint end:</strong> remind Craig about the open data case study, then the end-to-end illumex/illume experiment.</li>
+<li>
+<strong>Docket after the sprint</strong> (details in memory as <code>illume-docket</code>):
+<ul><li>Prediction defects reported by another agent:
+<ul><li>
+<code>predict(marginal = TRUE)</code> leaves out an AR/CAR latent (D2);</li>
+<li>
+<code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code> averages over the random intercept only (D3);</li>
+<li>
+<code><a href="reference/ilm_ame.html">ilm_ame()</a></code> is conditional at a random effect of zero, while its help implies an average over groups (D4).</li>
+</ul></li>
+<li>The latent-budget checks FAIL at one observation per latent, which is the usual layout for forecasting.</li>
+<li>
+<code>ilm_plot_model_pdp()</code>.</li>
+<li>An outlier/influence check.</li>
+<li>The multinomial slowdown against nnet.</li>
+<li>Refit loops that trust nlminb’s stopping code.</li>
+<li>Faster refits by warm starts.</li>
+<li>A formula interface for <code><a href="reference/ilm_fit.html">ilm_fit()</a></code>, which was advised against.</li>
+</ul></li>
+</ul><hr></div>
 <div class="section level2">
 <h2 id="standing-constraints-do-not-re-derive-do-not-violate">Standing constraints (do not re-derive, do not violate)<a class="anchor" aria-label="anchor" href="#standing-constraints-do-not-re-derive-do-not-violate"></a></h2>
 <ul><li>
-<strong>No GitHub repo creation, no pushing.</strong> Craig reviews everything himself before anything is published. The two remotes already exist: <code>https://github.com/huttoncp/illume</code> (public since 2026-09-23, so its Actions pages can be read without signing in), <code>https://github.com/huttoncp/illuminator</code> (private).</li>
+<strong>No GitHub repo creation, no pushing.</strong> Craig reviews everything himself before anything is published. The illume remote already exists: <code>https://github.com/huttoncp/illume</code> (public since 2026-09-23, so its Actions pages can be read without signing in).</li>
 <li>
 <strong>No git history rewrites</strong> without per-instance approval. One was approved on 2026-09-19; that approval covered only that one.</li>
 <li>
@@ -90,9 +101,7 @@
 <strong>The “review in progress” paragraph in the AI-disclosure text is Craig’s to update</strong>, not ours.</li>
 <li><strong>Craig does the applied case study himself.</strong></li>
 <li>
-<strong>illuminator is a separate repo.</strong> Never develop it inside the illume tree.</li>
-<li>
-<strong>Do not reference illuminator from illume</strong> until Craig decides to publish it. illume must stand on its own.</li>
+<strong>Other projects on this computer stay out of illume until Craig publishes them:</strong> never develop one inside the illume tree, never reference one from illume, and never name or describe one in anything pushed – commit messages, PR bodies, NEWS, these notes. illume must stand on its own.</li>
 <li>No new hard dependencies. Suggests behind <code><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace()</a></code> guards is fine. Prefer collapse over data.table.</li>
 <li>Never commit raw <code>.rds</code> from studies (<code>.gitignore</code> covers <code>studies/runs/**/*.rds</code>). Full findings go to the paper; a summary note goes to that version’s <code>NEWS.md</code>.</li>
 <li>Every diagnostic names a remedy that exists in-package.</li>

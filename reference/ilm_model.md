@@ -241,11 +241,14 @@ ilm_model_formula(
   comparing things that are not comparable, and so does
   [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md),
   whose sandwich needs per-observation scores that a restricted
-  likelihood does not have. Available for every family, but it delivers
-  different amounts depending on the family – see the section below.
+  likelihood does not have. Available for every family, but exact only
+  for a gaussian response: for any other family it is an approximately
+  restricted likelihood, which reduces the downward bias without REML's
+  exact properties, and `fit$reml_exact` says which a fit has (see the
+  *Regression models* vignette).
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
-  defaults to `TRUE`, because there the graph fixed the adjustment set
-  before any data were seen.
+  defaults to `TRUE` for a gaussian response, because there the graph
+  fixed the adjustment set before any data were seen.
 
 - boundary:
 

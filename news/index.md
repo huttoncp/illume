@@ -50,6 +50,20 @@
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
   which fits by REML. [`coef()`](https://rdrr.io/r/stats/coef.html) and
   the standard errors were never affected.
+- Fixed: [`predict()`](https://rdrr.io/r/stats/predict.html)’s intervals
+  for a model with a smooth were centred on the wrong parameters
+  whenever the family has one the model declares after its random
+  effects – a dispersion (gaussian, negative binomial, beta, the
+  survival families), cut points (ordinal), a zero part, a dispersion
+  formula, an AR term. The draws behind them had the right spread around
+  the wrong centre: for a gaussian `y ~ s(x)`, a fit of 0.245 had a “95%
+  interval” of -3.30 to -2.98, and every interval missed its own fit.
+  Through a nonlinear link the standard errors were wrong too – a
+  negative binomial smooth’s ran from 0.02 to 16 times mgcv’s – and so
+  were the bands of `ilm_plot_model(what = "effect")`, which are built
+  from them. Binomial and Poisson smooths, which have no such parameter,
+  were unaffected. The draws are now centred parameter by parameter, and
+  `test-joint-draws.R` holds the intervals to mgcv’s.
 - [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html),
   [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
   and
@@ -251,6 +265,13 @@ it, which remain the only things that have ever found a defect here.
 
   `test-remedies.R` also fails if any check the package can report has
   no rule.
+- The README, the *Introduction* and the *Regression models* vignette
+  show them. The vignette works through a five-category covariance too
+  rich for twenty subjects: the checks name a rank,
+  [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  writes it out, and
+  [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+  takes the level check from FAIL to WARN.
 - Writing the rules out found five remedies that were wrong:
   - `re_struct` naming only some of a model’s terms stopped with an
     error about `re_struct$NA`. The argument reads as if a term left out
@@ -1590,6 +1611,20 @@ example that had been in the package, working, for months.
   refuses too – integrating the coefficients out leaves no
   per-observation score for a sandwich to sum, which is the same
   combination `glmmTMB`’s `estfun` rejects.
+- The help pages lagged behind the change above.
+  [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)’s
+  still said non-gaussian REML was refused,
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
+  pointed to a section that did not exist, and
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)’s
+  said a restricted likelihood has no meaning outside a gaussian model.
+  All three now say what the code does: exact REML for a gaussian
+  response, and an approximately restricted likelihood for every other
+  family, recorded in `fit$reml_exact`.
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
+  still uses REML for a gaussian response only, now for the stated
+  reason that it is exact there. The *Regression models* vignette says
+  the same.
 
 ### Marginal slopes
 

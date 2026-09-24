@@ -103,7 +103,11 @@ leaves you to find the fix elsewhere is a complaint.
 <code><a href="../reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> names <code>ziformula</code>;
 <code><a href="../reference/ilm_check_proportional.html">ilm_check_proportional()</a></code> names
 <code>family = "multinomial"</code>. Where a remedy did not exist, it
-was built – which is most of what this package is.</p>
+was built – which is most of what this package is. The remedies are code
+as well as words: <code><a href="../reference/ilm_remedies.html">ilm_remedies()</a></code> writes each one out as the
+change to <code><a href="../reference/ilm_model.html">ilm_model()</a></code> that makes it, with a tier saying
+what applying it would change, and <code><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code>
+refits with the one you choose.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/huttoncp/illume" class="external-link">illume</a></span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -121,9 +125,11 @@ was built – which is most of what this package is.</p>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">downtime</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">region</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span>
 <span>                 family <span class="op">=</span> <span class="st">"poisson"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">## does it hold up?</span></span>
+<span><span class="co">## does it hold up, and if not, what is the fix?</span></span>
 <span><span class="fu"><a href="../reference/ilm_appraise.html">ilm_appraise</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                    <span class="co"># the whole battery at once</span></span>
-<span><span class="fu"><a href="../reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                 <span class="co"># more zeros than poisson allows?</span></span>
+<span><span class="va">zz</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>          <span class="co"># more zeros than poisson allows?</span></span>
+<span><span class="va">rem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_remedies.html">ilm_remedies</a></span><span class="op">(</span><span class="va">fit</span>, zeros <span class="op">=</span> <span class="va">zz</span><span class="op">)</span> <span class="co"># each remedy, as the change to make</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">rem</span>, <span class="fl">1</span><span class="op">)</span> <span class="co"># refit with remedy 1, or your pick</span></span>
 <span></span>
 <span><span class="co">## what does it say?</span></span>
 <span><span class="fu"><a href="../reference/ilm_anova.html">ilm_anova</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
@@ -136,9 +142,11 @@ was built – which is most of what this package is.</p>
 <span></span>
 <span><span class="co">## say it in words</span></span>
 <span><span class="fu"><a href="../reference/ilm_interpret.html">ilm_interpret</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
-<p>If <code><a href="../reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> flags excess zeros, the next line
-is <code>ilm_model(..., ziformula = ~ 1)</code> and everything
-downstream is unchanged. That is the shape of the whole package.</p>
+<p>If <code><a href="../reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> flags excess zeros,
+<code><a href="../reference/ilm_remedies.html">ilm_remedies()</a></code> names the fix –
+<code>ziformula = ~ 1</code>, as a mixture or as a hurdle –
+<code><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> makes it, and everything downstream is
+unchanged. That is the shape of the whole package.</p>
 </div>
 <div class="section level2">
 <h2 id="what-is-in-it">What is in it<a class="anchor" aria-label="anchor" href="#what-is-in-it"></a>
@@ -168,7 +176,8 @@ discontinuity, <code><a href="../reference/ilm_design.html">ilm_design()</a></co
 <td><strong>Diagnostics</strong></td>
 <td>
 <code><a href="../reference/ilm_appraise.html">ilm_appraise()</a></code> and around twenty individual checks,
-each naming its remedy</td>
+each naming its remedy; <code><a href="../reference/ilm_remedies.html">ilm_remedies()</a></code> writes the remedies
+out as code and <code><a href="../reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> makes one</td>
 </tr>
 <tr class="even">
 <td><strong>Inference</strong></td>

@@ -166,10 +166,13 @@ ilm_fit(
   Logical. Integrate the fixed effects out along with the random ones,
   giving restricted maximum likelihood. Under a flat prior that integral
   IS the restricted likelihood, and for a linear-gaussian model the
-  Laplace approximation to it is exact – so this is REML rather than an
-  approximation to it. Gaussian responses only; elsewhere the integral
-  is still well defined but has none of REML's properties, so it is
-  refused. See
+  Laplace approximation to it is exact – so for a gaussian response this
+  is REML rather than an approximation to it. For any other family the
+  Laplace approximation to the same integral is itself approximate: an
+  approximately restricted likelihood, which reduces maximum
+  likelihood's downward bias in the variance components but has none of
+  REML's exact properties. The fit records which of the two it is in
+  `reml_exact`. See
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for when to switch it on.
 

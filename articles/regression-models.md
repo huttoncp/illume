@@ -180,7 +180,7 @@ head(fit$checks[, c("check", "status", "detail")], 8)
 #> 4                                                       20.0 observations per level
 #> 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)
 #> 6                                          nlminb code 0 (relative convergence (4))
-#> 7                                                         max |gradient| = 1.62e-04
+#> 7                                                         max |gradient| = 1.64e-04
 #> 8              positive definite: TRUE; non-finite or non-positive variances: FALSE
 ```
 
@@ -202,6 +202,16 @@ bad <- fit$checks[fit$checks$status != "OK", ]
 if (nrow(bad)) bad[1, c("check", "cause", "suggestion")] else "all checks passed"
 #> [1] "all checks passed"
 ```
+
+A suggestion in words still has to be turned into code, and
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+does that: it lists a remedy for every check that is not `OK`, each
+written as the change to
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+that makes it, and
+[`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+refits with the one you choose. *When there are many categories*, below,
+shows both.
 
 ### The most useful check
 
@@ -304,8 +314,16 @@ so does
 – a sandwich needs per-observation scores, and integrating the
 coefficients out leaves none.
 
+For a gaussian response this is REML exactly: the Laplace approximation
+to the restricted likelihood is exact for a linear model, and the
+variance components agree with `lme4` to 1e-05. `reml = TRUE` works for
+every other family too, as it does in `glmmTMB`, but there the same
+integral is only approximately a restricted likelihood. It reduces the
+downward bias without REML’s exact properties, and `fit$reml_exact` says
+which of the two a fit has.
+
 [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
-and
+(for a gaussian response) and
 [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 default to REML, because in both the fixed effects were fixed before any
 data were seen: by the graph in one case and by the design in the other.
@@ -563,7 +581,99 @@ ilm_model(y ~ x1 + (1 | subj), data = dd, family = "multinomial",
 
 This saves parameters *and* latent values, and the latter is usually the
 bigger gain. When a structure is too rich for the data, the checks say
-so and name a specific rank to try.
+so and name a specific rank to try. Five categories and twenty subjects
+is such a case: an unstructured covariance for `subj` has 10 parameters,
+and there are two subjects for each of them.
+
+``` r
+
+set.seed(7)
+d5 <- data.frame(subj = factor(rep(1:20, each = 15)), x1 = rnorm(300))
+# the subjects differ along one dimension, shared by the four linear predictors
+eta5 <- outer(0.4 * d5$x1, seq(1, -1, length.out = 4)) +
+  outer(rnorm(20)[d5$subj], seq(0.8, -0.8, length.out = 4))
+P5 <- exp(eta5 %*% t(contr.sum(5))); P5 <- P5 / rowSums(P5)
+d5$y <- factor(apply(P5, 1, function(p) sample(letters[1:5], 1, prob = p)))
+
+f5 <- ilm_model(y ~ x1 + (1 | subj), data = d5, family = "multinomial",
+                verbose = FALSE)
+#> ilm_model(): the random-effect covariance of `subj` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.
+rem <- ilm_remedies(f5)
+rem
+#> 6 remedies
+#> 
+#> [1] structural -- re_levels[subj] (FAIL)
+#>     give 'subj' a reduced-rank category covariance, rr(1): 4 parameters
+#>     instead of 10
+#>     change: re_struct = list(subj = list(type = "rr", rank = 1L))
+#> 
+#> [2] structural -- latent_budget (WARN)
+#>     give 'subj', the term with the most latent values, a category
+#>     covariance of rank 3 (rr(3)), which cuts its latent values from 80 to
+#>     60
+#>     change: re_struct = list(subj = list(type = "rr", rank = 3L))
+#> 
+#> [3] structural -- hessian, sigma_rank[subj] (BOUNDARY, BOUNDARY)
+#>     refit with boundary = "avoid", a small penalty that keeps every
+#>     random-effect covariance inside its range. Each variance is then
+#>     assumed nonzero rather than estimated at zero, so do not test whether
+#>     it is; it comes out larger, and for a binary or categorical outcome the
+#>     fixed effects come out a little further from zero -- markedly so when a
+#>     category is rare
+#>     change: boundary = "avoid"
+#> 
+#> [4] structural -- sigma_rank[subj] (BOUNDARY)
+#>     give 'subj' a category covariance of rank 2 (rr(2)) in place of us: the
+#>     directions dropped have no variance
+#>     change: re_struct = list(subj = list(type = "rr", rank = 2L))
+#> 
+#> [5] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
+#>     pool levels of 'subj' that belong together, so that each level carries
+#>     more observations; the grouping then means something different, so
+#>     choose the pooling by what the levels are
+#>     by hand: not something a refit can do
+#> 
+#> [6] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
+#>     drop 'subj' from the model. Its variance is not zero, so the standard
+#>     errors stop accounting for the grouping, and for a non-gaussian
+#>     response the fixed effects change meaning
+#>     change: formula = y ~ x1
+#> 
+#> Refit with one by ilm_apply_remedy(fit, <this list>, id). Numerical is the
+#> same model fitted harder; structural changes the random-effect or variance
+#> structure and not what the fixed effects mean; estimand changes what they
+#> estimate or what their standard errors account for, so apply one of those
+#> only by choice.
+```
+
+Each remedy is the change that makes it, and its tier says what applying
+it would change: `structural` alters the covariance and leaves the fixed
+effects meaning what they did, while `estimand` would change what they
+estimate. Three remedies name a rank, because three checks ask three
+questions: `re_levels` what twenty subjects can support, `latent_budget`
+what the whole model can, and `sigma_rank` how many dimensions of the
+estimated covariance have any variance. The first is fixed by the design
+before anything is estimated, so it is the one to try, and the refit’s
+own checks say whether it was enough:
+
+``` r
+
+f5r <- ilm_apply_remedy(f5, rem, rem$id[startsWith(rem$check, "re_levels")][1])
+#> ilm_apply_remedy(): refitted with re_struct = list(subj = list(type = "rr", rank = 1L)).
+#>   re_levels[subj]: FAIL -> WARN
+#>   not OK after the refit: re_levels[subj] (WARN)
+f5r$checks[f5r$checks$status != "OK", c("check", "status", "detail")]
+#>             check status
+#> 3 re_levels[subj]   WARN
+#>                                                                    detail
+#> 3 20 levels for 4 covariance parameters (5.0 per parameter); rr(1), C = 4
+```
+
+The level check now warns rather than fails – four parameters from
+twenty subjects is five subjects each, short of the six it asks for –
+and the covariance no longer sits at its boundary. The refit went
+through the model’s own call, so everything else about it is as it was,
+and `f5r$remedy_log` records how it was reached.
 
 ## Checking the fitted model
 

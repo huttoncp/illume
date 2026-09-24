@@ -6,57 +6,52 @@ first section. Everything below “Standing constraints” is history.
 
 Delete this file once the queue is empty.
 
-## Where things stand (2026-09-24, about 06:15)
+## Where things stand (2026-09-24, about 11:00)
 
-| repo | branch | state |
-|----|----|----|
-| illume | `docs-remedies-reml` | pushed; Craig to open and merge its PR |
-| illume | `bump-0.0.8.9000` | pushed; PR link given. Holds the version, the no-flat Hessian fix, the held-boundary fix ([`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md) and the study scripts), the imputation study fix, the full 0.0.8.9000 study set with RUNINFO and findings, and this note |
-| illume | `interpret-prose` | pushed after the bump was merged into it; PR link given. Holds the [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) rewrite, the car/performance registrations (`check_model()` now routes to [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md), as Craig decided), the docs scope, and [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)’s gaussian default |
-| illumex | `main` | bump and date features merged (PR \#3) |
-
-**Merge order:** docs, then bump, then `interpret-prose`. A trial merge
-of all three in that order is clean. R CMD check passed on both branches
-(R 4.4.3, `--as-cran`): 0 errors. There is one warning, from CRAN’s
-incoming check, about `Remotes` and illumex not being on CRAN, and notes
-for the unverifiable time and example timing.
-
-**The 0.0.8.9000 study set is complete.**
-`studies/runs/0.0.8.9000/RUNINFO.dcf` has the whole account. In brief:
-
-- **The usability rule changed mid-run.** Fits held at a boundary now
-  count, as `ilm_fixed_usable()` counts them. The cells that had lost
-  replicates were re-run, and the held fits cover at 0.942 to 0.955.
-- **The imputation study now finds its rank function in illumex.**
-- **Timings:** multinomial fits are about a fifth slower relative to
-  nnet than at 0.0.7.9000, and this is not yet explained.
-
-The re-runs used 5 workers, because Craig asked for at most 6 cores
-while other agents work alongside.
-
-**Next, in order:** 1. After Craig merges the three PRs, reinstall
-illumex and then illume into his library, with vignettes. R 4.6.1’s
-library is empty, and downloading from CRAN needs his permission. 2. At
-sprint end, remind Craig about the open data case study. Then the
-end-to-end illumex/illume experiment. 3. Then the docket (in memory as
-`illume-docket`): - `ilm_plot_model_pdp()`; - an outlier/influence check
-for the model diagnostics; - the multinomial slowdown; - the refit loops
-that trust nlminb’s stopping code; - a formula interface for
-[`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md),
-which was advised against.
-
-A forecasting/prediction companion package is being planned in a
-parallel session. illume must never depend on it.
+- **Merged:** the 0.0.8.9000 bump (PR \#6) and the interpretation work
+  (PR \#7).
+- **To open and merge:**
+  - `docs-remedies-reml`, never opened as a PR;
+  - `joint-draws-order`, which fixes the joint draws behind
+    [`predict()`](https://rdrr.io/r/stats/predict.html)’s intervals (D1)
+    and keeps other projects out of these notes.
+- **Then, queue item 4:** reinstall illumex, then illume, into Craig’s R
+  4.4 and R 4.6.1 libraries.
+  - Build each package once with R 4.4, vignettes included:
+    `pkgbuild::build(vignettes = TRUE)`, with `RSTUDIO_PANDOC` set.
+  - Install the same tarballs into both libraries. Neither package has
+    compiled code.
+  - R 4.6.1’s library already has the six runtime dependencies from
+    CRAN: collapse, Rcpp, RcppEigen, RTMB, TMB and tinyplot.
+- **At sprint end:** remind Craig about the open data case study, then
+  the end-to-end illumex/illume experiment.
+- **Docket after the sprint** (details in memory as `illume-docket`):
+  - Prediction defects reported by another agent:
+    - `predict(marginal = TRUE)` leaves out an AR/CAR latent (D2);
+    - [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
+      averages over the random intercept only (D3);
+    - [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+      is conditional at a random effect of zero, while its help implies
+      an average over groups (D4).
+  - The latent-budget checks FAIL at one observation per latent, which
+    is the usual layout for forecasting.
+  - `ilm_plot_model_pdp()`.
+  - An outlier/influence check.
+  - The multinomial slowdown against nnet.
+  - Refit loops that trust nlminb’s stopping code.
+  - Faster refits by warm starts.
+  - A formula interface for
+    [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md),
+    which was advised against.
 
 ------------------------------------------------------------------------
 
 ## Standing constraints (do not re-derive, do not violate)
 
 - **No GitHub repo creation, no pushing.** Craig reviews everything
-  himself before anything is published. The two remotes already exist:
-  `https://github.com/huttoncp/illume` (public since 2026-09-23, so its
-  Actions pages can be read without signing in),
-  `https://github.com/huttoncp/illuminator` (private).
+  himself before anything is published. The illume remote already
+  exists: `https://github.com/huttoncp/illume` (public since 2026-09-23,
+  so its Actions pages can be read without signing in).
 - **No git history rewrites** without per-instance approval. One was
   approved on 2026-09-19; that approval covered only that one.
 - **Do not list Claude as a package author or contributor.** The
@@ -65,10 +60,11 @@ parallel session. illume must never depend on it.
 - **The “review in progress” paragraph in the AI-disclosure text is
   Craig’s to update**, not ours.
 - **Craig does the applied case study himself.**
-- **illuminator is a separate repo.** Never develop it inside the illume
-  tree.
-- **Do not reference illuminator from illume** until Craig decides to
-  publish it. illume must stand on its own.
+- **Other projects on this computer stay out of illume until Craig
+  publishes them:** never develop one inside the illume tree, never
+  reference one from illume, and never name or describe one in anything
+  pushed – commit messages, PR bodies, NEWS, these notes. illume must
+  stand on its own.
 - No new hard dependencies. Suggests behind
   [`requireNamespace()`](https://rdrr.io/r/base/ns-load.html) guards is
   fine. Prefer collapse over data.table.

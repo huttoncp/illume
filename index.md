@@ -43,7 +43,14 @@ names `dispformula`;
 names `ziformula`;
 [`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md)
 names `family = "multinomial"`. Where a remedy did not exist, it was
-built – which is most of what this package is.
+built – which is most of what this package is. The remedies are code as
+well as words:
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+writes each one out as the change to
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+that makes it, with a tier saying what applying it would change, and
+[`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+refits with the one you choose.
 
 ## Installation
 
@@ -72,9 +79,11 @@ ilm_check_missing(d, downtime ~ income + region)
 fit <- ilm_model(downtime ~ income + region + (1 | id), data = d,
                  family = "poisson")
 
-## does it hold up?
+## does it hold up, and if not, what is the fix?
 ilm_appraise(fit)                    # the whole battery at once
-ilm_check_zeros(fit)                 # more zeros than poisson allows?
+zz  <- ilm_check_zeros(fit)          # more zeros than poisson allows?
+rem <- ilm_remedies(fit, zeros = zz) # each remedy, as the change to make
+fit <- ilm_apply_remedy(fit, rem, 1) # refit with remedy 1, or your pick
 
 ## what does it say?
 ilm_anova(fit)
@@ -91,9 +100,12 @@ ilm_interpret(fit)
 
 If
 [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
-flags excess zeros, the next line is `ilm_model(..., ziformula = ~ 1)`
-and everything downstream is unchanged. That is the shape of the whole
-package.
+flags excess zeros,
+[`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+names the fix – `ziformula = ~ 1`, as a mixture or as a hurdle –
+[`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+makes it, and everything downstream is unchanged. That is the shape of
+the whole package.
 
 ## What is in it
 
@@ -101,7 +113,7 @@ package.
 |----|----|
 | **Models** | [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md) – gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | [`ilm_iv()`](https://huttoncp.github.io/illume/reference/ilm_iv.md) instrumental variables, [`ilm_did()`](https://huttoncp.github.io/illume/reference/ilm_did.md) difference in differences, [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md) regression discontinuity, [`ilm_design()`](https://huttoncp.github.io/illume/reference/ilm_design.md) complex samples |
-| **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy |
+| **Diagnostics** | [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md) and around twenty individual checks, each naming its remedy; [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md) writes the remedies out as code and [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md) makes one |
 | **Inference** | [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md), [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)/[`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md), [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md), [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md), [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md), [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md), [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md) |
 | **ANOVA** | [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md) – factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
 | **Exploration** (illumex) | [`ilm_describe_all()`](https://huttoncp.github.io/illumex/reference/ilm_describe_all.html), the data plots, [`ilm_boot_ci()`](https://huttoncp.github.io/illumex/reference/ilm_boot_ci.html), [`ilm_outliers()`](https://huttoncp.github.io/illumex/reference/ilm_outliers.html), [`ilm_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_anomaly.html) and [`ilm_plot_anomaly()`](https://huttoncp.github.io/illumex/reference/ilm_plot_anomaly.html) |

@@ -273,10 +273,13 @@ clusters that carries through to standard errors and to the degrees of
 freedom from <code><a href="ilm_denom_df.html">ilm_denom_df()</a></code>. Once set, any likelihood-ratio test refuses
 rather than quietly comparing things that are not comparable, and so does
 <code><a href="ilm_robust.html">ilm_robust()</a></code>, whose sandwich needs per-observation scores that a
-restricted likelihood does not have. Available for every family, but it
-delivers different amounts depending on the family – see the section
-below. <code><a href="ilm_dag_model.html">ilm_dag_model()</a></code> defaults to <code>TRUE</code>, because there the graph fixed
-the adjustment set before any data were seen.</p></dd>
+restricted likelihood does not have. Available for every family, but exact
+only for a gaussian response: for any other family it is an approximately
+restricted likelihood, which reduces the downward bias without REML's
+exact properties, and <code>fit$reml_exact</code> says which a fit has (see the
+<em>Regression models</em> vignette). <code><a href="ilm_dag_model.html">ilm_dag_model()</a></code> defaults to <code>TRUE</code> for a
+gaussian response, because there the graph fixed the adjustment set
+before any data were seen.</p></dd>
 
 
 <dt id="arg-boundary">boundary<a class="anchor" aria-label="anchor" href="#arg-boundary"></a></dt>

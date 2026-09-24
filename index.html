@@ -85,7 +85,7 @@
 <h2 id="two-commitments">Two commitments<a class="anchor" aria-label="anchor" href="#two-commitments"></a>
 </h2>
 <p><strong>One engine fits everything.</strong> <code><a href="reference/ilm_model.html">ilm_model()</a></code> goes from a simple regression to a mixed model with smooths and correlated errors, across families from gaussian through counts, proportions, ordered and unordered categories, and survival times. All of them are fitted by approximate maximum likelihood using the Laplace approximation via <a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a>. Because a single engine fits them all, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="reference/ilm_anova.html">ilm_anova()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> and every diagnostic stay the same as the model gets harder. Leave <code>family</code> off and it is read off the response, with the choice and the evidence for it stated; what the response cannot settle is asked about rather than guessed.</p>
-<p><strong>Every check names a remedy that exists in this package.</strong> A diagnostic that tells you an assumption fails and leaves you to find the fix elsewhere is a complaint, not a tool. <code><a href="reference/ilm_check_variance.html">ilm_check_variance()</a></code> names <code>dispformula</code>; <code><a href="reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> names <code>ziformula</code>; <code><a href="reference/ilm_check_proportional.html">ilm_check_proportional()</a></code> names <code>family = "multinomial"</code>. Where a remedy did not exist, it was built – which is most of what this package is.</p>
+<p><strong>Every check names a remedy that exists in this package.</strong> A diagnostic that tells you an assumption fails and leaves you to find the fix elsewhere is a complaint, not a tool. <code><a href="reference/ilm_check_variance.html">ilm_check_variance()</a></code> names <code>dispformula</code>; <code><a href="reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> names <code>ziformula</code>; <code><a href="reference/ilm_check_proportional.html">ilm_check_proportional()</a></code> names <code>family = "multinomial"</code>. Where a remedy did not exist, it was built – which is most of what this package is. The remedies are code as well as words: <code><a href="reference/ilm_remedies.html">ilm_remedies()</a></code> writes each one out as the change to <code><a href="reference/ilm_model.html">ilm_model()</a></code> that makes it, with a tier saying what applying it would change, and <code><a href="reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> refits with the one you choose.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -111,9 +111,11 @@
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">downtime</span> <span class="op">~</span> <span class="va">income</span> <span class="op">+</span> <span class="va">region</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span>
 <span>                 family <span class="op">=</span> <span class="st">"poisson"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">## does it hold up?</span></span>
+<span><span class="co">## does it hold up, and if not, what is the fix?</span></span>
 <span><span class="fu"><a href="reference/ilm_appraise.html">ilm_appraise</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                    <span class="co"># the whole battery at once</span></span>
-<span><span class="fu"><a href="reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                 <span class="co"># more zeros than poisson allows?</span></span>
+<span><span class="va">zz</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/ilm_check_zeros.html">ilm_check_zeros</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>          <span class="co"># more zeros than poisson allows?</span></span>
+<span><span class="va">rem</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ilm_remedies.html">ilm_remedies</a></span><span class="op">(</span><span class="va">fit</span>, zeros <span class="op">=</span> <span class="va">zz</span><span class="op">)</span> <span class="co"># each remedy, as the change to make</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ilm_apply_remedy.html">ilm_apply_remedy</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">rem</span>, <span class="fl">1</span><span class="op">)</span> <span class="co"># refit with remedy 1, or your pick</span></span>
 <span></span>
 <span><span class="co">## what does it say?</span></span>
 <span><span class="fu"><a href="reference/ilm_anova.html">ilm_anova</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
@@ -126,7 +128,7 @@
 <span></span>
 <span><span class="co">## say it in words</span></span>
 <span><span class="fu"><a href="reference/ilm_interpret.html">ilm_interpret</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
-<p>If <code><a href="reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> flags excess zeros, the next line is <code>ilm_model(..., ziformula = ~ 1)</code> and everything downstream is unchanged. That is the shape of the whole package.</p>
+<p>If <code><a href="reference/ilm_check_zeros.html">ilm_check_zeros()</a></code> flags excess zeros, <code><a href="reference/ilm_remedies.html">ilm_remedies()</a></code> names the fix – <code>ziformula = ~ 1</code>, as a mixture or as a hurdle – <code><a href="reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> makes it, and everything downstream is unchanged. That is the shape of the whole package.</p>
 </div>
 <div class="section level2">
 <h2 id="what-is-in-it">What is in it<a class="anchor" aria-label="anchor" href="#what-is-in-it"></a>
@@ -150,7 +152,7 @@
 <tr>
 <td><strong>Diagnostics</strong></td>
 <td>
-<code><a href="reference/ilm_appraise.html">ilm_appraise()</a></code> and around twenty individual checks, each naming its remedy</td>
+<code><a href="reference/ilm_appraise.html">ilm_appraise()</a></code> and around twenty individual checks, each naming its remedy; <code><a href="reference/ilm_remedies.html">ilm_remedies()</a></code> writes the remedies out as code and <code><a href="reference/ilm_apply_remedy.html">ilm_apply_remedy()</a></code> makes one</td>
 </tr>
 <tr>
 <td><strong>Inference</strong></td>
