@@ -12,7 +12,10 @@
   interval 12.3 to 18.1). That is 0.61 per unit of age." A probability is given
   as one ("57% at 29 against 36% at 54: 20 percentage points lower"), with the
   odds ratio after it. Causal language, where a design licenses it, reads as a
-  change: "moving x across its middle half ... raises predicted y".
+  change: "moving x across its middle half ... raises predicted y". In a mixed
+  model with a nonlinear link, it says that the predictions hold the random
+  effects at zero -- a typical group -- rather than averaging over groups,
+  which on the logit or log scale is not the same.
 * The evidence for a term is its joint test, so a factor with several levels
   gets one verdict, and so does a predictor in a multinomial model, which used
   to get one per category, each against the average of the categories -- and

@@ -265,3 +265,21 @@ test_that("a cluster profile is written up as the profile of each cluster", {
   expect_output(print(it), "INTERPRETATION (cluster profiles)", fixed = TRUE)
   expect_output(print(it), "What each cluster is", fixed = TRUE)
 })
+
+test_that("a mixed model's effects say they are for a typical group", {
+  set.seed(9); n <- 400
+  d <- data.frame(x = rnorm(n), g = factor(rep(1:40, each = 10)))
+  d$yb <- rbinom(n, 1, plogis(0.5 * d$x + rnorm(40, sd = 1.2)[d$g]))
+  d$yg <- 0.5 * d$x + rnorm(40)[d$g] + rnorm(n)
+  fb <- ilm_model(yb ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
+  hb <- ilm_interpret(fb, ame = FALSE)$sections$model
+  ## through the logit, a random effect of zero is not the average over g
+  expect_match(hb, "hold the random effect of g at zero -- a typical g --", fixed = TRUE)
+  ## with an identity link the two are the same, and nothing is said
+  fg <- ilm_model(yg ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
+  expect_no_match(ilm_interpret(fg, ame = FALSE)$sections$model, "random effect of g at zero")
+  ## a smooth is held as a random term, but it does not group the observations
+  d$ys <- sin(2 * d$x) + rnorm(n, sd = 0.5)
+  fs <- ilm_model(ys ~ s(x), data = d, family = "gaussian", verbose = FALSE)
+  expect_no_match(ilm_interpret(fs, ame = FALSE)$sections$model, "grouped by")
+})

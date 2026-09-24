@@ -74,7 +74,10 @@ for a factor. "Across the middle half of age, predicted income is 49.4 at
 29 against 64.7 at 54: 15.2 higher (95\% interval 12.3 to 18.1)", where the
 coefficient alone, 0.61, says nothing until the reader knows what a unit of
 age is and how much age varies. The predictions are averaged over the rows
-the model was fitted to, as \code{\link[=ilm_ame]{ilm_ame()}}'s effects are; a probability is
+the model was fitted to, as \code{\link[=ilm_ame]{ilm_ame()}}'s effects are, with any random
+effects at zero: in a mixed model they are a typical group's, and with a
+nonlinear link the text says so, since averaging over the groups instead
+-- \code{predict(marginal = TRUE)} -- gives different numbers. A probability is
 given as one, and a difference of two in percentage points, with the odds
 ratio after it for those who want it. The evidence is the term's joint
 test, so a factor with several levels, or a predictor in a multinomial

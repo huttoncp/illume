@@ -515,7 +515,10 @@ ilm_scale_words <- function(fam) {
 #' 29 against 64.7 at 54: 15.2 higher (95% interval 12.3 to 18.1)", where the
 #' coefficient alone, 0.61, says nothing until the reader knows what a unit of
 #' age is and how much age varies. The predictions are averaged over the rows
-#' the model was fitted to, as [ilm_ame()]'s effects are; a probability is
+#' the model was fitted to, as [ilm_ame()]'s effects are, with any random
+#' effects at zero: in a mixed model they are a typical group's, and with a
+#' nonlinear link the text says so, since averaging over the groups instead
+#' -- `predict(marginal = TRUE)` -- gives different numbers. A probability is
 #' given as one, and a difference of two in percentage points, with the odds
 #' ratio after it for those who want it. The evidence is the term's joint
 #' test, so a factor with several levels, or a predictor in a multinomial
@@ -584,15 +587,27 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   hdr <- sprintf("%s %s model of %s, fitted to %s observations.",
                  ilm_cap(ilm_article(fam)), fam, deparse(object$formula[[2]]),
                  if (is.na(n)) "an unknown number of" else format(n, big.mark = ","))
-  re <- names(object$re)
-  if (length(re))
+  ## the grouping terms only: a smooth is held as a random term too, and is
+  ## not a grouping of the observations
+  grp <- names(object$re)[vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE)]
+  if (length(grp))
     hdr <- paste(hdr, sprintf(
       "Observations are grouped by %s, and that grouping is modelled, so the estimates below already allow for it.",
-      paste(re, collapse = " and ")))
-  if (!identical(sw$link, "identity"))
+      ilm_and(grp)))
+  if (!identical(sw$link, "identity")) {
     hdr <- paste(hdr, sprintf(
       "The model works on the %s scale, so its coefficients are not in %s; the effects below are converted.",
       sw$link, sw$unit))
+    ## The predictions behind the effects set the random effects to zero.
+    ## Through a nonlinear link that is a typical group's, not the average
+    ## over groups -- through a logit the average is flatter -- and a reader
+    ## would take a probability for the average unless told.
+    if (length(grp))
+      hdr <- paste(hdr, sprintf(
+        "They hold the random effect%s of %s at zero -- a typical %s -- rather than averaging over %s; on the %s scale the two are not the same.",
+        if (length(grp) > 1L) "s" else "", ilm_and(grp), ilm_and(grp),
+        if (length(grp) > 1L) "them" else grp, sw$link))
+  }
   ## a likelihood the user did not choose is worth saying they did not
   if (!is.null(object$family_inferred))
     hdr <- paste(hdr, sprintf(
@@ -749,12 +764,13 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
       "predictor and the response, so an effect could differ in size or sign",
       "from what is reported. To say more you need a design that identifies",
       "one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd()."))
-  if (length(re) && !identical(sw$link, "identity"))
+  ## This used to say the effects above were averaged over groups. They are a
+  ## typical group's, as the model section says; what averages is here.
+  if (length(grp) && !identical(sw$link, "identity"))
     cav <- c(cav, paste(
-      "With a link function and a random effect, a coefficient is conditional",
-      "on the group -- the effect for units in the same group -- while the",
-      "marginal effects above are averaged over groups. The two answer",
-      "different questions and will not match."))
+      "The effects above, like the coefficients, are for a typical group.",
+      "Predictions averaged over the groups instead come from",
+      "predict(marginal = TRUE)."))
   if (isTRUE(object$exact_df))
     cav <- c(cav, paste(
       "This model has no random or smooth terms, so its t and F tests are",
