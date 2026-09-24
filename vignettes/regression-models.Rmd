@@ -139,6 +139,11 @@ bad <- fit$checks[fit$checks$status != "OK", ]
 if (nrow(bad)) bad[1, c("check", "cause", "suggestion")] else "all checks passed"
 ```
 
+A suggestion in words still has to be turned into code, and `ilm_remedies()`
+does that: it lists a remedy for every check that is not `OK`, each written as
+the change to `ilm_model()` that makes it, and `ilm_apply_remedy()` refits with
+the one you choose. *When there are many categories*, below, shows both.
+
 ### The most useful check
 
 The one to look at first is `latent_budget`. A mixed model introduces one
@@ -216,9 +221,16 @@ So: **settle the mean structure under the default, then refit with
 are not comparable, and so does `ilm_robust()` -- a sandwich needs
 per-observation scores, and integrating the coefficients out leaves none.
 
-`ilm_dag_model()` and `ilm_aov_ez()` default to REML, because in both the
-fixed effects were fixed before any data were seen: by the graph in one case
-and by the design in the other.
+For a gaussian response this is REML exactly: the Laplace approximation to
+the restricted likelihood is exact for a linear model, and the variance
+components agree with `lme4` to 1e-05. `reml = TRUE` works for every other
+family too, as it does in `glmmTMB`, but there the same integral is only
+approximately a restricted likelihood. It reduces the downward bias without
+REML's exact properties, and `fit$reml_exact` says which of the two a fit has.
+
+`ilm_dag_model()` (for a gaussian response) and `ilm_aov_ez()` default to REML,
+because in both the fixed effects were fixed before any data were seen: by the
+graph in one case and by the design in the other.
 
 ## Predictions
 
@@ -409,7 +421,45 @@ ilm_model(y ~ x1 + (1 | subj), data = dd, family = "multinomial",
 
 This saves parameters *and* latent values, and the latter is usually the bigger
 gain. When a structure is too rich for the data, the checks say so and name a
-specific rank to try.
+specific rank to try. Five categories and twenty subjects is such a case: an
+unstructured covariance for `subj` has 10 parameters, and there are two
+subjects for each of them.
+
+```{r many-cats}
+set.seed(7)
+d5 <- data.frame(subj = factor(rep(1:20, each = 15)), x1 = rnorm(300))
+# the subjects differ along one dimension, shared by the four linear predictors
+eta5 <- outer(0.4 * d5$x1, seq(1, -1, length.out = 4)) +
+  outer(rnorm(20)[d5$subj], seq(0.8, -0.8, length.out = 4))
+P5 <- exp(eta5 %*% t(contr.sum(5))); P5 <- P5 / rowSums(P5)
+d5$y <- factor(apply(P5, 1, function(p) sample(letters[1:5], 1, prob = p)))
+
+f5 <- ilm_model(y ~ x1 + (1 | subj), data = d5, family = "multinomial",
+                verbose = FALSE)
+rem <- ilm_remedies(f5)
+rem
+```
+
+Each remedy is the change that makes it, and its tier says what applying it
+would change: `structural` alters the covariance and leaves the fixed effects
+meaning what they did, while `estimand` would change what they estimate.
+Three remedies name a rank, because three checks ask three questions:
+`re_levels` what twenty subjects can support, `latent_budget` what the whole
+model can, and `sigma_rank` how many dimensions of the estimated covariance
+have any variance. The first is fixed by the design before anything is
+estimated, so it is the one to try, and the refit's own checks say whether it
+was enough:
+
+```{r many-cats-apply}
+f5r <- ilm_apply_remedy(f5, rem, rem$id[startsWith(rem$check, "re_levels")][1])
+f5r$checks[f5r$checks$status != "OK", c("check", "status", "detail")]
+```
+
+The level check now warns rather than fails -- four parameters from twenty
+subjects is five subjects each, short of the six it asks for -- and the
+covariance no longer sits at its boundary. The refit went through the model's
+own call, so everything else about it is as it was, and `f5r$remedy_log`
+records how it was reached.
 
 ## Checking the fitted model
 

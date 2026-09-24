@@ -30,7 +30,10 @@ tells you an assumption fails and leaves you to find the fix elsewhere is a
 complaint, not a tool. `ilm_check_variance()` names `dispformula`;
 `ilm_check_zeros()` names `ziformula`; `ilm_check_proportional()` names
 `family = "multinomial"`. Where a remedy did not exist, it was built -- which is
-most of what this package is.
+most of what this package is. The remedies are code as well as words:
+`ilm_remedies()` writes each one out as the change to `ilm_model()` that makes
+it, with a tier saying what applying it would change, and `ilm_apply_remedy()`
+refits with the one you choose.
 
 ## Installation
 
@@ -57,9 +60,11 @@ ilm_check_missing(d, downtime ~ income + region)
 fit <- ilm_model(downtime ~ income + region + (1 | id), data = d,
                  family = "poisson")
 
-## does it hold up?
+## does it hold up, and if not, what is the fix?
 ilm_appraise(fit)                    # the whole battery at once
-ilm_check_zeros(fit)                 # more zeros than poisson allows?
+zz  <- ilm_check_zeros(fit)          # more zeros than poisson allows?
+rem <- ilm_remedies(fit, zeros = zz) # each remedy, as the change to make
+fit <- ilm_apply_remedy(fit, rem, 1) # refit with remedy 1, or your pick
 
 ## what does it say?
 ilm_anova(fit)
@@ -74,9 +79,9 @@ ilm_scenario(fit, income = c(20, 40, 60), contrast = "first")
 ilm_interpret(fit)
 ```
 
-If `ilm_check_zeros()` flags excess zeros, the next line is
-`ilm_model(..., ziformula = ~ 1)` and everything downstream is unchanged. That
-is the shape of the whole package.
+If `ilm_check_zeros()` flags excess zeros, `ilm_remedies()` names the fix --
+`ziformula = ~ 1`, as a mixture or as a hurdle -- `ilm_apply_remedy()` makes it,
+and everything downstream is unchanged. That is the shape of the whole package.
 
 ## What is in it
 
@@ -84,7 +89,7 @@ is the shape of the whole package.
 |---|---|
 | **Models** | `ilm_model()` -- gaussian, binomial, poisson, negative binomial, beta, multinomial, three ordinal links, three accelerated failure time families, Royston-Parmar survival; random intercepts and slopes, penalised smooths, AR(1)/CAR(1), dispersion models, zero-inflation and hurdles |
 | **Other designs** | `ilm_iv()` instrumental variables, `ilm_did()` difference in differences, `ilm_rdd()` regression discontinuity, `ilm_design()` complex samples |
-| **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy |
+| **Diagnostics** | `ilm_appraise()` and around twenty individual checks, each naming its remedy; `ilm_remedies()` writes the remedies out as code and `ilm_apply_remedy()` makes one |
 | **Inference** | `ilm_anova()`, `ilm_effects()`, `ilm_emmeans()`/`ilm_contrast()`, `ilm_trends()`, `ilm_ame()`, `ilm_robust()`, `ilm_denom_df()`, `ilm_pb_lrt()` |
 | **ANOVA** | `ilm_aov_ez()` -- factorial and repeated measures by naming columns; F, generalized eta squared, sphericity corrections |
 | **Exploration** (illumex) | `ilm_describe_all()`, the data plots, `ilm_boot_ci()`, `ilm_outliers()`, `ilm_anomaly()` and `ilm_plot_anomaly()` |

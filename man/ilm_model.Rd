@@ -159,10 +159,13 @@ clusters that carries through to standard errors and to the degrees of
 freedom from \code{\link[=ilm_denom_df]{ilm_denom_df()}}. Once set, any likelihood-ratio test refuses
 rather than quietly comparing things that are not comparable, and so does
 \code{\link[=ilm_robust]{ilm_robust()}}, whose sandwich needs per-observation scores that a
-restricted likelihood does not have. Available for every family, but it
-delivers different amounts depending on the family -- see the section
-below. \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE}, because there the graph fixed
-the adjustment set before any data were seen.}
+restricted likelihood does not have. Available for every family, but exact
+only for a gaussian response: for any other family it is an approximately
+restricted likelihood, which reduces the downward bias without REML's
+exact properties, and \code{fit$reml_exact} says which a fit has (see the
+\emph{Regression models} vignette). \code{\link[=ilm_dag_model]{ilm_dag_model()}} defaults to \code{TRUE} for a
+gaussian response, because there the graph fixed the adjustment set
+before any data were seen.}
 
 \item{boundary}{What to do about a random-effect covariance at the edge of
 its range -- a variance of zero, or a correlation of +/-1 -- where the

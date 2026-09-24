@@ -62,6 +62,10 @@ test_that("a random intercept at a variance of zero is dropped, and nothing else
   expect_s3_class(u, "ilm_model")
   expect_output(print(rem), "structural -- ")
   expect_output(print(ilm_remedies(f2)), "No remedies")
+  ## some of the columns print as the table they are, not as empty headers
+  out <- capture.output(print(rem[, c("id", "tier", "change")]))
+  expect_true(any(grepl("formula = y ~ x", out, fixed = TRUE)))
+  expect_false(any(grepl("^\\[", out)))
 })
 
 test_that("remedies chain, and each fit logs how it was reached", {

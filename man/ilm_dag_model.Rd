@@ -47,8 +47,10 @@ likelihood. Defaults to \code{TRUE} here, unlike \code{\link[=ilm_model]{ilm_mod
 graph fixed the adjustment set before any data were looked at: the fixed
 effects are not being selected, so the one thing REML forbids -- comparing
 likelihoods across different fixed structures -- never arises, and its
-unbiased variance components are simply better. Ignored for non-gaussian
-responses, where restricted likelihood has no meaning.}
+unbiased variance components are simply better. Applied to gaussian
+responses only: for any other family the restricted likelihood is only
+approximate (see \code{\link[=ilm_model]{ilm_model()}}), so this route stays with maximum
+likelihood there.}
 
 \item{...}{Passed to \code{\link[=ilm_model]{ilm_model()}}.}
 }

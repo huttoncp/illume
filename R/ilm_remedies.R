@@ -611,6 +611,10 @@ ilm_remedies <- function(object, dispersion = NULL, zeros = NULL, variance = NUL
 #' @param ... Unused.
 #' @export
 print.ilm_remedies <- function(x, ...) {
+  ## a subset of the columns keeps the class but not what this layout reads,
+  ## and printed as blank headers; it is a plain table, so print it as one
+  if (!all(c("id", "check", "status", "tier", "remedy", "change") %in% names(x)))
+    return(NextMethod())
   if (!nrow(x)) {
     cat("No remedies: every check is OK.\n")
     return(invisible(x))
