@@ -1,0 +1,43 @@
+clean       n=480  rare share 0.259  usable: illume 400/400  mclogit 400/400
+            COVERAGE    illume 0.950 (+-0.011)   mclogit 0.937 (+-0.012)
+            attenuation illume 1.011            mclogit 0.864   (1 = none)
+            mean|bias|  illume 0.0083            mclogit 0.1018
+            RMSE        illume 0.3207            mclogit 0.2887
+            RE sd       illume 0.931            mclogit 1.166   (true 1.00)
+            median secs illume 0.37             mclogit 2.61
+unbalanced  n=480  rare share 0.245  usable: illume 400/400  mclogit 400/400
+            COVERAGE    illume 0.943 (+-0.012)   mclogit 0.932 (+-0.013)
+            attenuation illume 1.006            mclogit 0.881   (1 = none)
+            mean|bias|  illume 0.0242            mclogit 0.1042
+            RMSE        illume 0.3493            mclogit 0.3076
+            RE sd       illume 0.946            mclogit 1.241   (true 1.00)
+            median secs illume 0.38             mclogit 3.42
+rare        n=480  rare share 0.036  usable: illume 395/400  mclogit 400/400
+            COVERAGE    illume 0.930 (+-0.013)   mclogit 0.853 (+-0.018)
+            attenuation illume 1.451            mclogit 0.816   (1 = none)
+            mean|bias|  illume 0.3863            mclogit 0.2706
+            RMSE        illume 1.4678            mclogit 1.5976
+            RE sd       illume 1.493            mclogit 1.207   (true 1.00)
+            median secs illume 0.39             mclogit 3.59
+flat_re     n=480  rare share 0.180  usable: illume 395/400  mclogit 400/400
+            COVERAGE    illume 0.947 (+-0.011)   mclogit 0.947 (+-0.011)
+            attenuation illume 1.020            mclogit 1.008   (1 = none)
+            mean|bias|  illume 0.0129            mclogit 0.0081
+            RMSE        illume 0.2471            mclogit 0.2428
+            RE sd       illume 0.099            mclogit 0.004   (true 0.05)
+            median secs illume 0.55             mclogit 2.14
+heavy_re    n=480  rare share 0.284  usable: illume 400/400  mclogit 400/400
+            COVERAGE    illume 0.936 (+-0.012)   mclogit 0.902 (+-0.015)
+            attenuation illume 0.982            mclogit 0.846   (1 = none)
+            mean|bias|  illume 0.0592            mclogit 0.1301
+            RMSE        illume 0.3255            mclogit 0.3013
+            RE sd       illume 0.873            mclogit 1.227   (true 1.00)
+            median secs illume 0.34             mclogit 2.48
+combined    n=480  rare share 0.025  usable: illume 397/400  mclogit 400/400
+            COVERAGE    illume 0.942 (+-0.012)   mclogit 0.894 (+-0.015)
+            attenuation illume 1.268            mclogit 0.918   (1 = none)
+            mean|bias|  illume 0.3534            mclogit 0.3676
+            RMSE        illume 1.7122            mclogit 1.7316
+            RE sd       illume 0.867            mclogit 1.150   (true 1.00)
+            median secs illume 0.34             mclogit 4.19
+done

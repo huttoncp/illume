@@ -6,96 +6,49 @@ Everything below "Standing constraints" is history.
 
 Delete this file once the queue is empty.
 
-## Where things stand (2026-09-24, about 03:40)
+## Where things stand (2026-09-24, about 06:15)
 
 | repo    | branch               | state |
 |---------|----------------------|-------|
-| illume  | `docs-remedies-reml` | pushed; Craig to open and merge its PR (trial merge clean) |
-| illume  | `bump-0.0.8.9000`    | local, not pushed. Holds: the no-flat Hessian fix; the boundary SE study; the version; the first three studies; the held-boundary fix (`24038bf`); the imputation study fix (`c9cba94`); this note |
-| illume  | `interpret-prose`    | local, not pushed, stacked on an EARLIER bump commit (`b78cbe8`). Holds: the `ilm_interpret()` rewrite; the car/performance registration; the docs scope; the multinomial test fix; `ilm_fit()`'s gaussian default (`2c6d81f`). `R CMD check` clean at `b796037` |
-| illumex | `main`               | bump and time features merged (PR #3, `ff3a58e`) |
+| illume  | `docs-remedies-reml` | pushed; Craig to open and merge its PR |
+| illume  | `bump-0.0.8.9000`    | pushed; PR link given. Holds the version, the no-flat Hessian fix, the held-boundary fix (`ilm_consistency()` and the study scripts), the imputation study fix, the full 0.0.8.9000 study set with RUNINFO and findings, and this note |
+| illume  | `interpret-prose`    | pushed after the bump was merged into it; PR link given. Holds the `ilm_interpret()` rewrite, the car/performance registrations (`check_model()` now routes to `ilm_appraise()`, as Craig decided), the docs scope, and `ilm_fit()`'s gaussian default |
+| illumex | `main`               | bump and date features merged (PR #3) |
 
-**The 0.0.8.9000 study set.** All eight studies ran against the bump builds in
-the scratch library (`split-lib`). The first run found two defects in the
-study scripts. Both are fixed on the bump branch.
+**Merge order:** docs, then bump, then `interpret-prose`. A trial merge of all
+three in that order is clean. R CMD check passed on both branches (R 4.4.3,
+`--as-cran`): 0 errors. There is one warning, from CRAN's incoming check,
+about `Remotes` and illumex not being on CRAN, and notes for the unverifiable
+time and example timing.
 
-1. **The usability rule.** The coverage, power, mclogit and messy scripts
-   counted a fit as usable only when `pdHess` was TRUE. A fit with a boundary
-   direction held has `pdHess` FALSE by design, and since option C every
-   boundary is held. As a result, coverage kept 176 of 2000 `mn_J5_thin`
-   replicates.
-   - The saved replicates show the dropped fits cover at nominal. All fits
-     together cover at 0.945 in `mn_J5_thin` and 0.954 in `mn_J3_ar`.
-   - The same rule already understated 0.0.7.9000's rates.
-   - `ilm_consistency()` had the same rule, and called a model UNSTABLE. It
-     is fixed in the same commit.
-2. **The imputation study.** `imputation_ablation.R` called
-   `illume:::ilm_anom_rank()`, which moved to illumex in the split.
-   `lowrank_pa` fitted 0 of 40 in three cells.
+**The 0.0.8.9000 study set is complete.** `studies/runs/0.0.8.9000/RUNINFO.dcf`
+has the whole account. In brief:
 
-**The re-runs.** They use the bump branch's scripts and write over the first
-run's outputs in the main tree's `studies/runs/0.0.8.9000/`:
+- **The usability rule changed mid-run.** Fits held at a boundary now count,
+  as `ilm_fixed_usable()` counts them. The cells that had lost replicates were
+  re-run, and the held fits cover at 0.942 to 0.955.
+- **The imputation study now finds its rank function in illumex.**
+- **Timings:** multinomial fits are about a fifth slower relative to nnet than
+  at 0.0.7.9000, and this is not yet explained.
 
-- coverage: the 9 cells that lost fits;
-- power: 4 cells;
-- messy: all regimes;
-- imputation: then the whole study.
+The re-runs used 5 workers, because Craig asked for at most 6 cores while
+other agents work alongside.
 
-The first run's outputs are saved in the session scratchpad (`first_run_0089/`)
-for the before/after comparison.
+**Next, in order:**
+1. After Craig merges the three PRs, reinstall illumex and then illume into
+   his library, with vignettes. R 4.6.1's library is empty, and downloading
+   from CRAN needs his permission.
+2. At sprint end, remind Craig about the open data case study. Then the
+   end-to-end illumex/illume experiment.
+3. Then the docket (in memory as `illume-docket`):
+   - `ilm_plot_model_pdp()`;
+   - an outlier/influence check for the model diagnostics;
+   - the multinomial slowdown;
+   - the refit loops that trust nlminb's stopping code;
+   - a formula interface for `ilm_fit()`, which was advised against.
 
-**What needs no re-run:**
-- mclogit lost no fits (500/500 at both versions).
-- bench, boundary_se, mclogit and brms reproduce 0.0.7.9000's estimates
-  exactly.
-- bench timings are about 20% longer for every package, lme4 and glmmTMB
-  included, which points to machine load.
-
-If the session died mid-run, check the file times and row counts under
-`studies/runs/0.0.8.9000/`. Then re-run whatever is missing, from `studies/`,
-with the bump branch's scripts:
-
-    Rscript scripts/coverage_study.R 2000 10 runs/0.0.8.9000/coverage mn_J5_thin,mn_J3_ar,mn_J5_mid,mn_J5_rich,mn_J3_thin,mn_J5_vrich,mn_J3_rich,gauss_car1,rp_flex
-    Rscript scripts/power_study.R 2000 10 runs/0.0.8.9000/power 0,0.1,0.2,0.3,0.5 mn_J3_rich,mn_J3_thin,gauss_car1,rp_flex
-    Rscript scripts/messy_compare.R 400 10 runs/0.0.8.9000/messy
-    Rscript scripts/imputation_ablation.R 40 10 runs/0.0.8.9000/imputation
-
-A cell-limited power run merges into the existing `power_summary.csv`, so the
-first run's copy must be present.
-
-**Then, in order:**
-
-1. On the bump branch:
-   - commit the CSVs, with messy's console log as `log.txt`;
-   - write `RUNINFO.dcf`: R 4.4.3, a date per study, and notes on the rule
-     change with its before/after, the imputation fix and the bench timings;
-   - run `summarise_run.R` for 0.0.8.9000;
-   - add the NEWS validation notes.
-2. Run `R CMD check` on the bump, push it, and give Craig the PR link.
-3. Merge the bump into `interpret-prose`, keeping one 0.0.8.9000 section in
-   NEWS. Check, push, and give the PR link.
-4. After Craig merges, reinstall illumex and then illume into his library.
-   R 4.6.1's library is empty, and downloads need his permission.
-5. At sprint end, remind Craig about the open data case study. Then the
-   end-to-end experiment.
-
-**Craig's batched ideas (2026-09-24), for after the sprint:**
-
-- `ilm_plot_model_pdp()`: partial dependence for several terms in one call.
-- An outlier/influence check in `ilm_model()`'s residual diagnostics. None
-  exists.
-- `check_model()`: it errors today because insight does not support the
-  class, so the only working route is to `ilm_appraise()`. That is Craig's
-  call.
-- A formula interface for `ilm_fit()`: advised against, since `ilm_model()`
-  already takes a formula or a matrix.
-- A forecasting/prediction companion package, being planned in a parallel
-  session. illume must never depend on it.
-
-**Noticed while fixing the usability rule:** the refit loops in `ilm_pb.R`,
-`ilm_check.R`, `ilm_check_ar.R`, `ilm_diagnostics.R` and `ilm_ic.R` drop a
-refit on nlminb's stopping code alone. The studies found that code unreliable
-("false convergence" at a small gradient), so this is worth measuring.
+   A forecasting/prediction companion package is being planned in a parallel
+   session. illume must never depend on it.
 
 ---
 
