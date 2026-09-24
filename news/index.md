@@ -73,11 +73,14 @@
 - With one linear predictor – every family but the multinomial – a row’s
   whole latent contribution is a single normal, so
   `predict(marginal = TRUE)` now averages over it by Gauss-Hermite
-  quadrature rather than by draws. It matches numerical integration to
-  1e-7, gives the same answer on every call, and does not use `ndraw`;
-  the effects and scenarios built on it no longer move with the seed. A
-  multinomial outcome is still averaged by draws, now including an AR
-  term.
+  quadrature rather than by draws, with more nodes as the latent SD
+  grows. Against numerical integration it is better than 1e-12 through a
+  logit up to a latent SD of 6, and better than 1e-9 through a
+  complementary log-log up to 5; a fixed 40 nodes, as first written,
+  drifted to 2e-5 at a logit SD of 3.5. It gives the same answer on
+  every call and does not use `ndraw`; the effects and scenarios built
+  on it no longer move with the seed. A multinomial outcome is still
+  averaged by draws, now including an AR term.
 - Fixed:
   [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
   computed its means from the fixed-effect design and each random term’s
@@ -87,8 +90,12 @@
   curve came out as -1.31 at its peak of +1. Each mean now comes from
   `predict(marginal = TRUE)`, and the interval draws the whole parameter
   vector, variance components included, where it drew the fixed effects
-  alone. An ordinal fit is refused, as a multinomial one was, since it
-  too has no single number to report.
+  alone. The estimate is the mean at the fitted parameters, which
+  matches [`predict()`](https://rdrr.io/r/stats/predict.html) exactly
+  and does not move with `seed` or `sims`; it was the mean of the draws,
+  which through a logit was pulled towards the middle by up to half a
+  percentage point. An ordinal fit is refused, as a multinomial one was,
+  since it too has no single number to report.
 - [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
   says which effect it reports: by default the one for a typical group,
   with the random effects at zero – the effect

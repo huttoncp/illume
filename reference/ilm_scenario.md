@@ -84,8 +84,11 @@ In a mixed model each unit's prediction is averaged over every random
 term – intercepts, slopes, an AR or CAR latent – as
 `predict(marginal = TRUE)` does, so the result is a population mean
 rather than the value for a group whose random effect happens to be
-zero. The interval draws the whole parameter vector, variance components
-included, since that average depends on them.
+zero. The estimate is that mean at the fitted parameters, so it matches
+[`predict()`](https://rdrr.io/r/stats/predict.html) exactly and does not
+depend on `seed` or `sims`; the interval comes from draws of the whole
+parameter vector, variance components included, since the average
+depends on them.
 
 ## Extrapolation
 
@@ -126,12 +129,12 @@ ilm_scenario(f, dose = c(0, 10, 20), sims = 200, contrast = "first")
 #>   every unit set to the scenario's values, its own covariates kept
 #>   held as observed: age
 #>  dose estimate  lower  upper extrapolating
-#>     0   0.2079 0.1432 0.2907         FALSE
-#>    10   0.4072 0.3556 0.4635         FALSE
-#>    20   0.6432 0.5391 0.7398         FALSE
+#>     0   0.2064 0.1432 0.2907         FALSE
+#>    10   0.4074 0.3556 0.4635         FALSE
+#>    20   0.6439 0.5391 0.7398         FALSE
 #> 
 #>   Differences between scenarios
 #>          contrast estimate  lower  upper p
-#>  dose=10 - dose=0   0.1993 0.1294 0.2579 0
-#>  dose=20 - dose=0   0.4352 0.2675 0.5625 0
+#>  dose=10 - dose=0   0.2010 0.1294 0.2579 0
+#>  dose=20 - dose=0   0.4375 0.2675 0.5625 0
 ```
