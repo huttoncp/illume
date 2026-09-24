@@ -130,6 +130,12 @@ once. That answers "what would happen to a unit that looks like this".</p>
 <p>They are different questions and they give different answers under any
 non-linear link, because the average of a prediction is not the prediction
 at the average. The printed output says which was used.</p>
+<p>In a mixed model each unit's prediction is averaged over every random term
+– intercepts, slopes, an AR or CAR latent – as <code>predict(marginal = TRUE)</code>
+does, so the result is a population mean rather than the value for a group
+whose random effect happens to be zero. The interval draws the whole
+parameter vector, variance components included, since that average depends
+on them.</p>
     </div>
     <div class="section level2">
     <h2 id="extrapolation">Extrapolation<a class="anchor" aria-label="anchor" href="#extrapolation"></a></h2>
@@ -170,14 +176,14 @@ the adjustment set licenses a causal reading.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   every unit set to the scenario's values, its own covariates kept</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   held as observed: age</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  dose estimate  lower  upper extrapolating</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     0   0.2067 0.1417 0.2813         FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    10   0.4066 0.3610 0.4602         FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    20   0.6434 0.5528 0.7217         FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     0   0.2079 0.1432 0.2907         FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    10   0.4072 0.3556 0.4635         FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    20   0.6432 0.5391 0.7398         FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Differences between scenarios</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          contrast estimate  lower  upper p</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  dose=10 - dose=0   0.1999 0.1333 0.2548 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  dose=20 - dose=0   0.4367 0.2839 0.5587 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  dose=10 - dose=0   0.1993 0.1294 0.2579 0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  dose=20 - dose=0   0.4352 0.2675 0.5625 0</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

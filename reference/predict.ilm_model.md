@@ -63,7 +63,9 @@ predict(
 
 - ndraw:
 
-  Integer. Random-effect draws used when `marginal = TRUE`.
+  Integer. Random-effect draws used when `marginal = TRUE` for a
+  multinomial outcome; a single linear predictor is averaged by
+  quadrature and does not use it.
 
 - seed:
 
@@ -108,6 +110,16 @@ wherever the slope is centred – so the marginal and conditional curves
 separate by more at the ends of the range than in the middle. Averaging
 such a term as if it were an intercept understates that, and the error
 grows with the slope variance and with distance from centre.
+
+An **AR(1) or CAR(1) term** is averaged over too: at any one row its
+latent value has the stationary distribution, whatever the time.
+
+With **one linear predictor** – every family but the multinomial – a
+row's whole latent contribution is a single normal, and the average is
+taken by Gauss-Hermite quadrature: exact for any purpose, the same on
+every call, and free of `ndraw`. A multinomial outcome has one dimension
+per category, and is averaged over `ndraw` draws with common random
+numbers.
 
 ## Uncertainty
 

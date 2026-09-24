@@ -62,7 +62,7 @@ or a 20-point one depending on where the data sit.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_ame</span><span class="op">(</span><span class="va">object</span>, terms <span class="op">=</span> <span class="cn">NULL</span>, eps <span class="op">=</span> <span class="fl">1e-04</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_ame</span><span class="op">(</span><span class="va">object</span>, terms <span class="op">=</span> <span class="cn">NULL</span>, eps <span class="op">=</span> <span class="fl">1e-04</span>, marginal <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -79,6 +79,12 @@ or a 20-point one depending on where the data sit.</p>
 
 <dt id="arg-eps">eps<a class="anchor" aria-label="anchor" href="#arg-eps"></a></dt>
 <dd><p>Relative step for the numerical derivatives.</p></dd>
+
+
+<dt id="arg-marginal">marginal<a class="anchor" aria-label="anchor" href="#arg-marginal"></a></dt>
+<dd><p>Logical. <code>FALSE</code> (the default) for the effect in a typical
+group, with the random effects at zero; <code>TRUE</code> for the effect averaged
+over them. See "Which effect, in a mixed model".</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -97,9 +103,22 @@ it is the average change in fitted mean from moving every row to that level
 from the reference, which is a contrast rather than a derivative.</p>
 <p>Standard errors come from the delta method: the effect is differentiated
 numerically with respect to the parameters and combined with their covariance.
-The parameter vector includes the covariance parameters, because a
-population-averaged prediction depends on them and pretending otherwise would
-understate the uncertainty.</p>
+The parameter vector includes the covariance parameters, which the effect
+depends on when it is averaged over the random effects.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="which-effect-in-a-mixed-model">Which effect, in a mixed model<a class="anchor" aria-label="anchor" href="#which-effect-in-a-mixed-model"></a></h2>
+
+
+<p>By default the predictions hold the random effects at zero, so the effect is
+the one for a <strong>typical group</strong> – the effect <code><a href="ilm_interpret.html">ilm_interpret()</a></code> reports, and
+the one the coefficients describe. With <code>marginal = TRUE</code> the predictions
+are averaged over every random term, as <code>predict(marginal = TRUE)</code> does, and
+the effect is the one on the <strong>population as a whole</strong>. Through a nonlinear
+link the two differ: a logit's population-averaged effect is the flatter
+one. They answer different questions. The <code>marginaleffects</code> bridge averages
+over the random effects unless its option <code>ilm_model.marginal</code> is set to
+<code>FALSE</code>, so it matches <code>marginal = TRUE</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

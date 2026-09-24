@@ -64,6 +64,40 @@
   from them. Binomial and Poisson smooths, which have no such parameter,
   were unaffected. The draws are now centred parameter by parameter, and
   `test-joint-draws.R` holds the intervals to mgcv’s.
+- Fixed: `predict(marginal = TRUE)` left an AR(1) or CAR(1) term out of
+  the average over the random effects. At any one row its latent value
+  has the stationary distribution, and it is now averaged over with the
+  grouping terms: a Poisson model with a stationary AR variance of 0.59
+  averaged 1.40 where its own simulations averaged 1.86, and now agrees
+  with them and with the closed form.
+- With one linear predictor – every family but the multinomial – a row’s
+  whole latent contribution is a single normal, so
+  `predict(marginal = TRUE)` now averages over it by Gauss-Hermite
+  quadrature rather than by draws. It matches numerical integration to
+  1e-7, gives the same answer on every call, and does not use `ndraw`;
+  the effects and scenarios built on it no longer move with the seed. A
+  multinomial outcome is still averaged by draws, now including an AR
+  term.
+- Fixed:
+  [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
+  computed its means from the fixed-effect design and each random term’s
+  intercept variance alone. A random slope was averaged as if it were an
+  intercept, an AR term was left out, and a smooth lost its penalised
+  part entirely: a gaussian [`sin()`](https://rdrr.io/r/base/Trig.html)
+  curve came out as -1.31 at its peak of +1. Each mean now comes from
+  `predict(marginal = TRUE)`, and the interval draws the whole parameter
+  vector, variance components included, where it drew the fixed effects
+  alone. An ordinal fit is refused, as a multinomial one was, since it
+  too has no single number to report.
+- [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  says which effect it reports: by default the one for a typical group,
+  with the random effects at zero – the effect
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  describes – and with `marginal = TRUE` the one averaged over them,
+  which through a logit is the flatter. Its help used to justify its
+  standard errors by a population average it did not take. The
+  `marginaleffects` bridge averages over the random effects by default,
+  as `marginal = TRUE` does.
 - [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html),
   [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
   and

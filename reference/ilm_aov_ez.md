@@ -237,9 +237,9 @@ a
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
 #> 
 #>  contrast estimate     se lower upper p_adj
-#>     2 - 1    2.134 0.3906 1.217 3.051     0
-#>     3 - 1    4.325 0.3906 3.408 5.243     0
-#>     3 - 2    2.191 0.3906 1.274 3.109     0
+#>     2 - 1    2.134 0.3906 1.220 3.048     0
+#>     3 - 1    4.325 0.3906 3.411 5.240     0
+#>     3 - 2    2.191 0.3906 1.277 3.106     0
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 

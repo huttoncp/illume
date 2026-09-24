@@ -8,7 +8,7 @@ probability or a 20-point one depending on where the data sit.
 ## Usage
 
 ``` r
-ilm_ame(object, terms = NULL, eps = 1e-04)
+ilm_ame(object, terms = NULL, eps = 1e-04, marginal = FALSE)
 ```
 
 ## Arguments
@@ -25,6 +25,12 @@ ilm_ame(object, terms = NULL, eps = 1e-04)
 - eps:
 
   Relative step for the numerical derivatives.
+
+- marginal:
+
+  Logical. `FALSE` (the default) for the effect in a typical group, with
+  the random effects at zero; `TRUE` for the effect averaged over them.
+  See "Which effect, in a mixed model".
 
 ## Value
 
@@ -45,8 +51,21 @@ derivative.
 Standard errors come from the delta method: the effect is differentiated
 numerically with respect to the parameters and combined with their
 covariance. The parameter vector includes the covariance parameters,
-because a population-averaged prediction depends on them and pretending
-otherwise would understate the uncertainty.
+which the effect depends on when it is averaged over the random effects.
+
+## Which effect, in a mixed model
+
+By default the predictions hold the random effects at zero, so the
+effect is the one for a **typical group** – the effect
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+reports, and the one the coefficients describe. With `marginal = TRUE`
+the predictions are averaged over every random term, as
+`predict(marginal = TRUE)` does, and the effect is the one on the
+**population as a whole**. Through a nonlinear link the two differ: a
+logit's population-averaged effect is the flatter one. They answer
+different questions. The `marginaleffects` bridge averages over the
+random effects unless its option `ilm_model.marginal` is set to `FALSE`,
+so it matches `marginal = TRUE`.
 
 ## See also
 

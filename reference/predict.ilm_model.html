@@ -118,7 +118,9 @@ predictors, or <code>"class"</code> for the most likely category.</p></dd>
 
 
 <dt id="arg-ndraw">ndraw<a class="anchor" aria-label="anchor" href="#arg-ndraw"></a></dt>
-<dd><p>Integer. Random-effect draws used when <code>marginal = TRUE</code>.</p></dd>
+<dd><p>Integer. Random-effect draws used when <code>marginal = TRUE</code> for a
+multinomial outcome; a single linear predictor is averaged by quadrature
+and does not use it.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -162,6 +164,13 @@ slope is centred – so the marginal and conditional curves separate by more
 at the ends of the range than in the middle. Averaging such a term as if it
 were an intercept understates that, and the error grows with the slope
 variance and with distance from centre.</p>
+<p>An <strong>AR(1) or CAR(1) term</strong> is averaged over too: at any one row its latent
+value has the stationary distribution, whatever the time.</p>
+<p>With <strong>one linear predictor</strong> – every family but the multinomial – a row's
+whole latent contribution is a single normal, and the average is taken by
+Gauss-Hermite quadrature: exact for any purpose, the same on every call, and
+free of <code>ndraw</code>. A multinomial outcome has one dimension per category, and
+is averaged over <code>ndraw</code> draws with common random numbers.</p>
     </div>
     <div class="section level2">
     <h2 id="uncertainty">Uncertainty<a class="anchor" aria-label="anchor" href="#uncertainty"></a></h2>

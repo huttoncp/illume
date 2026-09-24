@@ -80,6 +80,13 @@ They are different questions and they give different answers under any
 non-linear link, because the average of a prediction is not the
 prediction at the average. The printed output says which was used.
 
+In a mixed model each unit's prediction is averaged over every random
+term – intercepts, slopes, an AR or CAR latent – as
+`predict(marginal = TRUE)` does, so the result is a population mean
+rather than the value for a group whose random effect happens to be
+zero. The interval draws the whole parameter vector, variance components
+included, since that average depends on them.
+
 ## Extrapolation
 
 A model returns a number for a dose nobody received, and the interval
@@ -119,12 +126,12 @@ ilm_scenario(f, dose = c(0, 10, 20), sims = 200, contrast = "first")
 #>   every unit set to the scenario's values, its own covariates kept
 #>   held as observed: age
 #>  dose estimate  lower  upper extrapolating
-#>     0   0.2067 0.1417 0.2813         FALSE
-#>    10   0.4066 0.3610 0.4602         FALSE
-#>    20   0.6434 0.5528 0.7217         FALSE
+#>     0   0.2079 0.1432 0.2907         FALSE
+#>    10   0.4072 0.3556 0.4635         FALSE
+#>    20   0.6432 0.5391 0.7398         FALSE
 #> 
 #>   Differences between scenarios
 #>          contrast estimate  lower  upper p
-#>  dose=10 - dose=0   0.1999 0.1333 0.2548 0
-#>  dose=20 - dose=0   0.4367 0.2839 0.5587 0
+#>  dose=10 - dose=0   0.1993 0.1294 0.2579 0
+#>  dose=20 - dose=0   0.4352 0.2675 0.5625 0
 ```
