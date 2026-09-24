@@ -243,7 +243,7 @@ test_that("a predictor in a multinomial model gets one verdict, in shares", {
   f <- ilm_model(k ~ x + h, data = d, family = "multinomial", verbose = FALSE)
   e <- ilm_interpret(f, ame = FALSE)$sections$effects
   expect_length(e, 2L)
-  expect_match(e[1], "the predicted share 'a' is [0-9]+% against [0-9]+%")
+  expect_match(e[1], "the predicted share of 'a' is [0-9]+% against [0-9]+%")
   expect_match(e[2], "Predicted shares for 'u' against 'v'", fixed = TRUE)
 })
 

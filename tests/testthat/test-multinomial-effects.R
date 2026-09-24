@@ -55,13 +55,23 @@ test_that("the slopes agree with marginaleffects on the same model", {
 test_that("the interpretation describes every category, with its own effect", {
   d <- mn_data()
   f <- ilm_model(y ~ x + g, data = d, family = "multinomial", verbose = FALSE)
-  txt <- paste(unlist(ilm_interpret(f)), collapse = "\n")
-  ## the coefficients of both modelled categories, not only the first
-  expect_match(txt, "lo:x: ", fixed = TRUE)
-  expect_match(txt, "mid:x: ", fixed = TRUE)
-  expect_match(txt, "odds of 'mid', relative to the average of the categories",
-               fixed = TRUE)
-  ## and each line quotes its own category's effect in percentage points
-  line <- grep("^mid:x: ", strsplit(txt, "\n")[[1]], value = TRUE)
-  expect_match(line, "In the probability of 'mid'", fixed = TRUE)
+  txt <- paste(unlist(ilm_interpret(f)$sections), collapse = "\n")
+  ## one sentence for x, with the predicted share of every category at both
+  ## ends of its middle half -- not one category's figures quoted for all
+  line <- grep("^x: ", strsplit(txt, "\n")[[1]], value = TRUE)
+  expect_length(line, 1L)
+  sh <- regmatches(line, regexec(paste0(
+    "of 'lo' is ([0-9.]+)% against ([0-9.]+)%, of 'mid' ([0-9.]+)% against ",
+    "([0-9.]+)% and of 'hi' ([0-9.]+)% against ([0-9.]+)%"), line))[[1]]
+  expect_length(sh, 7L)
+  ## one row per end, one column per category
+  sh <- matrix(as.numeric(sh[-1]), 2L)
+  ## as simulated, 'lo' rises with x and 'mid' falls
+  expect_gt(sh[2, 1], sh[1, 1])
+  expect_lt(sh[2, 2], sh[1, 2])
+  ## and at either end the three shares make a whole, to rounding
+  expect_true(all(abs(rowSums(sh) - 100) <= 2))
+  ## the factor too: every category, level by level
+  expect_match(txt, paste0("'lo' [0-9.]+%, [0-9.]+% and [0-9.]+%; 'mid' [0-9.]+%, ",
+                           "[0-9.]+% and [0-9.]+%; and 'hi' [0-9.]+%, [0-9.]+% and [0-9.]+%"))
 })

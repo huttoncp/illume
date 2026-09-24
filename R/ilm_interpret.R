@@ -416,7 +416,7 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     if (num && !is_causal)
       body <- sprintf("Across the %s of %s, from %s to %s, the predicted share %s.",
                       span, vn, vlab[1], vlab[2],
-                      ilm_and(sprintf("'%s' %s%s against %s", ks,
+                      ilm_and(sprintf("of '%s' %s%s against %s", ks,
                                       c("is ", rep("", length(ks) - 1L)),
                                       vapply(ks, function(k) fmt(per(k)[1]), ""),
                                       vapply(ks, function(k) fmt(per(k)[2]), ""))))
