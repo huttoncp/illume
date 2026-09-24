@@ -143,7 +143,7 @@ ilm_rem_latent <- function(fit) {
     e <- fit$re[[nm]]
     as.numeric(e$nl * e$d * ilm_str_width(fit$re_struct[[nm]], fit$C))
   }, 0)
-  if (!is.null(fit$ar)) lat["ar"] <- fit$ar$n_cell * fit$C
+  if (!is.null(fit$ar)) lat["ar"] <- ilm_ar_nlat(fit$ar) * fit$C
   lat
 }
 

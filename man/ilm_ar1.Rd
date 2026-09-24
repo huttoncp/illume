@@ -9,9 +9,11 @@ ilm_ar1(time, group, verbose = TRUE)
 }
 \arguments{
 \item{time}{Time index, one value per observation. Whole numbers, or values
-on a common step such as \code{c(0, 5, 10, 15)}.}
+on a common step such as \code{c(0, 5, 10, 15)}. Or a one-sided formula
+\code{~ time | group} naming two columns of the model's data; see Details.}
 
-\item{group}{Unit identifier, one value per observation.}
+\item{group}{Unit identifier, one value per observation. Omitted when
+\code{time} is a formula.}
 
 \item{verbose}{Warn when the latent budget is thin.}
 }
@@ -29,6 +31,13 @@ observation, so a unit that misses a wave is handled correctly -- the latent
 for that step simply has no observation attached, and the chain continues
 across it. What is \emph{not} allowed is times that do not sit on a common grid at
 all, because then "one step" has no meaning.
+
+\strong{By name.} \code{ilm_ar1(~ time | group)} names two columns of the model's
+data instead of passing them. \code{\link[=ilm_model]{ilm_model()}} reads them from its model
+frame, after rows with missing values are dropped, so the structure cannot
+come out of step with the response; vectors taken from the whole data frame
+beforehand can. The fitted model remembers the names, so \code{\link[=ilm_cells]{ilm_cells()}} and
+predictions for new rows know where to find the time and the group.
 }
 \examples{
 d <- ilm_sim(n_id = 20, n_period = 8)
@@ -36,6 +45,7 @@ a <- ilm_ar1(as.integer(factor(d$date)), d$id)
 a
 }
 \seealso{
-\code{\link[=ilm_car1]{ilm_car1()}} for arbitrary gaps, \code{\link[=ilm_check_ar]{ilm_check_ar()}} to test whether
-the structure is needed.
+\code{\link[=ilm_car1]{ilm_car1()}} for arbitrary gaps, \code{\link[=ilm_rw1]{ilm_rw1()}} for a level that
+drifts, \code{\link[=ilm_check_ar]{ilm_check_ar()}} to test whether the structure is needed,
+\code{\link[=ilm_cells]{ilm_cells()}} for the fitted cells.
 }

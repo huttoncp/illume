@@ -26,6 +26,7 @@ grp <- list(
        "One engine, every family. The formula is lme4's and the object that comes back is the same whatever was fitted.",
        function(x) x %in% c("ilm_model", "ilm_fit", "ilm_family",
          "ilm_model_formula", "ilm_surv", "ilm_censor", "ilm_ar1", "ilm_car1",
+         "ilm_rw1", "ilm_cells",
          "ilm_fourier", "ilm_cyclic", "ilm_squeeze", "ilm_thresholds")),
 
   list("Other designs",

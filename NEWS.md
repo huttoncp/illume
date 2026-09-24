@@ -1,6 +1,35 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_rw1()` fits a random walk over time, the local-level model of
+  time-series analysis. Each group's walk is held at zero at its first time,
+  so the fixed effects give its level there, and each step after that adds an
+  independent change with variance proportional to the time elapsed, so
+  irregular gaps enter as they are. With a gaussian response the fit is the
+  exact local-level likelihood. On five reference series (one to three
+  groups, unit steps and irregular gaps), by maximum likelihood and by REML,
+  the estimates agree with an independent maximisation of the exact
+  likelihood to within 5e-6 and the log-likelihood to 1e-10. A forecast of
+  a group's last cell from the fit (its mode, and its variance from the
+  joint precision) agrees with the closed form to 1e-8. For other families it is
+  the Laplace approximation, and the fit-time check on observations per
+  latent value applies to it as it does to CAR(1). `predict(marginal = TRUE)`
+  averages each row over its own spread, which grows with the time since its
+  group started.
+* `ilm_ar1()`, `ilm_car1()` and `ilm_rw1()` can name their two columns:
+  `ilm_car1(~ day | id)`. `ilm_model()` reads them from its model frame, after
+  rows with missing values are dropped, so the structure cannot fall out of
+  step with the response. Vectors taken from the whole data frame could, and
+  stopped the fit with a length mismatch. The fit keeps the names, which is
+  what lets `predict()` place new rows on a walk.
+* `ilm_cells()` lists the latent cells of a fitted AR(1), CAR(1) or
+  random-walk term, one row per cell. Each row gives the group and time (as
+  numbers, dates or date-times, as given), how many observations sit on the
+  cell, where the fit holds its value, and whether it is its group's first or
+  last cell. Code that works with the latent values, such as a forecast, reads
+  the layout from it instead of rebuilding it.
+* `summary()` names the correlation over time it fitted and gives its standard
+  deviation. It used to call a CAR(1) term "ar1".
 * `ilm_interpret()` says each effect in the response's own units, over a change
   a reader can picture: across the middle half of a numeric predictor, level by
   level for a factor, with the model's predictions at both ends, averaged over

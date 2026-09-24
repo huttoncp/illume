@@ -123,11 +123,11 @@ ilm_power_unit <- function(object) {
   NULL
 }
 
-## Each row's unit in an AR(1) or CAR(1) specification.
+## Each row's unit in an AR(1), CAR(1) or random-walk specification.
 #' @keywords internal
 #' @noRd
 ilm_ar_group <- function(ar) {
-  if (identical(ar$type, "car1")) findInterval(ar$idx, ar$first)
+  if (ar$type %in% c("car1", "rw1")) findInterval(ar$idx, ar$first)
   else (ar$idx - 1L) %/% ar$Tt + 1L
 }
 
@@ -153,17 +153,22 @@ ilm_censor_rows <- function(spec, rows) {
             ctime = if (is.null(ct)) NULL else ct[rows], class = class(spec))
 }
 
-## An AR(1) or CAR(1) specification for the rows a simulated study drew, with
-## its units relabelled. The times come back from the specification itself --
-## an AR(1) slot, or a CAR(1) time relative to the unit's first, rebuilt from
-## the gaps it kept; only differences in time enter the correlation.
+## An AR(1), CAR(1) or random-walk specification for the rows a simulated
+## study drew, with its units relabelled. The times come back from the
+## specification itself -- an AR(1) slot, or the cells' own times (rebuilt from
+## the gaps, relative to each unit's first, for a structure stored before the
+## times were); only differences in time enter the correlation.
 #' @keywords internal
 #' @noRd
 ilm_ar_rows <- function(ar, rows, group) {
-  if (identical(ar$type, "car1")) {
-    tc <- numeric(ar$n_cell)
-    for (k in seq_along(ar$rest)) tc[ar$rest[k]] <- tc[ar$prev[k]] + ar$gap[k]
-    ilm_car1(tc[ar$idx][rows], group, verbose = FALSE)
+  if (ar$type %in% c("car1", "rw1")) {
+    tc <- ar$ct
+    if (is.null(tc)) {
+      tc <- numeric(ar$n_cell)
+      for (k in seq_along(ar$rest)) tc[ar$rest[k]] <- tc[ar$prev[k]] + ar$gap[k]
+    }
+    ctor <- if (identical(ar$type, "rw1")) ilm_rw1 else ilm_car1
+    ctor(tc[ar$idx][rows], group, verbose = FALSE)
   } else {
     ilm_ar1(((ar$idx - 1L) %% ar$Tt + 1L)[rows], group, verbose = FALSE)
   }

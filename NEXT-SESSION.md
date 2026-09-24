@@ -1,42 +1,49 @@
-# Handoff — illume 0.0.8.9000 (bump in progress)
+# Handoff — illume 0.0.8.9000
 
 First written 2026-09-22. Rewritten on 2026-09-24, during the session that
-finished the 0.0.8.9000 study set. The current state is in this first section.
+added the random walk. The current state is in this first section.
 Everything below "Standing constraints" is history.
 
 Delete this file once the queue is empty.
 
-## Where things stand (2026-09-24, about 11:00)
+## Where things stand (2026-09-24, evening)
 
-- **Merged:** the 0.0.8.9000 bump (PR #6) and the interpretation work (PR #7).
-- **To open and merge:**
-  - `docs-remedies-reml`, never opened as a PR;
-  - `joint-draws-order`, which fixes the joint draws behind `predict()`'s
-    intervals (D1) and keeps other projects out of these notes.
-- **Then, queue item 4:** reinstall illumex, then illume, into Craig's R 4.4
-  and R 4.6.1 libraries.
-  - Build each package once with R 4.4, vignettes included:
-    `pkgbuild::build(vignettes = TRUE)`, with `RSTUDIO_PANDOC` set.
-  - Install the same tarballs into both libraries. Neither package has
-    compiled code.
-  - R 4.6.1's library already has the six runtime dependencies from CRAN:
-    collapse, Rcpp, RcppEigen, RTMB, TMB and tinyplot.
+- **Merged:** PRs #6 to #11: the 0.0.8.9000 bump, the interpretation work, the
+  remedies and REML documentation, the joint-draw order (D1), averaging over
+  every random term (D2 to D4) and the quadrature and scenario follow-up.
+  Both packages were rebuilt from main and installed into Craig's R 4.4 and
+  R 4.6.1 libraries after #11.
+- **In review:** `random-walk`, which adds `ilm_rw1()`, the by-name form
+  `~ time | group` for all three structures over time, and `ilm_cells()`.
+- **Next, in the order agreed with Craig:**
+  1. The exports another agent asked for, which Craig approved:
+     `ilm_matrices()` (new rows placed among the cells), `ilm_draws()` (joint
+     draws of every parameter, matched by name), `ilm_dist()` (each family's
+     d/p/q/r in illume's parameterisation), `ilm_normal_expect()` (the
+     quadrature behind `predict(marginal = TRUE)`), and `ilm_ranef()` and
+     `ilm_varcorr()`, registered on nlme's generics. Also in that batch:
+     - `fixef()` never reaches `fixef.ilm_model`, because the method is
+       registered to illume's own internal generic (`R/ilm_methods.R`),
+       not nlme's;
+     - predict's `marginal` help should say "set to zero (a typical group)";
+     - a sentence in `reml`'s help on few groups.
+  2. An outlier and influence check.
+  3. `ilm_plot_model_pdp()`, with its causal-language guard.
+  4. Reporting, version 1 (`ilm_session_log()` and `ilm_report()`, owned by
+     illumex and extended by illume), as agreed with Craig on 2026-09-24.
+  5. The multinomial slowdown, warm-started refits, and whether reformulas
+     moves to Imports.
+  6. After that, for the same agent: `ilm_scores()`, `ilm_calibration()` and
+     `ilm_contrast()` as S3 generics; `ilm_refit(fit, data)`; and optionally
+     `ilm_support(fit, newdata)`.
+- **Craig's calls, still open:**
+  - whether the latent-budget checks should FAIL at one observation per
+    latent value for a non-gaussian family. A Poisson walk with one count per
+    time point recovers its variance and is still marked unreliable.
+  - the vocabulary for which random effects a prediction uses.
+  - a formula interface for `ilm_fit()`, which was advised against.
 - **At sprint end:** remind Craig about the open data case study, then the
   end-to-end illumex/illume experiment.
-- **Docket after the sprint** (details in memory as `illume-docket`):
-  - Prediction defects reported by another agent:
-    - `predict(marginal = TRUE)` leaves out an AR/CAR latent (D2);
-    - `ilm_scenario()` averages over the random intercept only (D3);
-    - `ilm_ame()` is conditional at a random effect of zero, while its help
-      implies an average over groups (D4).
-  - The latent-budget checks FAIL at one observation per latent, which is the
-    usual layout for forecasting.
-  - `ilm_plot_model_pdp()`.
-  - An outlier/influence check.
-  - The multinomial slowdown against nnet.
-  - Refit loops that trust nlminb's stopping code.
-  - Faster refits by warm starts.
-  - A formula interface for `ilm_fit()`, which was advised against.
 
 ---
 

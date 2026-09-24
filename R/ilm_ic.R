@@ -179,8 +179,13 @@ ilm_Bar_hat <- function(object) {
   if (is.null(object$ar) || is.null(object$sdr$par.random)) return(NULL)
   v <- object$sdr$par.random
   i <- which(names(v) == "B_ar")
-  if (length(i) != object$ar$n_cell * object$C) return(NULL)
-  matrix(v[i], object$ar$n_cell, object$C)
+  ## a random walk's anchors are held at zero and are not in par.random, so
+  ## the integrated cells go back into their rows and the anchors stay zero
+  free <- ilm_ar_free(object$ar)
+  if (length(i) != length(free) * object$C) return(NULL)
+  Ba <- matrix(0, object$ar$n_cell, object$C)
+  Ba[free, ] <- matrix(v[i], length(free), object$C)
+  Ba
 }
 
 #' @keywords internal

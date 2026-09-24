@@ -25,7 +25,8 @@ ilm_msqrt <- function(S) {
   e$vectors %*% diag(sqrt(v), nrow(S)) %*% t(e$vectors)
 }
 
-## One draw of the latent AR(1) or CAR(1) process, at the observed rows.
+## One draw of the latent AR(1), CAR(1) or random-walk process, at the
+## observed rows.
 ##
 ## Simulating must walk the same chain the likelihood scores, or every
 ## envelope built on top of it is calibrated against the wrong process. Shared
@@ -36,7 +37,13 @@ ilm_msqrt <- function(S) {
 ilm_ar_draw <- function(ar, rho, Sar, C) {
   La <- ilm_msqrt(Sar)
   Ba <- matrix(0, ar$n_cell, C)
-  if (identical(ar$type, "car1")) {
+  if (identical(ar$type, "rw1")) {
+    ## zero at each group's first cell, as the fit holds it, then independent
+    ## steps with covariance gap * Sigma, in cell order like CAR(1)
+    for (k in seq_along(ar$rest))
+      Ba[ar$rest[k], ] <- Ba[ar$prev[k], ] +
+        sqrt(ar$gap[k]) * (rnorm(C) %*% La)
+  } else if (identical(ar$type, "car1")) {
     Ba[ar$first, ] <- matrix(rnorm(length(ar$first) * C), ncol = C) %*% La
     phi <- rho ^ ar$gap
     ## transitions are in cell order, so the predecessor is always already

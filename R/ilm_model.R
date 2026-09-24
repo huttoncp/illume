@@ -134,7 +134,11 @@ ilm_need_bars <- function()
 #'   `list(subj = list(d_cor = FALSE))`; see the examples, and [ilm_fit()] for
 #'   what each costs. The pre-fit checks say when a structure is too rich for
 #'   the data and name a rank to try.
-#' @param ar Optional correlation over time, from [ilm_ar1()] or [ilm_car1()].
+#' @param ar Optional correlation over time, from [ilm_ar1()], [ilm_car1()] or
+#'   [ilm_rw1()]. Written by name, as `ilm_car1(~ time | group)`, it takes the
+#'   two columns from `data` after rows with missing values are dropped, so it
+#'   cannot come out of step with the response, and the fit remembers them for
+#'   [ilm_cells()] and for predictions on new rows.
 #' @param censor Optional censoring specification from [ilm_censor()], for a
 #'   response with a floor, a ceiling or a detection limit.
 #' @param rp_df Degrees of freedom for a flexible parametric baseline, used by
@@ -483,6 +487,21 @@ ilm_model_formula <- function(formula, data, family = "auto",
     ## same na.action and the two designs cannot come out of step
     rhs <- unique(c(rhs, ilm_bq(zvars)))
   }
+  ## A correlation over time given by name, `~ time | group`, reads both
+  ## columns from the model frame, so they go into it: na.action then drops a
+  ## row from the structure and the response together, where vectors taken
+  ## from the whole data frame beforehand fall out of step with it.
+  if (inherits(ar, "ilm_cor_named")) {
+    if (is.data.frame(data)) {
+      miss <- setdiff(ar$vars, names(data))
+      if (length(miss))
+        stop("the correlation over time names ",
+             paste(sQuote(miss), collapse = " and "), ", which ",
+             if (length(miss) > 1L) "are not columns" else "is not a column",
+             " of `data`.", call. = FALSE)
+    }
+    rhs <- unique(c(rhs, ilm_bq(ar$vars)))
+  }
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
@@ -509,6 +528,8 @@ ilm_model_formula <- function(formula, data, family = "auto",
               "tells the two apart, and ilm_impute() is the remedy for the ",
               "second.")
   }
+
+  if (inherits(ar, "ilm_cor_named")) ar <- ilm_cor_build(ar, mf)
 
   yraw <- stats::model.response(mf); N <- nrow(mf)
   ## family = "auto": chosen from the response, and SAID, because a likelihood

@@ -50,7 +50,9 @@ and \code{d_cor = FALSE} to drop an intercept-slope correlation in any family.
 A term it leaves out gets \code{"us"} with its correlations, so only the terms
 that differ need naming. See the section above and the examples.}
 
-\item{ar}{Optional AR(1) specification:
+\item{ar}{Optional correlation over time, from \code{\link[=ilm_ar1]{ilm_ar1()}}, \code{\link[=ilm_car1]{ilm_car1()}} or
+\code{\link[=ilm_rw1]{ilm_rw1()}} given vectors -- a structure given by name, \code{~ time | group},
+is built from the data by \code{\link[=ilm_model]{ilm_model()}} -- or the older bare AR(1) list,
 \code{list(idx =, n_group =, Tt =)}.}
 
 \item{ylevels}{Optional character vector of category labels, used in output.}

@@ -40,12 +40,14 @@ reference:
   contents:
   - ilm_ar1
   - ilm_car1
+  - ilm_cells
   - ilm_censor
   - ilm_cyclic
   - ilm_family
   - ilm_fit
   - ilm_fourier
   - ilm_model
+  - ilm_rw1
   - ilm_squeeze
   - ilm_surv
   - ilm_thresholds

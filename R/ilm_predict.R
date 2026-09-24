@@ -288,6 +288,42 @@ ilm_joint_draws <- function(object, nsim, seed) {
   list(draws = sweep(D, 1L, mu, "+"), which = rn)
 }
 
+## Each prediction row's time since its group's random walk started, which
+## is what the walk's variance at the row is proportional to. The fitted rows
+## read it off their cells. New rows need their time and group, found through
+## the names the walk was given; a group the fit has not seen starts at its
+## earliest time among the new rows, as every fitted group started at its
+## first.
+#' @keywords internal
+#' @noRd
+ilm_rw_elapsed <- function(object, newdata) {
+  ar <- object$ar
+  t0 <- ar$ct[ar$first]
+  if (is.null(newdata))
+    return(ar$ct[ar$idx] - t0[ilm_ar_group(ar)])
+  v <- ar$vars
+  if (is.null(v))
+    stop("a random walk's spread at a row depends on how long after its ",
+         "group's first time the row falls, and this walk was given as ",
+         "vectors, so new rows cannot be placed on it. Give it by name, ",
+         "ilm_rw1(~ time | group), or predict with marginal = FALSE.",
+         call. = FALSE)
+  miss <- setdiff(v, names(newdata))
+  if (length(miss))
+    stop("`newdata` needs ", paste(sQuote(miss), collapse = " and "),
+         " to place its rows on the random walk.", call. = FALSE)
+  tt <- suppressWarnings(as.numeric(newdata[[v[["time"]]]]))
+  gg <- as.character(newdata[[v[["group"]]]])
+  if (anyNA(tt) || anyNA(gg))
+    stop("some rows of `newdata` have no usable ", sQuote(v[["time"]]),
+         " or ", sQuote(v[["group"]]), ", so they cannot be placed on the ",
+         "random walk.", call. = FALSE)
+  anchor <- t0[match(gg, ar$glev)]
+  new <- is.na(anchor)
+  if (any(new)) anchor[new] <- stats::ave(tt[new], gg[new], FUN = min)
+  abs(tt - anchor)
+}
+
 #' Predictions from a fitted model
 #'
 #' Returns the fitted mean on the response scale -- one probability per
@@ -325,7 +361,15 @@ ilm_joint_draws <- function(object, nsim, seed) {
 #' variance and with distance from centre.
 #'
 #' An **AR(1) or CAR(1) term** is averaged over too: at any one row its latent
-#' value has the stationary distribution, whatever the time.
+#' value has the stationary distribution, whatever the time. A **random walk**
+#' ([ilm_rw1()]) is not stationary: at a row its variance is the variance per
+#' unit of time multiplied by the time since the row's group started, so each
+#' row is averaged over its own spread, and the population mean moves away
+#' from the typical group's as time passes. New rows need their time and group
+#' for that, which the fit can find only when the walk was given by name,
+#' `ilm_rw1(~ time | group)`; a group the fit has not seen is taken to start
+#' at its earliest time among the new rows, as each fitted group started at
+#' its first.
 #'
 #' With **one linear predictor** -- every family but the multinomial -- a row's
 #' whole latent contribution is a single normal, and the average is taken by
@@ -411,6 +455,9 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## time -- and it used to be left out: a Poisson model with a stationary AR
   ## variance of 0.59 averaged 1.40 where its own simulations averaged 1.86.
   has_ar <- !is.null(object$ar) && !is.null(object$Sigma[["ar"]])
+  ## a random walk is not stationary: its variance at a row is Sigma times
+  ## the time since the row's group started, so each row carries its own
+  ar_el <- NULL
   ## Under an identity link the average over the random effects IS the
   ## conditional value: E[eta + z'u] = eta, because the random effects have
   ## mean zero and nothing nonlinear stands between. Simulating it instead
@@ -424,6 +471,8 @@ predict.ilm_model <- function(object, newdata = NULL,
   draws <- NULL; vrow <- NULL
   if (integ) {
     pdat <- if (is.null(newdata)) object$model else newdata
+    if (has_ar && identical(object$ar$type, "rw1"))
+      ar_el <- ilm_rw_elapsed(object, newdata)
     tms <- lapply(gk, function(k) {
       f  <- ilm_re_factors(object, k)
       Zb <- ilm_re_design(object, k, pdat, f$d)
@@ -450,7 +499,7 @@ predict.ilm_model <- function(object, newdata = NULL,
         list(Zb = tk$Zb, U = ilm_re_draws(tk$A, tk$B, ndraw, object$C)))
       if (has_ar)
         draws[[length(draws) + 1L]] <- list(
-          Zb = matrix(1, nrow(pdat), 1L),
+          Zb = matrix(if (is.null(ar_el)) 1 else sqrt(ar_el), nrow(pdat), 1L),
           U = ilm_re_draws(matrix(1, 1L, 1L), ilm_msqrt(object$Sigma[["ar"]]),
                            ndraw, object$C))
     } else {
@@ -461,7 +510,8 @@ predict.ilm_model <- function(object, newdata = NULL,
       ## with the seed.
       vrow <- numeric(nrow(pdat))
       for (tk in tms) vrow <- vrow + rowSums((tk$Zb %*% tk$A)^2) * sum(tk$B^2)
-      if (has_ar) vrow <- vrow + object$Sigma[["ar"]][1L, 1L]
+      if (has_ar) vrow <- vrow + object$Sigma[["ar"]][1L, 1L] *
+          (if (is.null(ar_el)) 1 else ar_el)
     }
   }
   ## A univariate family has one linear predictor and its own inverse link; the

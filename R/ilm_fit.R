@@ -702,7 +702,7 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
         if (ope < 5) "drop this grouping factor or pool levels" else "")
     }
   }
-  if (!is.null(ar)) lat["ar"] <- ar$n_cell * C
+  if (!is.null(ar)) lat["ar"] <- ilm_ar_nlat(ar) * C
 
   ## ---- GLOBAL latent budget -------------------------------------------------
   ## The binding constraint is total observations per latent VALUE, not any
@@ -771,8 +771,8 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     sug)
 
   if (!is.null(ar)) {
-    nlat <- ar$n_cell; r2 <- N / nlat
-    car <- identical(ar$type, "car1")
+    nlat <- ilm_ar_nlat(ar); r2 <- N / nlat
+    lab <- switch(ar$type, car1 = "CAR(1)", rw1 = "random-walk", "AR")
     ## For a gaussian response this ratio is reported but not failed on, for
     ## the reason given above: one latent per observation is what continuous
     ## time produces, and coverage there is nominal.
@@ -780,12 +780,15 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     ck <- ilm_add_check(ck, "obs_per_ar_latent",
       if (gaus) "OK" else if (r2 < 2) "FAIL" else if (r2 < 4) "WARN" else "OK",
       sprintf("%.2f observations per %s latent time point (%d time points)%s",
-              r2, if (car) "CAR(1)" else "AR", as.integer(nlat),
+              r2, lab, as.integer(nlat),
               if (gaus && r2 < 4) "; expected for continuous time and not a problem for a gaussian response" else ""),
-      if (thin) "the latent process carries about one categorical observation per latent value; Laplace attenuates the variance components and rho is driven toward the boundary" else "",
+      if (thin) paste0("the latent process carries about one categorical observation per latent value; Laplace attenuates the variance components",
+                       if (identical(ar$type, "rw1")) "" else " and rho is driven toward the boundary") else "",
       if (thin) {
-        if (car) "coarsen the time passed to ilm_car1() so observations share a latent value, or replace the term with s(time) plus a random slope"
-        else "coarsen the AR time grid, or replace AR with s(time) plus a random slope"
+        switch(ar$type,
+               car1 = "coarsen the time passed to ilm_car1() so observations share a latent value, or replace the term with s(time) plus a random slope",
+               rw1 = "coarsen the time passed to ilm_rw1() so observations share a latent value, or replace the term with s(time) plus a random slope",
+               "coarsen the AR time grid, or replace AR with s(time) plus a random slope")
       } else "")
   }
   ck
@@ -813,10 +816,12 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @param obj The `RTMB` objective object.
 #' @param sdr Output of `TMB::sdreport()`.
 #' @param C Integer. Number of category dimensions.
-#' @param has_ar Logical. Whether an AR(1) or CAR(1) term was fitted.
+#' @param has_ar Logical. Whether an AR(1), CAR(1) or random-walk term was
+#'   fitted.
 #' @param gap For CAR(1), the gaps between consecutive observations, so the
 #'   boundary check can judge the correlation across a typical gap rather than
 #'   across one time unit.
+#' @param ar_type The term's type. A random walk has no correlation to check.
 #' @param pre The pre-fit checks, used for cross-referencing.
 #' @param Sig Named list of fitted category covariance matrices.
 #' @param Sigd Named list of fitted within-group covariance matrices.
@@ -830,7 +835,8 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 #' @noRd
 ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, kinds = NULL,
                       pnames = NULL, gap = NULL, hess = NULL,
-                      boundary = character(0), avoided = FALSE) {
+                      boundary = character(0), avoided = FALSE,
+                      ar_type = NULL) {
   how <- if (is.null(hess)) "tmb" else hess$how
   ## The remedy a boundary check names. Under the default the penalised
   ## alternative is named with what it costs; a fit that already used it
@@ -986,7 +992,9 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     }
     ck <- ilm_add_check(ck, paste0("sigma_within[", nm, "]"), st, dt, wy, tr)
   }
-  if (has_ar) {
+  ## a random walk has no correlation parameter: its one boundary, a variance
+  ## of zero, is the covariance check's
+  if (has_ar && !identical(ar_type, "rw1")) {
     rho <- est[nmv == "rho"]
     lat <- pre$status[pre$check == "obs_per_ar_latent"]
     ## Judge the correlation across a TYPICAL gap, not across one time unit.
@@ -1122,15 +1130,23 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn) {
   }
   if (!is.null(ar)) {
     blocks[["ar"]] <- which(pn %in% c("lchol_ar", "rho_raw"))
-    rr <- pe[pn == "rho_raw"]
-    car <- identical(ar$type, "car1")
-    rho <- if (car) exp(-1 / exp(rr)) else tanh(rr)
-    eff <- if (car) rho^stats::median(ar$gap) else rho
     Sa <- Sig[["ar"]]
     eva <- eigen(Sa, symmetric = TRUE, only.values = TRUE)$values
-    if (abs(eff) > 0.99 || any(sqrt(pmax(diag(Sa), 0)) < 1e-3) ||
-        min(eva) < 1e-6 * max(eva, .Machine$double.eps))
-      flagged <- c(flagged, "ar")
+    flat <- min(eva) < 1e-6 * max(eva, .Machine$double.eps)
+    if (identical(ar$type, "rw1")) {
+      ## A random walk's variance is per unit of time, so with fine units
+      ## (seconds, days) a healthy walk has a tiny one. Judge the SD of a
+      ## typical step instead, which is on the scale of the linear predictor.
+      step_sd <- sqrt(pmax(diag(Sa), 0) * stats::median(ar$gap))
+      if (any(step_sd < 1e-3) || flat) flagged <- c(flagged, "ar")
+    } else {
+      rr <- pe[pn == "rho_raw"]
+      car <- identical(ar$type, "car1")
+      rho <- if (car) exp(-1 / exp(rr)) else tanh(rr)
+      eff <- if (car) rho^stats::median(ar$gap) else rho
+      if (abs(eff) > 0.99 || any(sqrt(pmax(diag(Sa), 0)) < 1e-3) || flat)
+        flagged <- c(flagged, "ar")
+    }
   }
   list(blocks = blocks, flagged = flagged,
        keep = which(!pn %in% c("theta", "lchol_ar", "rho_raw")))
@@ -1452,7 +1468,9 @@ ilm_print_checks <- function(ck, title) {
 #'   and `d_cor = FALSE` to drop an intercept-slope correlation in any family.
 #'   A term it leaves out gets `"us"` with its correlations, so only the terms
 #'   that differ need naming. See the section above and the examples.
-#' @param ar Optional AR(1) specification:
+#' @param ar Optional correlation over time, from [ilm_ar1()], [ilm_car1()] or
+#'   [ilm_rw1()] given vectors -- a structure given by name, `~ time | group`,
+#'   is built from the data by [ilm_model()] -- or the older bare AR(1) list,
 #'   `list(idx =, n_group =, Tt =)`.
 #' @param censor Optional censoring specification from [ilm_censor()], marking
 #'   observations known only as an interval -- at or below a floor, at or above
@@ -1797,7 +1815,9 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   }
   if (has_ord) pnames <- c(pnames, paste0("zeta:", ilm_ord_cut_names(ylevels, J)))
   if (has_zi) pnames <- c(pnames, paste0("zi:", colnames(Zzi)))
-  if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C), "ar:rho_raw")
+  ## a random walk has a variance and no correlation
+  if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C),
+                                if (!identical(ar$type, "rw1")) "ar:rho_raw")
 
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
              n_disp = fam$n_disp,
@@ -1836,6 +1856,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
              npc = as.integer(npc), ty = as.character(ty), rk = as.integer(rk),
              dcor = as.logical(dcor), K = K, C = C, has_ar = !is.null(ar),
              is_car = isTRUE(ar$type == "car1"),
+             is_rw = isTRUE(ar$type == "rw1"),
              ## the boundary-avoiding penalty, and which terms it applies to:
              ## populations only -- a smooth's penalty variance reaching zero
              ## is the smooth becoming linear, which is not a boundary to keep
@@ -1845,7 +1866,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
              pen_k = vapply(re, function(e) !identical(e$kind, "basis"), TRUE) &
                ty != "rr")
   if (!is.null(ar)) {
-    if (identical(ar$type, "car1")) {
+    if (ar$type %in% c("car1", "rw1")) {
       ## cells are ordered by group then time, so the preceding observation of
       ## a group is always the cell before it -- the same fact the evenly
       ## spaced case relies on, and why the index arithmetic is shared
@@ -1930,7 +1951,20 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
       }
       sdv <- c(sdv, sqrt(diag(S)))
     }
-    if (has_ar) {
+    if (has_ar && is_rw) {
+      La <- ilm_mkL(lchol_ar, C)
+      ## A random walk. Each group's first cell is held at zero -- mapped, not
+      ## integrated, below -- so it has no density of its own, and every step
+      ## after it is an independent change with covariance Sigma per unit of
+      ## time: variance gap * Sigma across a gap. The log(gap) term is a
+      ## constant, kept so the likelihood is the likelihood.
+      rsd <- B_ar[idx_t, , drop = FALSE] - B_ar[idx_lag, , drop = FALSE]
+      W <- (rsd / sqrt(ar_gap)) %*% solve(t(La))
+      nll <- nll + 0.5 * sum(W * W) + nre_ar * sum(log(diag(La))) +
+             (C / 2) * sum(log(ar_gap))
+      eta <- eta + B_ar[ar_idx, , drop = FALSE]
+      Sa <- La %*% t(La); sdv <- c(sdv, sqrt(diag(Sa)))
+    } else if (has_ar) {
       La <- ilm_mkL(lchol_ar, C)
       ## the first observation of each group, marginally
       W1 <- B_ar[idx1, , drop = FALSE] %*% solve(t(La))
@@ -2139,13 +2173,32 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     }
   }
   rnd <- if (sum(bl) > 0L) "bvec" else character(0)
+  map <- list()
   if (!is.null(ar)) {
     pars$lchol_ar <- rep(0, ilm_ncov(C))
-    ## for CAR(1) rho_raw is log(range); starting at the median gap puts the
-    ## correlation between consecutive observations near exp(-1)
-    pars$rho_raw <- if (identical(ar$type, "car1"))
-      log(stats::median(ar$gap)) else 0.5
+    if (identical(ar$type, "rw1")) {
+      ## A variance per unit of time depends on the unit, so start where a
+      ## TYPICAL STEP has variance one, whatever the unit -- with times in
+      ## seconds, one per unit is a walk wandering by thousands per hour
+      dg <- cumsum(c(1L, C - seq_len(C - 1L) + 1L))[seq_len(C)]
+      pars$lchol_ar[dg] <- -0.5 * log(stats::median(ar$gap))
+    } else {
+      ## for CAR(1) rho_raw is log(range); starting at the median gap puts the
+      ## correlation between consecutive observations near exp(-1)
+      pars$rho_raw <- if (identical(ar$type, "car1"))
+        log(stats::median(ar$gap)) else 0.5
+    }
     pars$B_ar <- matrix(0, ar$n_cell, C); rnd <- c(rnd, "B_ar")
+    ## A random walk's anchors are held at zero. Mapped out of the random
+    ## block, the objective still sees them -- as the constant zero -- so the
+    ## step arithmetic is the same at every cell, while the latent vector,
+    ## the joint precision and par.random hold only the cells that are
+    ## integrated, in cell order within each linear predictor.
+    if (identical(ar$type, "rw1")) {
+      code <- matrix(NA_integer_, ar$n_cell, C)
+      code[ar$rest, ] <- seq_len(length(ar$rest) * C)
+      map$B_ar <- factor(as.vector(code))
+    }
   }
   t0 <- proc.time()[3]
   ## REML integrates the FIXED effects out along with the random ones. Under a
@@ -2155,7 +2208,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## Checked against lme4: variance components agree to 6e-08.
   rnd_fit <- if (reml) c(rnd, "beta") else rnd
   obj <- MakeADFun(f, pars, random = if (length(rnd_fit)) rnd_fit else NULL,
-                   silent = TRUE)
+                   map = map, silent = TRUE)
   ## guard: if a fill order in nm_* ever drifts from ilm_mkL/ilm_mkD/ilm_mkLam/ilm_mkLd, the
   ## names would silently mislabel every parameter.  Fail loudly instead.
   n_expected <- if (reml) length(pnames) - p * C else length(pnames)
@@ -2169,7 +2222,14 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## a correlation taken towards +/-1 past where the Laplace arithmetic holds
   ## is brought back to the floor (see ilm_logsd_floor)
   fpos <- ilm_floor_pos(re, ty, toff, C, names(obj$par), ar)
-  opt <- ilm_floor_refit(obj, opt, fpos, ilm_logsd_floor, ctl)
+  ## A random walk's covariance is per unit of time, and what the floor
+  ## protects is the precision of a STEP, so the walk's floor sits where a
+  ## typical step's log SD reaches it: the same place for days or seconds.
+  ffl <- rep(ilm_logsd_floor, length(fpos))
+  if (identical(ar$type, "rw1"))
+    ffl[names(obj$par)[fpos] == "lchol_ar"] <-
+      ilm_logsd_floor - 0.5 * log(stats::median(ar$gap))
+  opt <- ilm_floor_refit(obj, opt, fpos, ffl, ctl)
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
 
   ## the fitted covariance structures, which depend on the estimates alone
@@ -2208,7 +2268,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
     if (length(d) && !any(cb$keep %in% d)) {
       lo <- rep(-Inf, length(opt$par)); up <- rep(Inf, length(opt$par))
-      lo[fpos] <- pmin(ilm_logsd_floor, opt$par[fpos])
+      lo[fpos] <- pmin(ffl, opt$par[fpos])
       lo[d] <- up[d] <- opt$par[d]
       o2 <- tryCatch(nlminb(opt$par, obj$fn, obj$gr, lower = lo, upper = up,
                             control = ctl), error = function(e) NULL)
@@ -2281,7 +2341,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ## estimated, so evaluating this at the REML estimates gives exactly the
     ## derivatives ilm_denom_df() needs. Costs one extra tape, about 20 ms.
     obj_ml <- MakeADFun(f, pars, random = if (length(rnd)) rnd else NULL,
-                        silent = TRUE)
+                        map = map, silent = TRUE)
   }
   sec <- proc.time()[3] - t0
 
@@ -2289,7 +2349,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                         gap = if (identical(ar$type, "car1")) ar$gap else NULL,
                     kinds = as.list(vapply(re, `[[`, "", "kind")), pnames = pnames,
                     hess = hess, boundary = cb$flagged,
-                    avoided = identical(boundary, "avoid"))
+                    avoided = identical(boundary, "avoid"),
+                    ar_type = ar$type)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {
@@ -2463,7 +2524,9 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  ## rho is the correlation ONE TIME UNIT apart under both
                  ## structures, so the two are directly comparable. For CAR(1)
                  ## the fitted parameter is log(range), and rho = exp(-1/range).
-                 rho = unname(if (is.null(ar)) NA_real_
+                 ## a random walk has no correlation: Sigma$ar is its variance
+                 ## per unit of time
+                 rho = unname(if (is.null(ar) || identical(ar$type, "rw1")) NA_real_
                        else if (identical(ar$type, "car1"))
                          exp(-1 / exp(pe[pn == "rho_raw"]))
                        else tanh(pe[pn == "rho_raw"])),

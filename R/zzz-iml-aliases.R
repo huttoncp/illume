@@ -61,6 +61,11 @@ iml_calibration <- ilm_calibration
 #' @export
 iml_car1 <- ilm_car1
 
+#' @rdname ilm_cells
+#' @usage NULL
+#' @export
+iml_cells <- ilm_cells
+
 #' @rdname ilm_censor
 #' @usage NULL
 #' @export
@@ -350,6 +355,11 @@ iml_rqr <- ilm_rqr
 #' @usage NULL
 #' @export
 iml_rqr_test <- ilm_rqr_test
+
+#' @rdname ilm_rw1
+#' @usage NULL
+#' @export
+iml_rw1 <- ilm_rw1
 
 #' @rdname ilm_scaffold
 #' @usage NULL
