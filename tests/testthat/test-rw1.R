@@ -260,12 +260,12 @@ test_that("a population average over a walk spreads with the time since it began
   ## through a log link the average is exact: exp(eta + s2 * elapsed / 2)
   el <- d$day - stats::ave(d$day, d$id, FUN = min)
   eta <- as.vector(f$X %*% f$beta)
-  expect_equal(unname(predict(f, marginal = TRUE)[, 1]),
+  expect_equal(unname(predict(f, groups = "population")[, 1]),
                exp(eta + 0.5 * s2 * el), tolerance = 1e-10)
   ## new rows: a fitted group from its own first time, and one the fit has
   ## not seen from its earliest row
   nd <- data.frame(x = 0, day = c(10, 48, 100, 104), id = c("u01", "u01", "zz", "zz"))
-  expect_equal(unname(predict(f, newdata = nd, marginal = TRUE)[, 1]),
+  expect_equal(unname(predict(f, newdata = nd, groups = "population")[, 1]),
                exp(f$beta[1] + 0.5 * s2 * c(10, 48, 0, 4)), tolerance = 1e-10)
   ## the typical group is unaffected
   expect_equal(unname(predict(f, newdata = nd)[, 1]), rep(exp(f$beta[1]), 4),
@@ -273,8 +273,8 @@ test_that("a population average over a walk spreads with the time since it began
   ## given as vectors, the walk cannot place new rows
   fv <- ilm_model(y ~ x, data = d, family = "poisson",
                   ar = ilm_rw1(d$day, d$id), verbose = FALSE)
-  expect_error(predict(fv, newdata = nd, marginal = TRUE), "Give it by name")
-  expect_equal(predict(fv, marginal = TRUE), predict(f, marginal = TRUE),
+  expect_error(predict(fv, newdata = nd, groups = "population"), "Give it by name")
+  expect_equal(predict(fv, groups = "population"), predict(f, groups = "population"),
                tolerance = 1e-6)
   expect_output(print(summary(f)), "random walk over time")
 })
@@ -354,7 +354,7 @@ test_that("a multinomial walk holds its anchors at zero in every category", {
   ## the second linear predictor's values follow the first's
   free <- !cl$anchor
   expect_equal(Ba[free, 2], unname(v[cl$index[free] + nl]))
-  P <- predict(f, marginal = TRUE, ndraw = 50)
+  P <- predict(f, groups = "population", ndraw = 50)
   expect_equal(unname(rowSums(P)), rep(1, nrow(d)), tolerance = 1e-12)
 })
 

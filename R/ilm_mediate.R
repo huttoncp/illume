@@ -142,7 +142,7 @@ ilm_mediate <- function(model_m, model_y, treat, mediator,
            "standard errors instead, or treat the groups as fixed.",
            call. = FALSE)
   }
-  dm <- model_m$model; dy <- model_y$model
+  dm <- ilm_data(model_m); dy <- ilm_data(model_y)
   if (nrow(dm) != nrow(dy))
     stop("the two models were fitted to ", nrow(dm), " and ", nrow(dy),
          " rows. A mediation decomposition compares counterfactuals for the ",

@@ -53,6 +53,45 @@ test_that("ilm_normal_expect() is the quadrature predict() averages with", {
   expect_error(ilm_normal_expect(stats::plogis, 0, -1), "non-negative")
 })
 
+test_that("a growing integrand is averaged where its mass is, and never NaN", {
+  ## exp(eta + sd z) phi(z) peaks at z = sd, where a rule centred at zero has
+  ## almost no nodes: it was 0.2% low at an SD of 10, 19% low at 12, and NaN
+  ## from 13.8, which draws of a variance reach with few groups
+  s <- c(5, 8, 10, 12, 13.8, 16, 20)
+  expect_equal(ilm_normal_expect(exp, 0.5, s), exp(0.5 + s^2 / 2),
+               tolerance = 1e-12)
+  ## past what double precision holds at the nodes it says so, as Inf
+  v <- ilm_normal_expect(exp, c(0, 0), c(3, 30))
+  expect_equal(v[1], exp(4.5), tolerance = 1e-12)
+  expect_identical(v[2], Inf)
+  expect_null(attributes(v))
+  ## a peak far from zero at a small spread is found too: the chance of a
+  ## count of 3 where the mean is exp(6) lives in the far left tail
+  fine <- function(h, e0, sd) {
+    z <- seq(-40, 40, by = 1e-4)
+    sum(h(e0 + sd * z) * stats::dnorm(z)) * 1e-4
+  }
+  h3 <- function(e) stats::dpois(3, exp(e))
+  expect_equal(ilm_normal_expect(h3, 6, 0.3), fine(h3, 6, 0.3),
+               tolerance = 1e-8)
+})
+
+test_that("predict()'s population mean under a log link is exact at any spread", {
+  set.seed(4); n <- 200
+  d <- data.frame(x = stats::rnorm(n), g = factor(rep(1:20, each = 10)))
+  d$y <- stats::rpois(n, exp(0.2 + 0.3 * d$x + stats::rnorm(20, 0, 0.5)[d$g]))
+  f <- ilm_model(y ~ x + (1 | g), data = d, family = "poisson", verbose = FALSE)
+  nd <- data.frame(x = c(-1, 0, 1))
+  eta <- as.vector(cbind(1, nd$x) %*% f$beta)
+  for (s in c(0.5, 3, 12)) {
+    f$Sigma[["g"]][1, 1] <- s^2
+    ## the argument's name changes with the `groups =` vocabulary; either
+    ## spelling reaches the same average
+    pm <- suppressWarnings(predict(f, nd, marginal = TRUE))
+    expect_equal(as.vector(pm), exp(eta + s^2 / 2), tolerance = 1e-10)
+  }
+})
+
 test_that("ilm_ranef() gives lme4's modes and condVar, labelled", {
   skip_if_not_installed("lme4")
   d <- acc_data()

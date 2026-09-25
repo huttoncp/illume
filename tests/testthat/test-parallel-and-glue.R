@@ -49,18 +49,18 @@ test_that("get_coef and set_coef round-trip, and theta actually propagates", {
   fit <- fit_basic()
   b0 <- get_coef.ilm_model(fit)
   expect_identical(b0, coef(fit, full = TRUE))
-  p0 <- get_predict.ilm_model(fit, marginal = FALSE)$estimate
-  expect_equal(get_predict.ilm_model(set_coef.ilm_model(fit, b0), marginal = FALSE)$estimate, p0)
+  p0 <- get_predict.ilm_model(fit, groups = "typical")$estimate
+  expect_equal(get_predict.ilm_model(set_coef.ilm_model(fit, b0), groups = "typical")$estimate, p0)
 
   bp <- b0; i <- grep("^subj:", names(bp))[1]; bp[i] <- bp[i] + 0.3
-  pp <- get_predict.ilm_model(set_coef.ilm_model(fit, bp), marginal = TRUE, ndraw = 40)$estimate
-  p0m <- get_predict.ilm_model(fit, marginal = TRUE, ndraw = 40)$estimate
+  pp <- get_predict.ilm_model(set_coef.ilm_model(fit, bp), groups = "population", ndraw = 40)$estimate
+  p0m <- get_predict.ilm_model(fit, groups = "population", ndraw = 40)$estimate
   expect_gt(max(abs(pp - p0m)), 1e-6)
 })
 
 test_that("get_predict returns long format with rowid and group", {
   fit <- fit_basic()
-  g <- get_predict.ilm_model(fit, marginal = FALSE)
+  g <- get_predict.ilm_model(fit, groups = "typical")
   expect_true(all(c("rowid", "group", "estimate") %in% names(g)))
   expect_equal(nrow(g), nrow(fit$X) * fit$J)
   expect_setequal(unique(g$group), fit$ylevels)

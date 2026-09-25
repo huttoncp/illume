@@ -62,12 +62,13 @@ non-linear link, because the average of a prediction is not the prediction
 at the average. The printed output says which was used.
 
 In a mixed model each unit's prediction is averaged over every random term
--- intercepts, slopes, an AR or CAR latent -- as \code{predict(marginal = TRUE)}
-does, so the result is a population mean rather than the value for a group
-whose random effect happens to be zero. The estimate is that mean at the
-fitted parameters, so it matches \code{predict()} exactly and does not depend on
-\code{seed} or \code{sims}; the interval comes from draws of the whole parameter
-vector, variance components included, since the average depends on them.
+-- intercepts, slopes, an AR or CAR latent -- as
+\code{predict(groups = "population")} does, so the result is a population mean
+rather than the value for a group whose random effect happens to be zero.
+The estimate is that mean at the fitted parameters, so it matches
+\code{predict()} exactly and does not depend on \code{seed} or \code{sims}; the interval
+comes from draws of the whole parameter vector, variance components
+included, since the average depends on them.
 }
 
 \section{Extrapolation}{

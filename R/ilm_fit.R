@@ -189,7 +189,7 @@ ilm_npar_d <- function(d, d_cor = TRUE)
 #' @keywords internal
 #' @noRd
 ilm_mkL_num <- function(v, C) {
-  L <- matrix(0, C, C); k <- 1L
+  L <- base::matrix(0, C, C); k <- 1L
   for (j in 1:C) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }
@@ -209,7 +209,7 @@ ilm_mkL_num <- function(v, C) {
 #' @keywords internal
 #' @noRd
 ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
-  L <- matrix(0, d, d); L[1, 1] <- 1; k <- 1L
+  L <- base::matrix(0, d, d); L[1, 1] <- 1; k <- 1L
   if (!d_cor) { for (i in 2:d) { L[i, i] <- exp(v[k]); k <- k + 1L }; return(L) }
   for (j in 1:d) for (i in j:d) {
     if (i == 1L && j == 1L) next
@@ -232,7 +232,7 @@ ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
 #' @return A numeric matrix.
 #' @keywords internal
 #' @noRd
-ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
+ilm_mkD_num   <- function(v, C) base::diag(exp(v), C, C)
 
 #' Plain-numeric versions of the covariance factor builders
 #'
@@ -249,7 +249,7 @@ ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
 #' @keywords internal
 #' @noRd
 ilm_mkLam_num <- function(v, C, r) {
-  L <- matrix(0, C, r); k <- 1L
+  L <- base::matrix(0, C, r); k <- 1L
   for (j in 1:r) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }
@@ -504,9 +504,41 @@ ilm_smooth <- function(spec, data) {
     spec <- ilm_swap_spec(spec, bad, stand, label = FALSE)
     data <- ilm_add_standins(data, map)
   }
-  sm <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE, scale.penalty = TRUE)[[1]]
+  sml <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE,
+                         scale.penalty = TRUE)
+  ## A factor `by` makes one smooth per level -- per level after the first,
+  ## for an ordered factor -- and only the first was ever kept: every other
+  ## level got no curve at all, and the fit said nothing. Refused until each
+  ## smooth is its own term.
+  if (length(sml) > 1L) {
+    by <- spec$by
+    if (!is.null(map) && by %in% names(map)) by <- map[[by]]
+    labs <- vapply(sml, function(s) s$label, "")
+    if (!is.null(map))
+      for (i in seq_along(map)) labs <- gsub(names(map)[i], map[[i]], labs,
+                                             fixed = TRUE)
+    stop(sub("\\)$", "", spec$label), ", by = ", by, ") makes ", length(sml),
+         " smooths, one for each level of the factor `", by, "` (",
+         paste(labs, collapse = ", "), "), and illume fits one smooth per ",
+         "term so far. It is refused rather than fitted wrongly: before this ",
+         "check, every smooth after the first was dropped without a word. ",
+         "Until each level has its own smooth here, fit this model with ",
+         "mgcv::gam().", call. = FALSE)
+  }
+  sm <- sml[[1L]]
   re <- mgcv::smooth2random(sm, "", type = 2)
   list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
+}
+
+## A smooth's name, as mgcv names the smooth it builds: the term as written,
+## "s(x)" or "t2(x,z)", with ":z" after it for a numeric `by` -- the name the
+## term, its unpenalised columns ("s(x):z.f1") and its variance go by. The
+## name as written alone cannot tell s(x) from s(x, by = z).
+#' @keywords internal
+#' @noRd
+ilm_smooth_label <- function(sp) {
+  by <- sp$by
+  if (is.null(by) || identical(by, "NA")) sp$label else paste0(sp$label, ":", by)
 }
 
 #' Build the table of model checks
@@ -591,7 +623,12 @@ ilm_add_check <- function(ck, check, status, detail, cause = "", suggestion = ""
 #' @noRd
 ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
                      family = NULL) {
-  C <- J - 1L
+  ## The category dimensions the fit itself will have. J - 1 is the
+  ## multinomial's; an ordered response also has J categories but ONE linear
+  ## predictor, and taking J - 1 for it sized a four-category fit's
+  ## covariance and latent budget three times over.
+  C <- if (is.list(family) && is.function(family$C_of)) family$C_of(J)
+       else J - 1L
   ## With weights, information is carried by sum(w), not the row count: a
   ## thousand rows each worth one trial and ten rows each worth a hundred are
   ## not the same amount of data, and the latent budget must use the latter.
@@ -1252,6 +1289,18 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
 ## coverage.
 ilm_flat_rel <- 1e-3
 
+## A BLOCK FLAT IN EVERY DIRECTION has nothing curved to be flat against: a
+## lone variance at zero, whose one direction is the one to the edge, or a
+## random walk's variance collapsing. Judged against its own largest
+## curvature it was never flat, so nothing was held -- a random intercept at
+## a standard deviation of 6e-5 kept a standard error of 8714 on its log
+## scale, and draws of it ran to infinity. So a block's largest curvature is
+## taken as at least ilm_flat_floor: on the log-SD scale 0.1 is a standard
+## error of 3.2, and a direction below 1e-3 of that -- a standard error of
+## 100 -- is one no data has resolved. A block with a healthy curved
+## direction, every one in the study above, is judged exactly as before.
+ilm_flat_floor <- 0.1
+
 #' @keywords internal
 #' @noRd
 ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
@@ -1307,7 +1356,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
     if (length(d) && !any(cb$keep %in% d)) {
       e <- eigen(H[d, d, drop = FALSE], symmetric = TRUE)
-      flat <- e$values < ilm_flat_rel * max(e$values[1], 1e-8)
+      flat <- e$values < ilm_flat_rel * max(e$values[1], ilm_flat_floor)
     }
   }
   if (!any(flat)) {

@@ -26,7 +26,7 @@
 #' @keywords internal
 #' @noRd
 ilm_ref_grid <- function(object, at = NULL) {
-  mf <- object$model
+  mf <- ilm_data(object)
   if (is.null(mf)) stop("the fit did not keep its model frame", call. = FALSE)
   tl <- attr(stats::terms(object), "term.labels")
   vars <- intersect(all.vars(stats::delete.response(stats::terms(object))),
@@ -208,7 +208,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
   mn <- is.null(object$family) || identical(object$family$name, "multinomial")
-  mf <- object$model
+  mf <- ilm_data(object)
   specs <- as.character(specs)
   miss <- setdiff(specs, names(mf))
   if (length(miss))
@@ -440,7 +440,7 @@ print.ilm_emm <- function(x, ...) {
     cat("\n  Category probabilities, averaged over the grid; each group's sum\n",
         "  to 1. Intervals are formed on the logit scale.",
         if (length(attr(x, "object")$re))
-          "\n  They are conditional on the random effects at zero; ilm_ame() is\n  the population-averaged comparison."
+          "\n  They are for a typical group, with the random effects at zero;\n  ilm_ame(groups = \"population\") gives the comparison averaged over\n  the groups."
         else "", "\n", sep = "")
   } else if (identical(attr(x, "family"), "multinomial")) {
     cat("\n  Each category's CENTRED log-odds: its log-probability less the\n",

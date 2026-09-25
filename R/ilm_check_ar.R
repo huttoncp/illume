@@ -41,7 +41,7 @@
 #' @noRd
 ilm_pearson_ovr <- function(object) {
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
-  P <- ilm_fitted(object, TRUE); N <- nrow(P)
+  P <- ilm_fitted(object); N <- nrow(P)
   ## For a univariate family the Pearson residual is the ordinary one: the
   ## deviation scaled by the standard deviation the family implies at that
   ## mean. Only the multinomial needs the one-vs-rest indicator construction.
@@ -58,7 +58,7 @@ ilm_pearson_ovr <- function(object) {
     ## three families. The normal score fills the censoring interval in and is
     ## centred and unit-scaled whatever the censoring.
     if (!is.null(object$family$cdf))
-      return(matrix(stats::qnorm(pmin(pmax(ilm_rqr(object, TRUE, 1L), 1e-8),
+      return(matrix(stats::qnorm(pmin(pmax(ilm_rqr(object, seed = 1L), 1e-8),
                                       1 - 1e-8)), ncol = 1L))
     w <- if (is.null(object$weights)) rep(1, N) else pmax(1, round(object$weights))
     v <- switch(fam,

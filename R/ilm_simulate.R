@@ -102,8 +102,22 @@ ilm_re_list_of <- function(fit) {
 #' @param fit A fitted `"ilm_model"` object.
 #' @param nsim Integer. Number of simulated datasets.
 #' @param seed Integer. Random seed, for reproducibility.
-#' @return An integer matrix with one column per simulated dataset, each holding
-#'   category codes.
+#' @return A matrix with one row per observation and one column per simulated
+#'   dataset, holding the response on its own scale: a measurement, a count, a
+#'   proportion of trials for a binomial response with trials, a time for a
+#'   survival one. For a multinomial or ordinal outcome it holds category codes,
+#'   as an integer matrix for the multinomial.
+#'
+#'   Each dataset draws new random effects, and a new path of any correlation
+#'   over time, from their fitted distributions: it is a new sample of groups,
+#'   not the fitted groups again.
+#'
+#'   A censored response is censored as the data were. A survival time is the
+#'   smaller of the drawn event time and the subject's censoring time: the
+#'   observed time for a subject who was censored, and for one who had the
+#'   event, a time drawn from the censoring distribution estimated from the
+#'   data. A value at or beyond its censoring time is a censored one. A
+#'   response with a floor or ceiling is held at that limit.
 #' @seealso [ilm_consistency()], [ilm_pb_lrt()], [ilm_appraise()].
 #' @export
 ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
