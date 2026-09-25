@@ -55,8 +55,8 @@ variance. With a dispersion model it varies by row, and this is its value
 at the median row.
 
 These are the variance parameters transformed exactly as a draw of them
-would be (\code{\link[=ilm_rebuild]{ilm_rebuild()}} is the one transform), so that anything summing
-over draws and this function cannot disagree at the estimate.
+would be -- through the one transform, \code{ilm_rebuild()} -- so that anything
+summing over draws and this function cannot disagree at the estimate.
 
 With \code{nlme} or \code{lme4} attached, \code{VarCorr(fit)} gives the same.
 }

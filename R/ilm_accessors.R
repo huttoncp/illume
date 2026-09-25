@@ -221,6 +221,7 @@ print.ilm_ranef <- function(x, digits = 4, ...) {
   invisible(x)
 }
 
+#' @param x An `"ilm_ranef"` object.
 #' @param row.names,optional Unused; for the generic.
 #' @param lme4 Logical. Give `lme4`'s long-format names -- `grpvar`, `term`,
 #'   `grp`, `condval`, `condsd` -- in place of illume's own.
@@ -262,7 +263,8 @@ ilm_cond_sd <- function(object) {
 #' @keywords internal
 #' @noRd
 ilm_diag_inv <- function(H, chunk = 512L) {
-  H <- Matrix::forceSymmetric(methods::as(H, "CsparseMatrix"))
+  if (!inherits(H, "sparseMatrix")) H <- Matrix::Matrix(H, sparse = TRUE)
+  H <- Matrix::forceSymmetric(H)
   n <- nrow(H)
   ch <- tryCatch(Matrix::Cholesky(H, LDL = FALSE, perm = TRUE),
                  error = function(e) NULL)
@@ -304,8 +306,8 @@ ilm_diag_inv <- function(H, chunk = 512L) {
 #' at the median row.
 #'
 #' These are the variance parameters transformed exactly as a draw of them
-#' would be ([ilm_rebuild()] is the one transform), so that anything summing
-#' over draws and this function cannot disagree at the estimate.
+#' would be -- through the one transform, `ilm_rebuild()` -- so that anything
+#' summing over draws and this function cannot disagree at the estimate.
 #'
 #' With `nlme` or `lme4` attached, `VarCorr(fit)` gives the same.
 #'

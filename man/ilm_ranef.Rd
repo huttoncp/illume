@@ -18,6 +18,8 @@ ilm_ranef(object, ...)
 
 \item{...}{Unused.}
 
+\item{x}{An \code{"ilm_ranef"} object.}
+
 \item{row.names, optional}{Unused; for the generic.}
 
 \item{lme4}{Logical. Give \code{lme4}'s long-format names -- \code{grpvar}, \code{term},
