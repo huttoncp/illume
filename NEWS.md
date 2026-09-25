@@ -61,6 +61,14 @@
   stopped with "no applicable method". It is now registered on nlme's
   generic.
 * A fit keeps each grouping term's level labels, and a refit keeps them too.
+* Fixed: a smooth with a factor `by`, `s(x, by = f)`, kept only the first
+  level's curve. mgcv makes one smooth per level (per level after the first,
+  for an ordered factor), and only the first was taken; every other level
+  had no curve, and nothing said so. On three levels with their own curves,
+  predictions at x = 0.25 came out 1.85, 1.94 and 3.91 where the truth was
+  2, 1 and 3.5, and mgcv gave 1.85, 0.95 and 3.40. Such a smooth is now an
+  error naming each level's smooth, until illume fits one per level. A
+  numeric `by` is one smooth, and is unaffected. Found by another agent.
 * Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
   - **The covariance shrank.** Its "inflated" covariance was built from
     differences of the fixed-effect covariance with the wrong algebra: the Q

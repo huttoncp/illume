@@ -504,7 +504,28 @@ ilm_smooth <- function(spec, data) {
     spec <- ilm_swap_spec(spec, bad, stand, label = FALSE)
     data <- ilm_add_standins(data, map)
   }
-  sm <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE, scale.penalty = TRUE)[[1]]
+  sml <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE,
+                         scale.penalty = TRUE)
+  ## A factor `by` makes one smooth per level -- per level after the first,
+  ## for an ordered factor -- and only the first was ever kept: every other
+  ## level got no curve at all, and the fit said nothing. Refused until each
+  ## smooth is its own term.
+  if (length(sml) > 1L) {
+    by <- spec$by
+    if (!is.null(map) && by %in% names(map)) by <- map[[by]]
+    labs <- vapply(sml, function(s) s$label, "")
+    if (!is.null(map))
+      for (i in seq_along(map)) labs <- gsub(names(map)[i], map[[i]], labs,
+                                             fixed = TRUE)
+    stop(sub("\\)$", "", spec$label), ", by = ", by, ") makes ", length(sml),
+         " smooths, one for each level of the factor `", by, "` (",
+         paste(labs, collapse = ", "), "), and illume fits one smooth per ",
+         "term so far. It is refused rather than fitted wrongly: before this ",
+         "check, every smooth after the first was dropped without a word. ",
+         "Until each level has its own smooth here, fit this model with ",
+         "mgcv::gam().", call. = FALSE)
+  }
+  sm <- sml[[1L]]
   re <- mgcv::smooth2random(sm, "", type = 2)
   list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
 }
