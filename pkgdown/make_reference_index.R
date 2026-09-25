@@ -32,9 +32,10 @@ grp <- list(
   list("Parts of a fitted model",
        "The pieces of a fit, laid out by name for code built on it: its random effects, its variance components, the cells of a correlation over time, and the quadrature behind a population average.",
        function(x) x %in% c("ilm_ranef", "ilm_varcorr", "ilm_draws",
-                            "ilm_matrices", "ilm_cells", "ilm_normal_expect"),
-       c("ilm_ranef", "ilm_varcorr", "ilm_draws", "ilm_matrices", "ilm_cells",
-         "ilm_normal_expect")),
+                            "ilm_matrices", "ilm_dist", "ilm_cells",
+                            "ilm_normal_expect"),
+       c("ilm_ranef", "ilm_varcorr", "ilm_draws", "ilm_matrices", "ilm_dist",
+         "ilm_cells", "ilm_normal_expect")),
 
   list("Other designs",
        "Identification strategies and sampling designs that are not a single regression.",
