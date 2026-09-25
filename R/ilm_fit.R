@@ -189,7 +189,7 @@ ilm_npar_d <- function(d, d_cor = TRUE)
 #' @keywords internal
 #' @noRd
 ilm_mkL_num <- function(v, C) {
-  L <- matrix(0, C, C); k <- 1L
+  L <- base::matrix(0, C, C); k <- 1L
   for (j in 1:C) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }
@@ -209,7 +209,7 @@ ilm_mkL_num <- function(v, C) {
 #' @keywords internal
 #' @noRd
 ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
-  L <- matrix(0, d, d); L[1, 1] <- 1; k <- 1L
+  L <- base::matrix(0, d, d); L[1, 1] <- 1; k <- 1L
   if (!d_cor) { for (i in 2:d) { L[i, i] <- exp(v[k]); k <- k + 1L }; return(L) }
   for (j in 1:d) for (i in j:d) {
     if (i == 1L && j == 1L) next
@@ -232,7 +232,7 @@ ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
 #' @return A numeric matrix.
 #' @keywords internal
 #' @noRd
-ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
+ilm_mkD_num   <- function(v, C) base::diag(exp(v), C, C)
 
 #' Plain-numeric versions of the covariance factor builders
 #'
@@ -249,7 +249,7 @@ ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
 #' @keywords internal
 #' @noRd
 ilm_mkLam_num <- function(v, C, r) {
-  L <- matrix(0, C, r); k <- 1L
+  L <- base::matrix(0, C, r); k <- 1L
   for (j in 1:r) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }
@@ -602,7 +602,12 @@ ilm_add_check <- function(ck, check, status, detail, cause = "", suggestion = ""
 #' @noRd
 ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
                      family = NULL) {
-  C <- J - 1L
+  ## The category dimensions the fit itself will have. J - 1 is the
+  ## multinomial's; an ordered response also has J categories but ONE linear
+  ## predictor, and taking J - 1 for it sized a four-category fit's
+  ## covariance and latent budget three times over.
+  C <- if (is.list(family) && is.function(family$C_of)) family$C_of(J)
+       else J - 1L
   ## With weights, information is carried by sum(w), not the row count: a
   ## thousand rows each worth one trial and ten rows each worth a hundred are
   ## not the same amount of data, and the latent budget must use the latter.

@@ -23,21 +23,40 @@
   - **Layout.** The rows are named by block, with a map that labels each
     one: coefficient, group and dimension, or cell.
   - **Natural scale.** Each draw's variance components are given on the
-    natural scale, through the same transform as `ilm_varcorr()`, so at the
-    estimate the two agree exactly.
+    natural scale, through the same transforms as `ilm_varcorr()`, so at the
+    estimate the two agree exactly. They are formed for all the draws at
+    once, so 1,000 draws take about as long with them as without.
   - **Boundaries.** Where a fit holds a boundary direction, the draws hold
     it exactly, by conditioning on it. The fit now keeps the directions it
     held and the Hessian its covariance came from.
   - **Options.** `given = "theta"` holds the variance parameters at their
-    estimates. `blocks` returns part of the vector. A fit made without
-    `joint = TRUE` has its precision formed on demand.
+    estimates. `given = "parameters"` holds every parameter and draws only
+    the random effects and the cells of a correlation over time, from their
+    distribution given the parameters. `blocks` returns part of the vector.
+    A fit made without `joint = TRUE` has its precision formed on demand.
+  - **Without random effects.** A fit with nothing integrated out, a GLM
+    say, is drawn from `vcov(fit, full = TRUE)`, as its standard errors are.
+    As first written such a fit was refused, because TMB forms a joint
+    precision only when there is a random part. Found by another agent.
 * `ilm_matrices()` gives the designs for new rows: the fixed design, each
   random term's design with each row's group matched by label, each
   smooth's penalised basis, and the zero part's and dispersion model's
-  designs. It also places each new row among a correlation over time's
-  cells: the cell it falls on, the cells either side and the time to each.
-  A prediction assembled from these matrices is `predict()`'s. The smooth
-  basis comes from the same code, now shared.
+  designs. Every column is named for what it multiplies: a random term's
+  by dimension, as `ilm_ranef()` names them (`"(Intercept)"` for a random
+  intercept alone too), and the zero part's and dispersion model's as their
+  coefficients are (`"zi:(Intercept)"`, `"disp:x"`), in
+  `coef(fit, full = TRUE)` and in `ilm_draws()`' map. It also places each
+  new row among a correlation over
+  time's cells: the cell it falls on, the cells either side and the time to
+  each. A prediction assembled from these matrices is `predict()`'s. The
+  smooth basis comes from the same code, now shared.
+* Fixed: the pre-fit checks sized an ordinal fit as though it had J - 1
+  category dimensions, as a multinomial fit has. It has one linear
+  predictor, as the fit itself knew. A four-category fit with 40 groups of
+  10 was reported as having 6 covariance parameters and 120 latent values,
+  a WARN, where it has 1 and 40, with ten observations to each. The checks
+  now take the dimensions from the family, as the fit does. Found by
+  another agent.
 * `ilm_dist()` gives a fit's response distribution as functions: the
   density, distribution and quantile functions, a random generator and the
   mean, in illume's own parameterisation.
