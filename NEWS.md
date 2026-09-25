@@ -93,6 +93,26 @@
   and the effects in `ilm_interpret()` -- returned `NA` for every
   `ilm_model(reml = TRUE)` and every `ilm_dag_model()`, which fits by REML.
   `coef()` and the standard errors were never affected.
+* Fixed: a REML fit's random effects were read from the wrong entries.
+  - **Cause.** TMB orders its random block by the parameter list, and under
+    REML the fixed effects are in that block and come first. Read by
+    position, every random effect was the entry p * C places before its
+    own, and the first few were the fixed effects themselves.
+  - **What it broke.** Everything conditional on the random effects, on
+    every REML mixed model: fitted values with `conditional = TRUE`, the
+    quantile residuals, `ilm_check_predictive()`, the dispersion and zeros
+    checks, and `ilm_plot_model(what = "random")`. On a gaussian random
+    intercept, the conditional predictor averaged 0.208 against a response
+    mean of 0.163.
+  - **Smooths.** A penalised smooth's coefficients are random effects too,
+    so `predict()` on a REML fit with a smooth was wrong outright: a sin()
+    curve came out as -2.08 where it was 0.48. `ilm_ame()` and
+    `ilm_scenario()` on such a fit were wrong with it.
+  - **What was not affected.** The fit itself, `coef()`, `vcov()` and the
+    intervals from joint draws were right all along.
+  - **Now.** The random effects are read by name, as the AR block already
+    was. They agree with lme4's REML modes, and a REML smooth with mgcv's.
+    Found independently by two other agents.
 * Fixed: `predict()`'s intervals for a model with a smooth were centred on the
   wrong parameters whenever the family has one the model declares after its
   random effects -- a dispersion (gaussian, negative binomial, beta, the

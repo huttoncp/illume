@@ -48,8 +48,17 @@ ilm_smooth_design <- function(sob, newdata) {
 #' @keywords internal
 #' @noRd
 ilm_Bhat_term <- function(object, k, bvec = NULL) {
-  v <- if (is.null(bvec)) object$sdr$par.random else bvec
-  matrix(v[object$b_idx[[k]]], object$nlk[k] * object$dk[k], object$wk[k])
+  ## By name, as ilm_Bar_hat() does. TMB orders par.random by the parameter
+  ## list, and under REML the fixed effects are in it and come first, so
+  ## indexing it by position read every random effect p * C entries early --
+  ## the first ones WERE the fixed effects. Every conditional quantity on a
+  ## REML fit was off with it, and a smooth's predictions were not even the
+  ## right shape: a sin() curve came out as -2.08 where it was 0.48.
+  if (is.null(bvec)) {
+    v <- object$sdr$par.random
+    bvec <- v[names(v) == "bvec"]
+  }
+  matrix(bvec[object$b_idx[[k]]], object$nlk[k] * object$dk[k], object$wk[k])
 }
 
 #' Build the fixed design for new data
