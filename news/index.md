@@ -458,6 +458,36 @@
   `marginaleffects` bridge averages over the random effects by default,
   as `marginal = TRUE` does.
 
+- Fixed: a term built from a variable broke everything that builds new
+  rows from the fit’s own. This covered `log(x)`, `poly(x, 2)`, `ns(x)`,
+  `ilm_fourier(t, ...)` and
+  [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md).
+
+  - **What it broke.**
+    [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md),
+    [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+    [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md),
+    [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
+    the effect plot, a survival curve’s typical row, mediation and
+    moderation, and `marginaleffects` through
+    [`insight::get_data()`](https://easystats.github.io/insight/reference/get_data.html).
+  - **Why.** The model frame holds such a term as a column of its own,
+    without the variable underneath, so the term could not be rebuilt
+    for new values. The error was “object ‘x’ not found”. For a time
+    column called `t` or `time` it was R’s own
+    [`t()`](https://rdrr.io/r/base/t.html) or
+    [`time()`](https://rdrr.io/r/stats/time.html) taken in its place:
+    “cannot coerce type ‘closure’”.
+  - **Now.** The fit keeps those variables, for the rows it used, and
+    these functions build from them. A marginal mean holds such a
+    variable at its mean, as emmeans does. Checked against emmeans on
+    `lm(y ~ log(x) + grp)` and against marginaleffects.
+  - [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+    still reports only predictors that are variables in their own right.
+    The column `log(x)` gets no effect: it is not a variable, and
+    treating it as one would have reported a silent zero.
+  - Found by another agent.
+
 - [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html),
   [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
   and
