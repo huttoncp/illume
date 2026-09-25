@@ -105,9 +105,15 @@ trustworthy when the random structure is held fixed, so that the
 approximation error largely cancels.</p>
 <p>The value is on the same scale as <code><a href="https://rdrr.io/pkg/lme4/man/lmer.html" class="external-link">lme4::lmer()</a></code> and <code><a href="https://rdrr.io/pkg/nlme/man/lme.html" class="external-link">nlme::lme()</a></code>, and
 agrees with both to numerical tolerance for a gaussian model they can also
-fit. It therefore includes every normalising constant, so <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">AIC()</a></code> and <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">BIC()</a></code>
+fit. It therefore includes the normalising constants, so <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">AIC()</a></code> and <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">BIC()</a></code>
 may be compared across models with <em>different</em> random structures as well as
 the same one.</p>
+<p>One constant is left out: for a binomial response with trials – a
+proportion weighted by its number of trials – the binomial coefficients,
+<code>sum(lchoose(trials, successes))</code>, which <code><a href="https://rdrr.io/r/stats/glm.html" class="external-link">glm()</a></code>, <code>lme4</code> and <code>glmmTMB</code>
+include. It is a constant of the data, so it changes no comparison between
+models of the same data, but the log-likelihoods of the two differ by
+exactly that much.</p>
 <p>Because it is an approximation, differences between models are most
 trustworthy when the random structure is held fixed, so that the
 approximation error largely cancels.</p>

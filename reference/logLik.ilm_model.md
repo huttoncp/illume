@@ -58,10 +58,18 @@ The value is on the same scale as
 [`lme4::lmer()`](https://rdrr.io/pkg/lme4/man/lmer.html) and
 [`nlme::lme()`](https://rdrr.io/pkg/nlme/man/lme.html), and agrees with
 both to numerical tolerance for a gaussian model they can also fit. It
-therefore includes every normalising constant, so
+therefore includes the normalising constants, so
 [`AIC()`](https://rdrr.io/r/stats/AIC.html) and
 [`BIC()`](https://rdrr.io/r/stats/AIC.html) may be compared across
 models with *different* random structures as well as the same one.
+
+One constant is left out: for a binomial response with trials – a
+proportion weighted by its number of trials – the binomial coefficients,
+`sum(lchoose(trials, successes))`, which
+[`glm()`](https://rdrr.io/r/stats/glm.html), `lme4` and `glmmTMB`
+include. It is a constant of the data, so it changes no comparison
+between models of the same data, but the log-likelihoods of the two
+differ by exactly that much.
 
 Because it is an approximation, differences between models are most
 trustworthy when the random structure is held fixed, so that the
