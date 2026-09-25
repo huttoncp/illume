@@ -455,6 +455,25 @@ ilm_as_cor <- function(ar) {
   structure(ar, class = c(paste0("ilm_", ar$type), "ilm_cor"))
 }
 
+## What a correlation over time's parameters mean, in words: one place, so
+## ilm_cells() and ilm_varcorr() say the same thing.
+#' @keywords internal
+#' @noRd
+ilm_ar_words <- function(ar) {
+  switch(ar$type,
+    ar1 = paste0("AR(1): rho is the correlation one grid step apart (a step ",
+                 "of ", signif(ar$step, 6), " time units), and the process is ",
+                 "stationary with covariance Sigma$ar at every cell."),
+    car1 = paste0("CAR(1): rho is the correlation one time unit apart, so ",
+                  "cells d units apart correlate rho^d; the process is ",
+                  "stationary with covariance Sigma$ar at every cell."),
+    rw1 = paste0("Random walk: each group's walk is zero at its first cell; ",
+                 "a step across d time units adds an independent change with ",
+                 "covariance d * Sigma$ar, so Sigma$ar is the variance per unit ",
+                 "of time and the variance grows with the time since the ",
+                 "group's first cell."))
+}
+
 ## The cells that are integrated out, in the order the fit stores them: all of
 ## them, except a random walk's anchors, which are held at zero.
 #' @keywords internal
@@ -553,18 +572,7 @@ ilm_cells <- function(object) {
   attr(out, "obs_cell") <- ar$idx
   attr(out, "vars") <- ar$vars
   attr(out, "n_latent") <- length(free)
-  attr(out, "parameterisation") <- switch(type,
-    ar1 = paste0("AR(1): rho is the correlation one grid step apart (a step ",
-                 "of ", signif(ar$step, 6), " time units), and the process is ",
-                 "stationary with covariance Sigma$ar at every cell."),
-    car1 = paste0("CAR(1): rho is the correlation one time unit apart, so ",
-                  "cells d units apart correlate rho^d; the process is ",
-                  "stationary with covariance Sigma$ar at every cell."),
-    rw1 = paste0("Random walk: each group's walk is zero at its first cell; ",
-                 "a step across d time units adds an independent change with ",
-                 "covariance d * Sigma$ar, so Sigma$ar is the variance per unit ",
-                 "of time and the variance grows with the time since the ",
-                 "group's first cell."))
+  attr(out, "parameterisation") <- ilm_ar_words(ar)
   if (identical(type, "ar1")) {
     attr(out, "step") <- ar$step
     attr(out, "origin") <- ilm_cor_as_time(org, ar)

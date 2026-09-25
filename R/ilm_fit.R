@@ -441,8 +441,10 @@ ilm_rec_rank <- function(C, nl) {
 #' @param re_list Named list of random-effect specifications.
 #' @param N Integer. Number of rows of data.
 #' @return A named list holding, for each term, `kind` (`"group"` or `"basis"`),
-#'   `group`, `Z`, `basis`, `d` (within-group dimensions) and `nl` (number of
-#'   levels, or of basis functions).
+#'   `group`, `Z`, `basis`, `d` (within-group dimensions), `nl` (number of
+#'   levels, or of basis functions), and for a grouping term its `levels` --
+#'   the labels behind the integer codes -- and `factor`, the grouping
+#'   variable's name when the formula front end supplied it.
 #' @keywords internal
 #' @noRd
 ilm_norm_re <- function(re_list, N) lapply(re_list, function(e) {
@@ -452,11 +454,11 @@ ilm_norm_re <- function(re_list, N) lapply(re_list, function(e) {
   } else if (is.list(e)) {                        # random slopes
     Z <- as.matrix(e$Z); g <- factor(e$group)
     list(kind = "group", basis = NULL, group = as.integer(g), Z = Z,
-         d = ncol(Z), nl = nlevels(g))
+         d = ncol(Z), nl = nlevels(g), levels = levels(g), factor = e$factor)
   } else {                                        # random intercept
     g <- factor(e)
     list(kind = "group", basis = NULL, group = as.integer(g),
-         Z = matrix(1, N, 1), d = 1L, nl = nlevels(g))
+         Z = matrix(1, N, 1), d = 1L, nl = nlevels(g), levels = levels(g))
   }
 })
 

@@ -20,7 +20,7 @@ test_that("fixed effects are recovered on simulated data", {
   dd <- sim_mlmm(seed = 4, n_subj = 60, per = 25)
   fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd, family = "multinomial", verbose = FALSE)
   bt <- attr(dd, "beta_true")
-  expect_lt(max(abs(fixef(fit) - bt)), 0.45)   # generous: small simulation
+  expect_lt(max(abs(nlme::fixef(fit) - bt)), 0.45)   # generous: small simulation
 })
 
 test_that("fewer than three categories is refused", {

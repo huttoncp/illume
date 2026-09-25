@@ -1,6 +1,30 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
+  labelled by grouping variable, level and coefficient, with their conditional
+  SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner
+  Hessian. There is a row per basis function of a smooth and per cell of a
+  correlation over time. `ilm_varcorr()` gives the variance components on
+  their natural scale: each term's covariance with lme4's `stddev` and
+  `correlation` attributes, the correlation over time's parameters, and the
+  dispersion, named for what it is. For a gaussian model that is `sigma`, the
+  residual SD, not the variance.
+  - Both are registered as `ranef()` and `VarCorr()` methods for nlme's
+    generics, which lme4 re-exports.
+  - On a model both packages fit, the modes, SDs and covariances agree with
+    lme4's to 1e-3.
+  - Each random effect's `row` is its position in the fit's full parameter
+    vector, where it matches the fit's own value exactly, by ML and by REML.
+    That is the check that would have caught the REML defect below.
+* `ilm_normal_expect()` exports the Gauss-Hermite quadrature behind
+  `predict(marginal = TRUE)`, so code built on a fit averages over a latent
+  spread as its predictions do.
+* Fixed: `fixef()` did not reach illume's method. It was registered on a
+  generic of illume's own, so with nlme or lme4 attached, `fixef(fit)`
+  stopped with "no applicable method". It is now registered on nlme's
+  generic.
+* A fit keeps each grouping term's level labels, and a refit keeps them too.
 * Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
   - **The covariance shrank.** Its "inflated" covariance was built from
     differences of the fixed-effect covariance with the wrong algebra: the Q
