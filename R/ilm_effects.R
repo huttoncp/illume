@@ -15,8 +15,8 @@
 ## for a GIVEN cluster -- two subjects in the same hospital, one exposed -- and
 ## not for the population. The two differ by more the larger the random
 ## effects, and the conditional one is routinely reported as if it were the
-## marginal one. ilm_ame() has the marginal quantity; this prints both and says
-## which is which.
+## marginal one. ilm_ame(groups = "population") has the marginal quantity;
+## this prints both and says which is which.
 ##
 ## A STANDARDISED COEFFICIENT IS NOT AN EFFECT SIZE FOR A BINARY PREDICTOR.
 ## Dividing by the standard deviation of a 0/1 variable answers "what happens
@@ -245,7 +245,8 @@ print.ilm_effects <- function(x, ...) {
   if (attr(x, "mixed") && k$exp)
     cat("\n  CONDITIONAL, not marginal: this is the ", k$scale,
         " for a given\n  cluster -- two units in the same group, one exposed -- and not for the\n",
-        "  population. ilm_ame() gives the population-averaged effect.\n",
+        "  population. ilm_ame(groups = \"population\") gives the effect\n",
+        "  averaged over the groups.\n",
         sep = "")
   pp <- attr(x, "partial")
   if (!is.null(pp) && nrow(pp)) {

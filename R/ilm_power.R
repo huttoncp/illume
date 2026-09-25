@@ -255,10 +255,11 @@ ilm_power_stub_grid <- function(object, st, d) {
 ## Fresh random effects for the groups of a simulated study, and each row's
 ## share of its group's. One matrix-normal draw per group, U = A Z B, so a
 ## random slope keeps its own variance and a multinomial term its covariance
-## across categories. The factorisation is shared with predict(marginal =
-## TRUE) through ilm_re_factors(), so the two cannot drift; the difference is
-## only WHOSE effect is drawn -- here one per simulated group, there one
-## population draw applied to every row and averaged over.
+## across categories. The factorisation is shared with
+## predict(groups = "population") through ilm_re_factors(), so the two cannot
+## drift; the difference is only WHOSE effect is drawn -- here one per
+## simulated group, there one population draw applied to every row and
+## averaged over.
 #' @keywords internal
 #' @noRd
 ilm_power_re <- function(object, k, g, Z) {

@@ -36,10 +36,10 @@ test_that("predictions at new data have the right shape", {
   expect_true(all(abs(rowSums(P) - 1) < 1e-9))
 })
 
-test_that("population-averaged differs from conditional and stays valid", {
+test_that("the population's prediction differs from a typical group's, and stays valid", {
   fit <- fit_basic()
-  pc <- predict(fit, type = "response", marginal = FALSE)
-  pm <- predict(fit, type = "response", marginal = TRUE, ndraw = 60)
+  pc <- predict(fit, type = "response", groups = "typical")
+  pm <- predict(fit, type = "response", groups = "population", ndraw = 60)
   expect_true(all(abs(rowSums(pm) - 1) < 1e-9))
   # softmax(E[eta]) != E[softmax(eta)]: they must not coincide
   expect_gt(max(abs(pc - pm)), 1e-4)
@@ -49,8 +49,8 @@ test_that("predictions are reproducible across calls", {
   # marginaleffects computes derivatives numerically, so identical inputs must
   # give identical outputs or the derivative is noise
   fit <- fit_basic()
-  a <- predict(fit, type = "response", marginal = TRUE, ndraw = 40)
-  b <- predict(fit, type = "response", marginal = TRUE, ndraw = 40)
+  a <- predict(fit, type = "response", groups = "population", ndraw = 40)
+  b <- predict(fit, type = "response", groups = "population", ndraw = 40)
   expect_equal(a, b)
 })
 
@@ -63,13 +63,13 @@ test_that("intervals stay inside [0, 1] and narrow with the level", {
   expect_true(all((p80$upper - p80$lower) <= (p95$upper - p95$lower) + 1e-8))
 })
 
-test_that("marginal predictions are refused on the link scale", {
+test_that("a population average is refused on the link scale", {
   fit <- fit_basic()
-  expect_error(predict(fit, type = "link", marginal = TRUE), "response scale")
+  expect_error(predict(fit, type = "link", groups = "population"), "response scale")
 })
 
 test_that("fitted probabilities agree with predict", {
   fit <- fit_basic()
-  expect_equal(unname(ilm_fitted(fit, conditional = FALSE)),
+  expect_equal(unname(ilm_fitted(fit, groups = "typical")),
                unname(predict(fit, type = "response")))
 })

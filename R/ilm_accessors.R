@@ -12,25 +12,40 @@
 #' Expectation of a function of a normal variable
 #'
 #' `E[h(eta + sd * Z)]` for `Z` standard normal, by the Gauss-Hermite
-#' quadrature `predict(marginal = TRUE)` uses for a population average -- the
-#' same nodes and the same rule for how many -- so code built on a fit averages
-#' over a latent spread exactly as the fit's own predictions do.
+#' quadrature `predict(groups = "population")` uses for a population average
+#' -- the same nodes and the same rule for how many -- so code built on a fit
+#' averages over a latent spread exactly as the fit's own predictions do.
 #'
 #' @details
 #' The number of nodes grows with the spread: 40 times the smallest whole
 #' number at least `sd^2`, and no more than 800, with one rule for the whole
 #' call, set by the largest `sd`. The rules are computed once and cached.
-#' Measured against [stats::integrate()], through an inverse link that is
-#' better than 1e-12 with a logit up to `sd = 6`, and better than 1e-9 with a
-#' complementary log-log up to `sd = 5`. For any other integrand, check the
-#' accuracy it needs; `n` sets the number of nodes directly.
+#'
+#' The rule is centred where `h(eta + sd * z)` times the normal density
+#' peaks, when that is more than two standard deviations from zero. For a
+#' bounded `h`, such as an inverse link, it rarely is, and the rule is the
+#' plain one. For an `h` that grows, the mass moves away: under a log link
+#' it sits at `z = sd`, where a rule centred at zero has almost no nodes.
+#'
+#' Accuracy, measured against a fine grid over `eta` from -12 to 8:
+#' - better than 1e-12 through a logit up to `sd = 6`;
+#' - better than 5e-9 through a complementary log-log up to `sd = 5`, and
+#'   5e-8 at 6;
+#' - better than 1e-13 for `exp`, whose expectation is `exp(eta + sd^2/2)`,
+#'   up to `sd = 20`.
+#'
+#' Past that, an integrand growing as fast as `exp` overflows double
+#' precision at the nodes, and the result is `Inf`, never `NaN`. For any
+#' other integrand, check the accuracy it needs; `n` sets the number of
+#' nodes directly.
 #'
 #' @param h A vectorised function of one argument.
 #' @param eta,sd The mean and the standard deviation of the normal, recycled
 #'   to a common length.
 #' @param n Optional number of nodes, in place of the rule.
 #' @return The expectation for each element: a vector shaped as `h(eta)`.
-#' @seealso [predict.ilm_model()], whose `marginal = TRUE` uses the same rule.
+#' @seealso [predict.ilm_model()], whose `groups = "population"` uses the
+#'   same rule.
 #' @examples
 #' ## a population-averaged probability through a logit
 #' ilm_normal_expect(stats::plogis, eta = 0.5, sd = 1.2)
@@ -49,8 +64,27 @@ ilm_normal_expect <- function(h, eta, sd, n = NULL) {
   if (!is.numeric(n) || length(n) != 1L || n < 1)
     stop("`n` must be a single positive number of nodes", call. = FALSE)
   gh <- ilm_gh(as.integer(n))
+  ## centred where h(eta + sd z) phi(z) lives: z = m + u, so each node's
+  ## weight carries phi(m + u) / phi(u) = exp(-m u - m^2 / 2), taken with the
+  ## weight in logs so that neither overflows at a far node. A node whose
+  ## weight has underflowed to zero carries no mass and is skipped: its term
+  ## was Inf * 0 once the integrand overflowed there.
+  m <- ilm_gh_shift(h, eta, sd)
+  ovf <- attr(m, "overflow"); m <- as.vector(m)
   out <- 0
-  for (q in seq_along(gh$z)) out <- out + gh$w[q] * h(eta + sd * gh$z[q])
+  for (q in seq_along(gh$z)) {
+    if (!(gh$w[q] > 0)) next
+    u <- gh$z[q]
+    wq <- ifelse(m == 0, gh$w[q], exp(log(gh$w[q]) - m * u - m^2 / 2))
+    term <- wq * h(eta + sd * (m + u))
+    term[wq == 0] <- 0
+    out <- out + term
+  }
+  ## past what double precision holds at the nodes -- exp beyond an SD of
+  ## about 20 -- the answer is Inf, never NaN or a finite underestimate
+  k <- length(out)
+  big <- rep_len(ovf, k) | (rep_len(m != 0, k) & !is.finite(out))
+  out[big] <- Inf
   out
 }
 

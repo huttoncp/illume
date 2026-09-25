@@ -149,7 +149,7 @@ ilm_moderation <- function(object, x = NULL, moderators = NULL,
          paste(ilm_unbq(main), collapse = ", "), ".", call. = FALSE)
 
   ## ---- which candidates ----------------------------------------------------
-  dat <- if (is.null(data)) fit$model else data
+  dat <- if (is.null(data)) ilm_data(fit) else data
   apriori <- ilm_mod_apriori(tl, x)
   if (is.null(moderators)) {
     moderators <- setdiff(main, c(x, apriori))

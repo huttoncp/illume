@@ -1,6 +1,6 @@
 ## Averaging over EVERY random term, and saying which effect is reported.
 ##
-## predict(marginal = TRUE) left an AR or CAR latent out of the average;
+## predict(groups = "population") left an AR or CAR latent out of the average;
 ## ilm_scenario() averaged over each term's intercept alone, dropped a smooth's
 ## penalised part, and drew the fixed effects alone for its interval; ilm_ame()
 ## reported the effect for a group at zero while its help implied the
@@ -23,7 +23,7 @@ test_that("an AR latent is averaged over, not left out", {
   f <- ilm_model(y ~ x + (1 | id), data = d, family = "poisson",
                  ar = ilm_ar1(d$t, d$id, verbose = FALSE), verbose = FALSE)
   expect_gt(f$Sigma[["ar"]][1, 1], 0.2)          # there really is AR variance
-  pm <- as.numeric(predict(f, type = "response", marginal = TRUE))
+  pm <- as.numeric(predict(f, type = "response", groups = "population"))
   eta <- as.numeric(f$X %*% f$beta)
   ## a log link has the average in closed form, over both terms
   cf <- exp(eta + (f$Sigma[["id"]][1, 1] + f$Sigma[["ar"]][1, 1]) / 2)
@@ -41,7 +41,7 @@ test_that("a CAR(1) latent is averaged over too", {
   d$t <- d$t + stats::runif(nrow(d), 0, 0.5)     # irregular times
   f <- ilm_model(y ~ x + (1 | id), data = d, family = "poisson",
                  ar = ilm_car1(d$t, d$id, verbose = FALSE), verbose = FALSE)
-  pm <- as.numeric(predict(f, type = "response", marginal = TRUE))
+  pm <- as.numeric(predict(f, type = "response", groups = "population"))
   eta <- as.numeric(f$X %*% f$beta)
   cf <- exp(eta + (f$Sigma[["id"]][1, 1] + f$Sigma[["ar"]][1, 1]) / 2)
   expect_equal(pm, cf, tolerance = 1e-6)
@@ -53,7 +53,7 @@ test_that("one linear predictor is averaged exactly, whatever ndraw or the seed"
   d$y <- rbinom(n, 1, plogis(-0.4 + 0.8 * d$x + rnorm(40, 0, 1.5)[d$g]))
   f <- ilm_model(y ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
   gr <- data.frame(x = c(-2, 0, 2))
-  pm <- as.numeric(predict(f, newdata = gr, type = "response", marginal = TRUE))
+  pm <- as.numeric(predict(f, newdata = gr, type = "response", groups = "population"))
   s <- sqrt(f$Sigma[["g"]][1, 1])
   ex <- vapply(gr$x, function(z) {
     e <- sum(c(1, z) * stats::coef(f))
@@ -62,7 +62,7 @@ test_that("one linear predictor is averaged exactly, whatever ndraw or the seed"
   }, 0)
   expect_equal(pm, ex, tolerance = 1e-7)
   expect_identical(pm, as.numeric(predict(f, newdata = gr, type = "response",
-                                          marginal = TRUE, ndraw = 7, seed = 99)))
+                                          groups = "population", ndraw = 7, seed = 99)))
 })
 
 test_that("a multinomial outcome with an AR term averages over it by draws", {
@@ -82,7 +82,7 @@ test_that("a multinomial outcome with an AR term averages over it by draws", {
                                   ar = ilm_ar1(d$t, d$id, verbose = FALSE),
                                   verbose = FALSE))
   gr <- data.frame(x = c(-1, 1))
-  pm <- predict(f, newdata = gr, type = "response", marginal = TRUE,
+  pm <- predict(f, newdata = gr, type = "response", groups = "population",
                 ndraw = 20000)
   ## brute force: the AR latent at a row is N(0, Sigma$ar), in the category
   ## dimensions, mapped through the sum-to-zero coding
@@ -96,7 +96,7 @@ test_that("a multinomial outcome with an AR term averages over it by draws", {
   }, numeric(f$J)))
   expect_lt(max(abs(pm - bf)), 0.006)
   ## and leaving the AR term out -- the old answer -- is a different one
-  pc <- predict(f, newdata = gr, type = "response", marginal = FALSE)
+  pc <- predict(f, newdata = gr, type = "response", groups = "typical")
   expect_gt(max(abs(pm - pc)), 0.02)
 })
 
@@ -111,7 +111,7 @@ test_that("a scenario averages over a random slope, not its intercept alone", {
                  verbose = FALSE)
   sc <- ilm_scenario(f, time = 4, sims = 200, progress = FALSE)
   nd <- f$model; nd$time <- 4
-  pa <- mean(predict(f, newdata = nd, type = "response", marginal = TRUE))
+  pa <- mean(predict(f, newdata = nd, type = "response", groups = "population"))
   expect_equal(sc$estimate, pa, tolerance = 0.01)
   ## the intercept-only average is a different number
   V <- f$Sigma[[1]][1, 1] * f$Sigma_d[["id"]]
@@ -156,7 +156,7 @@ test_that("ilm_ame() reports a typical group's effect, or the population's when 
   pop <- mean(vapply(eta, function(e) b[2] * stats::integrate(function(u)
     dens(e + u) * stats::dnorm(u, 0, s), -Inf, Inf)$value, 0))
   a0 <- ilm_ame(f, "x")
-  a1 <- ilm_ame(f, "x", marginal = TRUE)
+  a1 <- ilm_ame(f, "x", groups = "population")
   expect_equal(a0$estimate, unname(cond), tolerance = 1e-4)
   expect_equal(a1$estimate, unname(pop), tolerance = 1e-4)
   ## through a logit the population's effect is the flatter one
@@ -173,7 +173,7 @@ test_that("the quadrature holds at a large latent SD", {
   f <- ilm_model(y ~ x + (1 | g), data = d, family = "binomial", verbose = FALSE)
   f$Sigma[["g"]][1, 1] <- 3.4^2
   gr <- data.frame(x = c(-2, 0, 2))
-  pm <- as.numeric(predict(f, newdata = gr, type = "response", marginal = TRUE))
+  pm <- as.numeric(predict(f, newdata = gr, type = "response", groups = "population"))
   ex <- vapply(gr$x, function(z) {
     e <- sum(c(1, z) * stats::coef(f))
     stats::integrate(function(u) stats::plogis(e + u) * stats::dnorm(u, 0, 3.4),
@@ -193,7 +193,7 @@ test_that("a scenario's estimate is the population mean at the fit", {
                      progress = FALSE)
   pm <- vapply(c(-1, 1), function(v) {
     nd <- f$model; nd$x <- v
-    mean(predict(f, newdata = nd, type = "response", marginal = TRUE))
+    mean(predict(f, newdata = nd, type = "response", groups = "population"))
   }, 0)
   ## the value at the fit, whatever the seed or the number of draws
   expect_equal(s1$estimate, pm, tolerance = 1e-12)

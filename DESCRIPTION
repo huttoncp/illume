@@ -57,15 +57,15 @@ Imports:
     splines,
     utils,
     parallel,
-    codetools
+    codetools,
+    reformulas (>= 0.4.0),
+    mgcv
 Suggests:
     boot,
     lme4,
-    reformulas,
     glmmTMB,
     nlme,
     survival,
-    mgcv,
     car,
     marginaleffects,
     performance,

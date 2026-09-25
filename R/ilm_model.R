@@ -12,27 +12,18 @@
 ## predict(newdata=) and car::Anova all rebuild a reference grid from exactly
 ## those components, and retrofitting them later is painful.
 
-## The random-effect bars of a formula, and the formula without them. lme4
-## 2.0 moved its bar parser to reformulas and warns when it is reached through
-## lme4; an older lme4 has it and reformulas may be absent, so either serves.
+## The random-effect bars of a formula, and the formula without them, by
+## lme4's own parser, which lme4 2.0 moved to reformulas. It is imported: every
+## formula passes through it, bars or none, and with it only suggested a new
+## install could not fit even y ~ x, which stopped with "the formula interface
+## needs reformulas (or lme4)".
 #' @keywords internal
 #' @noRd
-ilm_findbars <- function(f)
-  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::findbars(f) else lme4::findbars(f)
+ilm_findbars <- function(f) reformulas::findbars(f)
 
 #' @keywords internal
 #' @noRd
-ilm_nobars <- function(f)
-  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::nobars(f) else lme4::nobars(f)
-
-## Whether either is there to parse bars with, and what to install if not.
-#' @keywords internal
-#' @noRd
-ilm_need_bars <- function()
-  if (!requireNamespace("reformulas", quietly = TRUE) &&
-      !requireNamespace("lme4", quietly = TRUE))
-    stop("the formula interface needs reformulas (or lme4) to read ",
-         "random-effect bars; install.packages(\"reformulas\")", call. = FALSE)
+ilm_nobars <- function(f) reformulas::nobars(f)
 
 #' Fit generalized linear and additive mixed models
 #'
@@ -398,8 +389,6 @@ ilm_model_formula <- function(formula, data, family = "auto",
   auto <- is.null(family) || identical(family, "auto")
   fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
-  ilm_need_bars()
-  if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
 
   ## Where the terms of the formula get evaluated. nobars(),
   ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying
@@ -552,6 +541,26 @@ ilm_model_formula <- function(formula, data, family = "auto",
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
+  ## The variables the terms are built from, for the rows the frame kept. The
+  ## frame holds a transformed term as its own column -- "log(x)", a Fourier
+  ## basis -- and not the variable underneath, so everything that builds new
+  ## rows from the fit's own (marginal means, average effects, scenarios)
+  ## could not rebuild the term: "object 'x' not found", or, for a column
+  ## called t or time, R's own t() and time() in its place. Only the columns
+  ## the frame lacks are kept, matched to its rows by name.
+  data_extra <- NULL
+  if (is.data.frame(data)) {
+    rv <- unique(c(all.vars(formula), zvars, dvars,
+                   if (inherits(ar, "ilm_cor_named")) ar$vars))
+    extra <- setdiff(intersect(rv, names(data)), names(mf))
+    if (length(extra)) {
+      idx <- match(rownames(mf), rownames(data))
+      if (!anyNA(idx)) {
+        data_extra <- as.data.frame(data)[idx, extra, drop = FALSE]
+        rownames(data_extra) <- rownames(mf)
+      }
+    }
+  }
   ## Dropping incomplete rows is the default and usually the right thing, but
   ## doing it SILENTLY is not: a model fitted to 61% of the data with no note
   ## of it invites conclusions the data cannot carry. Say how many went, and
@@ -875,6 +884,7 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fit$xlev      <- xlev
   fit$contrasts <- ctr
   fit$model     <- mf
+  fit$data_extra <- data_extra
   fit$smooths   <- sm_store
   fit$bars      <- bars
   fit$na.action <- attr(mf, "na.action")
@@ -922,6 +932,21 @@ formula.ilm_model      <- function(x, ...) x$formula
 #' @rdname ilm_model-accessors
 #' @export
 model.frame.ilm_model  <- function(formula, ...) formula$model
+
+## The rows a fit was made from, as new rows to predict from: the model frame
+## with the variables its transformed terms are built from added back, so
+## predict() and model.matrix() can rebuild log(x) or a Fourier basis for
+## changed values of x or t. A fit made before those were kept gets its frame.
+#' @keywords internal
+#' @noRd
+ilm_data <- function(object) {
+  mf <- object$model
+  if (is.null(mf)) return(NULL)
+  ex <- object$data_extra
+  if (is.null(ex) || !ncol(ex)) return(mf)
+  for (v in names(ex)) mf[[v]] <- ex[[v]]
+  mf
+}
 
 #' Standard accessors for a fitted model
 #'

@@ -188,7 +188,6 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
   if (is.na(n_unit) || n_unit < 4L)
     stop("`n_unit` below 4 is not a study; it is ", n_unit, call. = FALSE)
   fam <- if (inherits(family, "ilm_family")) family else ilm_family(family)
-  ilm_need_bars()
   ## A categorical outcome has categories to name, and an ordinal one cut
   ## points; nothing else has either, and quietly ignoring them would plan a
   ## study other than the one described.

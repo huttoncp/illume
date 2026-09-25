@@ -504,7 +504,28 @@ ilm_smooth <- function(spec, data) {
     spec <- ilm_swap_spec(spec, bad, stand, label = FALSE)
     data <- ilm_add_standins(data, map)
   }
-  sm <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE, scale.penalty = TRUE)[[1]]
+  sml <- mgcv::smoothCon(spec, data = data, absorb.cons = TRUE,
+                         scale.penalty = TRUE)
+  ## A factor `by` makes one smooth per level -- per level after the first,
+  ## for an ordered factor -- and only the first was ever kept: every other
+  ## level got no curve at all, and the fit said nothing. Refused until each
+  ## smooth is its own term.
+  if (length(sml) > 1L) {
+    by <- spec$by
+    if (!is.null(map) && by %in% names(map)) by <- map[[by]]
+    labs <- vapply(sml, function(s) s$label, "")
+    if (!is.null(map))
+      for (i in seq_along(map)) labs <- gsub(names(map)[i], map[[i]], labs,
+                                             fixed = TRUE)
+    stop(sub("\\)$", "", spec$label), ", by = ", by, ") makes ", length(sml),
+         " smooths, one for each level of the factor `", by, "` (",
+         paste(labs, collapse = ", "), "), and illume fits one smooth per ",
+         "term so far. It is refused rather than fitted wrongly: before this ",
+         "check, every smooth after the first was dropped without a word. ",
+         "Until each level has its own smooth here, fit this model with ",
+         "mgcv::gam().", call. = FALSE)
+  }
+  sm <- sml[[1L]]
   re <- mgcv::smooth2random(sm, "", type = 2)
   list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
 }
@@ -1282,6 +1303,18 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
 ## coverage.
 ilm_flat_rel <- 1e-3
 
+## A BLOCK FLAT IN EVERY DIRECTION has nothing curved to be flat against: a
+## lone variance at zero, whose one direction is the one to the edge, or a
+## random walk's variance collapsing. Judged against its own largest
+## curvature it was never flat, so nothing was held -- a random intercept at
+## a standard deviation of 6e-5 kept a standard error of 8714 on its log
+## scale, and draws of it ran to infinity. So a block's largest curvature is
+## taken as at least ilm_flat_floor: on the log-SD scale 0.1 is a standard
+## error of 3.2, and a direction below 1e-3 of that -- a standard error of
+## 100 -- is one no data has resolved. A block with a healthy curved
+## direction, every one in the study above, is judged exactly as before.
+ilm_flat_floor <- 0.1
+
 #' @keywords internal
 #' @noRd
 ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
@@ -1337,7 +1370,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
     if (length(d) && !any(cb$keep %in% d)) {
       e <- eigen(H[d, d, drop = FALSE], symmetric = TRUE)
-      flat <- e$values < ilm_flat_rel * max(e$values[1], 1e-8)
+      flat <- e$values < ilm_flat_rel * max(e$values[1], ilm_flat_floor)
     }
   }
   if (!any(flat)) {
