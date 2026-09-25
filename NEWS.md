@@ -1,6 +1,18 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* The latent-budget checks, `latent_budget` and `obs_per_ar_latent`, warn
+  rather than fail for a family with one linear predictor. Their row
+  thresholds were set on multinomial data, where one categorical observation
+  says little about its latent value; a count says more. Forty of forty
+  Poisson AR(1) fits at one observation per cell had positive definite
+  Hessians, an unattenuated rho and nominal forecast coverage, and every one
+  was failed. The thresholds are being recalibrated on the information each
+  latent value carries (`studies/scripts/latent_budget.R`); until then the
+  checks say they are provisional. A multinomial fit is judged as before.
+  The suggestion for a correlation over time now leads with coarsening its
+  grid, and the remedy that replaces it with `s(time)` plus a random slope
+  says it describes the past and is not for forecasting.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner
