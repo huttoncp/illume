@@ -311,6 +311,11 @@
     curved direction is judged exactly as before, which covers every fit in
     the boundary study.
   - Found by another agent.
+* `ilm_simulate()`'s help said it returns category codes. That is true only
+  for a multinomial or ordinal outcome. For every other family it returns
+  the response on its own scale, and the help now says so. It also says
+  that each dataset draws new random effects, and how a censored response
+  is censored.
 
 # illume 0.0.7.9000
 
