@@ -126,8 +126,9 @@ test_that("each mode is the fit's own value at its row, by ML and by REML", {
 
 test_that("a correlation over time and a smooth get their own rows", {
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
-                 ar = ilm_rw1(~ t | id), verbose = FALSE)
+  f <- suppressMessages(ilm_model(y ~ x + (1 | id), data = d,
+                                  family = "gaussian",
+                                  ar = ilm_rw1(~ t | id), verbose = FALSE))
   r <- ilm_ranef(f)
   cl <- ilm_cells(f)
   w <- r[r$type == "rw1", ]
@@ -198,8 +199,10 @@ test_that("the variance components are the one transform a draw would get", {
   ## at the estimate, the same numbers from the fit and from its parameter
   ## vector run through ilm_rebuild() -- what a draw of them goes through
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
-                 ar = ilm_car1(~ t | id), verbose = FALSE)
+  f <- suppressMessages(ilm_model(y ~ x + (1 + t | id), data = d,
+                                  family = "gaussian",
+                                  ar = ilm_car1(~ t | id, verbose = FALSE),
+                                  verbose = FALSE))
   a <- illume:::ilm_natural(f)
   b <- illume:::ilm_natural(f, f$opt$par)
   expect_equal(a, b, tolerance = 1e-12)

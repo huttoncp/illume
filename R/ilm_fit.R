@@ -1320,7 +1320,8 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     if (max(g0) <= 1e-2 && pd(H)) {
       s2 <- redo(H)
       if (!is.null(s2) && isTRUE(s2$pdHess))
-        return(list(sdr = s2, how = "recomputed", held = character(0), flat = 0L))
+        return(list(sdr = s2, how = "recomputed", held = character(0), flat = 0L,
+                    H = H))
     }
   } else {
     ## An orthonormal basis: every other parameter as it is, then the block's
@@ -1343,9 +1344,13 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
       B[cbind(fl, fl)] <- max(1, abs(diag(H)))
       Hm <- Q %*% B %*% t(Q); Hm <- (Hm + t(Hm)) / 2
       s2 <- redo(Hm)
+      ## `H` is the Hessian the covariance was taken from, and `dirs` the
+      ## directions held in it, in the coordinates of opt$par: what a draw of
+      ## the parameters has to hold as well (see ilm_draws())
       if (!is.null(s2))
         return(list(sdr = held_sdr(s2, rowSums(Q[, fl, drop = FALSE]^2) > 1e-2),
-                    how = "boundary", held = cb$flagged, flat = sum(flat)))
+                    how = "boundary", held = cb$flagged, flat = sum(flat),
+                    H = Hm, dirs = Q[, fl, drop = FALSE]))
     }
   }
   ## Otherwise whole terms are held, the ones at the boundary first: their
@@ -1363,7 +1368,8 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     if (is.null(s2)) next
     lead <- logical(n); lead[dd] <- TRUE
     return(list(sdr = held_sdr(s2, lead), how = "boundary", held = on,
-                flat = length(dd)))
+                flat = length(dd), H = Hm,
+                dirs = diag(1, n)[, dd, drop = FALSE]))
   }
   out
 }
@@ -2448,6 +2454,11 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  ## of them -- are held at the estimate) or "none"; see
                  ## ilm_hess_recover()
                  hessian_how = hess$how, hessian_held = hess$held,
+                 ## the fixed-parameter Hessian the covariance came from when
+                 ## it was not TMB's own, and the directions a boundary held,
+                 ## so the joint precision can be formed again and a draw
+                 ## can hold what the standard errors held
+                 hessian_fixed = hess$H, hessian_dirs = hess$dirs,
                  hessian_flat = hess$flat,
                  ## terms whose covariance sits at the edge of its range,
                  ## held or not; see ilm_cov_blocks()

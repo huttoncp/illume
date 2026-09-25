@@ -114,19 +114,28 @@ ilm_eta <- function(object, nd, beta = NULL, bvec = NULL) {
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
     if (e$kind != "basis") next                        # populations: left at zero
-    lab <- sub("\\.[0-9]+$", "", names(object$re)[k])
-    sdl <- nd$smooths[[lab]]
-    if (is.null(sdl)) sdl <- nd$smooths[[names(object$re)[k]]]
-    if (is.null(sdl)) stop("no stored smooth for term '", names(object$re)[k], "'")
-    blk <- if (length(sdl$Xr) == 1L) sdl$Xr[[1]] else {
-      i <- suppressWarnings(as.integer(sub(".*\\.", "", names(object$re)[k])))
-      sdl$Xr[[if (is.na(i)) 1L else i]]
-    }
-    ctb <- blk %*% ilm_Bhat_term(object, k, bvec)
+    ctb <- ilm_basis_new(object, nd, k) %*% ilm_Bhat_term(object, k, bvec)
     if (identical(object$re_struct[[k]]$type, "rr")) ctb <- ctb %*% t(object$Lambda[[k]])
     eta <- eta + ctb
   }
   eta
+}
+
+## A smooth term's penalised basis for the rows `nd` was built for. One place,
+## so predict() and ilm_matrices() cannot pick different blocks: a smooth
+## with a `by` variable is split into one term per level, named "lab.1",
+## "lab.2", ..., each with its own block of the stored design.
+#' @keywords internal
+#' @noRd
+ilm_basis_new <- function(object, nd, k) {
+  nm <- names(object$re)[k]
+  lab <- sub("\\.[0-9]+$", "", nm)
+  sdl <- nd$smooths[[lab]]
+  if (is.null(sdl)) sdl <- nd$smooths[[nm]]
+  if (is.null(sdl)) stop("no stored smooth for term '", nm, "'")
+  if (length(sdl$Xr) == 1L) return(sdl$Xr[[1]])
+  i <- suppressWarnings(as.integer(sub(".*\\.", "", nm)))
+  sdl$Xr[[if (is.na(i)) 1L else i]]
 }
 
 ## ---- drawing a random effect the way the model actually stores one ---------
