@@ -149,9 +149,9 @@ test_that("the per-row dispersion reaches the residuals and the simulators", {
   g0 <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
   # uniform with the model, hopeless without: the residual is being divided by
   # each row's own standard deviation
-  expect_gt(suppressWarnings(stats::ks.test(ilm_rqr(f, TRUE, 1L), "punif")$p.value),
+  expect_gt(suppressWarnings(stats::ks.test(ilm_rqr(f, seed = 1L), "punif")$p.value),
             0.01)
-  expect_lt(suppressWarnings(stats::ks.test(ilm_rqr(g0, TRUE, 1L), "punif")$p.value),
+  expect_lt(suppressWarnings(stats::ks.test(ilm_rqr(g0, seed = 1L), "punif")$p.value),
             1e-6)
   # Pearson residuals are unit-scaled for the same reason
   expect_lt(abs(stats::sd(illume:::ilm_pearson_ovr(f)) - 1), 0.1)

@@ -92,7 +92,7 @@ test_that("quantile residuals are uniform, censored or not", {
       cs <- if (cz) ilm_surv(d$time, d$event) else NULL
       f <- ilm_model(time ~ x, data = d, family = dist, censor = cs,
                      verbose = FALSE)
-      p <- suppressWarnings(stats::ks.test(ilm_rqr(f, TRUE, 1L), "punif")$p.value)
+      p <- suppressWarnings(stats::ks.test(ilm_rqr(f, seed = 1L), "punif")$p.value)
       expect_gt(p, 0.01, label = paste(dist, "censored =", cz))
     }
   }

@@ -12,9 +12,9 @@
 #' Expectation of a function of a normal variable
 #'
 #' `E[h(eta + sd * Z)]` for `Z` standard normal, by the Gauss-Hermite
-#' quadrature `predict(marginal = TRUE)` uses for a population average -- the
-#' same nodes and the same rule for how many -- so code built on a fit averages
-#' over a latent spread exactly as the fit's own predictions do.
+#' quadrature `predict(groups = "population")` uses for a population average
+#' -- the same nodes and the same rule for how many -- so code built on a fit
+#' averages over a latent spread exactly as the fit's own predictions do.
 #'
 #' @details
 #' The number of nodes grows with the spread: 40 times the smallest whole
@@ -30,7 +30,8 @@
 #'   to a common length.
 #' @param n Optional number of nodes, in place of the rule.
 #' @return The expectation for each element: a vector shaped as `h(eta)`.
-#' @seealso [predict.ilm_model()], whose `marginal = TRUE` uses the same rule.
+#' @seealso [predict.ilm_model()], whose `groups = "population"` uses the
+#'   same rule.
 #' @examples
 #' ## a population-averaged probability through a logit
 #' ilm_normal_expect(stats::plogis, eta = 0.5, sd = 1.2)

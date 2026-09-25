@@ -334,8 +334,9 @@ ilm_car1 <- function(time, group, verbose = TRUE) {
 #'
 #' `ilm_rw1(~ time | group)` names two columns of the model's data instead of
 #' passing them; see [ilm_ar1()] for why that is the safer form. It is also
-#' what lets `predict(marginal = TRUE)` place new rows on the walk, whose
-#' variance depends on how long after its group's first time each one falls.
+#' what lets `predict(groups = "population")` place new rows on the walk,
+#' whose variance depends on how long after its group's first time each one
+#' falls.
 #'
 #' @param time Time, one value per observation: any numeric scale, a `Date` or
 #'   a date-time. The variance is per unit of it. Or a one-sided formula

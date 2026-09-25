@@ -214,7 +214,7 @@ test_that("the residual and simulation machinery reaches a flexible fit", {
   d <- rp_piecewise(12, n = 1000)
   f <- ilm_model(time ~ x, data = d, family = "rp", rp_df = 5,
                  censor = ilm_surv(d$time, d$event), verbose = FALSE)
-  u <- ilm_rqr(f, TRUE, 1L)
+  u <- ilm_rqr(f, seed = 1L)
   expect_gt(suppressWarnings(stats::ks.test(u, "punif")$p.value), 0.01)
   r <- illume:::ilm_pearson_ovr(f)
   expect_lt(abs(mean(r)), 0.1)
