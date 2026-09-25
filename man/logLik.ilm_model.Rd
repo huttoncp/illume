@@ -37,9 +37,16 @@ approximation error largely cancels.
 
 The value is on the same scale as \code{lme4::lmer()} and \code{nlme::lme()}, and
 agrees with both to numerical tolerance for a gaussian model they can also
-fit. It therefore includes every normalising constant, so \code{AIC()} and \code{BIC()}
+fit. It therefore includes the normalising constants, so \code{AIC()} and \code{BIC()}
 may be compared across models with \emph{different} random structures as well as
 the same one.
+
+One constant is left out: for a binomial response with trials -- a
+proportion weighted by its number of trials -- the binomial coefficients,
+\code{sum(lchoose(trials, successes))}, which \code{glm()}, \code{lme4} and \code{glmmTMB}
+include. It is a constant of the data, so it changes no comparison between
+models of the same data, but the log-likelihoods of the two differ by
+exactly that much.
 
 Because it is an approximation, differences between models are most
 trustworthy when the random structure is held fixed, so that the

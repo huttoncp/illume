@@ -266,7 +266,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
 
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   if (type == "response") {
-    inv <- ilm_emm_linkinv(fam)
+    inv <- ilm_emm_linkinv(object)
     out$estimate <- inv(est); out$lower <- inv(out$lower)
     out$upper <- inv(out$upper); out$se <- NA_real_
   }
@@ -417,11 +417,15 @@ ilm_emm_ordinal <- function(object, g, mmg, av, specs, w, level, weights) {
 
 #' @keywords internal
 #' @noRd
-ilm_emm_linkinv <- function(fam)
-  switch(fam,
-    binomial = , multinomial = function(z) 1 / (1 + exp(-z)),
-    poisson = , nbinom = , weibull = , lognormal = , loglogistic = exp,
-    function(z) z)
+## The inverse link, from the family object, which knows its own. A switch on
+## the family's NAME used to stand here, and fell through to the identity for
+## any family it did not list: a beta model's "response" means were its
+## link-scale values, 0.37 where the proportion was 0.59.
+ilm_emm_linkinv <- function(object) {
+  f <- object$family
+  if (is.null(f) || !is.function(f$linkinv)) return(function(z) z)
+  f$linkinv
+}
 
 #' @export
 print.ilm_emm <- function(x, ...) {

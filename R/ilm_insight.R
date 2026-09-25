@@ -81,9 +81,12 @@ ilm_ins_varcov <- function(x, ...) suppressWarnings(stats::vcov(x))
 #' @noRd
 ilm_ins_model_info <- function(x, ...) {
   fam <- if (!is.null(x$family)) x$family$name else "gaussian"
-  lk <- switch(fam, gaussian = "identity", binomial = "logit",
-               poisson = "log", nbinom = "log", multinomial = "logit",
-               weibull = , lognormal = , loglogistic = "log", "log")
+  ## the family object's own link, which a switch on the name got wrong for
+  ## every family it did not list (beta and the ordinal links said "log"); a
+  ## flexible parametric survival model keeps "log", as its hazard is on that
+  ## scale
+  lk <- if (fam %in% c("rp", "rp_odds", "rp_normal")) "log"
+        else if (!is.null(x$family$link)) x$family$link else "identity"
   out <- list(
     is_binomial = fam == "binomial", is_count = fam %in% c("poisson", "nbinom"),
     is_poisson = fam == "poisson", is_negbin = fam == "nbinom",

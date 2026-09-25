@@ -96,6 +96,17 @@
   every call and does not use `ndraw`; the effects and scenarios built on it
   no longer move with the seed. A multinomial outcome is still averaged by draws, now
   including an AR term.
+* Fixed: `ilm_emmeans(type = "response")` on a beta model returned the
+  link-scale means: 0.37 where the proportion was 0.59. The inverse link was
+  chosen by switching on the family's name, and beta fell through to the
+  identity. It now comes from the family object itself, which closes that for
+  any family added later. The link name illume gives the easystats packages
+  had the same fault for beta and the ordinal links, which it reported as
+  "log", and now reads the family's own link. `logLik()`'s help now says that
+  for a binomial with trials it leaves out the binomial coefficients, which
+  `glm()`, `lme4` and `glmmTMB` include: a constant of the data, so no
+  comparison of models moves, but the values differ by exactly
+  `sum(lchoose(trials, successes))`. Found by another agent.
 * Fixed: `ilm_scenario()` computed its means from the fixed-effect design and
   each random term's intercept variance alone. A random slope was averaged as
   if it were an intercept, an AR term was left out, and a smooth lost its
