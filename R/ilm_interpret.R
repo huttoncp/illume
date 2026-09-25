@@ -126,7 +126,7 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
-  mf <- object$model
+  mf <- ilm_data(object)
   if (is.null(mf))
     stop("the fit did not keep its model frame, so marginal effects cannot ",
          "be computed", call. = FALSE)
@@ -134,8 +134,12 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
   ## only terms that are a bare variable: a marginal effect for `poly(x, 3)` or
   ## an interaction is a different question and is not answered by pretending.
   ## Compared as PLAIN names: a label keeps the backticks a column name does
-  ## not have, so `x 1` used to match nothing and quietly got no effect.
-  vars <- ilm_unbq(tl)[ilm_unbq(tl) %in% names(mf)]
+  ## not have, so `x 1` used to match nothing and quietly got no effect. A
+  ## transformed term's column, "log(x)", is in the frame too, but it is not a
+  ## variable: changing it moves nothing, since the prediction rebuilds log(x)
+  ## from x, and its effect would come out as a silent zero.
+  av <- all.vars(stats::delete.response(stats::terms(object)))
+  vars <- ilm_unbq(tl)[ilm_unbq(tl) %in% names(mf) & ilm_unbq(tl) %in% av]
   if (!is.null(terms)) vars <- intersect(vars, ilm_unbq(terms))
   if (!length(vars)) return(NULL)
 
@@ -246,7 +250,7 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
 #' @keywords internal
 #' @noRd
 ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4) {
-  mf <- object$model
+  mf <- ilm_data(object)
   x <- mf[[var]]
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
                                         type = "response"))

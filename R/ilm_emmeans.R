@@ -26,7 +26,7 @@
 #' @keywords internal
 #' @noRd
 ilm_ref_grid <- function(object, at = NULL) {
-  mf <- object$model
+  mf <- ilm_data(object)
   if (is.null(mf)) stop("the fit did not keep its model frame", call. = FALSE)
   tl <- attr(stats::terms(object), "term.labels")
   vars <- intersect(all.vars(stats::delete.response(stats::terms(object))),
@@ -208,7 +208,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
   mn <- is.null(object$family) || identical(object$family$name, "multinomial")
-  mf <- object$model
+  mf <- ilm_data(object)
   specs <- as.character(specs)
   miss <- setdiff(specs, names(mf))
   if (length(miss))

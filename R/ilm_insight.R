@@ -50,7 +50,7 @@ ilm_ins_predictors <- function(x, effects = "fixed", flatten = FALSE, ...) {
 #' @keywords internal
 #' @noRd
 ilm_ins_data <- function(x, ...) {
-  if (!is.null(x$model)) return(x$model)
+  if (!is.null(x$model)) return(ilm_data(x))
   stop("the fit did not keep its model frame", call. = FALSE)
 }
 

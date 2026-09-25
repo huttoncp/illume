@@ -141,7 +141,7 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
 #' @keywords internal
 #' @noRd
 ilm_typical_row <- function(object) {
-  mf <- object$model
+  mf <- ilm_data(object)
   if (is.null(mf))
     stop("this model does not carry its data, so there is no typical ",
          "covariate pattern to draw at. Pass `newdata`.", call. = FALSE)
@@ -246,7 +246,7 @@ ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
   obs <- matrix(obs, nrow = length(grid))
 
   ## the fitted curve, at the typical covariate pattern within each level
-  mf <- object$model
+  mf <- ilm_data(object)
   fitc <- vapply(lev, function(L) {
     nd <- if (is.null(by) || is.null(mf)) ilm_typical_row(object) else {
       s <- gvec == L
