@@ -58,6 +58,7 @@ reference:
   - ilm_varcorr
   - ilm_draws
   - ilm_matrices
+  - ilm_dist
   - ilm_cells
   - ilm_normal_expect
 - title: "Other designs"

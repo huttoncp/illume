@@ -171,6 +171,11 @@ iml_design <- ilm_design
 #' @export
 iml_did <- ilm_did
 
+#' @rdname ilm_dist
+#' @usage NULL
+#' @export
+iml_dist <- ilm_dist
+
 #' @rdname ilm_draws
 #' @usage NULL
 #' @export
