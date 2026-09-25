@@ -113,8 +113,17 @@ test_that("the zero part's and the dispersion model's designs come too", {
                  dispformula = ~ g, verbose = FALSE)
   nd <- data.frame(x = c(1, 2), z = c(0, 1), g = c("b", "a"))
   m <- ilm_matrices(f, nd)
-  expect_identical(colnames(m$zi), colnames(f$Zzi))
+  expect_identical(colnames(m$zi), paste0("zi:", colnames(f$Zzi)))
   expect_equal(matrix(m$zi, nrow(nd)), cbind(1, nd$z))
-  expect_identical(colnames(m$disp), colnames(f$Zd))
-  expect_equal(unname(m$disp[, "gb"]), c(1, 0))
+  expect_identical(colnames(m$disp), paste0("disp:", colnames(f$Zd)))
+  expect_equal(unname(m$disp[, "disp:gb"]), c(1, 0))
+  ## each column finds its coefficient by name, in coef() and in the draws
+  b <- stats::coef(f, full = TRUE)
+  expect_true(all(c(colnames(m$zi), colnames(m$disp)) %in% names(b)))
+  mp <- ilm_draws(f, nsim = 2, seed = 1)$map
+  expect_true(all(c(colnames(m$zi), colnames(m$disp)) %in% mp$term))
+  ## and the zero part's linear predictor for the new rows is the fit's own
+  eta_zi <- as.vector(m$zi %*% b[colnames(m$zi)])
+  expect_equal(eta_zi, as.vector(cbind(1, nd$z) %*% f$zi_gamma),
+               tolerance = 1e-12)
 })

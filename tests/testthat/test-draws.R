@@ -120,3 +120,29 @@ test_that("a fit without the precision stored forms it, and blocks subset", {
   expect_error(ilm_draws(f0, blocks = "nope"), "no block called")
   expect_output(print(dr), "joint draws")
 })
+
+test_that("a fit without random effects is drawn from its own covariance", {
+  ## with nothing integrated out, sdreport() forms no joint precision, and
+  ## that was taken for a fit read back from disk: no GLM could be drawn from
+  set.seed(31); n <- 300
+  d <- data.frame(x = stats::rnorm(n))
+  d$y <- stats::rpois(n, exp(0.3 + 0.5 * d$x))
+  d$yg <- 1 + 0.5 * d$x + stats::rnorm(n)
+  for (fam in c("poisson", "gaussian")) {
+    f <- ilm_model(stats::as.formula(if (fam == "poisson") "y ~ x" else "yg ~ x"),
+                   data = d, family = fam, verbose = FALSE)
+    ## the precision is the inverse of the whole covariance, exactly
+    Q <- illume:::ilm_joint_prec(f)
+    expect_equal(unname(solve(Q)), unname(vcov(f, full = TRUE)),
+                 tolerance = 1e-8)
+    dr <- ilm_draws(f, nsim = 4000, seed = 2)
+    expect_equal(unname(dr$mode), unname(coef(f, full = TRUE)),
+                 tolerance = 1e-12)
+    expect_equal(unname(stats::cov(t(dr$draws))),
+                 unname(vcov(f, full = TRUE)), tolerance = 0.1)
+    expect_identical(nrow(dr$map), length(coef(f, full = TRUE)))
+    expect_false(anyNA(dr$map$term))
+  }
+  ## a gaussian's residual SD is drawn with the rest, on the natural scale
+  expect_identical(dim(dr$natural$dispersion), c(1L, 4000L))
+})

@@ -82,7 +82,9 @@ package. The dispersion and the family's other parameters are still drawn.
 
 A fit made without \code{joint = TRUE} has no joint precision stored, and it is
 formed here from the fit's compiled objective; a fit read back from disk no
-longer has that, and has to be refitted.
+longer has that, and has to be refitted. A fit without random effects
+needs neither: with nothing integrated out, its draws come from
+\code{vcov(fit, full = TRUE)}.
 }
 \examples{
 set.seed(1)

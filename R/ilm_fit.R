@@ -591,7 +591,12 @@ ilm_add_check <- function(ck, check, status, detail, cause = "", suggestion = ""
 #' @noRd
 ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
                      family = NULL) {
-  C <- J - 1L
+  ## The category dimensions the fit itself will have. J - 1 is the
+  ## multinomial's; an ordered response also has J categories but ONE linear
+  ## predictor, and taking J - 1 for it sized a four-category fit's
+  ## covariance and latent budget three times over.
+  C <- if (is.list(family) && is.function(family$C_of)) family$C_of(J)
+       else J - 1L
   ## With weights, information is carried by sum(w), not the row count: a
   ## thousand rows each worth one trial and ten rows each worth a hundred are
   ## not the same amount of data, and the latent budget must use the latter.
