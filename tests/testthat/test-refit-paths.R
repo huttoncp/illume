@@ -85,7 +85,7 @@ test_that("fit indices work for every family, scoring only what can be scored", 
   ## a binary outcome is two categories, and is scored as such
   fb <- ilm_model(b ~ x, data = d, family = "binomial", verbose = FALSE)
   s <- ilm_scores(fb)
-  p <- ilm_fitted(fb, TRUE)[, 1]
+  p <- ilm_fitted(fb)[, 1]
   expect_equal(unname(s["brier"]), mean(2 * (d$b - p)^2))
   expect_equal(unname(s["log_score"]),
                mean(-log(ifelse(d$b == 1, p, 1 - p))))

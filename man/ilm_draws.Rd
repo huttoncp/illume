@@ -9,7 +9,7 @@ ilm_draws(
   object,
   nsim = 1000L,
   seed = NULL,
-  given = c("none", "theta"),
+  given = c("none", "theta", "parameters"),
   blocks = NULL,
   natural = TRUE
 )
@@ -21,8 +21,9 @@ ilm_draws(
 
 \item{seed}{Optional random seed.}
 
-\item{given}{\code{"none"} to draw everything, or \code{"theta"} to hold the variance
-parameters at their estimates.}
+\item{given}{\code{"none"} to draw everything, \code{"theta"} to hold the variance
+parameters at their estimates, or \code{"parameters"} to hold every parameter
+and draw only the random effects and the cells.}
 
 \item{blocks}{Optional character vector of the blocks to return, named as in
 \code{names(object$obj$env$par)}: \code{"beta"}, \code{"theta"}, \code{"bvec"}, \code{"logdisp"},
@@ -49,7 +50,8 @@ covariance by draw with its \code{rho} (and \code{range}) or, for a random walk,
 \code{var_per_time}; and \code{dispersion}, one row per dispersion parameter.
 At the estimate these are exactly \code{\link[=ilm_varcorr]{ilm_varcorr()}}'s.}
 \item{\code{held}}{the number of directions held at a boundary, and the
-terms they belong to.}
+terms they belong to; none under \code{given = "theta"} or
+\code{"parameters"}, which hold the variance parameters whole.}
 \item{\code{given}}{as asked.}
 }
 }
@@ -77,12 +79,26 @@ of a correlation over time at their estimates, and draws everything else
 from its distribution given them -- the approach of the \code{merTools}
 package. The dispersion and the family's other parameters are still drawn.
 
+\strong{\code{given = "parameters"}} holds every parameter at its estimate -- the
+fixed effects, the variance, dispersion and correlation parameters, and the
+family's others -- and draws only the random effects and the cells of a
+correlation over time, from their distribution given the parameters: the
+curvature of the fit's inner optimisation at the conditional modes, which
+for a gaussian model is that distribution exactly. Their SDs are
+\code{\link[=ilm_ranef]{ilm_ranef()}}'s \code{sd}, except under REML, where \code{ilm_ranef()} integrates
+over the fixed effects and these hold them, so these are smaller. The
+variance components in \code{natural} are then those at the estimate. A model
+without random effects has nothing left to draw: given its parameters the
+distribution is a point mass, and every draw sits at the estimate.
+
 \strong{\code{blocks}} returns only the named blocks of the parameter vector -- say
 \code{c("beta", "bvec")} -- which saves memory; the draw is joint either way.
 
 A fit made without \code{joint = TRUE} has no joint precision stored, and it is
 formed here from the fit's compiled objective; a fit read back from disk no
-longer has that, and has to be refitted.
+longer has that, and has to be refitted. A fit without random effects
+needs neither: with nothing integrated out, its draws come from
+\code{vcov(fit, full = TRUE)}.
 }
 \examples{
 set.seed(1)

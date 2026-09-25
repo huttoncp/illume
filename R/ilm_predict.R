@@ -10,7 +10,8 @@
 ## WHICH TERMS ARE HELD vs INTEGRATED.  After smooth2random a spline looks like
 ## a random effect but is not a population to average over -- it IS the mean
 ## structure, so basis terms are always evaluated.  Grouping factors and AR terms
-## are the populations: zeroed (conditional) or integrated out (marginal).
+## are the populations: zeroed (groups = "typical") or integrated out
+## (groups = "population").
 
 #' Evaluate a smooth's design at new covariate values
 #'
@@ -249,6 +250,67 @@ ilm_gh <- function(n = 40L) {
 ilm_gh_n <- function(s)
   as.integer(min(800, 40 * max(1, ceiling(max(s, 0, na.rm = TRUE)^2))))
 
+## Where the rule is centred, element by element: the peak of
+## h(eta + sd z) phi(z), found by Newton's method on its log. For a bounded h
+## -- an inverse logit, a probability -- the peak stays near zero, and a peak
+## within two standard deviations of it leaves the rule as it was: measured
+## over logit, probit and cloglog at SDs of 0.5 to 10, that threshold was
+## never less accurate than the plain rule, where one of 1 was, slightly, for
+## the cloglog. For an h that grows the mass moves away: exp(eta + sd z) phi(z)
+## peaks at z = sd, where a rule centred at zero has almost no nodes. There
+## the plain rule was 0.2% low at an SD of 10 and 19% low at 12, and past 13.8
+## its outer terms overflowed against weights that had underflowed to zero,
+## and the result was NaN.
+## `h` is always called on the whole vector, never a subset, because a caller's
+## h can be tied to its rows (a zero part's design, say).
+#' @keywords internal
+#' @noRd
+ilm_gh_shift <- function(h, eta, sd) {
+  n <- length(eta)
+  m <- numeric(n)
+  if (!n) return(m)
+  g <- function(z) {
+    v <- suppressWarnings(log(as.numeric(h(eta + sd * z))))
+    if (length(v) != n) rep(NA_real_, n) else v - z^2 / 2
+  }
+  d <- 1e-4
+  gm <- g(m)
+  ovf <- logical(n)
+  attr(m, "overflow") <- ovf
+  if (all(is.na(gm))) return(m)
+  for (it in seq_len(60L)) {
+    gp <- g(m + d); gn <- g(m - d)
+    ovf <- ovf | gp %in% Inf | gn %in% Inf
+    g1 <- (gp - gn) / (2 * d)
+    g2 <- (gp - 2 * gm + gn) / d^2
+    ok <- is.finite(g1) & is.finite(g2) & g2 < -0.5
+    step <- ifelse(ok, pmax(pmin(-g1 / g2, 5), -5), 0)
+    ## halved until the log-integrand does not fall: a full Newton step from
+    ## a fast-growing h can land where h has underflowed to zero, and there
+    ## the log is -Inf and nothing moves again
+    for (bt in seq_len(40L)) {
+      g_new <- g(m + step)
+      ovf <- ovf | g_new %in% Inf
+      bad <- step != 0 & !(is.finite(g_new) & g_new >= gm - 1e-12)
+      if (!any(bad)) break
+      step[bad] <- step[bad] / 2
+    }
+    step[bad] <- 0
+    m <- m + step
+    gm <- ifelse(step != 0, g_new, gm)
+    if (max(abs(step)) < 1e-10) break
+  }
+  ## only a peak the search reached is used; anywhere else the plain rule
+  ## stands, as it does for a peak within two standard deviations of zero
+  g1 <- (g(m + d) - g(m - d)) / (2 * d)
+  m[!is.finite(m) | !is.finite(g1) | abs(g1) > 1e-4 * pmax(1, abs(m)) |
+      abs(m) < 2] <- 0
+  ## where the integrand itself overflowed on the way, the expectation is too
+  ## large for double precision to represent at the nodes, and says so as Inf
+  attr(m, "overflow") <- ovf
+  m
+}
+
 #' Convert linear predictors to category probabilities
 #'
 #' Applies the softmax (multinomial logistic) transform so each row gives
@@ -324,7 +386,7 @@ ilm_rw_elapsed <- function(object, newdata) {
     stop("a random walk's spread at a row depends on how long after its ",
          "group's first time the row falls, and this walk was given as ",
          "vectors, so new rows cannot be placed on it. Give it by name, ",
-         "ilm_rw1(~ time | group), or predict with marginal = FALSE.",
+         "ilm_rw1(~ time | group), or predict with groups = \"typical\".",
          call. = FALSE)
   miss <- setdiff(v, names(newdata))
   if (length(miss))
@@ -349,34 +411,41 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' `nnet::multinom(type = "probs")` does -- or the linear predictor, optionally
 #' with standard errors and intervals.
 #'
-#' @section Conditional versus population-averaged:
-#' This is the choice that matters most, and there is no safe default that suits
-#' everyone.
+#' @section Which groups:
+#' In a model with random effects every prediction is for some group, and this
+#' is the choice that matters most. There is no safe default that suits
+#' everyone. `groups` says which:
 #'
-#' With `marginal = FALSE` the random effects are set to zero, giving the
-#' probabilities for a **typical** group -- one exactly at the population
-#' average. With `marginal = TRUE` the prediction is averaged over the
-#' distribution of random effects, giving the probabilities for the
-#' **population as a whole**.
+#' * `"typical"` (the default) sets every random effect to zero, giving the
+#'   prediction for a **typical group**: one exactly at the average.
+#' * `"population"` averages the prediction over the distribution of random
+#'   effects, giving it for the **population of groups as a whole**.
 #'
-#' These differ, sometimes substantially, because averaging and the softmax
-#' transform do not commute: the average of the transformed values is not the
-#' transform of the average. The population-averaged probabilities are pulled
-#' toward being more even across categories. Which you want depends on the
-#' question -- "what do I expect for an average subject?" or "what proportion of
-#' the population falls in each category?"
+#' These differ, sometimes substantially, because averaging and a nonlinear
+#' inverse link do not commute: the average of the transformed values is not
+#' the transform of the average. Through a softmax, the population's
+#' probabilities are pulled toward being more even across categories. Which
+#' you want depends on the question -- "what do I expect for an average
+#' subject?" or "what proportion of the population falls in each category?"
+#'
+#' Each fitted group's own effects are what [ilm_fitted()] uses, for the rows
+#' the model was fitted to, and [ilm_ranef()] returns them.
+#'
+#' `marginal` is the old name for this choice: `marginal = FALSE` is
+#' `groups = "typical"`, and `marginal = TRUE` is `groups = "population"`. It
+#' still works, with a warning, and will be removed after the next release.
 #'
 #' Under an **identity link** the two coincide exactly, because the random
-#' effects have mean zero and nothing nonlinear stands between. `marginal` is
-#' then answered in closed form rather than by simulation, so the result does
-#' not depend on `ndraw` and carries no Monte Carlo noise.
+#' effects have mean zero and nothing nonlinear stands between.
+#' `"population"` is then answered in closed form rather than by simulation,
+#' so the result does not depend on `ndraw` and carries no Monte Carlo noise.
 #'
 #' A **random slope** is averaged over as a slope. The amount being integrated
 #' over then depends on the row -- it grows with distance from wherever the
-#' slope is centred -- so the marginal and conditional curves separate by more
-#' at the ends of the range than in the middle. Averaging such a term as if it
-#' were an intercept understates that, and the error grows with the slope
-#' variance and with distance from centre.
+#' slope is centred -- so the population's curve and the typical group's
+#' separate by more at the ends of the range than in the middle. Averaging
+#' such a term as if it were an intercept understates that, and the error
+#' grows with the slope variance and with distance from centre.
 #'
 #' An **AR(1) or CAR(1) term** is averaged over too: at any one row its latent
 #' value has the stationary distribution, whatever the time. A **random walk**
@@ -419,16 +488,19 @@ ilm_rw_elapsed <- function(object, newdata) {
 #'   used to fit the model.
 #' @param type `"response"` for probabilities (the default), `"link"` for linear
 #'   predictors, or `"class"` for the most likely category.
-#' @param marginal Logical. Average over the random-effect distribution
-#'   (population-averaged) rather than setting it to zero (conditional).
+#' @param groups `"typical"` (the default) for a group with every random
+#'   effect at zero, or `"population"` for the average over the groups. See
+#'   "Which groups".
 #' @param se.fit Logical. Return standard errors.
 #' @param interval `"none"` or `"confidence"`.
 #' @param level Numeric. Interval coverage, default 0.95.
 #' @param nsim Integer. Parameter draws used for uncertainty.
-#' @param ndraw Integer. Random-effect draws used when `marginal = TRUE` for a
-#'   multinomial outcome; a single linear predictor is averaged by quadrature
-#'   and does not use it.
+#' @param ndraw Integer. Random-effect draws used when `groups =
+#'   "population"` for a multinomial outcome; a single linear predictor is
+#'   averaged by quadrature and does not use it.
 #' @param seed Integer. Random seed, so results are reproducible.
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`.
 #' @param ... Unused.
 #'
 #' @return A matrix of probabilities (or linear predictors), or a factor for
@@ -444,10 +516,15 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' @export
 predict.ilm_model <- function(object, newdata = NULL,
                          type = c("response", "link", "class"),
-                         marginal = FALSE, se.fit = FALSE,
+                         groups = c("typical", "population"), se.fit = FALSE,
                          interval = c("none", "confidence"), level = 0.95,
-                         nsim = 200L, ndraw = 200L, seed = 1L, ...) {
+                         nsim = 200L, ndraw = 200L, seed = 1L,
+                         marginal = NULL, ...) {
   type <- match.arg(type); interval <- match.arg(interval)
+  groups <- ilm_groups_arg(groups, c("typical", "population"),
+                           !missing(groups), "predict()", marginal, "marginal",
+                           c(`TRUE` = "population", `FALSE` = "typical"))
+  marginal <- identical(groups, "population")
   ## A flexible parametric model's linear predictor depends on TIME through the
   ## spline, so there is no fitted value for a covariate pattern alone. Asking
   ## for one is a question about the survival curve.
@@ -459,7 +536,8 @@ predict.ilm_model <- function(object, newdata = NULL,
          call. = FALSE)
   want_unc <- isTRUE(se.fit) || interval != "none"
   if (marginal && type == "link")
-    stop("marginal = TRUE applies on the response scale; use type = \"response\"")
+    stop("groups = \"population\" averages on the response scale; use ",
+         "type = \"response\"", call. = FALSE)
   ## needed before point() closes over it
   multinom0 <- object$C > 1L
   Tc <- contr.sum(object$J)
@@ -477,7 +555,7 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## the time since the row's group started, so each row carries its own
   ar_el <- NULL
   ## Under an identity link the average over the random effects IS the
-  ## conditional value: E[eta + z'u] = eta, because the random effects have
+  ## typical group's value: E[eta + z'u] = eta, because the random effects have
   ## mean zero and nothing nonlinear stands between. Simulating it instead
   ## returns a noisy estimate of a number already known exactly -- with 200
   ## draws and a random slope that noise reached 0.14 on the response scale.
@@ -497,13 +575,13 @@ predict.ilm_model <- function(object, newdata = NULL,
       if (is.null(Zb)) {
         ## the bar varies over something the prediction rows do not carry, so
         ## the only honest option left is the intercept part -- said out loud,
-        ## because a marginal average over less than the whole term is a
-        ## different quantity from the one that was asked for
+        ## because an average over less than the whole term is a different
+        ## quantity from the one that was asked for
         warning("the random-effect term '", names(object$re)[k], "' varies ",
                 "within a group over a column the prediction data does not ",
-                "have, so the marginal average integrates its intercept ",
-                "only. Supply that column to average over the whole term.",
-                call. = FALSE)
+                "have, so the average over the groups integrates its ",
+                "intercept only. Supply that column to average over the ",
+                "whole term.", call. = FALSE)
         f$A <- matrix(1, 1L, 1L)
         Zb  <- matrix(1, nrow(pdat), 1L)
       }
@@ -576,10 +654,12 @@ predict.ilm_model <- function(object, newdata = NULL,
                matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
     if (!multinom) {
       ## the zero part inside the integral: a hurdle's mean is not linear in
-      ## the count mean, so it cannot be applied to the average afterwards
-      gh <- ilm_gh(ilm_gh_n(sqrt(max(vrow)))); P <- 0
-      for (q in seq_along(gh$z))
-        P <- P + gh$w[q] * zi_adj(linkinv(eta[, 1] + sqrt(vrow) * gh$z[q]))
+      ## the count mean, so it cannot be applied to the average afterwards.
+      ## Through ilm_normal_expect(), so the two cannot differ: its rule is
+      ## centred where the integrand lives, which for a log link at a large
+      ## latent SD is far from zero.
+      P <- ilm_normal_expect(function(e) zi_adj(linkinv(e)), eta[, 1],
+                             sqrt(vrow))
       return(matrix(P, ncol = 1L))
     }
     P <- matrix(0, nrow(eta), object$J)

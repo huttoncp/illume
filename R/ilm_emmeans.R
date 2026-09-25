@@ -440,7 +440,7 @@ print.ilm_emm <- function(x, ...) {
     cat("\n  Category probabilities, averaged over the grid; each group's sum\n",
         "  to 1. Intervals are formed on the logit scale.",
         if (length(attr(x, "object")$re))
-          "\n  They are conditional on the random effects at zero; ilm_ame() is\n  the population-averaged comparison."
+          "\n  They are for a typical group, with the random effects at zero;\n  ilm_ame(groups = \"population\") gives the comparison averaged over\n  the groups."
         else "", "\n", sep = "")
   } else if (identical(attr(x, "family"), "multinomial")) {
     cat("\n  Each category's CENTRED log-odds: its log-probability less the\n",

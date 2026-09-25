@@ -52,8 +52,9 @@ observations per latent value as they do for \code{\link[=ilm_car1]{ilm_car1()}}
 
 \code{ilm_rw1(~ time | group)} names two columns of the model's data instead of
 passing them; see \code{\link[=ilm_ar1]{ilm_ar1()}} for why that is the safer form. It is also
-what lets \code{predict(marginal = TRUE)} place new rows on the walk, whose
-variance depends on how long after its group's first time each one falls.
+what lets \code{predict(groups = "population")} place new rows on the walk,
+whose variance depends on how long after its group's first time each one
+falls.
 }
 \examples{
 set.seed(1)

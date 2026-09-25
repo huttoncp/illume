@@ -8,13 +8,14 @@
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  marginal = FALSE,
+  groups = c("typical", "population"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
   nsim = 200L,
   ndraw = 200L,
   seed = 1L,
+  marginal = NULL,
   ...
 )
 }
@@ -27,8 +28,9 @@ used to fit the model.}
 \item{type}{\code{"response"} for probabilities (the default), \code{"link"} for linear
 predictors, or \code{"class"} for the most likely category.}
 
-\item{marginal}{Logical. Average over the random-effect distribution
-(population-averaged) rather than setting it to zero (conditional).}
+\item{groups}{\code{"typical"} (the default) for a group with every random
+effect at zero, or \code{"population"} for the average over the groups. See
+"Which groups".}
 
 \item{se.fit}{Logical. Return standard errors.}
 
@@ -38,11 +40,13 @@ predictors, or \code{"class"} for the most likely category.}
 
 \item{nsim}{Integer. Parameter draws used for uncertainty.}
 
-\item{ndraw}{Integer. Random-effect draws used when \code{marginal = TRUE} for a
-multinomial outcome; a single linear predictor is averaged by quadrature
-and does not use it.}
+\item{ndraw}{Integer. Random-effect draws used when \code{groups = "population"} for a multinomial outcome; a single linear predictor is
+averaged by quadrature and does not use it.}
 
 \item{seed}{Integer. Random seed, so results are reproducible.}
+
+\item{marginal}{Deprecated. \code{TRUE} is \code{groups = "population"}, and \code{FALSE}
+is \code{groups = "typical"}.}
 
 \item{...}{Unused.}
 }
@@ -57,35 +61,43 @@ category for a multinomial or ordinal outcome, as
 \code{nnet::multinom(type = "probs")} does -- or the linear predictor, optionally
 with standard errors and intervals.
 }
-\section{Conditional versus population-averaged}{
+\section{Which groups}{
 
-This is the choice that matters most, and there is no safe default that suits
-everyone.
+In a model with random effects every prediction is for some group, and this
+is the choice that matters most. There is no safe default that suits
+everyone. \code{groups} says which:
+\itemize{
+\item \code{"typical"} (the default) sets every random effect to zero, giving the
+prediction for a \strong{typical group}: one exactly at the average.
+\item \code{"population"} averages the prediction over the distribution of random
+effects, giving it for the \strong{population of groups as a whole}.
+}
 
-With \code{marginal = FALSE} the random effects are set to zero, giving the
-probabilities for a \strong{typical} group -- one exactly at the population
-average. With \code{marginal = TRUE} the prediction is averaged over the
-distribution of random effects, giving the probabilities for the
-\strong{population as a whole}.
+These differ, sometimes substantially, because averaging and a nonlinear
+inverse link do not commute: the average of the transformed values is not
+the transform of the average. Through a softmax, the population's
+probabilities are pulled toward being more even across categories. Which
+you want depends on the question -- "what do I expect for an average
+subject?" or "what proportion of the population falls in each category?"
 
-These differ, sometimes substantially, because averaging and the softmax
-transform do not commute: the average of the transformed values is not the
-transform of the average. The population-averaged probabilities are pulled
-toward being more even across categories. Which you want depends on the
-question -- "what do I expect for an average subject?" or "what proportion of
-the population falls in each category?"
+Each fitted group's own effects are what \code{\link[=ilm_fitted]{ilm_fitted()}} uses, for the rows
+the model was fitted to, and \code{\link[=ilm_ranef]{ilm_ranef()}} returns them.
+
+\code{marginal} is the old name for this choice: \code{marginal = FALSE} is
+\code{groups = "typical"}, and \code{marginal = TRUE} is \code{groups = "population"}. It
+still works, with a warning, and will be removed after the next release.
 
 Under an \strong{identity link} the two coincide exactly, because the random
-effects have mean zero and nothing nonlinear stands between. \code{marginal} is
-then answered in closed form rather than by simulation, so the result does
-not depend on \code{ndraw} and carries no Monte Carlo noise.
+effects have mean zero and nothing nonlinear stands between.
+\code{"population"} is then answered in closed form rather than by simulation,
+so the result does not depend on \code{ndraw} and carries no Monte Carlo noise.
 
 A \strong{random slope} is averaged over as a slope. The amount being integrated
 over then depends on the row -- it grows with distance from wherever the
-slope is centred -- so the marginal and conditional curves separate by more
-at the ends of the range than in the middle. Averaging such a term as if it
-were an intercept understates that, and the error grows with the slope
-variance and with distance from centre.
+slope is centred -- so the population's curve and the typical group's
+separate by more at the ends of the range than in the middle. Averaging
+such a term as if it were an intercept understates that, and the error
+grows with the slope variance and with distance from centre.
 
 An \strong{AR(1) or CAR(1) term} is averaged over too: at any one row its latent
 value has the stationary distribution, whatever the time. A \strong{random walk}

@@ -153,7 +153,7 @@ test_that("quantile residuals are uniform for a censored fit", {
   cs <- ilm_censor(d$y, upper = 1.8)
   f <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian", censor = cs,
                  verbose = FALSE)
-  u <- ilm_rqr(f, TRUE, 1L)
+  u <- ilm_rqr(f, seed = 1L)
   expect_gt(suppressWarnings(stats::ks.test(u, "punif")$p.value), 0.01)
   # every censored row gets its own draw, not a shared quantile
   expect_equal(length(unique(round(u[cs != 0L], 8))), sum(cs != 0L))

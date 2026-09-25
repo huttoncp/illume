@@ -124,12 +124,13 @@ ilm_scen_support <- function(mf, scen, vars) {
 #' at the average. The printed output says which was used.
 #'
 #' In a mixed model each unit's prediction is averaged over every random term
-#' -- intercepts, slopes, an AR or CAR latent -- as `predict(marginal = TRUE)`
-#' does, so the result is a population mean rather than the value for a group
-#' whose random effect happens to be zero. The estimate is that mean at the
-#' fitted parameters, so it matches `predict()` exactly and does not depend on
-#' `seed` or `sims`; the interval comes from draws of the whole parameter
-#' vector, variance components included, since the average depends on them.
+#' -- intercepts, slopes, an AR or CAR latent -- as
+#' `predict(groups = "population")` does, so the result is a population mean
+#' rather than the value for a group whose random effect happens to be zero.
+#' The estimate is that mean at the fitted parameters, so it matches
+#' `predict()` exactly and does not depend on `seed` or `sims`; the interval
+#' comes from draws of the whole parameter vector, variance components
+#' included, since the average depends on them.
 #'
 #' @section Extrapolation:
 #'
@@ -302,7 +303,8 @@ ilm_scen_par_draws <- function(object, sims) {
 #' @noRd
 ilm_scen_mean <- function(object, nd, mixed) {
   mu <- suppressWarnings(stats::predict(object, newdata = nd, type = "response",
-                                        marginal = mixed))
+                                        groups = if (mixed) "population"
+                                                 else "typical"))
   mean(as.numeric(mu))
 }
 

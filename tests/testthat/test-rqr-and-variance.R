@@ -31,7 +31,7 @@ fit_fam <- function(d, fam) {
 test_that("quantile residuals are uniform for every family", {
   d <- sim_fam()
   for (fam in c("gaussian", "poisson", "nbinom", "binomial", "multinomial")) {
-    r <- ilm_rqr(fit_fam(d, fam), TRUE, 1L)
+    r <- ilm_rqr(fit_fam(d, fam), seed = 1L)
     expect_length(r, nrow(d))
     expect_true(all(r >= 0 & r <= 1), info = fam)
     p <- suppressWarnings(stats::ks.test(r, "punif")$p.value)
@@ -44,7 +44,7 @@ test_that("quantile residuals still detect a wrong family", {
   # overdispersed counts fitted as Poisson
   f <- ilm_model(nb ~ x + (1 | g), data = d, family = "poisson",
                  verbose = FALSE)
-  p <- suppressWarnings(stats::ks.test(ilm_rqr(f, TRUE, 1L), "punif")$p.value)
+  p <- suppressWarnings(stats::ks.test(ilm_rqr(f, seed = 1L), "punif")$p.value)
   expect_lt(p, 1e-5)
 })
 

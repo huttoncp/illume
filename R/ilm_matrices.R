@@ -38,12 +38,16 @@
 #'   \describe{
 #'     \item{`X`}{the fixed design, columns as `colnames(object$X)`.}
 #'     \item{`re`}{one element per grouping term: `Z`, its design (the
-#'       intercept and slope columns); `level`, each row's group label;
+#'       intercept and slope columns, named by dimension as [ilm_ranef()]
+#'       and [ilm_draws()]' map name them, `"(Intercept)"` for a random
+#'       intercept alone); `level`, each row's group label;
 #'       `group`, its position among the fitted levels, `NA` for a new group;
 #'       `new_group`; and `factor`, the grouping variable.}
 #'     \item{`smooth`}{one penalised basis per smooth term.}
 #'     \item{`zi`, `disp`}{the zero part's and the dispersion model's designs,
-#'       when the model has them.}
+#'       when the model has them. Their columns are named as the coefficients
+#'       they multiply are, in `coef(object, full = TRUE)` and in
+#'       [ilm_draws()]' map: `"zi:(Intercept)"`, `"disp:x"`.}
 #'     \item{`ar`}{with a correlation over time, a data frame with a row per
 #'       new row: `group`, `time`, `cell`, `prev_cell`, `next_cell`,
 #'       `dt_prev`, `dt_next` and `new_group`.}
@@ -83,6 +87,11 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
     if (is.null(Z))
       stop("the random term '", nm, "' varies with a column `newdata` does not ",
            "have", call. = FALSE)
+    ## columns named as ilm_ranef() and ilm_draws()' map name the dimensions,
+    ## a random intercept alone included: an unnamed column there was read by
+    ## code built on it as no column at all
+    colnames(Z) <- if (!is.null(colnames(e$Z))) colnames(e$Z)
+      else if (e$d == 1L) "(Intercept)" else paste0("z", seq_len(e$d))
     b <- object$bars[[match(k, gk)]]
     g <- tryCatch(eval(b[[3L]], newdata, env), error = function(err) NULL)
     if (is.null(g) || length(g) != nrow(newdata))
@@ -95,10 +104,17 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
                          new_group = is.na(code),
                          factor = if (!is.null(e$factor)) e$factor else nm)
   }
-  if (!is.null(object$Zzi))
+  ## named as their coefficients are, in coef(object, full = TRUE) and in
+  ## ilm_draws()' map, so a column finds its coefficient by name, as X's do
+  if (!is.null(object$Zzi)) {
     out$zi <- ilm_zi_design(object$zi_formula, newdata, colnames(object$Zzi))
-  if (!is.null(object$disp_formula))
+    colnames(out$zi) <- paste0("zi:", colnames(object$Zzi))
+  }
+  if (!is.null(object$disp_formula)) {
     out$disp <- ilm_disp_design(object, newdata)
+    if (!is.null(out$disp))
+      colnames(out$disp) <- paste0("disp:", colnames(object$Zd))
+  }
   if (!is.null(object$ar)) {
     v <- object$ar$vars
     if (is.null(time) || is.null(group)) {
