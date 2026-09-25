@@ -10,11 +10,20 @@
     group's prediction is a spread, not one value.
 
   Each function takes the words that apply to it, with its default unchanged.
-  `predict()` and `ilm_ame()` take `"typical"` (the default) or
-  `"population"`. `ilm_fitted()`, `ilm_scores()` and `ilm_rqr()` take
-  `"fitted"` (the default) or `"typical"`. The `marginaleffects` bridge takes
-  `"population"` (the default, from the option `ilm_model.groups`) or
-  `"typical"`. Any other word is an error that says where it is answered.
+  `predict()` takes `"typical"` (the default), `"population"` or `"fitted"`,
+  and `ilm_ame()` `"typical"` (the default) or `"population"`.
+  `ilm_fitted()`, `ilm_scores()` and `ilm_rqr()` take `"fitted"` (the
+  default) or `"typical"`. The `marginaleffects` bridge takes `"population"`
+  (the default, from the option `ilm_model.groups`) or `"typical"`. Any other
+  word is an error that says where it is answered.
+  - `predict(groups = "fitted")` is new. It gives each row its own group's
+    estimated effects, as lme4's `predict()` does by default, and with a
+    correlation over time the fitted value of the row's cell. New rows are
+    matched to the fitted groups by label and to the fitted cells by time.
+    A group the fit has not seen, or a time off its group's fitted cells,
+    is an error that names `"typical"` and `"population"`, not a silent zero.
+    Its intervals draw the random effects with everything else, through
+    `ilm_draws()`.
   - The words replace `marginal` and `conditional`, which still work for one
     release, with a warning once per session: `marginal = TRUE` is
     `groups = "population"`, and `conditional = TRUE` is `groups = "fitted"`.

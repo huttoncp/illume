@@ -404,6 +404,105 @@ ilm_rw_elapsed <- function(object, newdata) {
   abs(tt - anchor)
 }
 
+## Where each prediction row sits among the fitted groups and cells, for
+## groups = "fitted": for each grouping term, the row's design and its group's
+## position among the fitted levels, and with a correlation over time the
+## row's cell. The fit's own rows carry these; new rows are placed by label,
+## through ilm_matrices(). A group the fit has not seen has no estimated
+## effect, and a time off the fitted cells has no fitted latent value -- past
+## a group's last cell it would need a forecast -- so both are refused rather
+## than given the zero a typical group has.
+#' @keywords internal
+#' @noRd
+ilm_fitted_place <- function(object, newdata) {
+  gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
+  alt <- "use groups = \"typical\" or groups = \"population\" for them"
+  if (is.null(newdata)) {
+    re <- lapply(gk, function(k)
+      list(k = k, Z = object$re[[k]]$Z, group = object$re[[k]]$group))
+    return(list(re = re, cell = if (!is.null(object$ar)) object$ar$idx))
+  }
+  for (k in gk) {
+    e <- object$re[[k]]
+    if (length(e$levels) != e$nl)
+      stop("this fit was made before its groups' labels were stored, so new ",
+           "rows cannot be matched to its groups; refit it, or ", alt,
+           call. = FALSE)
+  }
+  ar <- object$ar
+  if (!is.null(ar) && is.null(ar$vars))
+    stop("the correlation over time was built from vectors, so new rows ",
+         "cannot be placed on its fitted cells. Build it by name, ",
+         "ilm_", ar$type, "(~ time | group), or ", alt, ".", call. = FALSE)
+  M <- ilm_matrices(object, newdata)
+  re <- lapply(gk, function(k) {
+    m <- M$re[[names(object$re)[k]]]
+    if (any(m$new_group)) {
+      nw <- unique(m$level[m$new_group])
+      stop(length(nw), " group", if (length(nw) > 1L) "s" else "", " of `",
+           m$factor, "` in `newdata` (", paste(utils::head(nw, 3L),
+                                              collapse = ", "),
+           if (length(nw) > 3L) ", ..." else "", ") ",
+           if (length(nw) > 1L) "were" else "was", " not in the fit, so ",
+           if (length(nw) > 1L) "they have" else "it has", " no estimated ",
+           "effect. A new group's effect is unknown: ", alt, ".",
+           call. = FALSE)
+    }
+    list(k = k, Z = m$Z, group = m$group)
+  })
+  cell <- NULL
+  if (!is.null(ar)) {
+    a <- M$ar
+    off <- is.na(a$cell)
+    if (any(off)) {
+      i <- which(off)[1L]
+      why <- if (a$new_group[i]) "a group the fit has not seen"
+        else if (is.na(a$next_cell[i])) paste0(
+          "after its group's last fitted time, where the latent value would ",
+          "have to be forecast, which predict() does not do")
+        else "between two of its group's fitted times"
+      stop(sum(off), " row", if (sum(off) > 1L) "s" else "", " of `newdata` ",
+           if (sum(off) > 1L) "fall" else "falls", " off the correlation ",
+           "over time's fitted cells: row ", i, " is at ", format(a$time[i]),
+           " in group ", a$group[i], ", ", why, ". groups = \"fitted\" uses ",
+           "the fitted value of each row's cell; ", alt, ".", call. = FALSE)
+    }
+    cell <- a$cell
+  }
+  list(re = re, cell = cell)
+}
+
+## The fitted groups' contribution to each placed row's linear predictor: each
+## grouping term's effects for the row's group, through its design, and the
+## row's cell of a correlation over time. From the conditional modes, or from
+## a draw of them (`bvec`, and `bar` for the free cells).
+#' @keywords internal
+#' @noRd
+ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
+  S <- matrix(0, n, object$C)
+  for (r in pl$re) {
+    k <- r$k; nl <- object$nlk[k]
+    B <- ilm_Bhat_term(object, k, bvec)
+    isrr <- identical(object$re_struct[[k]]$type, "rr")
+    for (i in seq_len(object$dk[k])) {
+      ctb <- B[((i - 1L) * nl + 1L):(i * nl), , drop = FALSE][r$group, ,
+                                                               drop = FALSE]
+      if (isrr) ctb <- ctb %*% t(object$Lambda[[k]])
+      S <- S + r$Z[, i] * ctb
+    }
+  }
+  if (!is.null(pl$cell)) {
+    Ba <- if (is.null(bar)) ilm_Bar_hat(object) else {
+      free <- ilm_ar_free(object$ar)
+      Bd <- matrix(0, object$ar$n_cell, object$C)
+      Bd[free, ] <- matrix(bar, length(free), object$C)
+      Bd
+    }
+    if (!is.null(Ba)) S <- S + Ba[pl$cell, , drop = FALSE]
+  }
+  S
+}
+
 #' Predictions from a fitted model
 #'
 #' Returns the fitted mean on the response scale -- one probability per
@@ -420,16 +519,17 @@ ilm_rw_elapsed <- function(object, newdata) {
 #'   prediction for a **typical group**: one exactly at the average.
 #' * `"population"` averages the prediction over the distribution of random
 #'   effects, giving it for the **population of groups as a whole**.
+#' * `"fitted"` gives each row **its own group's** estimated effects, the
+#'   conditional modes [ilm_ranef()] reports, as lme4's `predict()` does by
+#'   default. See "A fitted group's own prediction".
 #'
-#' These differ, sometimes substantially, because averaging and a nonlinear
-#' inverse link do not commute: the average of the transformed values is not
-#' the transform of the average. Through a softmax, the population's
-#' probabilities are pulled toward being more even across categories. Which
-#' you want depends on the question -- "what do I expect for an average
-#' subject?" or "what proportion of the population falls in each category?"
-#'
-#' Each fitted group's own effects are what [ilm_fitted()] uses, for the rows
-#' the model was fitted to, and [ilm_ranef()] returns them.
+#' The first two differ, sometimes substantially, because averaging and a
+#' nonlinear inverse link do not commute: the average of the transformed
+#' values is not the transform of the average. Through a softmax, the
+#' population's probabilities are pulled toward being more even across
+#' categories. Which you want depends on the question -- "what do I expect for
+#' an average subject?" or "what proportion of the population falls in each
+#' category?"
 #'
 #' `marginal` is the old name for this choice: `marginal = FALSE` is
 #' `groups = "typical"`, and `marginal = TRUE` is `groups = "population"`. It
@@ -466,6 +566,27 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' call, and free of `ndraw`. A multinomial outcome has one dimension per category, and
 #' is averaged over `ndraw` draws with common random numbers.
 #'
+#' @section A fitted group's own prediction:
+#' `groups = "fitted"` adds each row's own group's estimated effects to the
+#' fixed part: every grouping term's, through the row's own values of any
+#' random slope, and with a correlation over time, the fitted value of the
+#' row's cell. Without `newdata` these are the rows the model was fitted to,
+#' and the prediction is [ilm_fitted()]'s. New rows are matched to the fitted
+#' groups by label, and to the fitted cells by their time and group, so a
+#' correlation over time has to have been given by name,
+#' `ilm_ar1(~ time | group)` and the like.
+#'
+#' A row that has no estimated effect is an error, rather than being given the
+#' zero a typical group has:
+#' * a group the fit has not seen, whose effect is unknown;
+#' * a time off its group's fitted cells. Past the group's last cell, the
+#'   latent value would have to be forecast, which `predict()` does not do.
+#'
+#' `groups = "typical"` or `"population"` answer for such rows instead. With
+#' `se.fit` or `interval`, the draws include the random effects and the cells,
+#' jointly with everything else, as [ilm_draws()] gives them. The intervals
+#' then carry the uncertainty in each group's own effect.
+#'
 #' @section Uncertainty:
 #' Standard errors and intervals come from simulation rather than a formula,
 #' because the softmax makes the quantity nonlinear in the parameters. Intervals
@@ -476,7 +597,8 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' coefficients. Without it only the fixed effects vary, which breaks the
 #' correlation described in `ilm_joint_draws()` and distorts intervals around
 #' smooths; a warning says so. [ilm_model()] enables it automatically when the model
-#' contains smooths.
+#' contains smooths. `groups = "fitted"` always draws jointly, as
+#' [ilm_draws()] does.
 #'
 #' Random-effect draws are held fixed across rows and across parameter draws
 #' ("common random numbers"). Without that, Monte Carlo noise would swamp
@@ -489,8 +611,9 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' @param type `"response"` for probabilities (the default), `"link"` for linear
 #'   predictors, or `"class"` for the most likely category.
 #' @param groups `"typical"` (the default) for a group with every random
-#'   effect at zero, or `"population"` for the average over the groups. See
-#'   "Which groups".
+#'   effect at zero, `"population"` for the average over the groups, or
+#'   `"fitted"` for each row's own group's estimated effects. See "Which
+#'   groups".
 #' @param se.fit Logical. Return standard errors.
 #' @param interval `"none"` or `"confidence"`.
 #' @param level Numeric. Interval coverage, default 0.95.
@@ -516,15 +639,17 @@ ilm_rw_elapsed <- function(object, newdata) {
 #' @export
 predict.ilm_model <- function(object, newdata = NULL,
                          type = c("response", "link", "class"),
-                         groups = c("typical", "population"), se.fit = FALSE,
+                         groups = c("typical", "population", "fitted"),
+                         se.fit = FALSE,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L,
                          marginal = NULL, ...) {
   type <- match.arg(type); interval <- match.arg(interval)
-  groups <- ilm_groups_arg(groups, c("typical", "population"),
+  groups <- ilm_groups_arg(groups, c("typical", "population", "fitted"),
                            !missing(groups), "predict()", marginal, "marginal",
                            c(`TRUE` = "population", `FALSE` = "typical"))
   marginal <- identical(groups, "population")
+  fitted <- identical(groups, "fitted")
   ## A flexible parametric model's linear predictor depends on TIME through the
   ## spline, so there is no fitted value for a covariate pattern alone. Asking
   ## for one is a question about the survival curve.
@@ -544,6 +669,12 @@ predict.ilm_model <- function(object, newdata = NULL,
   nd <- if (is.null(newdata)) list(X = object$X, smooths = NULL) else ilm_newX(object, newdata)
   if (is.null(newdata) && length(object$smooths))
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
+  ## each row's own group and cell, placed before anything is computed, so a
+  ## row that has none stops here
+  pl <- if (fitted) ilm_fitted_place(object, newdata) else NULL
+  ## with no groups and no cells there is nothing of a group's own to add, and
+  ## the prediction is the typical group's, intervals and all
+  if (fitted && !length(pl$re) && is.null(pl$cell)) fitted <- FALSE
 
   gk <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
   ## An AR or CAR term is a population to average over too. Its latent value at
@@ -637,8 +768,9 @@ predict.ilm_model <- function(object, newdata = NULL,
     for (q in seq_along(draws)) S <- S + draws[[q]]$Zb %*% draws[[q]]$U[[m]]
     S
   }
-  point <- function(beta, bvec = NULL) {
+  point <- function(beta, bvec = NULL, bar = NULL) {
     eta <- ilm_eta(object, nd, beta, bvec)
+    if (fitted) eta <- eta + ilm_fitted_shift(object, pl, nrow(eta), bvec, bar)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
     if (ordinal) {
       if (!integ)
@@ -686,7 +818,23 @@ predict.ilm_model <- function(object, newdata = NULL,
 
   ## ---- uncertainty by simulation -----------------------------------------
   p <- ncol(object$X); C <- object$C
-  jd <- if (!is.null(object$jointPrecision)) ilm_joint_draws(object, nsim, seed + 1L) else NULL
+  jd <- NULL
+  if (fitted) {
+    ## A fitted group's effects are estimates too, correlated with the fixed
+    ## effects, so they are drawn with everything else. ilm_draws() forms the
+    ## joint precision whether or not the fit stored it, and holds a boundary
+    ## direction exactly.
+    blk <- intersect(c("beta", "bvec", "B_ar"), names(object$obj$env$par))
+    dr <- tryCatch(ilm_draws(object, nsim = nsim, seed = seed + 1L,
+                             blocks = blk, natural = FALSE),
+                   error = function(e) e)
+    if (inherits(dr, "error")) {
+      warning("no intervals: ", conditionMessage(dr), call. = FALSE)
+      return(est)
+    }
+    jd <- list(draws = dr$draws, which = rownames(dr$draws))
+  } else if (!is.null(object$jointPrecision))
+    jd <- ilm_joint_draws(object, nsim, seed + 1L)
   if (is.null(jd)) {
     ## NOT "too narrow" -- measured, it is the opposite.  Drawing beta from its
     ## marginal covariance while HOLDING the penalised coefficients fixed breaks
@@ -709,9 +857,12 @@ predict.ilm_model <- function(object, newdata = NULL,
       acc[, , s] <- point(matrix(bb + as.vector(rnorm(length(bb)) %*% R), p, C))
   } else {
     isb <- jd$which == "beta"; isr <- jd$which == "bvec"
+    isa <- jd$which == "B_ar"
     acc <- array(0, c(nrow(est), ncol(est), nsim))
     for (s in seq_len(nsim))
-      acc[, , s] <- point(matrix(jd$draws[isb, s], p, C), jd$draws[isr, s])
+      acc[, , s] <- point(matrix(jd$draws[isb, s], p, C),
+                          if (any(isr)) jd$draws[isr, s],
+                          if (any(isa)) jd$draws[isa, s])
   }
   se <- apply(acc, 1:2, sd)
   a <- (1 - level) / 2

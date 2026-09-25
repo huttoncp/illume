@@ -23,9 +23,10 @@ ilm_groups_words <- c("fitted", "new", "typical", "population")
 #' @noRd
 ilm_groups_elsewhere <- function(word) {
   switch(word,
-    fitted = paste0("each fitted group's own effects are used for the rows ",
-                    "the model was fitted to, by ilm_fitted(), ilm_scores() ",
-                    "and ilm_rqr(); ilm_ranef() gives the effects themselves"),
+    fitted = paste0("each row's own group's effects are used by ",
+                    "predict(groups = \"fitted\"), and for the rows the model ",
+                    "was fitted to by ilm_fitted(), ilm_scores() and ",
+                    "ilm_rqr(); ilm_ranef() gives the effects themselves"),
     new = paste0("a group the fit has not seen has unknown effects, so what ",
                  "it predicts is a spread rather than one value. ",
                  "groups = \"population\" gives the spread's mean, and ",

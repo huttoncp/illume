@@ -8,7 +8,7 @@
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  groups = c("typical", "population"),
+  groups = c("typical", "population", "fitted"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
@@ -29,8 +29,9 @@ used to fit the model.}
 predictors, or \code{"class"} for the most likely category.}
 
 \item{groups}{\code{"typical"} (the default) for a group with every random
-effect at zero, or \code{"population"} for the average over the groups. See
-"Which groups".}
+effect at zero, \code{"population"} for the average over the groups, or
+\code{"fitted"} for each row's own group's estimated effects. See "Which
+groups".}
 
 \item{se.fit}{Logical. Return standard errors.}
 
@@ -71,17 +72,18 @@ everyone. \code{groups} says which:
 prediction for a \strong{typical group}: one exactly at the average.
 \item \code{"population"} averages the prediction over the distribution of random
 effects, giving it for the \strong{population of groups as a whole}.
+\item \code{"fitted"} gives each row \strong{its own group's} estimated effects, the
+conditional modes \code{\link[=ilm_ranef]{ilm_ranef()}} reports, as lme4's \code{predict()} does by
+default. See "A fitted group's own prediction".
 }
 
-These differ, sometimes substantially, because averaging and a nonlinear
-inverse link do not commute: the average of the transformed values is not
-the transform of the average. Through a softmax, the population's
-probabilities are pulled toward being more even across categories. Which
-you want depends on the question -- "what do I expect for an average
-subject?" or "what proportion of the population falls in each category?"
-
-Each fitted group's own effects are what \code{\link[=ilm_fitted]{ilm_fitted()}} uses, for the rows
-the model was fitted to, and \code{\link[=ilm_ranef]{ilm_ranef()}} returns them.
+The first two differ, sometimes substantially, because averaging and a
+nonlinear inverse link do not commute: the average of the transformed
+values is not the transform of the average. Through a softmax, the
+population's probabilities are pulled toward being more even across
+categories. Which you want depends on the question -- "what do I expect for
+an average subject?" or "what proportion of the population falls in each
+category?"
 
 \code{marginal} is the old name for this choice: \code{marginal = FALSE} is
 \code{groups = "typical"}, and \code{marginal = TRUE} is \code{groups = "population"}. It
@@ -119,6 +121,31 @@ call, and free of \code{ndraw}. A multinomial outcome has one dimension per cate
 is averaged over \code{ndraw} draws with common random numbers.
 }
 
+\section{A fitted group's own prediction}{
+
+\code{groups = "fitted"} adds each row's own group's estimated effects to the
+fixed part: every grouping term's, through the row's own values of any
+random slope, and with a correlation over time, the fitted value of the
+row's cell. Without \code{newdata} these are the rows the model was fitted to,
+and the prediction is \code{\link[=ilm_fitted]{ilm_fitted()}}'s. New rows are matched to the fitted
+groups by label, and to the fitted cells by their time and group, so a
+correlation over time has to have been given by name,
+\code{ilm_ar1(~ time | group)} and the like.
+
+A row that has no estimated effect is an error, rather than being given the
+zero a typical group has:
+\itemize{
+\item a group the fit has not seen, whose effect is unknown;
+\item a time off its group's fitted cells. Past the group's last cell, the
+latent value would have to be forecast, which \code{predict()} does not do.
+}
+
+\code{groups = "typical"} or \code{"population"} answer for such rows instead. With
+\code{se.fit} or \code{interval}, the draws include the random effects and the cells,
+jointly with everything else, as \code{\link[=ilm_draws]{ilm_draws()}} gives them. The intervals
+then carry the uncertainty in each group's own effect.
+}
+
 \section{Uncertainty}{
 
 Standard errors and intervals come from simulation rather than a formula,
@@ -130,7 +157,8 @@ If the fit was made with \code{joint = TRUE} the draws include the penalised smo
 coefficients. Without it only the fixed effects vary, which breaks the
 correlation described in \code{ilm_joint_draws()} and distorts intervals around
 smooths; a warning says so. \code{\link[=ilm_model]{ilm_model()}} enables it automatically when the model
-contains smooths.
+contains smooths. \code{groups = "fitted"} always draws jointly, as
+\code{\link[=ilm_draws]{ilm_draws()}} does.
 
 Random-effect draws are held fixed across rows and across parameter draws
 ("common random numbers"). Without that, Monte Carlo noise would swamp
