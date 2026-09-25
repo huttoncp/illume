@@ -20,7 +20,9 @@ A list with
 \describe{
 \item{\code{X}}{the fixed design, columns as \code{colnames(object$X)}.}
 \item{\code{re}}{one element per grouping term: \code{Z}, its design (the
-intercept and slope columns); \code{level}, each row's group label;
+intercept and slope columns, named by dimension as \code{\link[=ilm_ranef]{ilm_ranef()}}
+and \code{\link[=ilm_draws]{ilm_draws()}}' map name them, \code{"(Intercept)"} for a random
+intercept alone); \code{level}, each row's group label;
 \code{group}, its position among the fitted levels, \code{NA} for a new group;
 \code{new_group}; and \code{factor}, the grouping variable.}
 \item{\code{smooth}}{one penalised basis per smooth term.}

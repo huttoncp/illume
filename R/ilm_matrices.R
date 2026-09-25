@@ -38,7 +38,9 @@
 #'   \describe{
 #'     \item{`X`}{the fixed design, columns as `colnames(object$X)`.}
 #'     \item{`re`}{one element per grouping term: `Z`, its design (the
-#'       intercept and slope columns); `level`, each row's group label;
+#'       intercept and slope columns, named by dimension as [ilm_ranef()]
+#'       and [ilm_draws()]' map name them, `"(Intercept)"` for a random
+#'       intercept alone); `level`, each row's group label;
 #'       `group`, its position among the fitted levels, `NA` for a new group;
 #'       `new_group`; and `factor`, the grouping variable.}
 #'     \item{`smooth`}{one penalised basis per smooth term.}
@@ -85,6 +87,11 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
     if (is.null(Z))
       stop("the random term '", nm, "' varies with a column `newdata` does not ",
            "have", call. = FALSE)
+    ## columns named as ilm_ranef() and ilm_draws()' map name the dimensions,
+    ## a random intercept alone included: an unnamed column there was read by
+    ## code built on it as no column at all
+    colnames(Z) <- if (!is.null(colnames(e$Z))) colnames(e$Z)
+      else if (e$d == 1L) "(Intercept)" else paste0("z", seq_len(e$d))
     b <- object$bars[[match(k, gk)]]
     g <- tryCatch(eval(b[[3L]], newdata, env), error = function(err) NULL)
     if (is.null(g) || length(g) != nrow(newdata))

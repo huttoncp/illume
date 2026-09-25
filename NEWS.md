@@ -38,9 +38,12 @@
 * `ilm_matrices()` gives the designs for new rows: the fixed design, each
   random term's design with each row's group matched by label, each
   smooth's penalised basis, and the zero part's and dispersion model's
-  designs, whose columns are named as their coefficients are
-  (`"zi:(Intercept)"`, `"disp:x"`), in `coef(fit, full = TRUE)` and in
-  `ilm_draws()`' map. It also places each new row among a correlation over
+  designs. Every column is named for what it multiplies: a random term's
+  by dimension, as `ilm_ranef()` names them (`"(Intercept)"` for a random
+  intercept alone too), and the zero part's and dispersion model's as their
+  coefficients are (`"zi:(Intercept)"`, `"disp:x"`), in
+  `coef(fit, full = TRUE)` and in `ilm_draws()`' map. It also places each
+  new row among a correlation over
   time's cells: the cell it falls on, the cells either side and the time to
   each. A prediction assembled from these matrices is `predict()`'s. The
   smooth basis comes from the same code, now shared.
