@@ -31,6 +31,8 @@ beta: 90 of 249 fits at the limit; the rule flags 93, 3 of them not at it, and m
 The line alone, without the flatness test, flags 8 beta fits not at the limit: curved optima at phi up to 2.3e+15, where a correlation over time interpolates nearly noiseless data.
 After the hold: 153 negative binomial fits held; their fixed-effect standard error of x runs 0.989 to 1.000 times the Poisson refit's (median 1.000), and 242 of 242 held fits have draws of the log dispersion within 50.
 
+Gaussian residual SD at zero (500 fits; AR(1) at one observation per cell with noise SD 0.5, 0.2 and 0.05, and two random-intercept controls): at the limit when the objective does not rise by more than 1e-3 as log sigma is pushed 3 lower. 93 fits were at the limit; the rule -- sigma below 1e-3 of the response's SD, and flat within 5e-3 -- flags 89, 0 of them not at it, and misses 4, whose sigma was 0.021 to 0.034 of the response's SD. Not at the limit, sigma was at least 0.038 of it, so no line separates those few: the flatness test does. After the hold, 88 fits held, all with draws of log sigma within 50: 88 of 88.
+
 CAVEAT that must travel with this result: a fit at the limit that the
 optimiser left unconverged -- the objective still falling steeply as the
 dispersion grows -- is not held; it stays a failure, as it should.

@@ -292,6 +292,32 @@ summarise_study <- function(dir, study) {
                sum(d$draws_finite[grepl("dispersion", d$held)], na.rm = TRUE), " of ",
                sum(grepl("dispersion", d$held)), " held fits have draws of the log ",
                "dispersion within 50."),
+      {
+        ## the gaussian residual SD at zero, from dispersion_limit_gaussian.R
+        g <- read_all(dir, "^dispersion_limit_gaussian_verify.csv$")
+        if (is.null(g)) g <- read_all(dir, "^dispersion_limit_gaussian_phase1.csv$")
+        if (is.null(g)) NULL else {
+          g <- g[g$ok & !is.na(g$at), ]
+          hg <- if ("held" %in% names(g)) grepl("dispersion", g$held) else rep(FALSE, nrow(g))
+          c("",
+            paste0("Gaussian residual SD at zero (", nrow(g), " fits; AR(1) at one ",
+                   "observation per cell with noise SD 0.5, 0.2 and 0.05, and two ",
+                   "random-intercept controls): at the limit when the objective ",
+                   "does not rise by more than 1e-3 as log sigma is pushed 3 lower. ",
+                   sum(g$at), " fits were at the limit; the rule -- sigma below 1e-3 ",
+                   "of the response's SD, and flat within 5e-3 -- flags ", sum(g$rule),
+                   ", ", sum(g$rule & !g$at), " of them not at it, and misses ",
+                   sum(!g$rule & g$at), ", whose sigma was ",
+                   signif(min(g$rel[!g$rule & g$at]), 2), " to ",
+                   signif(max(g$rel[!g$rule & g$at]), 2), " of the response's SD. ",
+                   "Not at the limit, sigma was at least ", signif(min(g$rel[!g$at]), 2),
+                   " of it, so no line separates those few: the flatness test does. ",
+                   if (any(hg)) paste0("After the hold, ", sum(hg), " fits held, all ",
+                                       "with draws of log sigma within 50: ",
+                                       sum(g$draws_finite[hg], na.rm = TRUE), " of ",
+                                       sum(hg), ".") else ""))
+        }
+      },
       "",
       "CAVEAT that must travel with this result: a fit at the limit that the",
       "optimiser left unconverged -- the objective still falling steeply as the",

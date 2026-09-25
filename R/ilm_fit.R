@@ -913,7 +913,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
       if (length(lb) && lb %in% c("WARN", "FAIL")) "; the latent budget check also failed, which is the likely driver" else "") else "",
     if (!pd || anyNaN) "simplify the covariance structure; standard errors are unusable until this is resolved" else "")
   if (!is.null(disp)) {
-    w <- ilm_disp_limit_words(disp$family, disp$value)
+    w <- ilm_disp_limit_words(disp$family, disp$value, disp$ysd)
     ck <- ilm_add_check(ck, "dispersion_limit", "BOUNDARY", w$detail, w$why,
                         w$remedy)
   }
@@ -1129,7 +1129,7 @@ ilm_hessian <- function(gr, par, h = 1e-4) {
 #' @keywords internal
 #' @noRd
 ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
-                           fam = NULL) {
+                           fam = NULL, ysd = NA_real_) {
   it <- which(pn == "theta")
   blocks <- list(); flagged <- character(0)
   for (k in seq_along(re)) {
@@ -1172,8 +1172,11 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
   ## likelihood is flat in it (see ilm_disp_limit)
   keep <- which(!pn %in% c("theta", "lchol_ar", "rho_raw"))
   id <- which(pn == "logdisp")
-  if (isTRUE(fam$disp_limit) && length(id) == 1L &&
-      exp(-pe[id] / 2) < ilm_disp_limit) {
+  side <- if (is.null(fam$disp_limit)) 0L else fam$disp_limit
+  past <- if (side > 0) exp(-pe[id] / 2) < ilm_disp_limit
+          else if (side < 0) isTRUE(exp(pe[id]) / ysd < ilm_sigma_limit)
+          else FALSE
+  if (side != 0L && length(id) == 1L && isTRUE(past)) {
     blocks[["dispersion"]] <- id
     flagged <- c(flagged, "dispersion")
     keep <- setdiff(keep, id)
@@ -1200,6 +1203,14 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
 ##     were past the line, and the flatness test is what keeps them out.
 ilm_disp_limit <- 1e-2
 
+## A GAUSSIAN RESIDUAL SD AT ZERO is the same edge at the other end: with one
+## observation per cell of a correlation over time, the latent process can
+## take up all the noise. It is held by the rule for a random effect's SD --
+## below 1e-3, here of the response's SD so that the line does not depend on
+## its units -- and the same flatness test, with log sigma pushed 3 LOWER
+## (studies/scripts/dispersion_limit_gaussian.R).
+ilm_sigma_limit <- 1e-3
+
 ## ...and the likelihood flat beyond it: pushing the log dispersion 3 further
 ## -- k or phi twenty times larger -- changes the objective, with the random
 ## effects re-optimised, by at most ilm_disp_flat_tol, a deviance of 0.01.
@@ -1211,10 +1222,10 @@ ilm_disp_flat_tol <- 5e-3
 ## beyond it.
 #' @keywords internal
 #' @noRd
-ilm_disp_flat <- function(obj, par, pn, cb) {
+ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
   if (!"dispersion" %in% cb$flagged) return(cb)
   id <- cb$blocks[["dispersion"]]
-  p2 <- par; p2[id] <- p2[id] + 3
+  p2 <- par; p2[id] <- p2[id] + 3 * sign(side)
   f0 <- tryCatch(obj$fn(par), error = function(e) NA_real_)
   f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
   ## the tape last evaluated at the pushed point; put it back at the optimum
@@ -1230,40 +1241,54 @@ ilm_disp_flat <- function(obj, par, pn, cb) {
 ## fitting, summary() and vcov() -- all from here.
 #' @keywords internal
 #' @noRd
-ilm_disp_limit_words <- function(family, value = NA_real_) {
-  nb <- identical(family, "nbinom")
-  par <- if (nb) "k" else "phi"
+ilm_disp_limit_words <- function(family, value = NA_real_, ysd = NA_real_) {
+  fam <- if (identical(family, "nbinom")) "nb"
+         else if (identical(family, "gaussian")) "gauss" else "beta"
+  par <- switch(fam, nb = "k", gauss = "sigma", "phi")
+  coarsen <- paste0("coarsen a correlation over time to a grid several ",
+                    "observations share, or drop a random effect with one ",
+                    "observation per level")
+  sh <- switch(fam,
+    nb = paste0("the negative binomial's k has run to its limit: the data ",
+                "show no overdispersion beyond the model's other terms, so ",
+                "the fit is the Poisson model, and family = \"poisson\" is ",
+                "the simpler equivalent"),
+    gauss = paste0("the residual SD has run to zero: the model's other terms ",
+                   "leave no residual variation, usually because a ",
+                   "correlation over time or a random effect has about one ",
+                   "observation per cell or level and has taken up the noise"),
+    paste0("the beta's precision phi has run to its limit: the model's ",
+           "other terms carry all the variation in the data"))
   list(
     par = par,
-    detail = sprintf(
+    detail = if (fam == "gauss")
+      sprintf("sigma = %.3g, %.1e of the response's SD: at its limit, where it is held at its estimate",
+              value, value / ysd)
+    else sprintf(
       "%s = %.3g, 1 / sqrt(%s) = %.1e: at its limit, where it is held at its estimate",
       par, value, par, 1 / sqrt(value)),
-    why = if (nb)
-      paste0("the negative binomial's k has run to infinity: the data show ",
-             "no overdispersion beyond what the model's other terms carry, ",
-             "so the fit is the Poisson model, and k has no standard error")
-    else
+    why = switch(fam,
+      nb = paste0("the negative binomial's k has run to infinity: the data ",
+                  "show no overdispersion beyond what the model's other ",
+                  "terms carry, so the fit is the Poisson model, and k has ",
+                  "no standard error"),
+      gauss = paste0("the residual SD has run to zero: the model's other ",
+                     "terms leave no residual variation, so sigma has no ",
+                     "standard error -- usually a correlation over time or a ",
+                     "random effect with about one observation per cell or ",
+                     "level, which has taken up the noise"),
       paste0("the beta's precision phi has run to infinity: the model's ",
              "other terms carry all the variation in the data, so phi has ",
              "no standard error -- usually a random effect or a correlation ",
-             "over time with about one observation per level or cell"),
-    remedy = if (nb)
-      paste0("family = \"poisson\" is the simpler equivalent: the same fit, ",
-             "with the same fixed effects and standard errors, and one ",
-             "parameter fewer. The fixed effects here are usable as they are")
-    else
-      paste0("the fixed effects are usable as they are; the term absorbing ",
-             "the variation is worth a look -- coarsen a correlation over ",
-             "time to a grid several observations share, or drop a random ",
-             "effect with one observation per level"),
-    short = sh <- if (nb)
-      paste0("the negative binomial's k has run to its limit: the data show ",
-             "no overdispersion beyond the model's other terms, so the fit is ",
-             "the Poisson model, and family = \"poisson\" is the simpler ",
-             "equivalent")
-    else
-      paste0("the beta's precision phi has run to its limit: the model's ",
-             "other terms carry all the variation in the data"),
+             "over time with about one observation per level or cell")),
+    remedy = switch(fam,
+      nb = paste0("family = \"poisson\" is the simpler equivalent: the same ",
+                  "fit, with the same fixed effects and standard errors, and ",
+                  "one parameter fewer. The fixed effects here are usable as ",
+                  "they are"),
+      paste0(coarsen, ", so that the residual and the latent values are told ",
+             "apart. The fixed effects here are usable as they are")),
+    short = sh,
     Short = sub("^the", "The", sh))
 }
 
@@ -2400,8 +2425,13 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     list(Sig = Sig, Sigd = Sigd, Lams = Lams)
   }
   s <- structs(opt$par)
+  ## the response's spread, for a gaussian SD's line; finite values only, so a
+  ## censored row's open bound does not count
+  ysd <- if (identical(fam$name, "gaussian")) {
+    yy <- as.numeric(y); stats::sd(yy[is.finite(yy)])
+  } else NA_real_
   cb <- ilm_cov_blocks(re, s$Sig, s$Sigd, ty, rk, dk, toff, ar, opt$par, pn,
-                       fam)
+                       fam, ysd)
 
   ## AT A BOUNDARY the optimiser chases a log standard deviation towards minus
   ## infinity along a ridge the likelihood is flat on, and nlminb stops with
@@ -2429,7 +2459,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
         opt <- o2
         s <- structs(opt$par)
         cb <- ilm_cov_blocks(re, s$Sig, s$Sigd, ty, rk, dk, toff, ar,
-                             opt$par, pn, fam)
+                             opt$par, pn, fam, ysd)
       }
       ## the tape last evaluated wherever nlminb stopped; put it at the optimum
       invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
@@ -2462,7 +2492,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## that sits at its boundary rather than lose the fixed effects along with
   ## it (see ilm_hess_recover()). This has to come before the REML block
   ## below, which reads the joint precision out of sdr.
-  cb <- ilm_disp_flat(obj, opt$par, pn, cb)
+  cb <- ilm_disp_flat(obj, opt$par, pn, cb,
+                      side = if (is.null(fam$disp_limit)) 1L else fam$disp_limit)
   hess <- ilm_hess_recover(obj, opt, sdr, cb, joint || reml)
   sdr <- hess$sdr
 
@@ -2503,7 +2534,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                     ar_type = ar$type,
                     disp = if ("dispersion" %in% cb$flagged)
                       list(family = fam$name,
-                           value = exp(opt$par[pn == "logdisp"])))
+                           value = exp(opt$par[pn == "logdisp"]), ysd = ysd))
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {

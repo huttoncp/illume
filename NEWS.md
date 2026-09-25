@@ -15,7 +15,12 @@
   model's other terms and that `family = "poisson"` is the simpler
   equivalent. The fixed effects' standard errors are then the Poisson
   model's. The line and the flatness test were measured on 600 simulated
-  fits (`studies/scripts/dispersion_limit.R`). Found by another agent.
+  fits (`studies/scripts/dispersion_limit.R`). A gaussian residual SD at
+  zero -- a correlation over time at one observation per cell taking up all
+  the noise -- is held the same way, when sigma is below 1e-3 of the
+  response's SD and the likelihood is flat below it; there the remedy is to
+  coarsen the grid (`studies/scripts/dispersion_limit_gaussian.R`). Found by
+  another agent.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner

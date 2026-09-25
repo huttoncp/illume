@@ -86,3 +86,29 @@ test_that("a beta's phi is held at its limit, and not at a curved optimum", {
   expect_lt(exp(-f2$opt$par[names(f2$opt$par) == "logdisp"] / 2), 1e-2)
   expect_false("dispersion" %in% f2$hessian_held)
 })
+
+## The gaussian study's AR(1) design at one observation per cell: the latent
+## process can take up all the noise (studies/scripts/dispersion_limit_gaussian.R)
+dl_gauss <- function(seed, noise = 0.5) {
+  set.seed(seed); G <- 20; Tn <- 16
+  d <- expand.grid(t = seq_len(Tn), g = factor(seq_len(G)))
+  lat <- unlist(lapply(seq_len(G), function(i) as.numeric(
+    stats::arima.sim(list(ar = 0.7), Tn, sd = 0.8 * sqrt(1 - 0.49)))))
+  d$x <- stats::rnorm(nrow(d))
+  d$y <- 0.5 + 0.3 * d$x + lat + stats::rnorm(nrow(d), 0, noise)
+  d
+}
+
+test_that("a gaussian residual SD at zero is held, and a healthy one is not", {
+  expect_message(f <- dl_fit(dl_gauss(6027), "gaussian"),
+                 "residual SD has run to zero")
+  expect_true("dispersion" %in% f$hessian_held)
+  ck <- f$checks[f$checks$check == "dispersion_limit", ]
+  expect_identical(ck$status, "BOUNDARY")
+  expect_match(ck$suggestion, "^coarsen")
+  dr <- ilm_draws(f, nsim = 50, seed = 1, natural = FALSE)
+  ld <- dr$draws[rownames(dr$draws) == "logdisp", ]
+  expect_true(all(ld == ld[1]))
+  f2 <- suppressMessages(dl_fit(dl_gauss(6008), "gaussian"))
+  expect_false("dispersion" %in% f2$hessian_held)
+})

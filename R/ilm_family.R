@@ -151,6 +151,9 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
     gaussian = list(
       name = "gaussian", link = "identity", n_disp = 1L,
       disp_names = "log_sigma", C_of = function(J) 1L, censorable = TRUE,
+      ## sigma can run to zero, where the model's other terms take up all
+      ## the variation (see ilm_disp_limit): downwards on the log scale
+      disp_limit = -1L,
       nll = function(eta, y, w, disp, cens = NULL, logsig = NULL, ...) {
         ## logsig is a dispersion MODEL: one log standard deviation per row,
         ## in place of the single parameter. dnorm vectorises over it, so
@@ -213,8 +216,8 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
       name = "nbinom", link = "log", n_disp = 1L, zi_ok = TRUE,
       disp_names = "log_k", C_of = function(J) 1L,
       ## k can run to infinity, where the model is the Poisson (see
-      ## ilm_disp_limit)
-      disp_limit = TRUE,
+      ## ilm_disp_limit): upwards on the log scale
+      disp_limit = 1L,
       nll = function(eta, y, w, disp, logsig = NULL, ...) {
         mu <- exp(eta[, 1]); k <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
         -sum(w * dnbinom2(y, mu = mu, var = mu + mu * mu / k, log = TRUE))
@@ -249,8 +252,8 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
       name = "beta", link = "logit", n_disp = 1L,
       disp_names = "phi", C_of = function(J) 1L, unit = TRUE,
       ## phi can run to infinity, where the model's other terms carry all
-      ## the variation (see ilm_disp_limit)
-      disp_limit = TRUE,
+      ## the variation (see ilm_disp_limit): upwards on the log scale
+      disp_limit = 1L,
       ## A zero part is available, but only as a hurdle. A CONTINUOUS density
       ## has no mass at zero, so there is no "the count produced a zero on its
       ## own" route for a mixture to add -- every zero came from the zero
