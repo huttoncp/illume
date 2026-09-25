@@ -69,7 +69,7 @@ test_that("the old argument given by position is read as before", {
 
 test_that("the words are checked, and a word not taken says where it is", {
   f <- grp_fit()
-  expect_error(predict(f, groups = "fitted"), "ilm_fitted()", fixed = TRUE)
+  expect_error(ilm_fitted(f, groups = "new"), "unknown effects")
   expect_error(predict(f, groups = "new"), "a spread rather than one value")
   expect_error(ilm_ame(f, groups = "fitted"),
                "ilm_ame() takes groups = \"typical\" or \"population\"",
@@ -86,7 +86,7 @@ test_that("the words are checked, and a word not taken says where it is", {
   ## a unique abbreviation is the word, and the whole default is the default
   expect_identical(predict(f, groups = "pop"),
                    predict(f, groups = "population"))
-  expect_identical(predict(f, groups = c("typical", "population")),
+  expect_identical(predict(f, groups = c("typical", "population", "fitted")),
                    predict(f))
 })
 
