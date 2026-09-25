@@ -90,11 +90,21 @@ to a common length.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The number of nodes grows with the spread: 40 times the smallest whole
 number at least <code>sd^2</code>, and no more than 800, with one rule for the whole
-call, set by the largest <code>sd</code>. The rules are computed once and cached.
-Measured against <code><a href="https://rdrr.io/r/stats/integrate.html" class="external-link">stats::integrate()</a></code>, through an inverse link that is
-better than 1e-12 with a logit up to <code>sd = 6</code>, and better than 1e-9 with a
-complementary log-log up to <code>sd = 5</code>. For any other integrand, check the
-accuracy it needs; <code>n</code> sets the number of nodes directly.</p>
+call, set by the largest <code>sd</code>. The rules are computed once and cached.</p>
+<p>The rule is centred where <code>h(eta + sd * z)</code> times the normal density
+peaks, when that is more than two standard deviations from zero. For a
+bounded <code>h</code>, such as an inverse link, it rarely is, and the rule is the
+plain one. For an <code>h</code> that grows, the mass moves away: under a log link
+it sits at <code>z = sd</code>, where a rule centred at zero has almost no nodes.</p>
+<p>Accuracy, measured against a fine grid over <code>eta</code> from -12 to 8:</p><ul><li><p>better than 1e-12 through a logit up to <code>sd = 6</code>;</p></li>
+<li><p>better than 5e-9 through a complementary log-log up to <code>sd = 5</code>, and
+5e-8 at 6;</p></li>
+<li><p>better than 1e-13 for <code>exp</code>, whose expectation is <code>exp(eta + sd^2/2)</code>,
+up to <code>sd = 20</code>.</p></li>
+</ul><p>Past that, an integrand growing as fast as <code>exp</code> overflows double
+precision at the nodes, and the result is <code>Inf</code>, never <code>NaN</code>. For any
+other integrand, check the accuracy it needs; <code>n</code> sets the number of
+nodes directly.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

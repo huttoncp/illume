@@ -163,6 +163,16 @@
 - A fit keeps each grouping term’s level labels, and a refit keeps them
   too.
 
+- Fixed: a smooth with a factor `by`, `s(x, by = f)`, kept only the
+  first level’s curve. mgcv makes one smooth per level (per level after
+  the first, for an ordered factor), and only the first was taken; every
+  other level had no curve, and nothing said so. On three levels with
+  their own curves, predictions at x = 0.25 came out 1.85, 1.94 and 3.91
+  where the truth was 2, 1 and 3.5, and mgcv gave 1.85, 0.95 and 3.40.
+  Such a smooth is now an error naming each level’s smooth, until illume
+  fits one per level. A numeric `by` is one smooth, and is unaffected.
+  Found by another agent.
+
 - Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
 
   - **The covariance shrank.** Its “inflated” covariance was built from
@@ -385,6 +395,28 @@
   on it no longer move with the seed. A multinomial outcome is still
   averaged by draws, now including an AR term.
 
+- Fixed: the quadrature behind a population average, and
+  [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md),
+  lost an integrand that grows, such as the mean under a log link, at a
+  large latent SD. `exp(eta + sd z)` times the normal density peaks at
+  `z = sd`, where a rule centred at zero has almost no nodes.
+
+  - **What it did.** At an SD of 10 the mean was 0.2% low, and at 12,
+    19% low. From 13.8 the outer terms overflowed against weights that
+    had underflowed to zero, and the result was `NaN`. Draws of a
+    variance reach those SDs with few groups.
+  - **Now.** The rule is centred where the integrand peaks, when that is
+    more than two SDs from zero. A log link’s mean is exact to 1e-13 up
+    to an SD of 20, and past that it is `Inf`, never `NaN`.
+  - **Unaffected.** A bounded integrand, such as an inverse logit, peaks
+    near zero and keeps the plain rule: its accuracy is unchanged, and
+    better than 1e-12 through a logit up to an SD of 6.
+  - [`predict()`](https://rdrr.io/r/stats/predict.html) now averages
+    through
+    [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
+    itself, so the two cannot differ.
+  - Found by another agent.
+
 - Fixed: `ilm_emmeans(type = "response")` on a beta model returned the
   link-scale means: 0.37 where the proportion was 0.59. The inverse link
   was chosen by switching on the family’s name, and beta fell through to
@@ -474,6 +506,20 @@
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
   example, which never ran, is replaced by ones that do.
 
+- Fixed: a new install could not fit any model from a formula. Every
+  formula passes through lme4’s bar parser, bars or none, and that
+  parser lives in reformulas, which illume only suggested. With neither
+  reformulas nor lme4 installed, as after a plain
+  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html),
+  even `y ~ x` stopped with “the formula interface needs reformulas (or
+  lme4)”. reformulas (\>= 0.4.0) is now imported. It is small: beyond
+  what R ships, it brings only Rdpack and rbibutils.
+
+  - mgcv is imported too. Every formula is read by its
+    `interpret.gam()`, so it was needed just as unconditionally. It
+    ships with R, so this costs nothing, and it lets the “mgcv is
+    required” check before each fit go.
+
 - [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
   defaults to `family = "gaussian"`, as
   [`glm.fit()`](https://rdrr.io/r/stats/glm.html) does, and to no random
@@ -523,6 +569,33 @@
   function that moved to illumex. Counted as the package counts them,
   the multinomial cells cover at 0.946 to 0.954, and the fits held at a
   boundary, on their own, at 0.942 to 0.955.
+
+- Fixed: a lone variance at zero, such as a random intercept’s, was
+  flagged as sitting at its boundary but was not held there. A boundary
+  term’s directions are held when they are flat against its most curved
+  one. A single variance has nothing to be flat against, and neither
+  does any covariance flat in every direction, so nothing was held.
+
+  - **What it did.** On a binary random intercept at an SD of 6e-5, its
+    log-SD kept a standard error of 8714. Draws of it ran to infinity,
+    so half of
+    [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)’
+    natural-scale variances were `Inf`.
+  - **Now.** A block’s largest curvature is taken as at least 0.1 on the
+    log-SD scale, so a direction with a standard error above 100 there
+    is held, as every other flat direction is.
+  - **Unaffected.** The fixed effects’ standard errors were right before
+    and are unchanged, equal to the model’s without the term. A
+    covariance with a curved direction is judged exactly as before,
+    which covers every fit in the boundary study.
+  - Found by another agent.
+
+- [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)’s
+  help said it returns category codes. That is true only for a
+  multinomial or ordinal outcome. For every other family it returns the
+  response on its own scale, and the help now says so. It also says that
+  each dataset draws new random effects, and how a censored response is
+  censored.
 
 ## illume 0.0.7.9000
 

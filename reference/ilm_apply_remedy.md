@@ -73,14 +73,14 @@ rem <- ilm_remedies(f)
 rem
 #> 2 remedies
 #> 
-#> [1] structural -- variance_boundary (WARN)
+#> [1] structural -- hessian, variance_boundary (BOUNDARY, WARN)
 #>     drop 'g': its variance is estimated at zero, so the fixed effects are
 #>     the same without it and their standard errors barely move. Keep it
 #>     instead if the design calls for it -- repeated measures, say -- since a
 #>     zero estimate is not evidence of no clustering
 #>     change: formula = y ~ x
 #> 
-#> [2] structural -- variance_boundary (WARN)
+#> [2] structural -- hessian, variance_boundary (BOUNDARY, WARN)
 #>     refit with boundary = "avoid", a small penalty that keeps every
 #>     random-effect covariance inside its range. Each variance is then
 #>     assumed nonzero rather than estimated at zero, so do not test whether
@@ -96,11 +96,12 @@ rem
 #> only by choice.
 f2 <- ilm_apply_remedy(f, rem, 1)
 #> ilm_apply_remedy(): refitted with formula = y ~ x.
+#>   hessian: BOUNDARY -> OK
 #>   variance_boundary: WARN -> no longer checked, as the term is gone
 #>   every check is OK after the refit
 f2$remedy_log
-#>               check status       tier
-#> 1 variance_boundary   WARN structural
+#>                        check         status       tier
+#> 1 hessian, variance_boundary BOUNDARY, WARN structural
 #>                                                                                                                                                                                                                                                            remedy
 #> 1 drop 'g': its variance is estimated at zero, so the fixed effects are the same without it and their standard errors barely move. Keep it instead if the design calls for it -- repeated measures, say -- since a zero estimate is not evidence of no clustering
 #>            change

@@ -36,11 +36,27 @@ The expectation for each element: a vector shaped as `h(eta)`.
 The number of nodes grows with the spread: 40 times the smallest whole
 number at least `sd^2`, and no more than 800, with one rule for the
 whole call, set by the largest `sd`. The rules are computed once and
-cached. Measured against
-[`stats::integrate()`](https://rdrr.io/r/stats/integrate.html), through
-an inverse link that is better than 1e-12 with a logit up to `sd = 6`,
-and better than 1e-9 with a complementary log-log up to `sd = 5`. For
-any other integrand, check the accuracy it needs; `n` sets the number of
+cached.
+
+The rule is centred where `h(eta + sd * z)` times the normal density
+peaks, when that is more than two standard deviations from zero. For a
+bounded `h`, such as an inverse link, it rarely is, and the rule is the
+plain one. For an `h` that grows, the mass moves away: under a log link
+it sits at `z = sd`, where a rule centred at zero has almost no nodes.
+
+Accuracy, measured against a fine grid over `eta` from -12 to 8:
+
+- better than 1e-12 through a logit up to `sd = 6`;
+
+- better than 5e-9 through a complementary log-log up to `sd = 5`, and
+  5e-8 at 6;
+
+- better than 1e-13 for `exp`, whose expectation is `exp(eta + sd^2/2)`,
+  up to `sd = 20`.
+
+Past that, an integrand growing as fast as `exp` overflows double
+precision at the nodes, and the result is `Inf`, never `NaN`. For any
+other integrand, check the accuracy it needs; `n` sets the number of
 nodes directly.
 
 ## See also

@@ -104,14 +104,14 @@ f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 ilm_remedies(f)
 #> 2 remedies
 #> 
-#> [1] structural -- variance_boundary (WARN)
+#> [1] structural -- hessian, variance_boundary (BOUNDARY, WARN)
 #>     drop 'g': its variance is estimated at zero, so the fixed effects are
 #>     the same without it and their standard errors barely move. Keep it
 #>     instead if the design calls for it -- repeated measures, say -- since a
 #>     zero estimate is not evidence of no clustering
 #>     change: formula = y ~ x
 #> 
-#> [2] structural -- variance_boundary (WARN)
+#> [2] structural -- hessian, variance_boundary (BOUNDARY, WARN)
 #>     refit with boundary = "avoid", a small penalty that keeps every
 #>     random-effect covariance inside its range. Each variance is then
 #>     assumed nonzero rather than estimated at zero, so do not test whether

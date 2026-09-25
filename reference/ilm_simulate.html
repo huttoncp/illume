@@ -80,8 +80,20 @@ model's family – a category for a multinomial or ordinal outcome.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An integer matrix with one column per simulated dataset, each holding
-category codes.</p>
+    <p>A matrix with one row per observation and one column per simulated
+dataset, holding the response on its own scale: a measurement, a count, a
+proportion of trials for a binomial response with trials, a time for a
+survival one. For a multinomial or ordinal outcome it holds category codes,
+as an integer matrix for the multinomial.</p>
+<p>Each dataset draws new random effects, and a new path of any correlation
+over time, from their fitted distributions: it is a new sample of groups,
+not the fitted groups again.</p>
+<p>A censored response is censored as the data were. A survival time is the
+smaller of the drawn event time and the subject's censoring time: the
+observed time for a subject who was censored, and for one who had the
+event, a time drawn from the censoring distribution estimated from the
+data. A value at or beyond its censoring time is a censored one. A
+response with a floor or ceiling is held at that limit.</p>
     </div>
     <div class="section level2">
     <h2 id="why-this-is-central">Why this is central<a class="anchor" aria-label="anchor" href="#why-this-is-central"></a></h2>
