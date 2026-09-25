@@ -8,13 +8,17 @@ Delete this file once the queue is empty.
 
 ## Where things stand (2026-09-24, evening)
 
-- **Merged:** PRs #6 to #11: the 0.0.8.9000 bump, the interpretation work, the
-  remedies and REML documentation, the joint-draw order (D1), averaging over
-  every random term (D2 to D4) and the quadrature and scenario follow-up.
-  Both packages were rebuilt from main and installed into Craig's R 4.4 and
-  R 4.6.1 libraries after #11.
-- **In review:** `random-walk`, which adds `ilm_rw1()`, the by-name form
-  `~ time | group` for all three structures over time, and `ilm_cells()`.
+- **Merged:** PRs #6 to #13 in illume and #4 in illumex. They cover the
+  0.0.8.9000 bump, the interpretation work, the remedies and REML
+  documentation, the joint-draw order (D1), averaging over every random term
+  (D2 to D4), the quadrature and scenario follow-up, the random walk with
+  `ilm_cells()`, and the padding in the prose numbers. Both packages were
+  rebuilt from main (illume d793812, illumex c98ea7a) and installed into
+  Craig's R 4.4 and R 4.6.1 libraries.
+- **In review:** `kr-fix`, which fixes Kenward-Roger. The old one shrank the
+  covariance, took Satterthwaite's df, and its gate did not refuse what it
+  said it refused. A review found it, and Craig put it ahead of the queue
+  below.
 - **Next, in the order agreed with Craig:**
   1. The exports another agent asked for, which Craig approved:
      `ilm_matrices()` (new rows placed among the cells), `ilm_draws()` (joint

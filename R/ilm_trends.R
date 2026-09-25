@@ -173,6 +173,12 @@ ilm_trends <- function(object, specs, var, at = NULL,
   ## from zero is the question here, unlike a marginal mean, so the reference
   ## has to be right rather than merely available.
   ddf <- ilm_trend_df(object, L, df)
+  ## Kenward-Roger's t is the estimate over its ADJUSTED standard error, on
+  ## its df; the df alone, beside the unadjusted one, is neither method
+  if (!is.null(attr(ddf, "V"))) {
+    Vem <- L %*% attr(ddf, "V") %*% t(L)
+    se <- sqrt(pmax(diag(Vem), 0))
+  }
   stat <- est / se
   pval <- if (is.finite(ddf[1])) 2 * stats::pt(-abs(stat), ddf) else
     2 * stats::pnorm(-abs(stat))
@@ -255,6 +261,21 @@ ilm_trend_df <- function(object, L, df) {
   meth <- match.arg(as.character(df)[1],
                     c("auto", "satterthwaite", "kenward-roger", "residual",
                       "asymptotic"))
+  ## Kenward-Roger's adjusted covariance is computed once and serves every
+  ## row, and it comes back with the df because the standard errors need it.
+  ## Asked for where it is not available, it says why instead of quietly
+  ## becoming a z test.
+  if (identical(meth, "kenward-roger") &&
+      identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)) {
+    ok <- ilm_kr_applicable(object)
+    if (!isTRUE(ok))
+      stop("Kenward-Roger is not available for this model: ", ok,
+           ". `df = \"satterthwaite\"` does apply here.", call. = FALSE)
+    parts <- ilm_kr_parts(object)
+    out <- vapply(seq_len(nrow(L)), function(i)
+      ilm_df_kr(object, L[i, , drop = FALSE], parts = parts)$df, numeric(1))
+    return(structure(out, method = "kenward-roger", V = parts$PhiA))
+  }
   out <- vapply(seq_len(nrow(L)), function(i) {
     r <- tryCatch(ilm_denom_df(object, L[i, , drop = FALSE], method = meth),
                   error = function(e) list(df = Inf, method = "asymptotic"))
