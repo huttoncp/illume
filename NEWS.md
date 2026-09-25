@@ -1,6 +1,21 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* A dispersion at its unbounded limit is held as a covariance at its
+  boundary is. A negative binomial's k, or a beta's precision phi, can run off
+  to infinity when the model's other terms -- a correlation over time, a
+  random intercept -- carry all the variation. The optimiser then stopped
+  wherever the gradient got small, with a standard error to match, and draws
+  of log k spanned hundreds either way, reaching a k of zero where `rnbinom()`
+  returns NA. Such a fit is now held when 1 / sqrt(k) (or phi) is below 1e-2
+  and the likelihood is flat beyond it: `fit$hessian_held` names
+  `"dispersion"`, the new check `dispersion_limit` is BOUNDARY, `ilm_draws()`
+  leaves it fixed, and `summary()`, `print()`, the message at fitting and
+  `ilm_remedies()` say that the data show no overdispersion beyond the
+  model's other terms and that `family = "poisson"` is the simpler
+  equivalent. The fixed effects' standard errors are then the Poisson
+  model's. The line and the flatness test were measured on 600 simulated
+  fits (`studies/scripts/dispersion_limit.R`). Found by another agent.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner

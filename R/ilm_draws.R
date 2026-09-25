@@ -206,6 +206,7 @@ ilm_held_coords <- function(object, rn) {
   it <- which(rn == "theta")
   for (nm in object$hessian_held) {
     if (identical(nm, "ar")) { h[rn %in% c("lchol_ar", "rho_raw")] <- TRUE; next }
+    if (identical(nm, "dispersion")) { h[rn == "logdisp"] <- TRUE; next }
     k <- match(nm, names(object$re))
     if (is.na(k)) next
     h[it[(object$toff[k] + 1L):object$toff[k + 1L]]] <- TRUE

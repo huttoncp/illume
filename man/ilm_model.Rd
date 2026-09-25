@@ -193,6 +193,15 @@ The penalty is small against the likelihood, so it matters only where
 the data cannot resolve the covariance, and \code{logLik()} reports the
 likelihood of the data at the penalised estimate.
 
+A dispersion at its unbounded limit is held the same way whichever is
+chosen: a negative binomial's k, or a beta's precision phi, run off to
+infinity because the model's other terms carry all the variation. Such a
+fit is held when 1 / sqrt(k) (or phi) is below 1e-2 and the likelihood
+is flat beyond it, and says so: \code{fit$hessian_held} names
+\code{"dispersion"}, the check \code{dispersion_limit} is BOUNDARY, and the fixed
+effects keep their standard errors -- for the negative binomial, exactly
+the Poisson model's, and \code{family = "poisson"} is the simpler equivalent.
+
 Measured against \code{"hold"} on a three-category outcome with 60 groups of
 8, 400 datasets per condition: with a true between-group SD of 0.05,
 every \code{"avoid"} fit was usable against 395 of 400 under \code{"hold"}, and the

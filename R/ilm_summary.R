@@ -229,6 +229,8 @@ Dispersion model: ", deparse(o$disp_formula), "
       note <- if (lab == "sigma") "   (residual standard deviation)"
               else if (lab == "k") "   (smaller means more overdispersion)"
               else ""
+      if ("dispersion" %in% o$boundary_terms)
+        note <- "   (at its limit, and held there: see the checks below)"
       cat(sprintf(" %-8s %.4f%s\n", lab, o$dispersion[[nm]], note))
     }
   }
@@ -294,11 +296,20 @@ Dispersion model: ", deparse(o$disp_formula), "
       cat(sprintf("  [%s] %s: %s\n", bad$status[i], bad$check[i], bad$detail[i]))
     if (nrow(bad) > 4L) cat(sprintf("  ... and %d more; see fit$checks\n", nrow(bad) - 4L))
     if (nf) cat("  >> FAIL means the standard errors above are not usable.\n")
-    else if (nb) {
+    dl <- "dispersion" %in% o$boundary_terms
+    if (!nf && nb) {
       at <- ilm_boundary_at(o)
-      ilm_trust_note(intersect(o$hessian_held, at), at,
-                     avoided = identical(o$boundary, "avoid"))
+      if (length(at) || !dl)
+        ilm_trust_note(intersect(o$hessian_held, at), at,
+                       avoided = identical(o$boundary, "avoid"))
     }
+    ## said whatever else failed: which family the fit is, is worth knowing
+    if (dl)
+      writeLines(strwrap(paste0(">> ", ilm_disp_limit_words(fam)$Short, ".",
+                                if (!nf) paste(" The fixed effects, their",
+                                               "standard errors and tests are",
+                                               "usable.") else ""),
+                         width = 78, indent = 2, exdent = 5))
     if (nf + nw + nb)
       cat("  ilm_remedies() writes out a remedy for each, as the change to make.\n")
   }
@@ -312,7 +323,7 @@ Dispersion model: ", deparse(o$disp_formula), "
 #' @noRd
 ilm_boundary_at <- function(o) {
   basis <- names(o$re)[vapply(o$re, function(e) identical(e$kind, "basis"), TRUE)]
-  setdiff(union(o$hessian_held, o$boundary_terms), basis)
+  setdiff(union(o$hessian_held, o$boundary_terms), c(basis, "dispersion"))
 }
 
 ## The same verdict as ilm_trust_note(), as sentences for ilm_interpret(), so
@@ -407,6 +418,8 @@ print.ilm_model <- function(x, ...) {
     if (length(at))
       sprintf("  [BOUNDARY: %s at a boundary; fixed effects usable]",
               paste(at, collapse = ", "))
+    else if ("dispersion" %in% x$boundary_terms)
+      "  [BOUNDARY: dispersion at its limit; fixed effects usable]"
     else ""
   if (isTRUE(x$ordinal)) {
     ## the flag used to be a sixth argument to a five-placeholder format, so

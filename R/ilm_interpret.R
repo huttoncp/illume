@@ -769,10 +769,18 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     }
     ## a covariance at its boundary: which parts of the fit stand, in the same
     ## words summary() uses
-    if (bnd)
+    at <- ilm_boundary_at(object)
+    if (bnd && (length(at) || !"dispersion" %in% object$boundary_terms))
       dl <- c(dl, paste("BOUNDARY --",
-                        ilm_trust_text(object$hessian_held, ilm_boundary_at(object),
+                        ilm_trust_text(setdiff(object$hessian_held, "dispersion"),
+                                       at,
                                        avoided = identical(object$boundary, "avoid"))))
+    ## a dispersion at its limit, in the words summary() uses
+    if (bnd && "dispersion" %in% object$boundary_terms)
+      dl <- c(dl, paste0("BOUNDARY -- ",
+                         ilm_disp_limit_words(object$family$name)$Short,
+                         ". The fixed effects, their standard errors and ",
+                         "tests are usable."))
   }
   sec$diagnostics <- dl
 

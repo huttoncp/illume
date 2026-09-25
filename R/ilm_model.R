@@ -234,6 +234,15 @@ ilm_need_bars <- function()
 #'   the data cannot resolve the covariance, and `logLik()` reports the
 #'   likelihood of the data at the penalised estimate.
 #'
+#'   A dispersion at its unbounded limit is held the same way whichever is
+#'   chosen: a negative binomial's k, or a beta's precision phi, run off to
+#'   infinity because the model's other terms carry all the variation. Such a
+#'   fit is held when 1 / sqrt(k) (or phi) is below 1e-2 and the likelihood
+#'   is flat beyond it, and says so: `fit$hessian_held` names
+#'   `"dispersion"`, the check `dispersion_limit` is BOUNDARY, and the fixed
+#'   effects keep their standard errors -- for the negative binomial, exactly
+#'   the Poisson model's, and `family = "poisson"` is the simpler equivalent.
+#'
 #'   Measured against `"hold"` on a three-category outcome with 60 groups of
 #'   8, 400 datasets per condition: with a true between-group SD of 0.05,
 #'   every `"avoid"` fit was usable against 395 of 400 under `"hold"`, and the
@@ -811,6 +820,14 @@ ilm_model_formula <- function(formula, data, family = "auto",
               "it is; its variance comes out larger, and for a binary or ",
               "categorical outcome the fixed effects a little further from ",
               "zero -- markedly so when a category is rare.")
+  }
+  ## a dispersion at its limit is held whatever `boundary` says: that
+  ## argument's penalty is on the covariances, not on the dispersion
+  if ("dispersion" %in% fit$boundary_terms) {
+    w <- ilm_disp_limit_words(fit$family$name)
+    message("ilm_model(): ", w$short, ". The fixed effects and their ",
+            "standard errors are usable; ", w$par, "'s own estimate is where ",
+            "the optimiser stopped, and is held there.")
   }
 
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
