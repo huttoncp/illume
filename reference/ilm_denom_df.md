@@ -40,7 +40,8 @@ ilm_denom_df(
 ## Value
 
 A list with `df`, the `method` actually used, and for Kenward-Roger the
-adjusted covariance `V`.
+adjusted covariance `V` and `scale`, the factor by which the Wald F
+formed with `V` is multiplied before it is referred to F(q, df).
 
 ## Which method
 
@@ -50,11 +51,16 @@ only, it applies to every structure this package fits, and it is what
 `lmerTest` reports.
 
 `"kenward-roger"` also inflates the covariance for the uncertainty in
-the variance components, which matters most when clusters are few. It
-costs second derivatives, and it is only defined where the marginal
-covariance is linear in the variance components – random intercepts and
-slopes with a single residual variance. Asked for elsewhere it stops and
-says why.
+the variance components, which matters most when clusters are few, and
+gives an F test its own denominator df and scale factor (Kenward and
+Roger 1997). It is computed as `pbkrtest` computes it, and agrees with
+it. It needs a REML fit (`reml = TRUE`) of a gaussian model whose random
+terms are intercepts and slopes – correlated or not, nested or crossed –
+with one residual variance and no weights, and it forms the covariance
+of all the observations, so it stops above 4000 rows. Asked for
+elsewhere it stops and says why. For one contrast its scale is exactly
+1: the t statistic is the estimate over its standard error from the
+adjusted covariance `V`, on the df returned.
 
 `"residual"` is `N - p`, which is exact with nothing integrated out and
 optimistic otherwise. `"asymptotic"` returns `Inf`, recovering the
@@ -68,6 +74,16 @@ neither answers it;
 [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
 simulates the null rather than approximating its reference, and is the
 remedy there.
+
+## References
+
+Kenward, M. G., & Roger, J. H. (1997). Small sample inference for fixed
+effects from restricted maximum likelihood. *Biometrics*, 53(3),
+983–997.
+
+Halekoh, U., & Hojsgaard, S. (2014). A Kenward-Roger approximation and
+parametric bootstrap methods for tests in linear mixed models: the R
+package pbkrtest. *Journal of Statistical Software*, 59(9), 1–30.
 
 ## See also
 
@@ -85,7 +101,7 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 L <- c(0, 1)                      # the slope on income
 ilm_denom_df(f, L)
 #> $df
-#> [1] 282.5911
+#> [1] 282.5906
 #> 
 #> $method
 #> [1] "satterthwaite"

@@ -3,6 +3,36 @@
 ## illume 0.0.8.9000
 
 - illume now requires illumex 0.0.8.9000.
+
+- Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
+
+  - **The covariance shrank.** Its “inflated” covariance was built from
+    differences of the fixed-effect covariance with the wrong algebra:
+    the Q term had the wrong sign and the P-Phi-P term was missing. So
+    the covariance came out smaller than the unadjusted one, by a factor
+    of 1 - 4/n for a single variance component.
+  - **The df were Satterthwaite’s.** Its df were Satterthwaite’s formula
+    applied to that matrix, not Kenward and Roger’s. Its one test
+    asserted only that the df were below Satterthwaite’s, which the
+    defect guaranteed.
+  - **The gate did not refuse.** It claimed to refuse a correlated
+    random slope but tested the category width, which is always 1.
+
+  It is now computed as `pbkrtest` computes it: from the covariance of
+  the observations, with Kenward and Roger’s own df and F scaling. It
+  agrees with `pbkrtest` to 2e-6 in df and 3e-8 in the F scaling, and in
+  the adjusted covariance to within the two fits’ REML difference. That
+  holds for a random intercept, correlated and uncorrelated random
+  slopes, and crossed factors. In a balanced design it reproduces the
+  exact test: 6 df, to 1e-8.
+
+  A correlated slope is linear in its covariance’s elements, so it is
+  now covered. Kenward-Roger now needs a REML fit (`reml = TRUE`),
+  because it is derived for REML estimates. It stops for smooths,
+  weights and more than 4000 rows. `ilm_trends(df = "kenward-roger")`
+  now uses the adjusted standard errors as well as the df. Found in a
+  review.
+
 - [`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
   fits a random walk over time, the local-level model of time-series
   analysis. Each group’s walk is held at zero at its first time, so the
@@ -19,6 +49,7 @@
   fit-time check on observations per latent value applies to it as it
   does to CAR(1). `predict(marginal = TRUE)` averages each row over its
   own spread, which grows with the time since its group started.
+
 - [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md),
   [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   and
@@ -31,6 +62,7 @@
   with a length mismatch. The fit keeps the names, which is what lets
   [`predict()`](https://rdrr.io/r/stats/predict.html) place new rows on
   a walk.
+
 - [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
   lists the latent cells of a fitted AR(1), CAR(1) or random-walk term,
   one row per cell. Each row gives the group and time (as numbers, dates
@@ -38,9 +70,11 @@
   the fit holds its value, and whether it is its group’s first or last
   cell. Code that works with the latent values, such as a forecast,
   reads the layout from it instead of rebuilding it.
+
 - [`summary()`](https://rdrr.io/r/base/summary.html) names the
   correlation over time it fitted and gives its standard deviation. It
   used to call a CAR(1) term “ar1”.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   says each effect in the response’s own units, over a change a reader
   can picture: across the middle half of a numeric predictor, level by
@@ -60,20 +94,24 @@
   predictions hold the random effects at zero – a typical group – rather
   than averaging over groups, which on the logit or log scale is not the
   same.
+
 - The evidence for a term is its joint test, so a factor with several
   levels gets one verdict, and so does a predictor in a multinomial
   model, which used to get one per category, each against the average of
   the categories – and could then report lower odds of a category beside
   a higher probability of it. Its effect is now the predicted share of
   every category at both ends.
+
 - P-values in the prose are given to three significant figures, or as “p
   \< 0.001”; a factor level is named as a value (“tenure ‘rent’ rather
   than ‘own’”, not “tenurerent: being rent rather than own”).
+
 - Fixed: a number shorter than four characters came into
   [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)’s
   sentences with spaces in front of it: “(95% interval 13 to 32)”.
   Printing re-wraps the text, which hid it. The strings themselves,
   which a report or a paste takes, carried it.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   writes up a cluster profile from
   [`illumex::ilm_profile()`](https://huttoncp.github.io/illumex/reference/ilm_profile.html)
@@ -81,6 +119,7 @@
   [`ilm_profile_na()`](https://huttoncp.github.io/illumex/reference/ilm_profile_na.html):
   the clustering, a paragraph per cluster, the rows between clusters and
   the variables that only add distance, and why none of it is a test.
+
 - Fixed: every REML fit predicted `NA`. Under REML the fixed effects sit
   in the random block and the stored `beta` was built from a parameter
   vector that did not hold them, so
@@ -93,6 +132,7 @@
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md),
   which fits by REML. [`coef()`](https://rdrr.io/r/stats/coef.html) and
   the standard errors were never affected.
+
 - Fixed: [`predict()`](https://rdrr.io/r/stats/predict.html)’s intervals
   for a model with a smooth were centred on the wrong parameters
   whenever the family has one the model declares after its random
@@ -107,12 +147,14 @@
   from them. Binomial and Poisson smooths, which have no such parameter,
   were unaffected. The draws are now centred parameter by parameter, and
   `test-joint-draws.R` holds the intervals to mgcv’s.
+
 - Fixed: `predict(marginal = TRUE)` left an AR(1) or CAR(1) term out of
   the average over the random effects. At any one row its latent value
   has the stationary distribution, and it is now averaged over with the
   grouping terms: a Poisson model with a stationary AR variance of 0.59
   averaged 1.40 where its own simulations averaged 1.86, and now agrees
   with them and with the closed form.
+
 - With one linear predictor – every family but the multinomial – a row’s
   whole latent contribution is a single normal, so
   `predict(marginal = TRUE)` now averages over it by Gauss-Hermite
@@ -124,6 +166,7 @@
   every call and does not use `ndraw`; the effects and scenarios built
   on it no longer move with the seed. A multinomial outcome is still
   averaged by draws, now including an AR term.
+
 - Fixed:
   [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
   computed its means from the fixed-effect design and each random term’s
@@ -139,6 +182,7 @@
   which through a logit was pulled towards the middle by up to half a
   percentage point. An ordinal fit is refused, as a multinomial one was,
   since it too has no single number to report.
+
 - [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
   says which effect it reports: by default the one for a typical group,
   with the random effects at zero – the effect
@@ -148,6 +192,7 @@
   standard errors by a population average it did not take. The
   `marginaleffects` bridge averages over the random effects by default,
   as `marginal = TRUE` does.
+
 - [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html),
   [`performance::model_performance()`](https://easystats.github.io/performance/reference/model_performance.html)
   and
@@ -166,6 +211,7 @@
   `check_model()` draws
   [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md)’s
   panels, and its help page says whose they are.
+
 - The documentation says what the package fits.
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   is “Fit generalized linear and additive mixed models” rather than “Fit
@@ -181,6 +227,7 @@
   [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
   no longer describe themselves as multinomial-only. Where something IS
   about categories, it now says so.
+
 - `re_struct` is documented with examples in
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md),
   [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
@@ -193,6 +240,7 @@
   needs outside a multinomial model, used to stop and ask for one.
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
   example, which never ran, is replaced by ones that do.
+
 - [`ilm_fit()`](https://huttoncp.github.io/illume/reference/ilm_fit.md)
   defaults to `family = "gaussian"`, as
   [`glm.fit()`](https://rdrr.io/r/stats/glm.html) does, and to no random
@@ -203,16 +251,19 @@
   than fitting a gaussian model to the category codes.
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   is unchanged: it reads the family off the response.
+
 - The parameter-aliasing check no longer starts a sentence with a
   capitalised parameter name (“Retired:(Intercept) \<-\> retired:age
   cannot be separated”); it reads “These data cannot separate
   retired:(Intercept) from retired:age”.
+
 - A covariance term flagged at its boundary but curved in every
   direction always takes the recomputed Hessian now, as a fit with
   nothing at a boundary does. It still went to TMB’s own Hessian
   whenever TMB called that positive definite, so its standard errors
   depended on the verdict the change below was meant to take out of the
   decision: 2 to 10% apart in one fit of the boundary study’s re-run.
+
 - [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
   counts a refit that lands on a covariance boundary. Such a refit has
   that direction held, so `pdHess` is `FALSE` by design and its fixed
@@ -221,12 +272,14 @@
   multinomial model whose subjects vary along one direction, 11 of 30
   refits were dropped and the check reported the model “UNSTABLE”,
   unable to recover itself. It refits all 30.
+
 - [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md)
   calls a variance fitted at zero a boundary whenever the fit does –
   below 1e-3 – as well as when it is small beside the model’s largest.
   With one random term, that term was compared with itself, so a random
   intercept fitted at 0.0001 was reported as biased, and the Laplace
   approximation blamed, in a gaussian model, which has none.
+
 - The study set was re-run for this version and reproduces 0.0.7.9000
   wherever nothing changed (`studies/findings/`). Two of its scripts had
   fallen behind the package, and both are fixed. Four counted a fit as

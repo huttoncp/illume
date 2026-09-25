@@ -96,7 +96,9 @@ nothing was integrated out, Satterthwaite for a gaussian mixed model, and
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with <code>df</code>, the <code>method</code> actually used, and for
-Kenward-Roger the adjusted covariance <code>V</code>.</p>
+Kenward-Roger the adjusted covariance <code>V</code> and <code>scale</code>, the factor by which
+the Wald F formed with <code>V</code> is multiplied before it is referred to
+F(q, df).</p>
     </div>
     <div class="section level2">
     <h2 id="which-method">Which method<a class="anchor" aria-label="anchor" href="#which-method"></a></h2>
@@ -107,10 +109,16 @@ the contrast. It is the default because it costs first derivatives only, it
 applies to every structure this package fits, and it is what <code>lmerTest</code>
 reports.</p>
 <p><code>"kenward-roger"</code> also inflates the covariance for the uncertainty in the
-variance components, which matters most when clusters are few. It costs
-second derivatives, and it is only defined where the marginal covariance is
-linear in the variance components – random intercepts and slopes with a
-single residual variance. Asked for elsewhere it stops and says why.</p>
+variance components, which matters most when clusters are few, and gives
+an F test its own denominator df and scale factor (Kenward and Roger 1997).
+It is computed as <code>pbkrtest</code> computes it, and agrees with it. It needs a
+REML fit (<code>reml = TRUE</code>) of a gaussian model whose random terms are
+intercepts and slopes – correlated or not, nested or crossed – with one
+residual variance and no weights, and it forms the covariance of all the
+observations, so it stops above 4000 rows. Asked for elsewhere it stops and
+says why. For one contrast its scale is exactly 1: the t statistic is the
+estimate over its standard error from the adjusted covariance <code>V</code>, on the
+df returned.</p>
 <p><code>"residual"</code> is <code>N - p</code>, which is exact with nothing integrated out and
 optimistic otherwise. <code>"asymptotic"</code> returns <code>Inf</code>, recovering the
 chi-square.</p>
@@ -123,6 +131,14 @@ chi-square.</p>
 family the small-sample problem is a different one and neither answers it;
 <code><a href="ilm_pb_lrt.html">ilm_pb_lrt()</a></code> simulates the null rather than approximating its reference,
 and is the remedy there.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Kenward, M. G., &amp; Roger, J. H. (1997). Small sample inference for fixed
+effects from restricted maximum likelihood. <em>Biometrics</em>, 53(3), 983–997.</p>
+<p>Halekoh, U., &amp; Hojsgaard, S. (2014). A Kenward-Roger approximation and
+parametric bootstrap methods for tests in linear mixed models: the R
+package pbkrtest. <em>Journal of Statistical Software</em>, 59(9), 1–30.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -138,7 +154,7 @@ and is the remedy there.</p>
 <span class="r-in"><span><span class="va">L</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>                      <span class="co"># the slope on income</span></span></span>
 <span class="r-in"><span><span class="fu">ilm_denom_df</span><span class="op">(</span><span class="va">f</span>, <span class="va">L</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $df</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 282.5911</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 282.5906</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $method</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "satterthwaite"</span>

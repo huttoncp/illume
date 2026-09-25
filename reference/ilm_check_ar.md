@@ -129,11 +129,11 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 ilm_check_ar(f, time = as.integer(factor(d$date)), group = d$id,
              maxlag = 3, B = 12)
 #> 
-#> residual autocorrelation vs simulated envelope (12 refits)
+#> residual autocorrelation vs simulated envelope (11 refits)
 #>  lag component estimate null_mean      lo     hi  maxz      p status n_pairs
-#>    1  residual  -0.1768   -0.1278 -0.3871 0.1315 -0.57 0.4615     OK     140
-#>    2  residual  -0.1317   -0.0836 -0.2908 0.1236 -0.44 0.9231     OK     120
-#>    3  residual  -0.0654   -0.1369 -0.3296 0.0558  0.83 0.5385     OK     100
+#>    1  residual  -0.1768   -0.1248 -0.3982 0.1486 -0.58 0.5000     OK     140
+#>    2  residual  -0.1317   -0.0701 -0.2851 0.1450 -0.59 0.7500     OK     120
+#>    3  residual  -0.0654   -0.1330 -0.3326 0.0667  0.76 0.5833     OK     100
 #> 
 #> >> residual autocorrelation is consistent with the fitted model.
 ```
