@@ -116,6 +116,12 @@
   the layout from it instead of rebuilding it.
 * `summary()` names the correlation over time it fitted and gives its standard
   deviation. It used to call a CAR(1) term "ar1".
+* Fixed: `y ~ z + s(x, by = z)`, a numeric `by` variable beside its own
+  smooth, fitted with a failed Hessian and every standard error `NaN`, and
+  nothing said why. A smooth with a numeric `by` is not centred, so its
+  unpenalised part already spans `z` (and `z * x`) whatever the basis. The
+  two are one column. The fit now stops before it starts, saying so and
+  that dropping `z` is the fix (Wood 2017, p. 326). Found by another agent.
 * `ilm_interpret()` says each effect in the response's own units, over a change
   a reader can picture: across the middle half of a numeric predictor, level by
   level for a factor, with the model's predictions at both ends, averaged over

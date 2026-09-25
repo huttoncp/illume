@@ -409,6 +409,24 @@ ilm_model_formula <- function(formula, data, family = "auto",
     stop("smooth terms must be written unqualified, e.g. s(x) not ",
          qualified[1], ". mgcv detects smooths by name, so a namespaced call ",
          "is treated as an ordinary predictor.", call. = FALSE)
+  ## A smooth with a numeric `by` is not centred, so its unpenalised part
+  ## already spans the by variable itself: for s(x, by = z), z and z * x,
+  ## whatever the basis. With z also a term of the model the two are one
+  ## column, the fit has no unique answer, and it came back with a failed
+  ## Hessian and every standard error NaN, saying nothing of why.
+  if (is.data.frame(data)) for (sp in smsp) {
+    bv <- sp$by
+    if (is.null(bv) || identical(bv, "NA") || !bv %in% names(data) ||
+        !is.numeric(data[[bv]]) || !bv %in% ilm_unbq(ptl)) next
+    lab <- paste0(sub("\\)$", "", sp$label), ", by = ", bv, ")")
+    stop("`", bv, "` is a term of the model and also the `by` variable of ",
+         lab, ". A smooth with a numeric `by` is not centred, so its ",
+         "unpenalised part already contains ", bv, "'s main effect: the two ",
+         "are the same column, and the model as written has no unique fit ",
+         "(every standard error would come out NaN). Drop `", bv, "` from ",
+         "the formula; ", lab, " carries its effect. See Wood (2017), ",
+         "Generalized Additive Models, 2nd ed., p. 326.", call. = FALSE)
+  }
 
   ## all.vars() on the grouping side, not deparse(). A NESTED bar is expanded
   ## by findbars() into a grouping EXPRESSION rather than a name --
