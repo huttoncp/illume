@@ -28,10 +28,26 @@ over a latent spread exactly as the fit's own predictions do.
 The number of nodes grows with the spread: 40 times the smallest whole
 number at least \code{sd^2}, and no more than 800, with one rule for the whole
 call, set by the largest \code{sd}. The rules are computed once and cached.
-Measured against \code{\link[stats:integrate]{stats::integrate()}}, through an inverse link that is
-better than 1e-12 with a logit up to \code{sd = 6}, and better than 1e-9 with a
-complementary log-log up to \code{sd = 5}. For any other integrand, check the
-accuracy it needs; \code{n} sets the number of nodes directly.
+
+The rule is centred where \code{h(eta + sd * z)} times the normal density
+peaks, when that is more than two standard deviations from zero. For a
+bounded \code{h}, such as an inverse link, it rarely is, and the rule is the
+plain one. For an \code{h} that grows, the mass moves away: under a log link
+it sits at \code{z = sd}, where a rule centred at zero has almost no nodes.
+
+Accuracy, measured against a fine grid over \code{eta} from -12 to 8:
+\itemize{
+\item better than 1e-12 through a logit up to \code{sd = 6};
+\item better than 5e-9 through a complementary log-log up to \code{sd = 5}, and
+5e-8 at 6;
+\item better than 1e-13 for \code{exp}, whose expectation is \code{exp(eta + sd^2/2)},
+up to \code{sd = 20}.
+}
+
+Past that, an integrand growing as fast as \code{exp} overflows double
+precision at the nodes, and the result is \code{Inf}, never \code{NaN}. For any
+other integrand, check the accuracy it needs; \code{n} sets the number of
+nodes directly.
 }
 \examples{
 ## a population-averaged probability through a logit
