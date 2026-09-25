@@ -77,3 +77,25 @@ test_that("category labels come from the outcome factor", {
   expect_equal(fit$ylevels, c("c1", "c2", "c3"))
   expect_true(all(grepl("^c1:|^c2:", names(coef(fit)))))
 })
+
+test_that("a factor `by` is refused rather than fitted with one level's curve", {
+  ## mgcv makes one smooth per level of a factor `by`, and only the first was
+  ## kept: levels b and c got no curve, and the fit said nothing
+  set.seed(3); n <- 300
+  d <- data.frame(x = stats::runif(n),
+                  f = factor(sample(c("a", "b", "c"), n, TRUE)))
+  d$y <- ifelse(d$f == "a", sin(2 * pi * d$x), -sin(2 * pi * d$x)) +
+    stats::rnorm(n, 0, 0.3)
+  expect_error(ilm_model(y ~ f + s(x, by = f), data = d, family = "gaussian",
+                         verbose = FALSE),
+               "s(x, by = f) makes 3 smooths, one for each level of the factor `f` (s(x):fa, s(x):fb, s(x):fc)",
+               fixed = TRUE)
+  ## an ordered factor gets one per level after the first
+  d$o <- factor(d$f, ordered = TRUE)
+  expect_error(ilm_model(y ~ o + s(x, by = o), data = d, family = "gaussian",
+                         verbose = FALSE), "(s(x):ob, s(x):oc)", fixed = TRUE)
+  ## a numeric `by` is one smooth, and is still fitted
+  d$z <- stats::rnorm(n)
+  expect_s3_class(ilm_model(y ~ s(x, by = z), data = d, family = "gaussian",
+                            verbose = FALSE), "ilm_model")
+})
