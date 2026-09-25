@@ -21,6 +21,34 @@
   response's SD and the likelihood is flat below it; there the remedy is to
   coarsen the grid (`studies/scripts/dispersion_limit_gaussian.R`). Found by
   another agent.
+* **Which groups** a prediction, a fitted value or a residual is for is now
+  one argument, `groups`, with the same words everywhere:
+  - `"fitted"`: each group's own estimated effects;
+  - `"typical"`: every random effect at zero, a group exactly at the average;
+  - `"population"`: averaged over the groups;
+  - `"new"`: a group the fit has not seen. No function takes it yet: such a
+    group's prediction is a spread, not one value.
+
+  Each function takes the words that apply to it, with its default unchanged.
+  `predict()` and `ilm_ame()` take `"typical"` (the default) or
+  `"population"`. `ilm_fitted()`, `ilm_scores()` and `ilm_rqr()` take
+  `"fitted"` (the default) or `"typical"`. The `marginaleffects` bridge takes
+  `"population"` (the default, from the option `ilm_model.groups`) or
+  `"typical"`. Any other word is an error that says where it is answered.
+  - The words replace `marginal` and `conditional`, which still work for one
+    release, with a warning once per session: `marginal = TRUE` is
+    `groups = "population"`, and `conditional = TRUE` is `groups = "fitted"`.
+    The same holds for the option `ilm_model.marginal`.
+  - "Conditional" had meant two things: a fitted group's effects in
+    `ilm_fitted()`, and effects at zero in `predict()`'s help.
+* Fixed: the prints of `ilm_effects()` and of `ilm_emmeans()` for categories,
+  and the "Effect size and power" and "Workflow" vignettes, said `ilm_ame()`
+  gives the population-averaged effect. By default it gives a typical
+  group's. They now name `ilm_ame(groups = "population")`.
+* Fixed: `ilm_fitted()`'s help said it gives each category's probability for
+  an ordinal outcome. It gives the latent linear predictor, which the
+  thresholds cut into categories, as the checks and scores built on it
+  expect. `predict()` gives the probabilities.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner
@@ -43,21 +71,40 @@
   - **Layout.** The rows are named by block, with a map that labels each
     one: coefficient, group and dimension, or cell.
   - **Natural scale.** Each draw's variance components are given on the
-    natural scale, through the same transform as `ilm_varcorr()`, so at the
-    estimate the two agree exactly.
+    natural scale, through the same transforms as `ilm_varcorr()`, so at the
+    estimate the two agree exactly. They are formed for all the draws at
+    once, so 1,000 draws take about as long with them as without.
   - **Boundaries.** Where a fit holds a boundary direction, the draws hold
     it exactly, by conditioning on it. The fit now keeps the directions it
     held and the Hessian its covariance came from.
   - **Options.** `given = "theta"` holds the variance parameters at their
-    estimates. `blocks` returns part of the vector. A fit made without
-    `joint = TRUE` has its precision formed on demand.
+    estimates. `given = "parameters"` holds every parameter and draws only
+    the random effects and the cells of a correlation over time, from their
+    distribution given the parameters. `blocks` returns part of the vector.
+    A fit made without `joint = TRUE` has its precision formed on demand.
+  - **Without random effects.** A fit with nothing integrated out, a GLM
+    say, is drawn from `vcov(fit, full = TRUE)`, as its standard errors are.
+    As first written such a fit was refused, because TMB forms a joint
+    precision only when there is a random part. Found by another agent.
 * `ilm_matrices()` gives the designs for new rows: the fixed design, each
   random term's design with each row's group matched by label, each
   smooth's penalised basis, and the zero part's and dispersion model's
-  designs. It also places each new row among a correlation over time's
-  cells: the cell it falls on, the cells either side and the time to each.
-  A prediction assembled from these matrices is `predict()`'s. The smooth
-  basis comes from the same code, now shared.
+  designs. Every column is named for what it multiplies: a random term's
+  by dimension, as `ilm_ranef()` names them (`"(Intercept)"` for a random
+  intercept alone too), and the zero part's and dispersion model's as their
+  coefficients are (`"zi:(Intercept)"`, `"disp:x"`), in
+  `coef(fit, full = TRUE)` and in `ilm_draws()`' map. It also places each
+  new row among a correlation over
+  time's cells: the cell it falls on, the cells either side and the time to
+  each. A prediction assembled from these matrices is `predict()`'s. The
+  smooth basis comes from the same code, now shared.
+* Fixed: the pre-fit checks sized an ordinal fit as though it had J - 1
+  category dimensions, as a multinomial fit has. It has one linear
+  predictor, as the fit itself knew. A four-category fit with 40 groups of
+  10 was reported as having 6 covariance parameters and 120 latent values,
+  a WARN, where it has 1 and 40, with ten observations to each. The checks
+  now take the dimensions from the family, as the fit does. Found by
+  another agent.
 * `ilm_dist()` gives a fit's response distribution as functions: the
   density, distribution and quantile functions, a random generator and the
   mean, in illume's own parameterisation.
@@ -74,13 +121,21 @@
   - **Not covered.** The flexible parametric survival families, whose linear
     predictor depends on time itself.
 * `ilm_normal_expect()` exports the Gauss-Hermite quadrature behind
-  `predict(marginal = TRUE)`, so code built on a fit averages over a latent
-  spread as its predictions do.
+  `predict(groups = "population")`, so code built on a fit averages over a
+  latent spread as its predictions do.
 * Fixed: `fixef()` did not reach illume's method. It was registered on a
   generic of illume's own, so with nlme or lme4 attached, `fixef(fit)`
   stopped with "no applicable method". It is now registered on nlme's
   generic.
 * A fit keeps each grouping term's level labels, and a refit keeps them too.
+* Fixed: a smooth with a factor `by`, `s(x, by = f)`, kept only the first
+  level's curve. mgcv makes one smooth per level (per level after the first,
+  for an ordered factor), and only the first was taken; every other level
+  had no curve, and nothing said so. On three levels with their own curves,
+  predictions at x = 0.25 came out 1.85, 1.94 and 3.91 where the truth was
+  2, 1 and 3.5, and mgcv gave 1.85, 0.95 and 3.40. Such a smooth is now an
+  error naming each level's smooth, until illume fits one per level. A
+  numeric `by` is one smooth, and is unaffected. Found by another agent.
 * Fixed: `ilm_denom_df(method = "kenward-roger")` was not Kenward-Roger.
   - **The covariance shrank.** Its "inflated" covariance was built from
     differences of the fixed-effect covariance with the wrong algebra: the Q
@@ -119,9 +174,9 @@
   a group's last cell from the fit (its mode, and its variance from the
   joint precision) agrees with the closed form to 1e-8. For other families it is
   the Laplace approximation, and the fit-time check on observations per
-  latent value applies to it as it does to CAR(1). `predict(marginal = TRUE)`
-  averages each row over its own spread, which grows with the time since its
-  group started.
+  latent value applies to it as it does to CAR(1).
+  `predict(groups = "population")` averages each row over its own spread,
+  which grows with the time since its group started.
 * `ilm_ar1()`, `ilm_car1()` and `ilm_rw1()` can name their two columns:
   `ilm_car1(~ day | id)`. `ilm_model()` reads them from its model frame, after
   rows with missing values are dropped, so the structure cannot fall out of
@@ -136,6 +191,28 @@
   the layout from it instead of rebuilding it.
 * `summary()` names the correlation over time it fitted and gives its standard
   deviation. It used to call a CAR(1) term "ar1".
+* Fixed: `y ~ z + s(x, by = z)`, a numeric `by` variable beside its own
+  smooth, fitted with a failed Hessian and every standard error `NaN`, and
+  nothing said why. A smooth with a numeric `by` is not centred, so its
+  unpenalised part already spans `z` (and `z * x`) whatever the basis. The
+  two are one column. The fit now stops before it starts, saying so and
+  that dropping `z` is the fix (Wood 2017, p. 326). Found by another agent.
+* Fixed: a smooth with a numeric `by` took the name of the same smooth
+  without it, so `s(x) + s(x, by = z)` called both `"s(x)"`.
+  - **What it did.** The second overwrote the first's penalised part, so
+    the fit carried one random term too few. The two shared column names,
+    and `predict()` on new rows stopped on a column count.
+  - **Now.** Every smooth takes mgcv's own name: `"s(x):z"` for
+    `s(x, by = z)`. Its unpenalised columns are `"s(x):z.f1"`,
+    `"s(x):z.f2"`, and its variance is `"s(x):z"`. Two smooths with one name
+    stop instead of overwriting.
+  - **What changes for existing code.** A smooth with a numeric `by`, alone,
+    used to name its columns `"s(x).f1"` and `"s(x).f2"`. Code that picked
+    them out by those names needs the new ones. A smooth without a `by` is
+    named as before.
+  - `?ilm_model` has a section, "How smooth terms are named", with the
+    whole scheme, and the regression-models vignette says the same.
+  - Found by another agent.
 * `ilm_interpret()` says each effect in the response's own units, over a change
   a reader can picture: across the middle half of a numeric predictor, level by
   level for a factor, with the model's predictions at both ends, averaged over
@@ -179,7 +256,7 @@
     position, every random effect was the entry p * C places before its
     own, and the first few were the fixed effects themselves.
   - **What it broke.** Everything conditional on the random effects, on
-    every REML mixed model: fitted values with `conditional = TRUE`, the
+    every REML mixed model: fitted values with each group's own effects, the
     quantile residuals, `ilm_check_predictive()`, the dispersion and zeros
     checks, and `ilm_plot_model(what = "random")`. On a gaussian random
     intercept, the conditional predictor averaged 0.208 against a response
@@ -206,22 +283,39 @@
   Poisson smooths, which have no such parameter, were unaffected. The draws
   are now centred parameter by parameter, and `test-joint-draws.R` holds the
   intervals to mgcv's.
-* Fixed: `predict(marginal = TRUE)` left an AR(1) or CAR(1) term out of the
-  average over the random effects. At any one row its latent value has the
+* Fixed: `predict(groups = "population")` left an AR(1) or CAR(1) term out of
+  the average over the random effects. At any one row its latent value has the
   stationary distribution, and it is now averaged over with the grouping
   terms: a Poisson model with a stationary AR variance of 0.59 averaged 1.40
   where its own simulations averaged 1.86, and now agrees with them and with
   the closed form.
 * With one linear predictor -- every family but the multinomial -- a row's
-  whole latent contribution is a single normal, so `predict(marginal = TRUE)`
-  now averages over it by Gauss-Hermite quadrature rather than by draws, with
-  more nodes as the latent SD grows. Against numerical integration it is
+  whole latent contribution is a single normal, so
+  `predict(groups = "population")` now averages over it by Gauss-Hermite
+  quadrature rather than by draws, with more nodes as the latent SD grows. Against numerical integration it is
   better than 1e-12 through a logit up to a latent SD of 6, and better than
   1e-9 through a complementary log-log up to 5; a fixed 40 nodes, as first
   written, drifted to 2e-5 at a logit SD of 3.5. It gives the same answer on
   every call and does not use `ndraw`; the effects and scenarios built on it
   no longer move with the seed. A multinomial outcome is still averaged by draws, now
   including an AR term.
+* Fixed: the quadrature behind a population average, and `ilm_normal_expect()`,
+  lost an integrand that grows, such as the mean under a log link, at a large
+  latent SD. `exp(eta + sd z)` times the normal density peaks at `z = sd`,
+  where a rule centred at zero has almost no nodes.
+  - **What it did.** At an SD of 10 the mean was 0.2% low, and at 12, 19%
+    low. From 13.8 the outer terms overflowed against weights that had
+    underflowed to zero, and the result was `NaN`. Draws of a variance reach
+    those SDs with few groups.
+  - **Now.** The rule is centred where the integrand peaks, when that is more
+    than two SDs from zero. A log link's mean is exact to 1e-13 up to an SD
+    of 20, and past that it is `Inf`, never `NaN`.
+  - **Unaffected.** A bounded integrand, such as an inverse logit, peaks
+    near zero and keeps the plain rule: its accuracy is unchanged, and
+    better than 1e-12 through a logit up to an SD of 6.
+  - `predict()` now averages through `ilm_normal_expect()` itself, so the two
+    cannot differ.
+  - Found by another agent.
 * Fixed: `ilm_emmeans(type = "response")` on a beta model returned the
   link-scale means: 0.37 where the proportion was 0.59. The inverse link was
   chosen by switching on the family's name, and beta fell through to the
@@ -237,7 +331,7 @@
   each random term's intercept variance alone. A random slope was averaged as
   if it were an intercept, an AR term was left out, and a smooth lost its
   penalised part entirely: a gaussian `sin()` curve came out as -1.31 at its
-  peak of +1. Each mean now comes from `predict(marginal = TRUE)`, and the
+  peak of +1. Each mean now comes from `predict(groups = "population")`, and the
   interval draws the whole parameter vector, variance components included,
   where it drew the fixed effects alone. The estimate is the mean at the
   fitted parameters, which matches `predict()` exactly and does not move with
@@ -277,6 +371,16 @@
   now: `list(subj = list(d_cor = FALSE))`, which is all an uncorrelated slope
   needs outside a multinomial model, used to stop and ask for one.
   `ilm_model()`'s example, which never ran, is replaced by ones that do.
+* Fixed: a new install could not fit any model from a formula. Every formula
+  passes through lme4's bar parser, bars or none, and that parser lives in
+  reformulas, which illume only suggested. With neither reformulas nor lme4
+  installed, as after a plain `install.packages()`, even `y ~ x` stopped with
+  "the formula interface needs reformulas (or lme4)". reformulas (>= 0.4.0)
+  is now imported. It is small: beyond what R ships, it brings only Rdpack
+  and rbibutils.
+  - mgcv is imported too. Every formula is read by its `interpret.gam()`, so
+    it was needed just as unconditionally. It ships with R, so this costs
+    nothing, and it lets the "mgcv is required" check before each fit go.
 * `ilm_fit()` defaults to `family = "gaussian"`, as `glm.fit()` does, and to
   no random terms (`re_list = list()`), so `ilm_fit(X, y)` is a linear model.
   Its default was `"multinomial"`, where the package began. A call that gives

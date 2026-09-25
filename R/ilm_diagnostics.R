@@ -41,8 +41,12 @@
 #' refitting simulated data and so accounts for this automatically.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param conditional Logical. Evaluate at the fitted random effects.
+#' @param groups `"fitted"` (the default) takes each observation's
+#'   distribution at its group's own estimated random effects; `"typical"`
+#'   takes it with every random effect at zero. As in [ilm_fitted()].
 #' @param seed Integer. Random seed; the transform uses randomisation.
+#' @param conditional Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE`
+#'   is `groups = "typical"`.
 #' @return A numeric vector on the unit interval.
 #' @references
 #' Dunn, P. K., & Smyth, G. K. (1996). Randomized quantile residuals. *Journal of
@@ -52,7 +56,12 @@
 #' models. R package. (The simulation-based approach this borrows from.)
 #' @seealso [ilm_rqr_test()], [ilm_appraise()].
 #' @export
-ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
+ilm_rqr <- function(object, groups = c("fitted", "typical"), seed = 1L,
+                    conditional = NULL) {
+  groups <- ilm_groups_arg(groups, c("fitted", "typical"), !missing(groups),
+                           "ilm_rqr()", conditional, "conditional",
+                           c(`TRUE` = "fitted", `FALSE` = "typical"))
+  conditional <- identical(groups, "fitted")
   set.seed(seed)
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   y <- as.numeric(object$y)
@@ -76,7 +85,7 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
     return(pmin(pmax(lo + stats::runif(N) * (hi - lo), 1e-10), 1 - 1e-10))
   }
   if (!identical(fam, "multinomial")) {
-    mu <- as.numeric(ilm_fitted(object, conditional)[, 1])
+    mu <- as.numeric(ilm_fitted(object, groups)[, 1])
     w <- if (is.null(object$weights)) rep(1, N) else object$weights
     ## one dispersion per row, so a dispersion model is honoured; a constant
     ## repeated otherwise
@@ -149,7 +158,7 @@ ilm_rqr <- function(object, conditional = TRUE, seed = 1L) {
     return(pmin(pmax(u, 0), 1))
   }
 
-  P <- ilm_fitted(object, conditional)
+  P <- ilm_fitted(object, groups)
   S <- -log(pmax(P, .Machine$double.eps))       # atom values, N x J
   obs <- S[cbind(seq_len(N), as.integer(y))]    # observed log score
   tol <- 1e-10
@@ -297,7 +306,7 @@ ilm_calibration <- function(object, nbins = 10L, B = 200L, seed = 1L) {
                         object$family$pfun)
     colnames(Pm) <- object$ylevels
     Pm
-  } else ilm_fitted(object, TRUE)
+  } else ilm_fitted(object)
   ## A binomial fit predicts one probability, of the modelled outcome. Putting
   ## it in the two-column form the multinomial path already uses lets one
   ## implementation serve both, with the second column the complement.
@@ -425,7 +434,7 @@ ilm_re_mahalanobis <- function(object, term = NULL) {
 #' @export
 ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
                           stat = function(u) mean(u), verbose = TRUE) {
-  obs <- stat(ilm_rqr(object, TRUE, seed))
+  obs <- stat(ilm_rqr(object, seed = seed))
   ys <- ilm_sim_cond(object, B, seed + 1L)
   ## the same model, every part of it -- see ilm_refit_stub()
   stub <- ilm_refit_stub(object)
@@ -447,7 +456,7 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
              silent = TRUE)
     if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
     f$assign <- asg; f$term_labels <- tl
-    stat(ilm_rqr(f, TRUE, seed = seed + 1000L + b))
+    stat(ilm_rqr(f, seed = seed + 1000L + b))
   }
   null <- unlist(ilm_lapply(cl, seq_len(B), one))
   nok <- sum(is.finite(null))
@@ -495,8 +504,8 @@ ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
   op <- par(mfrow = c(2, 3), mar = c(4, 4, 3, 1), cex = 0.8); on.exit(par(op))
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   mn <- identical(fam, "multinomial")
-  u <- ilm_rqr(object, TRUE, seed); z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
-  P <- ilm_fitted(object, TRUE)
+  u <- ilm_rqr(object, seed = seed); z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
+  P <- ilm_fitted(object)
 
   ## 1 QQ of the log-score randomised quantile residuals
   qqnorm(z, main = "Quantile residuals", pch = 16, cex = 0.4,

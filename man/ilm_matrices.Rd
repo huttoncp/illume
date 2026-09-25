@@ -20,12 +20,16 @@ A list with
 \describe{
 \item{\code{X}}{the fixed design, columns as \code{colnames(object$X)}.}
 \item{\code{re}}{one element per grouping term: \code{Z}, its design (the
-intercept and slope columns); \code{level}, each row's group label;
+intercept and slope columns, named by dimension as \code{\link[=ilm_ranef]{ilm_ranef()}}
+and \code{\link[=ilm_draws]{ilm_draws()}}' map name them, \code{"(Intercept)"} for a random
+intercept alone); \code{level}, each row's group label;
 \code{group}, its position among the fitted levels, \code{NA} for a new group;
 \code{new_group}; and \code{factor}, the grouping variable.}
 \item{\code{smooth}}{one penalised basis per smooth term.}
 \item{\code{zi}, \code{disp}}{the zero part's and the dispersion model's designs,
-when the model has them.}
+when the model has them. Their columns are named as the coefficients
+they multiply are, in \code{coef(object, full = TRUE)} and in
+\code{\link[=ilm_draws]{ilm_draws()}}' map: \code{"zi:(Intercept)"}, \code{"disp:x"}.}
 \item{\code{ar}}{with a correlation over time, a data frame with a row per
 new row: \code{group}, \code{time}, \code{cell}, \code{prev_cell}, \code{next_cell},
 \code{dt_prev}, \code{dt_next} and \code{new_group}.}

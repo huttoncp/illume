@@ -215,3 +215,24 @@ test_that("the proportional-odds check separates the two cases", {
   expect_lt(AIC(ilm_model(y ~ x + g, data = d, family = "multinomial",
                           verbose = FALSE)), AIC(f_bad))
 })
+
+test_that("the pre-fit checks size an ordinal fit as the fit is sized", {
+  ## an ordered response has J categories but one linear predictor. The
+  ## checks took J - 1 dimensions, the multinomial's, and so counted this
+  ## four-category fit's 40 random intercepts as 120 latent values: a WARN
+  ## where it has ten observations to each
+  set.seed(4); n <- 400
+  d <- data.frame(x = rnorm(n), g = factor(rep(1:40, each = 10)))
+  lat <- 0.8 * d$x + rnorm(40, 0, 0.7)[d$g] + stats::rlogis(n)
+  d$y <- cut(lat, c(-Inf, -1, 0.5, 2, Inf), labels = letters[1:4],
+             ordered_result = TRUE)
+  f <- ilm_model(y ~ x + (1 | g), data = d, family = "ordinal",
+                 verbose = FALSE)
+  ck <- f$checks
+  expect_match(ck$detail[ck$check == "re_levels[g]"],
+               "40 levels for 1 covariance parameters (40.0 per parameter); us, C = 1",
+               fixed = TRUE)
+  expect_match(ck$detail[ck$check == "latent_budget"],
+               "(400 observations, 40 latent values: g 40)", fixed = TRUE)
+  expect_identical(ck$status[ck$check == "latent_budget"], "OK")
+})

@@ -5,21 +5,28 @@
 \alias{iml_fitted}
 \title{Fitted values}
 \usage{
-ilm_fitted(object, conditional = TRUE)
+ilm_fitted(object, groups = c("fitted", "typical"), conditional = NULL)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{conditional}{Logical. \code{TRUE} evaluates the random effects at their
-fitted values, giving in-sample fitted probabilities. \code{FALSE} sets grouping
-and AR terms to zero. Smooth terms are included either way, because they
-are mean structure rather than a population to average over.}
+\item{groups}{\code{"fitted"} (the default) uses each group's own estimated
+random effects, and each AR, CAR or random-walk cell's, giving the
+in-sample fitted values. \code{"typical"} sets them all to zero, for a group
+exactly at the average. Smooth terms are included either way, because
+they are mean structure rather than a population of groups. The average
+over the groups is \code{\link[=predict.ilm_model]{predict.ilm_model()}}'s \code{groups = "population"}.}
+
+\item{conditional}{Deprecated. \code{TRUE} is \code{groups = "fitted"}, and \code{FALSE}
+is \code{groups = "typical"}.}
 }
 \value{
 A matrix with one row per observation: one column per category for
-a multinomial or ordinal outcome, one column otherwise.
+a multinomial outcome, one column otherwise.
 }
 \description{
 The fitted mean for each observation: the probability of each category for
-a multinomial or ordinal outcome, the fitted value otherwise.
+a multinomial outcome, the fitted value otherwise. For an ordinal outcome it
+is the latent linear predictor, which the thresholds cut into categories;
+\code{\link[=predict.ilm_model]{predict.ilm_model()}} gives each category's probability.
 }

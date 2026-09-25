@@ -5,14 +5,19 @@
 \alias{iml_rqr}
 \title{Randomised quantile residuals}
 \usage{
-ilm_rqr(object, conditional = TRUE, seed = 1L)
+ilm_rqr(object, groups = c("fitted", "typical"), seed = 1L, conditional = NULL)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{conditional}{Logical. Evaluate at the fitted random effects.}
+\item{groups}{\code{"fitted"} (the default) takes each observation's
+distribution at its group's own estimated random effects; \code{"typical"}
+takes it with every random effect at zero. As in \code{\link[=ilm_fitted]{ilm_fitted()}}.}
 
 \item{seed}{Integer. Random seed; the transform uses randomisation.}
+
+\item{conditional}{Deprecated. \code{TRUE} is \code{groups = "fitted"}, and \code{FALSE}
+is \code{groups = "typical"}.}
 }
 \value{
 A numeric vector on the unit interval.

@@ -5,12 +5,16 @@
 \alias{iml_scores}
 \title{Proper scoring rules for a categorical outcome}
 \usage{
-ilm_scores(object, conditional = TRUE)
+ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{conditional}{Logical, as in \code{\link[=ilm_fitted]{ilm_fitted()}}.}
+\item{groups}{\code{"fitted"} (the default) or \code{"typical"}: which random
+effects the probabilities being scored use, as in \code{\link[=ilm_fitted]{ilm_fitted()}}.}
+
+\item{conditional}{Deprecated. \code{TRUE} is \code{groups = "fitted"}, and \code{FALSE}
+is \code{groups = "typical"}.}
 }
 \value{
 A named numeric vector: \code{log_score}, \code{brier}, \code{accuracy}, and for an

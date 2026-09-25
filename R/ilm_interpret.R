@@ -92,22 +92,31 @@ ilm_fmt_pct <- function(p)
 #' depends on when it is averaged over the random effects.
 #'
 #' @section Which effect, in a mixed model:
-#' By default the predictions hold the random effects at zero, so the effect is
-#' the one for a **typical group** -- the effect [ilm_interpret()] reports, and
-#' the one the coefficients describe. With `marginal = TRUE` the predictions
-#' are averaged over every random term, as `predict(marginal = TRUE)` does, and
-#' the effect is the one on the **population as a whole**. Through a nonlinear
-#' link the two differ: a logit's population-averaged effect is the flatter
-#' one. They answer different questions. The `marginaleffects` bridge averages
-#' over the random effects unless its option `ilm_model.marginal` is set to
-#' `FALSE`, so it matches `marginal = TRUE`.
+#' By default, `groups = "typical"`, the predictions hold the random effects at
+#' zero, so the effect is the one for a **typical group** -- the effect
+#' [ilm_interpret()] reports, and the one the coefficients describe. With
+#' `groups = "population"` the predictions are averaged over every random term,
+#' as `predict(groups = "population")` does, and the effect is the one on the
+#' **population as a whole**. Through a nonlinear link the two differ: a
+#' logit's population-averaged effect is the flatter one. They answer
+#' different questions. The `marginaleffects` bridge averages over the random
+#' effects unless its option `ilm_model.groups` is set to `"typical"`, so by
+#' default it matches `groups = "population"`.
+#'
+#' "Marginal" is the usual name for this kind of effect, a derivative or a
+#' contrast averaged over the rows, whichever groups it is taken for. The old
+#' argument `marginal` chose the groups: `marginal = FALSE` is `groups =
+#' "typical"`, and `marginal = TRUE` is `groups = "population"`. It still
+#' works, with a warning, and will be removed after the next release.
 #'
 #' @param object An [ilm_model()].
 #' @param terms Which predictors. Default is every fixed-effect term.
 #' @param eps Relative step for the numerical derivatives.
-#' @param marginal Logical. `FALSE` (the default) for the effect in a typical
-#'   group, with the random effects at zero; `TRUE` for the effect averaged
+#' @param groups `"typical"` (the default) for the effect in a typical group,
+#'   with the random effects at zero; `"population"` for the effect averaged
 #'   over them. See "Which effect, in a mixed model".
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`.
 #' @return A data frame with `term`, `level`, `estimate`, `se`, `lower`,
 #'   `upper`, and `kind` (`"slope"` or `"contrast"`). For an outcome with
 #'   categories -- multinomial or ordinal -- there is also a `category` column
@@ -122,10 +131,14 @@ ilm_fmt_pct <- function(p)
 #' fit <- ilm_model(y ~ x + g, data = d, family = "binomial", verbose = FALSE)
 #' ilm_ame(fit)
 #' @export
-ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
+ilm_ame <- function(object, terms = NULL, eps = 1e-4,
+                    groups = c("typical", "population"), marginal = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
+  groups <- ilm_groups_arg(groups, c("typical", "population"),
+                           !missing(groups), "ilm_ame()", marginal, "marginal",
+                           c(`TRUE` = "population", `FALSE` = "typical"))
   mf <- object$model
   if (is.null(mf))
     stop("the fit did not keep its model frame, so marginal effects cannot ",
@@ -148,14 +161,13 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4, marginal = FALSE) {
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
                                         type = "response"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
-  ## with marginal = TRUE a single linear predictor is averaged by quadrature
-  ## and a multinomial one by draws with a fixed seed, so every call -- at each
-  ## parameter perturbation and each side of each difference -- integrates
-  ## over the same thing and the differences are not noise
+  ## with groups = "population" a single linear predictor is averaged by
+  ## quadrature and a multinomial one by draws with a fixed seed, so every
+  ## call -- at each parameter perturbation and each side of each difference
+  ## -- integrates over the same thing and the differences are not noise
   mu <- function(dd) {
     p <- suppressWarnings(stats::predict(object, newdata = dd,
-                                         type = "response",
-                                         marginal = isTRUE(marginal)))
+                                         type = "response", groups = groups))
     if (!is.null(cats)) as.matrix(p)
     else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
   }
@@ -538,13 +550,13 @@ ilm_scale_words <- function(fam) {
 #' the model was fitted to, as [ilm_ame()]'s effects are, with any random
 #' effects at zero: in a mixed model they are a typical group's, and with a
 #' nonlinear link the text says so, since averaging over the groups instead
-#' -- `predict(marginal = TRUE)` -- gives different numbers. A probability is
-#' given as one, and a difference of two in percentage points, with the odds
-#' ratio after it for those who want it. The evidence is the term's joint
-#' test, so a factor with several levels, or a predictor in a multinomial
-#' model, gets one verdict rather than one per coefficient. A term that is not
-#' a plain variable -- an interaction, a spline -- is described by its
-#' coefficients.
+#' -- `predict(groups = "population")` -- gives different numbers. A
+#' probability is given as one, and a difference of two in percentage points,
+#' with the odds ratio after it for those who want it. The evidence is the
+#' term's joint test, so a factor with several levels, or a predictor in a
+#' multinomial model, gets one verdict rather than one per coefficient. A term
+#' that is not a plain variable -- an interaction, a spline -- is described by
+#' its coefficients.
 #'
 #' @section Causal language is licensed, not assumed:
 #'
@@ -798,7 +810,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     cav <- c(cav, paste(
       "The effects above, like the coefficients, are for a typical group.",
       "Predictions averaged over the groups instead come from",
-      "predict(marginal = TRUE)."))
+      "predict(groups = \"population\"), and the effects from",
+      "ilm_ame(groups = \"population\")."))
   if (isTRUE(object$exact_df))
     cav <- c(cav, paste(
       "This model has no random or smooth terms, so its t and F tests are",

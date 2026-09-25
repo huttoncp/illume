@@ -228,7 +228,7 @@ ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
     warning("B = ", B, " puts the smallest achievable p-value at ",
             signif(1 / (B + 1), 2), ", so a FAIL verdict is unreachable. ",
             "Use B >= 100.", call. = FALSE)
-  mu <- as.numeric(ilm_fitted(object, TRUE)[, 1])
+  mu <- as.numeric(ilm_fitted(object)[, 1])
   vf <- switch(fam,
     poisson  = mu,
     binomial = mu * (1 - mu),
@@ -359,7 +359,7 @@ ilm_binned_residuals <- function(object, nbins = NULL, plot = TRUE) {
   if (!identical(fam, "binomial"))
     stop("binned residuals are for a binary response; for ", fam,
          " use ilm_rqr() or the panels in ilm_appraise()", call. = FALSE)
-  p <- as.numeric(ilm_fitted(object, TRUE)[, 1])
+  p <- as.numeric(ilm_fitted(object)[, 1])
   y <- as.numeric(object$y)
   r <- y - p
   n <- length(p)
@@ -409,9 +409,9 @@ ilm_binned_residuals <- function(object, nbins = NULL, plot = TRUE) {
 ## are standard normal when the model -- INCLUDING its variance -- is right, so
 ## any remaining pattern in their spread is variance misspecification.
 ilm_var_stats <- function(fit, by_vec, seed) {
-  u <- ilm_rqr(fit, TRUE, seed)
+  u <- ilm_rqr(fit, seed = seed)
   z <- stats::qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
-  mu <- as.numeric(ilm_fitted(fit, TRUE)[, 1])
+  mu <- as.numeric(ilm_fitted(fit)[, 1])
   ok <- is.finite(z) & is.finite(mu)
   ## Spearman, so a curved mean-variance relationship is still caught and no
   ## scale assumption is smuggled in
@@ -550,9 +550,9 @@ ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
                           if (is.null(by_lab)) "group" else by_lab))
 
   if (plot) {
-    u <- ilm_rqr(object, TRUE, seed)
+    u <- ilm_rqr(object, seed = seed)
     z <- stats::qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
-    mu <- as.numeric(ilm_fitted(object, TRUE)[, 1])
+    mu <- as.numeric(ilm_fitted(object)[, 1])
     ok <- is.finite(z) & is.finite(mu)
     graphics::plot(mu[ok], sqrt(abs(z[ok])), pch = 19,
                    col = grDevices::adjustcolor("black", 0.35),
