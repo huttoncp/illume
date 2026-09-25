@@ -323,7 +323,10 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
 
   obs_per_ar_latent = list(
     ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value"),
-    ilm_rem("estimand", "replace the AR term with a smooth of time, s(time), plus a random slope on time for the group: a trend and each group's departure from it, in place of a correlated process")),
+    ## s(time) describes the past and does not forecast: beyond the data a
+    ## smooth runs on its last slope, where a correlated process reverts,
+    ## so it is offered as a description only
+    ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts")),
 
   optimizer = if (status == "FAIL") list(ilm_rem_restarts(fit)) else list(),
 
