@@ -80,6 +80,34 @@ test_that("ilm_ranef() gives lme4's modes and condVar, labelled", {
   expect_identical(nlme::ranef(f), r)
 })
 
+test_that("the conditional SDs are the exact posterior's, by ML and by REML", {
+  ## For a gaussian model the Laplace approximation is exact, so the SDs must
+  ## be those of the posterior of the random effects given the variance
+  ## components -- holding the fixed effects at their estimate under ML, and
+  ## integrating them out under a flat prior under REML. Built here densely
+  ## from the fit's own estimates. (An earlier draft filled the REML vector
+  ## by position and was 60% off.)
+  d <- acc_data()
+  n <- nrow(d); nl <- nlevels(d$id); g <- as.integer(d$id)
+  Zi <- outer(g, seq_len(nl), `==`) * 1
+  Z <- cbind(Zi, Zi * d$t)                       # intercepts, then slopes
+  X <- cbind(1, d$x)
+  for (reml in c(FALSE, TRUE)) {
+    f <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+                   reml = reml, verbose = FALSE)
+    S <- ilm_varcorr(f)$re$id; s2 <- unname(ilm_varcorr(f)$dispersion$value)^2
+    Ginv <- solve(kronecker(S[, ], diag(nl)))
+    P <- if (reml)
+      rbind(cbind(crossprod(X), crossprod(X, Z)),
+            cbind(crossprod(Z, X), crossprod(Z) + s2 * Ginv)) / s2
+    else (crossprod(Z) + s2 * Ginv) / s2
+    V <- solve(P)
+    want <- sqrt(diag(V))[if (reml) -(1:2) else seq_len(2 * nl)]
+    r <- expect_silent(ilm_ranef(f))
+    expect_equal(r$sd, want, tolerance = 1e-6, label = paste("reml =", reml))
+  }
+})
+
 test_that("each mode is the fit's own value at its row, by ML and by REML", {
   ## Under REML the fixed effects are in the random block and come first, and
   ## reading the random effects by POSITION shifted every mode by p * C. The

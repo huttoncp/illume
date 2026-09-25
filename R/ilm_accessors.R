@@ -247,14 +247,35 @@ ilm_cond_sd <- function(object) {
   out <- rep(NA_real_, length(env$par))
   ri <- env$random
   if (!length(ri)) return(out)
-  full <- env$par
-  full[-ri] <- object$opt$par
-  full[ri] <- object$sdr$par.random
+  ## the full vector at the optimum, block by block BY NAME: under REML the
+  ## stored opt$par has the fixed effects prepended, so it is not the vector
+  ## TMB optimised, and filling by position put them where the variance
+  ## parameters go
+  full <- ilm_full_par(object)
   H <- tryCatch(env$spHess(full, random = TRUE), error = function(e) NULL)
   if (is.null(H)) return(out)
   v <- ilm_diag_inv(H)
   out[ri] <- sqrt(pmax(v, 0))
   out
+}
+
+## The fit's full parameter vector at the optimum, in object$obj$env$par order,
+## each block taken by name: a random block from par.random, a fixed one from
+## opt$par. The joint precision and ilm_ranef()'s rows are laid out along it.
+#' @keywords internal
+#' @noRd
+ilm_full_par <- function(object) {
+  full <- object$obj$env$par
+  rn <- names(full)
+  pf <- object$opt$par; pr <- object$sdr$par.random
+  for (nm in unique(rn)) {
+    src <- if (nm %in% names(pr)) pr[names(pr) == nm] else pf[names(pf) == nm]
+    if (length(src) != sum(rn == nm))
+      stop("internal: the fit's '", nm, "' block has ", length(src),
+           " values for ", sum(rn == nm), " places", call. = FALSE)
+    full[rn == nm] <- src
+  }
+  full
 }
 
 ## The diagonal of a sparse symmetric matrix's inverse, a block of columns at
