@@ -12,7 +12,7 @@ ilm_draws(
   object,
   nsim = 1000L,
   seed = NULL,
-  given = c("none", "theta"),
+  given = c("none", "theta", "parameters"),
   blocks = NULL,
   natural = TRUE
 )
@@ -34,8 +34,9 @@ ilm_draws(
 
 - given:
 
-  `"none"` to draw everything, or `"theta"` to hold the variance
-  parameters at their estimates.
+  `"none"` to draw everything, `"theta"` to hold the variance parameters
+  at their estimates, or `"parameters"` to hold every parameter and draw
+  only the random effects and the cells.
 
 - blocks:
 
@@ -85,7 +86,8 @@ An object of class `"ilm_draws"`, a list with
 - `held`:
 
   the number of directions held at a boundary, and the terms they belong
-  to.
+  to; none under `given = "theta"` or `"parameters"`, which hold the
+  variance parameters whole.
 
 - `given`:
 
@@ -113,12 +115,29 @@ else from its distribution given them – the approach of the `merTools`
 package. The dispersion and the family's other parameters are still
 drawn.
 
+**`given = "parameters"`** holds every parameter at its estimate – the
+fixed effects, the variance, dispersion and correlation parameters, and
+the family's others – and draws only the random effects and the cells of
+a correlation over time, from their distribution given the parameters:
+the curvature of the fit's inner optimisation at the conditional modes,
+which for a gaussian model is that distribution exactly. Their SDs are
+[`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)'s
+`sd`, except under REML, where
+[`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+integrates over the fixed effects and these hold them, so these are
+smaller. The variance components in `natural` are then those at the
+estimate. A model without random effects has nothing left to draw: given
+its parameters the distribution is a point mass, and every draw sits at
+the estimate.
+
 **`blocks`** returns only the named blocks of the parameter vector – say
 `c("beta", "bvec")` – which saves memory; the draw is joint either way.
 
 A fit made without `joint = TRUE` has no joint precision stored, and it
 is formed here from the fit's compiled objective; a fit read back from
-disk no longer has that, and has to be refitted.
+disk no longer has that, and has to be refitted. A fit without random
+effects needs neither: with nothing integrated out, its draws come from
+`vcov(fit, full = TRUE)`.
 
 ## See also
 

@@ -34,25 +34,50 @@
   - **Layout.** The rows are named by block, with a map that labels each
     one: coefficient, group and dimension, or cell.
   - **Natural scale.** Each draw’s variance components are given on the
-    natural scale, through the same transform as
+    natural scale, through the same transforms as
     [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md),
-    so at the estimate the two agree exactly.
+    so at the estimate the two agree exactly. They are formed for all
+    the draws at once, so 1,000 draws take about as long with them as
+    without.
   - **Boundaries.** Where a fit holds a boundary direction, the draws
     hold it exactly, by conditioning on it. The fit now keeps the
     directions it held and the Hessian its covariance came from.
   - **Options.** `given = "theta"` holds the variance parameters at
-    their estimates. `blocks` returns part of the vector. A fit made
-    without `joint = TRUE` has its precision formed on demand.
+    their estimates. `given = "parameters"` holds every parameter and
+    draws only the random effects and the cells of a correlation over
+    time, from their distribution given the parameters. `blocks` returns
+    part of the vector. A fit made without `joint = TRUE` has its
+    precision formed on demand.
+  - **Without random effects.** A fit with nothing integrated out, a GLM
+    say, is drawn from `vcov(fit, full = TRUE)`, as its standard errors
+    are. As first written such a fit was refused, because TMB forms a
+    joint precision only when there is a random part. Found by another
+    agent.
 
 - [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
   gives the designs for new rows: the fixed design, each random term’s
   design with each row’s group matched by label, each smooth’s penalised
-  basis, and the zero part’s and dispersion model’s designs. It also
-  places each new row among a correlation over time’s cells: the cell it
-  falls on, the cells either side and the time to each. A prediction
-  assembled from these matrices is
+  basis, and the zero part’s and dispersion model’s designs. Every
+  column is named for what it multiplies: a random term’s by dimension,
+  as
+  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  names them (`"(Intercept)"` for a random intercept alone too), and the
+  zero part’s and dispersion model’s as their coefficients are
+  (`"zi:(Intercept)"`, `"disp:x"`), in `coef(fit, full = TRUE)` and in
+  [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)’
+  map. It also places each new row among a correlation over time’s
+  cells: the cell it falls on, the cells either side and the time to
+  each. A prediction assembled from these matrices is
   [`predict()`](https://rdrr.io/r/stats/predict.html)’s. The smooth
   basis comes from the same code, now shared.
+
+- Fixed: the pre-fit checks sized an ordinal fit as though it had J - 1
+  category dimensions, as a multinomial fit has. It has one linear
+  predictor, as the fit itself knew. A four-category fit with 40 groups
+  of 10 was reported as having 6 covariance parameters and 120 latent
+  values, a WARN, where it has 1 and 40, with ten observations to each.
+  The checks now take the dimensions from the family, as the fit does.
+  Found by another agent.
 
 - [`ilm_dist()`](https://huttoncp.github.io/illume/reference/ilm_dist.md)
   gives a fit’s response distribution as functions: the density,
@@ -157,6 +182,34 @@
 - [`summary()`](https://rdrr.io/r/base/summary.html) names the
   correlation over time it fitted and gives its standard deviation. It
   used to call a CAR(1) term “ar1”.
+
+- Fixed: `y ~ z + s(x, by = z)`, a numeric `by` variable beside its own
+  smooth, fitted with a failed Hessian and every standard error `NaN`,
+  and nothing said why. A smooth with a numeric `by` is not centred, so
+  its unpenalised part already spans `z` (and `z * x`) whatever the
+  basis. The two are one column. The fit now stops before it starts,
+  saying so and that dropping `z` is the fix (Wood 2017, p. 326). Found
+  by another agent.
+
+- Fixed: a smooth with a numeric `by` took the name of the same smooth
+  without it, so `s(x) + s(x, by = z)` called both `"s(x)"`.
+
+  - **What it did.** The second overwrote the first’s penalised part, so
+    the fit carried one random term too few. The two shared column
+    names, and [`predict()`](https://rdrr.io/r/stats/predict.html) on
+    new rows stopped on a column count.
+  - **Now.** Every smooth takes mgcv’s own name: `"s(x):z"` for
+    `s(x, by = z)`. Its unpenalised columns are `"s(x):z.f1"`,
+    `"s(x):z.f2"`, and its variance is `"s(x):z"`. Two smooths with one
+    name stop instead of overwriting.
+  - **What changes for existing code.** A smooth with a numeric `by`,
+    alone, used to name its columns `"s(x).f1"` and `"s(x).f2"`. Code
+    that picked them out by those names needs the new ones. A smooth
+    without a `by` is named as before.
+  - [`?ilm_model`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+    has a section, “How smooth terms are named”, with the whole scheme,
+    and the regression-models vignette says the same.
+  - Found by another agent.
 
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   says each effect in the response’s own units, over a change a reader

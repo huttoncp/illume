@@ -92,7 +92,9 @@ rows' times and groups. Not needed when it was built by name.</p></dd>
 
 <dt><code>re</code></dt>
 <dd><p>one element per grouping term: <code>Z</code>, its design (the
-intercept and slope columns); <code>level</code>, each row's group label;
+intercept and slope columns, named by dimension as <code><a href="ilm_ranef.html">ilm_ranef()</a></code>
+and <code><a href="ilm_draws.html">ilm_draws()</a></code>' map name them, <code>"(Intercept)"</code> for a random
+intercept alone); <code>level</code>, each row's group label;
 <code>group</code>, its position among the fitted levels, <code>NA</code> for a new group;
 <code>new_group</code>; and <code>factor</code>, the grouping variable.</p></dd>
 
@@ -101,7 +103,9 @@ intercept and slope columns); <code>level</code>, each row's group label;
 
 <dt><code>zi</code>, <code>disp</code></dt>
 <dd><p>the zero part's and the dispersion model's designs,
-when the model has them.</p></dd>
+when the model has them. Their columns are named as the coefficients
+they multiply are, in <code>coef(object, full = TRUE)</code> and in
+<code><a href="ilm_draws.html">ilm_draws()</a></code>' map: <code>"zi:(Intercept)"</code>, <code>"disp:x"</code>.</p></dd>
 
 <dt><code>ar</code></dt>
 <dd><p>with a correlation over time, a data frame with a row per

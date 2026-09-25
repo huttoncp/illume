@@ -40,9 +40,14 @@ A list with
 - `re`:
 
   one element per grouping term: `Z`, its design (the intercept and
-  slope columns); `level`, each row's group label; `group`, its position
-  among the fitted levels, `NA` for a new group; `new_group`; and
-  `factor`, the grouping variable.
+  slope columns, named by dimension as
+  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  and
+  [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)'
+  map name them, `"(Intercept)"` for a random intercept alone); `level`,
+  each row's group label; `group`, its position among the fitted levels,
+  `NA` for a new group; `new_group`; and `factor`, the grouping
+  variable.
 
 - `smooth`:
 
@@ -51,7 +56,10 @@ A list with
 - `zi`, `disp`:
 
   the zero part's and the dispersion model's designs, when the model has
-  them.
+  them. Their columns are named as the coefficients they multiply are,
+  in `coef(object, full = TRUE)` and in
+  [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)'
+  map: `"zi:(Intercept)"`, `"disp:x"`.
 
 - `ar`:
 

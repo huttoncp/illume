@@ -391,6 +391,38 @@ standard errors meaningless.
 verdicts for that reason, and `fit$checks` holds the full table with a
 reason and a suggested remedy for anything that is not `"OK"`.
 
+## How smooth terms are named
+
+A smooth takes the name mgcv gives the smooth it builds, and three
+things are named from it:
+
+- **the smooth itself**, as `fit$smooths` and the random terms list it:
+  `"s(x)"` for `s(x)`, `"t2(x,z)"` for `t2(x, z)`, and `"s(x):z"` for a
+  smooth with a numeric `by`, `s(x, by = z)`;
+
+- **its unpenalised columns** among the fixed effects: the name with
+  `.f1`, `.f2`, ... after it, so `"s(x).f1"`, or `"s(x):z.f1"` and
+  `"s(x):z.f2"`;
+
+- **its penalised part**, the random term whose variance
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
+  and `fit$Sigma` report: the name itself, or `"t2(x,z).1"`,
+  `"t2(x,z).2"`, ... for a tensor product, which has a penalty per
+  margin.
+
+Two smooths may not share a name. `s(x) + s(x, k = 5)` stops, because
+the second would overwrite the first.
+
+**What changed.** A smooth with a numeric `by` used to take the name of
+the same smooth without it: `"s(x)"`, with columns `"s(x).f1"` and
+`"s(x).f2"`. Beside a plain `s(x)` the two names collided: one smooth's
+penalised part was lost from the fit, and
+[`predict()`](https://rdrr.io/r/stats/predict.html) on new rows stopped.
+Its columns are now `"s(x):z.f1"` and `"s(x):z.f2"`, and its variance
+`"s(x):z"`. Code that picked them out by the old names needs the new
+ones. A smooth without a `by` is named as before.
+
 ## References
 
 Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., & Liu, J. (2013). A

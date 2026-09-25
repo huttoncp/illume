@@ -407,6 +407,29 @@ and <code>fit$checks</code> holds the full table with a reason and a suggested r
 for anything that is not <code>"OK"</code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="how-smooth-terms-are-named">How smooth terms are named<a class="anchor" aria-label="anchor" href="#how-smooth-terms-are-named"></a></h2>
+
+
+<p>A smooth takes the name mgcv gives the smooth it builds, and three things
+are named from it:</p><ul><li><p><strong>the smooth itself</strong>, as <code>fit$smooths</code> and the random terms list it:
+<code>"s(x)"</code> for <code>s(x)</code>, <code>"t2(x,z)"</code> for <code>t2(x, z)</code>, and <code>"s(x):z"</code> for a
+smooth with a numeric <code>by</code>, <code>s(x, by = z)</code>;</p></li>
+<li><p><strong>its unpenalised columns</strong> among the fixed effects: the name with <code>.f1</code>,
+<code>.f2</code>, ... after it, so <code>"s(x).f1"</code>, or <code>"s(x):z.f1"</code> and <code>"s(x):z.f2"</code>;</p></li>
+<li><p><strong>its penalised part</strong>, the random term whose variance <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>,
+<code><a href="ilm_varcorr.html">ilm_varcorr()</a></code> and <code>fit$Sigma</code> report: the name itself, or <code>"t2(x,z).1"</code>,
+<code>"t2(x,z).2"</code>, ... for a tensor product, which has a penalty per margin.</p></li>
+</ul><p>Two smooths may not share a name. <code>s(x) + s(x, k = 5)</code> stops, because the
+second would overwrite the first.</p>
+<p><strong>What changed.</strong> A smooth with a numeric <code>by</code> used to take the name of the
+same smooth without it: <code>"s(x)"</code>, with columns <code>"s(x).f1"</code> and
+<code>"s(x).f2"</code>. Beside a plain <code>s(x)</code> the two names collided: one smooth's
+penalised part was lost from the fit, and <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> on new rows stopped.
+Its columns are now <code>"s(x):z.f1"</code> and <code>"s(x):z.f2"</code>, and its variance
+<code>"s(x):z"</code>. Code that picked them out by the old names needs the new ones.
+A smooth without a <code>by</code> is named as before.</p>
+    </div>
+    <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., &amp; Liu, J. (2013). A
 nondegenerate penalized likelihood estimator for variance parameters in

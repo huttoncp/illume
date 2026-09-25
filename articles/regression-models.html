@@ -418,6 +418,21 @@ penalised smooths:</p>
 <code>te()</code> for tensor products, and write them unqualified –
 <code>s(x)</code>, not <code>mgcv::s(x)</code> – because mgcv identifies
 smooths by name.</p>
+<p>A smooth is named as mgcv names it. <code>s(x)</code> is
+<code>"s(x)"</code>, and a smooth with a numeric <code>by</code>,
+<code>s(x, by = z)</code>, is <code>"s(x):z"</code>. Its unpenalised
+columns among the fixed effects carry the name with <code>.f1</code>,
+<code>.f2</code>, … after it (<code>"s(x):z.f1"</code>), and its
+penalised part is the random term of that name. A smooth with a numeric
+<code>by</code> used to be called <code>"s(x)"</code>, with columns
+<code>"s(x).f1"</code> and <code>"s(x).f2"</code>. Beside a plain
+<code>s(x)</code> that collided, and the fit lost one of the two. The
+section “How smooth terms are named” in <code><a href="../reference/ilm_model.html">?ilm_model</a></code> has the
+whole scheme.</p>
+<p>A numeric <code>by</code> variable is not also entered on its own.
+<code>s(x, by = z)</code> is not centred, so it already carries
+<code>z</code>’s main effect, and <code>y ~ z + s(x, by = z)</code>
+stops and says so.</p>
 <p>A random term’s covariance is set through <code>re_struct</code>: a
 list with one element per term, named by its grouping variable, each
 element itself a list. Two settings go in it. <code>d_cor = FALSE</code>
