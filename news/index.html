@@ -55,6 +55,18 @@
 <li>On a model both packages fit, the modes, SDs and covariances agree with lme4’s to 1e-3.</li>
 <li>Each random effect’s <code>row</code> is its position in the fit’s full parameter vector, where it matches the fit’s own value exactly, by ML and by REML. That is the check that would have caught the REML defect below.</li>
 </ul></li>
+<li>
+<p><code><a href="../reference/ilm_draws.html">ilm_draws()</a></code> draws every parameter of a fit jointly from its joint precision: the fixed effects, the variance and dispersion parameters, each group’s random effects and each cell of a correlation over time.</p>
+<ul><li>
+<strong>Layout.</strong> The rows are named by block, with a map that labels each one: coefficient, group and dimension, or cell.</li>
+<li>
+<strong>Natural scale.</strong> Each draw’s variance components are given on the natural scale, through the same transform as <code><a href="../reference/ilm_varcorr.html">ilm_varcorr()</a></code>, so at the estimate the two agree exactly.</li>
+<li>
+<strong>Boundaries.</strong> Where a fit holds a boundary direction, the draws hold it exactly, by conditioning on it. The fit now keeps the directions it held and the Hessian its covariance came from.</li>
+<li>
+<strong>Options.</strong> <code>given = "theta"</code> holds the variance parameters at their estimates. <code>blocks</code> returns part of the vector. A fit made without <code>joint = TRUE</code> has its precision formed on demand.</li>
+</ul></li>
+<li><p><code><a href="../reference/ilm_matrices.html">ilm_matrices()</a></code> gives the designs for new rows: the fixed design, each random term’s design with each row’s group matched by label, each smooth’s penalised basis, and the zero part’s and dispersion model’s designs. It also places each new row among a correlation over time’s cells: the cell it falls on, the cells either side and the time to each. A prediction assembled from these matrices is <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>’s. The smooth basis comes from the same code, now shared.</p></li>
 <li><p><code><a href="../reference/ilm_normal_expect.html">ilm_normal_expect()</a></code> exports the Gauss-Hermite quadrature behind <code>predict(marginal = TRUE)</code>, so code built on a fit averages over a latent spread as its predictions do.</p></li>
 <li><p>Fixed: <code>fixef()</code> did not reach illume’s method. It was registered on a generic of illume’s own, so with nlme or lme4 attached, <code>fixef(fit)</code> stopped with “no applicable method”. It is now registered on nlme’s generic.</p></li>
 <li><p>A fit keeps each grouping term’s level labels, and a refit keeps them too.</p></li>

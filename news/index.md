@@ -26,6 +26,34 @@
     ML and by REML. That is the check that would have caught the REML
     defect below.
 
+- [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+  draws every parameter of a fit jointly from its joint precision: the
+  fixed effects, the variance and dispersion parameters, each group’s
+  random effects and each cell of a correlation over time.
+
+  - **Layout.** The rows are named by block, with a map that labels each
+    one: coefficient, group and dimension, or cell.
+  - **Natural scale.** Each draw’s variance components are given on the
+    natural scale, through the same transform as
+    [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md),
+    so at the estimate the two agree exactly.
+  - **Boundaries.** Where a fit holds a boundary direction, the draws
+    hold it exactly, by conditioning on it. The fit now keeps the
+    directions it held and the Hessian its covariance came from.
+  - **Options.** `given = "theta"` holds the variance parameters at
+    their estimates. `blocks` returns part of the vector. A fit made
+    without `joint = TRUE` has its precision formed on demand.
+
+- [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
+  gives the designs for new rows: the fixed design, each random term’s
+  design with each row’s group matched by label, each smooth’s penalised
+  basis, and the zero part’s and dispersion model’s designs. It also
+  places each new row among a correlation over time’s cells: the cell it
+  falls on, the cells either side and the time to each. A prediction
+  assembled from these matrices is
+  [`predict()`](https://rdrr.io/r/stats/predict.html)’s. The smooth
+  basis comes from the same code, now shared.
+
 - [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
   exports the Gauss-Hermite quadrature behind
   `predict(marginal = TRUE)`, so code built on a fit averages over a

@@ -49,6 +49,10 @@ and the quadrature behind a population average.
   [`VarCorr(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
   [`as.data.frame(`*`<ilm_VarCorr>`*`)`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
   : Variance components of a fitted model
+- [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+  : Joint draws of every parameter of a fitted model
+- [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
+  : The design matrices of a fitted model, for new rows
 - [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
   : The cells of a correlation over time
 - [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
