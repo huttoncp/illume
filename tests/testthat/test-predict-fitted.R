@@ -42,6 +42,14 @@ test_that("the fitted rows' prediction is ilm_fitted()'s, and new rows' by hand"
                                 predict(f, nd, groups = "typical"))))
 })
 
+test_that("without groups or cells, a fitted group's prediction is the typical one", {
+  d <- pf_data()
+  f <- ilm_model(y ~ x, data = d, family = "binomial", verbose = FALSE)
+  nd <- data.frame(x = c(-1, 2))
+  expect_identical(predict(f, nd, groups = "fitted", se.fit = TRUE),
+                   predict(f, nd, groups = "typical", se.fit = TRUE))
+})
+
 test_that("a row with no estimated effect is an error, not a zero", {
   d <- pf_data()
   f <- ilm_model(y ~ x + (1 | g), data = d, family = "binomial",

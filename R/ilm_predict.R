@@ -611,6 +611,9 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## each row's own group and cell, placed before anything is computed, so a
   ## row that has none stops here
   pl <- if (fitted) ilm_fitted_place(object, newdata) else NULL
+  ## with no groups and no cells there is nothing of a group's own to add, and
+  ## the prediction is the typical group's, intervals and all
+  if (fitted && !length(pl$re) && is.null(pl$cell)) fitted <- FALSE
 
   gk <- which(vapply(object$re, function(e) e$kind != "basis", TRUE))
   ## An AR or CAR term is a population to average over too. Its latent value at
