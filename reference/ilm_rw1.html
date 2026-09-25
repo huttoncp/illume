@@ -116,8 +116,9 @@ the Laplace approximation, and the fit-time checks judge the number of
 observations per latent value as they do for <code><a href="ilm_car1.html">ilm_car1()</a></code>.</p>
 <p><code>ilm_rw1(~ time | group)</code> names two columns of the model's data instead of
 passing them; see <code><a href="ilm_ar1.html">ilm_ar1()</a></code> for why that is the safer form. It is also
-what lets <code>predict(marginal = TRUE)</code> place new rows on the walk, whose
-variance depends on how long after its group's first time each one falls.</p>
+what lets <code>predict(groups = "population")</code> place new rows on the walk,
+whose variance depends on how long after its group's first time each one
+falls.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

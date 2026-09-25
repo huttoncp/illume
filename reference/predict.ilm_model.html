@@ -67,13 +67,14 @@ with standard errors and intervals.</p>
 <span>  <span class="va">object</span>,</span>
 <span>  newdata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"response"</span>, <span class="st">"link"</span>, <span class="st">"class"</span><span class="op">)</span>,</span>
-<span>  marginal <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typical"</span>, <span class="st">"population"</span><span class="op">)</span>,</span>
 <span>  se.fit <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  interval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"confidence"</span><span class="op">)</span>,</span>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">200L</span>,</span>
 <span>  ndraw <span class="op">=</span> <span class="fl">200L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  marginal <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -96,9 +97,10 @@ used to fit the model.</p></dd>
 predictors, or <code>"class"</code> for the most likely category.</p></dd>
 
 
-<dt id="arg-marginal">marginal<a class="anchor" aria-label="anchor" href="#arg-marginal"></a></dt>
-<dd><p>Logical. Average over the random-effect distribution
-(population-averaged) rather than setting it to zero (conditional).</p></dd>
+<dt id="arg-groups">groups<a class="anchor" aria-label="anchor" href="#arg-groups"></a></dt>
+<dd><p><code>"typical"</code> (the default) for a group with every random
+effect at zero, or <code>"population"</code> for the average over the groups. See
+"Which groups".</p></dd>
 
 
 <dt id="arg-se-fit">se.fit<a class="anchor" aria-label="anchor" href="#arg-se-fit"></a></dt>
@@ -118,13 +120,17 @@ predictors, or <code>"class"</code> for the most likely category.</p></dd>
 
 
 <dt id="arg-ndraw">ndraw<a class="anchor" aria-label="anchor" href="#arg-ndraw"></a></dt>
-<dd><p>Integer. Random-effect draws used when <code>marginal = TRUE</code> for a
-multinomial outcome; a single linear predictor is averaged by quadrature
-and does not use it.</p></dd>
+<dd><p>Integer. Random-effect draws used when <code>groups = "population"</code> for a multinomial outcome; a single linear predictor is
+averaged by quadrature and does not use it.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
 <dd><p>Integer. Random seed, so results are reproducible.</p></dd>
+
+
+<dt id="arg-marginal">marginal<a class="anchor" aria-label="anchor" href="#arg-marginal"></a></dt>
+<dd><p>Deprecated. <code>TRUE</code> is <code>groups = "population"</code>, and <code>FALSE</code>
+is <code>groups = "typical"</code>.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -138,32 +144,36 @@ and does not use it.</p></dd>
 with <code>fit</code>, <code>se.fit</code>, <code>lower</code>, <code>upper</code>, <code>level</code> and <code>joint</code>.</p>
     </div>
     <div class="section level2">
-    <h2 id="conditional-versus-population-averaged">Conditional versus population-averaged<a class="anchor" aria-label="anchor" href="#conditional-versus-population-averaged"></a></h2>
+    <h2 id="which-groups">Which groups<a class="anchor" aria-label="anchor" href="#which-groups"></a></h2>
 
 
-<p>This is the choice that matters most, and there is no safe default that suits
-everyone.</p>
-<p>With <code>marginal = FALSE</code> the random effects are set to zero, giving the
-probabilities for a <strong>typical</strong> group – one exactly at the population
-average. With <code>marginal = TRUE</code> the prediction is averaged over the
-distribution of random effects, giving the probabilities for the
-<strong>population as a whole</strong>.</p>
-<p>These differ, sometimes substantially, because averaging and the softmax
-transform do not commute: the average of the transformed values is not the
-transform of the average. The population-averaged probabilities are pulled
-toward being more even across categories. Which you want depends on the
-question – "what do I expect for an average subject?" or "what proportion of
-the population falls in each category?"</p>
+<p>In a model with random effects every prediction is for some group, and this
+is the choice that matters most. There is no safe default that suits
+everyone. <code>groups</code> says which:</p><ul><li><p><code>"typical"</code> (the default) sets every random effect to zero, giving the
+prediction for a <strong>typical group</strong>: one exactly at the average.</p></li>
+<li><p><code>"population"</code> averages the prediction over the distribution of random
+effects, giving it for the <strong>population of groups as a whole</strong>.</p></li>
+</ul><p>These differ, sometimes substantially, because averaging and a nonlinear
+inverse link do not commute: the average of the transformed values is not
+the transform of the average. Through a softmax, the population's
+probabilities are pulled toward being more even across categories. Which
+you want depends on the question – "what do I expect for an average
+subject?" or "what proportion of the population falls in each category?"</p>
+<p>Each fitted group's own effects are what <code><a href="ilm_fitted.html">ilm_fitted()</a></code> uses, for the rows
+the model was fitted to, and <code><a href="ilm_ranef.html">ilm_ranef()</a></code> returns them.</p>
+<p><code>marginal</code> is the old name for this choice: <code>marginal = FALSE</code> is
+<code>groups = "typical"</code>, and <code>marginal = TRUE</code> is <code>groups = "population"</code>. It
+still works, with a warning, and will be removed after the next release.</p>
 <p>Under an <strong>identity link</strong> the two coincide exactly, because the random
-effects have mean zero and nothing nonlinear stands between. <code>marginal</code> is
-then answered in closed form rather than by simulation, so the result does
-not depend on <code>ndraw</code> and carries no Monte Carlo noise.</p>
+effects have mean zero and nothing nonlinear stands between.
+<code>"population"</code> is then answered in closed form rather than by simulation,
+so the result does not depend on <code>ndraw</code> and carries no Monte Carlo noise.</p>
 <p>A <strong>random slope</strong> is averaged over as a slope. The amount being integrated
 over then depends on the row – it grows with distance from wherever the
-slope is centred – so the marginal and conditional curves separate by more
-at the ends of the range than in the middle. Averaging such a term as if it
-were an intercept understates that, and the error grows with the slope
-variance and with distance from centre.</p>
+slope is centred – so the population's curve and the typical group's
+separate by more at the ends of the range than in the middle. Averaging
+such a term as if it were an intercept understates that, and the error
+grows with the slope variance and with distance from centre.</p>
 <p>An <strong>AR(1) or CAR(1) term</strong> is averaged over too: at any one row its latent
 value has the stationary distribution, whatever the time. A <strong>random walk</strong>
 (<code><a href="ilm_rw1.html">ilm_rw1()</a></code>) is not stationary: at a row its variance is the variance per

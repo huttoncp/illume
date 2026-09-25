@@ -295,7 +295,7 @@ ilm_anova(fit)                               # Type II by default
 ilm_effects(fit)                             # odds ratios, rate ratios, ...
 em <- ilm_emmeans(fit, "group")
 ilm_contrast(em)                             # simultaneous by default
-ilm_ame(fit, "x")                            # population-averaged
+ilm_ame(fit, "x", groups = "population")     # averaged over the groups
 ilm_plot_model(fit)
 ```
 

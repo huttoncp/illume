@@ -82,8 +82,8 @@ prediction at the average. The printed output says which was used.
 
 In a mixed model each unit's prediction is averaged over every random
 term – intercepts, slopes, an AR or CAR latent – as
-`predict(marginal = TRUE)` does, so the result is a population mean
-rather than the value for a group whose random effect happens to be
+`predict(groups = "population")` does, so the result is a population
+mean rather than the value for a group whose random effect happens to be
 zero. The estimate is that mean at the fitted parameters, so it matches
 [`predict()`](https://rdrr.io/r/stats/predict.html) exactly and does not
 depend on `seed` or `sims`; the interval comes from draws of the whole

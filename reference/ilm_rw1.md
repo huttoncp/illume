@@ -64,8 +64,9 @@ checks judge the number of observations per latent value as they do for
 of passing them; see
 [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
 for why that is the safer form. It is also what lets
-`predict(marginal = TRUE)` place new rows on the walk, whose variance
-depends on how long after its group's first time each one falls.
+`predict(groups = "population")` place new rows on the walk, whose
+variance depends on how long after its group's first time each one
+falls.
 
 ## References
 

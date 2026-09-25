@@ -101,9 +101,9 @@ averaged over the rows the model was fitted to, as
 [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)'s
 effects are, with any random effects at zero: in a mixed model they are
 a typical group's, and with a nonlinear link the text says so, since
-averaging over the groups instead – `predict(marginal = TRUE)` – gives
-different numbers. A probability is given as one, and a difference of
-two in percentage points, with the odds ratio after it for those who
+averaging over the groups instead – `predict(groups = "population")` –
+gives different numbers. A probability is given as one, and a difference
+of two in percentage points, with the odds ratio after it for those who
 want it. The evidence is the term's joint test, so a factor with several
 levels, or a predictor in a multinomial model, gets one verdict rather
 than one per coefficient. A term that is not a plain variable – an

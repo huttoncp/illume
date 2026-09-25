@@ -9,7 +9,7 @@ function along, the construction below.
 ## Usage
 
 ``` r
-ilm_rqr(object, conditional = TRUE, seed = 1L)
+ilm_rqr(object, groups = c("fitted", "typical"), seed = 1L, conditional = NULL)
 ```
 
 ## Arguments
@@ -18,13 +18,21 @@ ilm_rqr(object, conditional = TRUE, seed = 1L)
 
   A fitted `"ilm_model"` object.
 
-- conditional:
+- groups:
 
-  Logical. Evaluate at the fitted random effects.
+  `"fitted"` (the default) takes each observation's distribution at its
+  group's own estimated random effects; `"typical"` takes it with every
+  random effect at zero. As in
+  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md).
 
 - seed:
 
   Integer. Random seed; the transform uses randomisation.
+
+- conditional:
+
+  Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE` is
+  `groups = "typical"`.
 
 ## Value
 

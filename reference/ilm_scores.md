@@ -8,7 +8,7 @@ probabilistic predictions.
 ## Usage
 
 ``` r
-ilm_scores(object, conditional = TRUE)
+ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL)
 ```
 
 ## Arguments
@@ -17,10 +17,16 @@ ilm_scores(object, conditional = TRUE)
 
   A fitted `"ilm_model"` object.
 
+- groups:
+
+  `"fitted"` (the default) or `"typical"`: which random effects the
+  probabilities being scored use, as in
+  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md).
+
 - conditional:
 
-  Logical, as in
-  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md).
+  Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE` is
+  `groups = "typical"`.
 
 ## Value
 

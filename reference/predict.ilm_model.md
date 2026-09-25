@@ -13,13 +13,14 @@ predict(
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  marginal = FALSE,
+  groups = c("typical", "population"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
   nsim = 200L,
   ndraw = 200L,
   seed = 1L,
+  marginal = NULL,
   ...
 )
 ```
@@ -40,10 +41,11 @@ predict(
   `"response"` for probabilities (the default), `"link"` for linear
   predictors, or `"class"` for the most likely category.
 
-- marginal:
+- groups:
 
-  Logical. Average over the random-effect distribution
-  (population-averaged) rather than setting it to zero (conditional).
+  `"typical"` (the default) for a group with every random effect at
+  zero, or `"population"` for the average over the groups. See "Which
+  groups".
 
 - se.fit:
 
@@ -63,13 +65,18 @@ predict(
 
 - ndraw:
 
-  Integer. Random-effect draws used when `marginal = TRUE` for a
+  Integer. Random-effect draws used when `groups = "population"` for a
   multinomial outcome; a single linear predictor is averaged by
   quadrature and does not use it.
 
 - seed:
 
   Integer. Random seed, so results are reproducible.
+
+- marginal:
+
+  Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
+  `groups = "typical"`.
 
 - ...:
 
@@ -81,35 +88,49 @@ A matrix of probabilities (or linear predictors), or a factor for
 `type = "class"`. When standard errors or intervals are requested, a
 list with `fit`, `se.fit`, `lower`, `upper`, `level` and `joint`.
 
-## Conditional versus population-averaged
+## Which groups
 
-This is the choice that matters most, and there is no safe default that
-suits everyone.
+In a model with random effects every prediction is for some group, and
+this is the choice that matters most. There is no safe default that
+suits everyone. `groups` says which:
 
-With `marginal = FALSE` the random effects are set to zero, giving the
-probabilities for a **typical** group – one exactly at the population
-average. With `marginal = TRUE` the prediction is averaged over the
-distribution of random effects, giving the probabilities for the
-**population as a whole**.
+- `"typical"` (the default) sets every random effect to zero, giving the
+  prediction for a **typical group**: one exactly at the average.
 
-These differ, sometimes substantially, because averaging and the softmax
-transform do not commute: the average of the transformed values is not
-the transform of the average. The population-averaged probabilities are
-pulled toward being more even across categories. Which you want depends
-on the question – "what do I expect for an average subject?" or "what
-proportion of the population falls in each category?"
+- `"population"` averages the prediction over the distribution of random
+  effects, giving it for the **population of groups as a whole**.
+
+These differ, sometimes substantially, because averaging and a nonlinear
+inverse link do not commute: the average of the transformed values is
+not the transform of the average. Through a softmax, the population's
+probabilities are pulled toward being more even across categories. Which
+you want depends on the question – "what do I expect for an average
+subject?" or "what proportion of the population falls in each category?"
+
+Each fitted group's own effects are what
+[`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)
+uses, for the rows the model was fitted to, and
+[`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+returns them.
+
+`marginal` is the old name for this choice: `marginal = FALSE` is
+`groups = "typical"`, and `marginal = TRUE` is `groups = "population"`.
+It still works, with a warning, and will be removed after the next
+release.
 
 Under an **identity link** the two coincide exactly, because the random
-effects have mean zero and nothing nonlinear stands between. `marginal`
-is then answered in closed form rather than by simulation, so the result
-does not depend on `ndraw` and carries no Monte Carlo noise.
+effects have mean zero and nothing nonlinear stands between.
+`"population"` is then answered in closed form rather than by
+simulation, so the result does not depend on `ndraw` and carries no
+Monte Carlo noise.
 
 A **random slope** is averaged over as a slope. The amount being
 integrated over then depends on the row – it grows with distance from
-wherever the slope is centred – so the marginal and conditional curves
-separate by more at the ends of the range than in the middle. Averaging
-such a term as if it were an intercept understates that, and the error
-grows with the slope variance and with distance from centre.
+wherever the slope is centred – so the population's curve and the
+typical group's separate by more at the ends of the range than in the
+middle. Averaging such a term as if it were an intercept understates
+that, and the error grows with the slope variance and with distance from
+centre.
 
 An **AR(1) or CAR(1) term** is averaged over too: at any one row its
 latent value has the stationary distribution, whatever the time. A

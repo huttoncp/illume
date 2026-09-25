@@ -1,9 +1,10 @@
 # Expectation of a function of a normal variable
 
 `E[h(eta + sd * Z)]` for `Z` standard normal, by the Gauss-Hermite
-quadrature `predict(marginal = TRUE)` uses for a population average –
-the same nodes and the same rule for how many – so code built on a fit
-averages over a latent spread exactly as the fit's own predictions do.
+quadrature `predict(groups = "population")` uses for a population
+average – the same nodes and the same rule for how many – so code built
+on a fit averages over a latent spread exactly as the fit's own
+predictions do.
 
 ## Usage
 
@@ -45,7 +46,7 @@ nodes directly.
 ## See also
 
 [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md),
-whose `marginal = TRUE` uses the same rule.
+whose `groups = "population"` uses the same rule.
 
 ## Examples
 

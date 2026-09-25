@@ -293,7 +293,7 @@ for partial dependence.</p>
 <span><span class="fu"><a href="../reference/ilm_effects.html">ilm_effects</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                             <span class="co"># odds ratios, rate ratios, ...</span></span>
 <span><span class="va">em</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_emmeans.html">ilm_emmeans</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"group"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ilm_contrast.html">ilm_contrast</a></span><span class="op">(</span><span class="va">em</span><span class="op">)</span>                             <span class="co"># simultaneous by default</span></span>
-<span><span class="fu"><a href="../reference/ilm_ame.html">ilm_ame</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"x"</span><span class="op">)</span>                            <span class="co"># population-averaged</span></span>
+<span><span class="fu"><a href="../reference/ilm_ame.html">ilm_ame</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"x"</span>, groups <span class="op">=</span> <span class="st">"population"</span><span class="op">)</span>     <span class="co"># averaged over the groups</span></span>
 <span><span class="fu"><a href="../reference/ilm_plot_model.html">ilm_plot_model</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <p>A ratio from a mixed model is <strong>conditional</strong> on the
 cluster, and <code><a href="../reference/ilm_effects.html">ilm_effects()</a></code> says so rather than letting it

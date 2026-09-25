@@ -29,8 +29,9 @@ get_predict.ilm_model(
   model,
   newdata = NULL,
   type = "response",
-  marginal = NULL,
+  groups = NULL,
   ndraw = 100L,
+  marginal = NULL,
   ...
 )
 ```
@@ -61,14 +62,27 @@ get_predict.ilm_model(
 
   Prediction type.
 
-- marginal:
+- groups:
 
-  Logical. Population-averaged predictions; defaults to the
-  `ilm_model.marginal` option, which is `TRUE`.
+  Which groups the predictions are for: `"population"`, the average over
+  the groups, or `"typical"`, a group with every random effect at zero.
+  Defaults to the `ilm_model.groups` option, which is `"population"`.
+  See
+  [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md).
+  Given to a `marginaleffects` function, `groups` is passed on to this
+  method with a warning from `marginaleffects` that it does not know the
+  argument; setting the option instead avoids the warning.
 
 - ndraw:
 
-  Integer. Random-effect draws when `marginal = TRUE`.
+  Integer. Random-effect draws when `groups = "population"`, for a
+  multinomial outcome.
+
+- marginal:
+
+  Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
+  `groups = "typical"`. The option `ilm_model.marginal` is deprecated in
+  the same way.
 
 ## Value
 

@@ -8,7 +8,13 @@ probability or a 20-point one depending on where the data sit.
 ## Usage
 
 ``` r
-ilm_ame(object, terms = NULL, eps = 1e-04, marginal = FALSE)
+ilm_ame(
+  object,
+  terms = NULL,
+  eps = 1e-04,
+  groups = c("typical", "population"),
+  marginal = NULL
+)
 ```
 
 ## Arguments
@@ -26,11 +32,16 @@ ilm_ame(object, terms = NULL, eps = 1e-04, marginal = FALSE)
 
   Relative step for the numerical derivatives.
 
+- groups:
+
+  `"typical"` (the default) for the effect in a typical group, with the
+  random effects at zero; `"population"` for the effect averaged over
+  them. See "Which effect, in a mixed model".
+
 - marginal:
 
-  Logical. `FALSE` (the default) for the effect in a typical group, with
-  the random effects at zero; `TRUE` for the effect averaged over them.
-  See "Which effect, in a mixed model".
+  Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
+  `groups = "typical"`.
 
 ## Value
 
@@ -55,17 +66,25 @@ which the effect depends on when it is averaged over the random effects.
 
 ## Which effect, in a mixed model
 
-By default the predictions hold the random effects at zero, so the
-effect is the one for a **typical group** – the effect
+By default, `groups = "typical"`, the predictions hold the random
+effects at zero, so the effect is the one for a **typical group** – the
+effect
 [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
-reports, and the one the coefficients describe. With `marginal = TRUE`
-the predictions are averaged over every random term, as
-`predict(marginal = TRUE)` does, and the effect is the one on the
-**population as a whole**. Through a nonlinear link the two differ: a
-logit's population-averaged effect is the flatter one. They answer
-different questions. The `marginaleffects` bridge averages over the
-random effects unless its option `ilm_model.marginal` is set to `FALSE`,
-so it matches `marginal = TRUE`.
+reports, and the one the coefficients describe. With
+`groups = "population"` the predictions are averaged over every random
+term, as `predict(groups = "population")` does, and the effect is the
+one on the **population as a whole**. Through a nonlinear link the two
+differ: a logit's population-averaged effect is the flatter one. They
+answer different questions. The `marginaleffects` bridge averages over
+the random effects unless its option `ilm_model.groups` is set to
+`"typical"`, so by default it matches `groups = "population"`.
+
+"Marginal" is the usual name for this kind of effect, a derivative or a
+contrast averaged over the rows, whichever groups it is taken for. The
+old argument `marginal` chose the groups: `marginal = FALSE` is
+`groups = "typical"`, and `marginal = TRUE` is `groups = "population"`.
+It still works, with a warning, and will be removed after the next
+release.
 
 ## See also
 

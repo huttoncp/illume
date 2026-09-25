@@ -147,13 +147,13 @@ age is and how much age varies. The predictions are averaged over the rows
 the model was fitted to, as <code><a href="ilm_ame.html">ilm_ame()</a></code>'s effects are, with any random
 effects at zero: in a mixed model they are a typical group's, and with a
 nonlinear link the text says so, since averaging over the groups instead
-– <code>predict(marginal = TRUE)</code> – gives different numbers. A probability is
-given as one, and a difference of two in percentage points, with the odds
-ratio after it for those who want it. The evidence is the term's joint
-test, so a factor with several levels, or a predictor in a multinomial
-model, gets one verdict rather than one per coefficient. A term that is not
-a plain variable – an interaction, a spline – is described by its
-coefficients.</p>
+– <code>predict(groups = "population")</code> – gives different numbers. A
+probability is given as one, and a difference of two in percentage points,
+with the odds ratio after it for those who want it. The evidence is the
+term's joint test, so a factor with several levels, or a predictor in a
+multinomial model, gets one verdict rather than one per coefficient. A term
+that is not a plain variable – an interaction, a spline – is described by
+its coefficients.</p>
     </div>
     <div class="section level2">
     <h2 id="causal-language-is-licensed-not-assumed">Causal language is licensed, not assumed<a class="anchor" aria-label="anchor" href="#causal-language-is-licensed-not-assumed"></a></h2>

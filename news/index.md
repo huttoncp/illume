@@ -4,6 +4,57 @@
 
 - illume now requires illumex 0.0.8.9000.
 
+- **Which groups** a prediction, a fitted value or a residual is for is
+  now one argument, `groups`, with the same words everywhere:
+
+  - `"fitted"`: each group’s own estimated effects;
+  - `"typical"`: every random effect at zero, a group exactly at the
+    average;
+  - `"population"`: averaged over the groups;
+  - `"new"`: a group the fit has not seen. No function takes it yet:
+    such a group’s prediction is a spread, not one value.
+
+  Each function takes the words that apply to it, with its default
+  unchanged. [`predict()`](https://rdrr.io/r/stats/predict.html) and
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  take `"typical"` (the default) or `"population"`.
+  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md),
+  [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md)
+  and
+  [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
+  take `"fitted"` (the default) or `"typical"`. The `marginaleffects`
+  bridge takes `"population"` (the default, from the option
+  `ilm_model.groups`) or `"typical"`. Any other word is an error that
+  says where it is answered.
+
+  - The words replace `marginal` and `conditional`, which still work for
+    one release, with a warning once per session: `marginal = TRUE` is
+    `groups = "population"`, and `conditional = TRUE` is
+    `groups = "fitted"`. The same holds for the option
+    `ilm_model.marginal`.
+  - “Conditional” had meant two things: a fitted group’s effects in
+    [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md),
+    and effects at zero in
+    [`predict()`](https://rdrr.io/r/stats/predict.html)’s help.
+
+- Fixed: the prints of
+  [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md)
+  and of
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+  for categories, and the “Effect size and power” and “Workflow”
+  vignettes, said
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  gives the population-averaged effect. By default it gives a typical
+  group’s. They now name `ilm_ame(groups = "population")`.
+
+- Fixed:
+  [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)’s
+  help said it gives each category’s probability for an ordinal outcome.
+  It gives the latent linear predictor, which the thresholds cut into
+  categories, as the checks and scores built on it expect.
+  [`predict()`](https://rdrr.io/r/stats/predict.html) gives the
+  probabilities.
+
 - [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
   lists a fitted model’s random effects: the conditional modes, labelled
   by grouping variable, level and coefficient, with their conditional
@@ -101,8 +152,8 @@
 
 - [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
   exports the Gauss-Hermite quadrature behind
-  `predict(marginal = TRUE)`, so code built on a fit averages over a
-  latent spread as its predictions do.
+  `predict(groups = "population")`, so code built on a fit averages over
+  a latent spread as its predictions do.
 
 - Fixed: `fixef()` did not reach illume’s method. It was registered on a
   generic of illume’s own, so with nlme or lme4 attached, `fixef(fit)`
@@ -155,8 +206,9 @@
   variance from the joint precision) agrees with the closed form to
   1e-8. For other families it is the Laplace approximation, and the
   fit-time check on observations per latent value applies to it as it
-  does to CAR(1). `predict(marginal = TRUE)` averages each row over its
-  own spread, which grows with the time since its group started.
+  does to CAR(1). `predict(groups = "population")` averages each row
+  over its own spread, which grows with the time since its group
+  started.
 
 - [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md),
   [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
@@ -276,8 +328,8 @@
     by position, every random effect was the entry p \* C places before
     its own, and the first few were the fixed effects themselves.
   - **What it broke.** Everything conditional on the random effects, on
-    every REML mixed model: fitted values with `conditional = TRUE`, the
-    quantile residuals,
+    every REML mixed model: fitted values with each group’s own effects,
+    the quantile residuals,
     [`ilm_check_predictive()`](https://huttoncp.github.io/illume/reference/ilm_check_predictive.md),
     the dispersion and zeros checks, and
     `ilm_plot_model(what = "random")`. On a gaussian random intercept,
@@ -314,16 +366,16 @@
   were unaffected. The draws are now centred parameter by parameter, and
   `test-joint-draws.R` holds the intervals to mgcv’s.
 
-- Fixed: `predict(marginal = TRUE)` left an AR(1) or CAR(1) term out of
-  the average over the random effects. At any one row its latent value
-  has the stationary distribution, and it is now averaged over with the
-  grouping terms: a Poisson model with a stationary AR variance of 0.59
-  averaged 1.40 where its own simulations averaged 1.86, and now agrees
-  with them and with the closed form.
+- Fixed: `predict(groups = "population")` left an AR(1) or CAR(1) term
+  out of the average over the random effects. At any one row its latent
+  value has the stationary distribution, and it is now averaged over
+  with the grouping terms: a Poisson model with a stationary AR variance
+  of 0.59 averaged 1.40 where its own simulations averaged 1.86, and now
+  agrees with them and with the closed form.
 
 - With one linear predictor – every family but the multinomial – a row’s
   whole latent contribution is a single normal, so
-  `predict(marginal = TRUE)` now averages over it by Gauss-Hermite
+  `predict(groups = "population")` now averages over it by Gauss-Hermite
   quadrature rather than by draws, with more nodes as the latent SD
   grows. Against numerical integration it is better than 1e-12 through a
   logit up to a latent SD of 6, and better than 1e-9 through a
@@ -354,12 +406,13 @@
   intercept, an AR term was left out, and a smooth lost its penalised
   part entirely: a gaussian [`sin()`](https://rdrr.io/r/base/Trig.html)
   curve came out as -1.31 at its peak of +1. Each mean now comes from
-  `predict(marginal = TRUE)`, and the interval draws the whole parameter
-  vector, variance components included, where it drew the fixed effects
-  alone. The estimate is the mean at the fitted parameters, which
-  matches [`predict()`](https://rdrr.io/r/stats/predict.html) exactly
-  and does not move with `seed` or `sims`; it was the mean of the draws,
-  which through a logit was pulled towards the middle by up to half a
+  `predict(groups = "population")`, and the interval draws the whole
+  parameter vector, variance components included, where it drew the
+  fixed effects alone. The estimate is the mean at the fitted
+  parameters, which matches
+  [`predict()`](https://rdrr.io/r/stats/predict.html) exactly and does
+  not move with `seed` or `sims`; it was the mean of the draws, which
+  through a logit was pulled towards the middle by up to half a
   percentage point. An ordinal fit is refused, as a multinomial one was,
   since it too has no single number to report.
 

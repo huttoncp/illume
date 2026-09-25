@@ -442,13 +442,13 @@ symmetric and can reach below zero.
 odds ratio for a *given cluster* – two patients in the same hospital,
 one exposed – not for the population, and the gap widens as the random
 effects grow. The print says so and names
-[`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
-for the population-averaged quantity:
+`ilm_ame(groups = "population")` for the population-averaged quantity:
 
 ``` r
 
-ilm_effects(fit)      # conditional odds ratio, e.g. 2.58
-ilm_ame(fit, "dose")  # marginal effect on the probability scale, e.g. 0.193
+ilm_effects(fit)                             # conditional odds ratio
+ilm_ame(fit, "dose", groups = "population")  # effect on the probability
+                                             # scale, averaged over groups
 ```
 
 **Standardising a binary predictor is meaningless.** Dividing by the

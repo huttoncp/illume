@@ -131,12 +131,13 @@ once. That answers "what would happen to a unit that looks like this".</p>
 non-linear link, because the average of a prediction is not the prediction
 at the average. The printed output says which was used.</p>
 <p>In a mixed model each unit's prediction is averaged over every random term
-– intercepts, slopes, an AR or CAR latent – as <code>predict(marginal = TRUE)</code>
-does, so the result is a population mean rather than the value for a group
-whose random effect happens to be zero. The estimate is that mean at the
-fitted parameters, so it matches <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> exactly and does not depend on
-<code>seed</code> or <code>sims</code>; the interval comes from draws of the whole parameter
-vector, variance components included, since the average depends on them.</p>
+– intercepts, slopes, an AR or CAR latent – as
+<code>predict(groups = "population")</code> does, so the result is a population mean
+rather than the value for a group whose random effect happens to be zero.
+The estimate is that mean at the fitted parameters, so it matches
+<code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> exactly and does not depend on <code>seed</code> or <code>sims</code>; the interval
+comes from draws of the whole parameter vector, variance components
+included, since the average depends on them.</p>
     </div>
     <div class="section level2">
     <h2 id="extrapolation">Extrapolation<a class="anchor" aria-label="anchor" href="#extrapolation"></a></h2>
