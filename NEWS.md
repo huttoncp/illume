@@ -372,6 +372,27 @@
   illumex. Counted as the package counts them, the multinomial cells cover at
   0.946 to 0.954, and the fits held at a boundary, on their own, at 0.942 to
   0.955.
+* Fixed: a lone variance at zero, such as a random intercept's, was flagged
+  as sitting at its boundary but was not held there. A boundary term's
+  directions are held when they are flat against its most curved one. A
+  single variance has nothing to be flat against, and neither does any
+  covariance flat in every direction, so nothing was held.
+  - **What it did.** On a binary random intercept at an SD of 6e-5, its
+    log-SD kept a standard error of 8714. Draws of it ran to infinity, so
+    half of `ilm_draws()`' natural-scale variances were `Inf`.
+  - **Now.** A block's largest curvature is taken as at least 0.1 on the
+    log-SD scale, so a direction with a standard error above 100 there is
+    held, as every other flat direction is.
+  - **Unaffected.** The fixed effects' standard errors were right before and
+    are unchanged, equal to the model's without the term. A covariance with a
+    curved direction is judged exactly as before, which covers every fit in
+    the boundary study.
+  - Found by another agent.
+* `ilm_simulate()`'s help said it returns category codes. That is true only
+  for a multinomial or ordinal outcome. For every other family it returns
+  the response on its own scale, and the help now says so. It also says
+  that each dataset draws new random effects, and how a censored response
+  is censored.
 
 # illume 0.0.7.9000
 

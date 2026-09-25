@@ -234,3 +234,34 @@ test_that("the interpretation says which parts of a boundary fit stand", {
   expect_match(paste(it$sections$caveats, collapse = " "), "ilm_pb_lrt()",
                fixed = TRUE)
 })
+
+test_that("a lone variance at zero is held, as the flat direction it is", {
+  ## a block with one direction has nothing curved to be flat against, so the
+  ## relative test never held it: the log-SD of this random intercept, at an
+  ## SD of 6e-5, kept a standard error of 8714, and draws of it ran to Inf
+  set.seed(1400003); G <- 8; n <- 6
+  d <- data.frame(g = factor(sprintf("g%02d", rep(1:G, each = n))),
+                  x = stats::rnorm(G * n))
+  b <- stats::rnorm(G, 0, 0.8)
+  d$y <- stats::rbinom(G * n, 1, stats::plogis(0.5 * d$x + b[d$g]))
+  f <- suppressMessages(ilm_model(y ~ x + (1 | g), data = d,
+                                  family = "binomial", verbose = FALSE))
+  expect_identical(f$hessian_how, "boundary")
+  expect_identical(f$hessian_held, "g")
+  ## the fixed effects' standard errors are the model's without the term
+  f0 <- ilm_model(y ~ x, data = d, family = "binomial", verbose = FALSE)
+  expect_equal(unname(sqrt(diag(suppressWarnings(vcov(f))))),
+               unname(sqrt(diag(vcov(f0)))), tolerance = 1e-3)
+  ## and the draws hold the variance where the fit does
+  dr <- ilm_draws(f, nsim = 200, seed = 3)
+  expect_identical(dr$held$n, 1L)
+  expect_lt(stats::sd(dr$draws[rownames(dr$draws) == "theta", ]), 1e-8)
+  expect_true(all(is.finite(dr$natural$re$g)))
+  ## a variance well away from zero is not touched
+  set.seed(2); d2 <- data.frame(g = factor(rep(1:30, each = 10)),
+                                x = stats::rnorm(300))
+  d2$y <- 1 + 0.5 * d2$x + stats::rnorm(30)[d2$g] + stats::rnorm(300)
+  f2 <- ilm_model(y ~ x + (1 | g), data = d2, family = "gaussian",
+                  verbose = FALSE)
+  expect_length(f2$hessian_held, 0L)
+})

@@ -1289,6 +1289,18 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
 ## coverage.
 ilm_flat_rel <- 1e-3
 
+## A BLOCK FLAT IN EVERY DIRECTION has nothing curved to be flat against: a
+## lone variance at zero, whose one direction is the one to the edge, or a
+## random walk's variance collapsing. Judged against its own largest
+## curvature it was never flat, so nothing was held -- a random intercept at
+## a standard deviation of 6e-5 kept a standard error of 8714 on its log
+## scale, and draws of it ran to infinity. So a block's largest curvature is
+## taken as at least ilm_flat_floor: on the log-SD scale 0.1 is a standard
+## error of 3.2, and a direction below 1e-3 of that -- a standard error of
+## 100 -- is one no data has resolved. A block with a healthy curved
+## direction, every one in the study above, is judged exactly as before.
+ilm_flat_floor <- 0.1
+
 #' @keywords internal
 #' @noRd
 ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
@@ -1344,7 +1356,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     d <- unlist(cb$blocks[cb$flagged], use.names = FALSE)
     if (length(d) && !any(cb$keep %in% d)) {
       e <- eigen(H[d, d, drop = FALSE], symmetric = TRUE)
-      flat <- e$values < ilm_flat_rel * max(e$values[1], 1e-8)
+      flat <- e$values < ilm_flat_rel * max(e$values[1], ilm_flat_floor)
     }
   }
   if (!any(flat)) {
