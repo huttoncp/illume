@@ -184,9 +184,16 @@ ilm_se_fixef <- function(object) {
 #'
 #' The value is on the same scale as `lme4::lmer()` and `nlme::lme()`, and
 #' agrees with both to numerical tolerance for a gaussian model they can also
-#' fit. It therefore includes every normalising constant, so `AIC()` and `BIC()`
+#' fit. It therefore includes the normalising constants, so `AIC()` and `BIC()`
 #' may be compared across models with *different* random structures as well as
 #' the same one.
+#'
+#' One constant is left out: for a binomial response with trials -- a
+#' proportion weighted by its number of trials -- the binomial coefficients,
+#' `sum(lchoose(trials, successes))`, which `glm()`, `lme4` and `glmmTMB`
+#' include. It is a constant of the data, so it changes no comparison between
+#' models of the same data, but the log-likelihoods of the two differ by
+#' exactly that much.
 #'
 #' @param object A fitted `"ilm_model"` object.
 #' @param ... Unused.

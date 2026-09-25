@@ -182,3 +182,24 @@ test_that("cluster-robust standard errors cover the beta family", {
   expect_gt(r$se[r$term == "(Intercept)"] / r$se_model[r$term == "(Intercept)"],
             1.5)
 })
+
+test_that("a beta model's marginal means on the response scale are proportions", {
+  ## the inverse link used to be chosen by switching on the family's name, and
+  ## beta fell through to the identity: its "response" means were the
+  ## link-scale values
+  set.seed(7)
+  d <- data.frame(g = factor(rep(1:15, each = 12)), x1 = stats::rnorm(180),
+                  grp = factor(rep(c("a", "b"), 90)))
+  eta <- 0.3 + 0.4 * d$x1 + 0.5 * (d$grp == "b") + stats::rnorm(15, 0, 0.4)[d$g]
+  mu <- stats::plogis(eta)
+  d$y <- stats::rbeta(180, mu * 8, (1 - mu) * 8)
+  f <- ilm_model(y ~ x1 + grp + (1 | g), data = d, family = "beta",
+                 verbose = FALSE)
+  el <- ilm_emmeans(f, "grp", type = "link")
+  er <- ilm_emmeans(f, "grp", type = "response")
+  expect_equal(er$estimate, stats::plogis(el$estimate), tolerance = 1e-12)
+  expect_equal(er$lower, stats::plogis(el$lower), tolerance = 1e-12)
+  expect_true(all(er$estimate > 0 & er$estimate < 1))
+  ## and the easystats stack is told the link it has
+  expect_identical(illume:::ilm_ins_model_info(f)$link_function, "logit")
+})
