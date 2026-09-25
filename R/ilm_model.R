@@ -12,27 +12,18 @@
 ## predict(newdata=) and car::Anova all rebuild a reference grid from exactly
 ## those components, and retrofitting them later is painful.
 
-## The random-effect bars of a formula, and the formula without them. lme4
-## 2.0 moved its bar parser to reformulas and warns when it is reached through
-## lme4; an older lme4 has it and reformulas may be absent, so either serves.
+## The random-effect bars of a formula, and the formula without them, by
+## lme4's own parser, which lme4 2.0 moved to reformulas. It is imported: every
+## formula passes through it, bars or none, and with it only suggested a new
+## install could not fit even y ~ x, which stopped with "the formula interface
+## needs reformulas (or lme4)".
 #' @keywords internal
 #' @noRd
-ilm_findbars <- function(f)
-  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::findbars(f) else lme4::findbars(f)
+ilm_findbars <- function(f) reformulas::findbars(f)
 
 #' @keywords internal
 #' @noRd
-ilm_nobars <- function(f)
-  if (requireNamespace("reformulas", quietly = TRUE)) reformulas::nobars(f) else lme4::nobars(f)
-
-## Whether either is there to parse bars with, and what to install if not.
-#' @keywords internal
-#' @noRd
-ilm_need_bars <- function()
-  if (!requireNamespace("reformulas", quietly = TRUE) &&
-      !requireNamespace("lme4", quietly = TRUE))
-    stop("the formula interface needs reformulas (or lme4) to read ",
-         "random-effect bars; install.packages(\"reformulas\")", call. = FALSE)
+ilm_nobars <- function(f) reformulas::nobars(f)
 
 #' Fit generalized linear and additive mixed models
 #'
@@ -398,8 +389,6 @@ ilm_model_formula <- function(formula, data, family = "auto",
   auto <- is.null(family) || identical(family, "auto")
   fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
-  ilm_need_bars()
-  if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
 
   ## Where the terms of the formula get evaluated. nobars(),
   ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying

@@ -351,6 +351,16 @@
   now: `list(subj = list(d_cor = FALSE))`, which is all an uncorrelated slope
   needs outside a multinomial model, used to stop and ask for one.
   `ilm_model()`'s example, which never ran, is replaced by ones that do.
+* Fixed: a new install could not fit any model from a formula. Every formula
+  passes through lme4's bar parser, bars or none, and that parser lives in
+  reformulas, which illume only suggested. With neither reformulas nor lme4
+  installed, as after a plain `install.packages()`, even `y ~ x` stopped with
+  "the formula interface needs reformulas (or lme4)". reformulas (>= 0.4.0)
+  is now imported. It is small: beyond what R ships, it brings only Rdpack
+  and rbibutils.
+  - mgcv is imported too. Every formula is read by its `interpret.gam()`, so
+    it was needed just as unconditionally. It ships with R, so this costs
+    nothing, and it lets the "mgcv is required" check before each fit go.
 * `ilm_fit()` defaults to `family = "gaussian"`, as `glm.fit()` does, and to
   no random terms (`re_list = list()`), so `ilm_fit(X, y)` is a linear model.
   Its default was `"multinomial"`, where the package began. A call that gives
