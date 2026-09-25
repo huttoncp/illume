@@ -324,6 +324,26 @@
   through a logit is the flatter. Its help used to justify its standard errors
   by a population average it did not take. The `marginaleffects` bridge
   averages over the random effects by default, as `marginal = TRUE` does.
+* Fixed: a term built from a variable broke everything that builds new rows
+  from the fit's own. This covered `log(x)`, `poly(x, 2)`, `ns(x)`,
+  `ilm_fourier(t, ...)` and `ilm_cyclic()`.
+  - **What it broke.** `ilm_ame()`, `ilm_emmeans()`, `ilm_trends()`,
+    `ilm_scenario()`, the effect plot, a survival curve's typical row,
+    mediation and moderation, and `marginaleffects` through
+    `insight::get_data()`.
+  - **Why.** The model frame holds such a term as a column of its own,
+    without the variable underneath, so the term could not be rebuilt for
+    new values. The error was "object 'x' not found". For a time column
+    called `t` or `time` it was R's own `t()` or `time()` taken in its place:
+    "cannot coerce type 'closure'".
+  - **Now.** The fit keeps those variables, for the rows it used, and these
+    functions build from them. A marginal mean holds such a variable at its
+    mean, as emmeans does. Checked against emmeans on
+    `lm(y ~ log(x) + grp)` and against marginaleffects.
+  - `ilm_ame()` still reports only predictors that are variables in their
+    own right. The column `log(x)` gets no effect: it is not a variable, and
+    treating it as one would have reported a silent zero.
+  - Found by another agent.
 * `car::Anova()`, `performance::model_performance()` and
   `performance::check_model()` now reach illume's methods, as the README and
   the introduction always said they did. The methods were exported as

@@ -107,7 +107,7 @@ ilm_trends <- function(object, specs, var, at = NULL,
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
-  mf <- object$model
+  mf <- ilm_data(object)
   if (is.null(mf)) stop("the fit did not keep its model frame", call. = FALSE)
   var <- as.character(var)
   if (length(var) != 1L)

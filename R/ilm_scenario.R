@@ -185,7 +185,7 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   if (!length(spec) || is.null(names(spec)) || any(names(spec) == ""))
     stop("name the predictors to set, for instance dose = c(0, 10, 20).",
          call. = FALSE)
-  mf <- object$model
+  mf <- ilm_data(object)
   miss <- setdiff(names(spec), names(mf))
   if (length(miss))
     stop("not in the model: ", paste(miss, collapse = ", "),
@@ -194,8 +194,11 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   grid <- expand.grid(spec, stringsAsFactors = FALSE,
                       KEEP.OUT.ATTRS = FALSE)
 
-  ## what is being held fixed, and at what
-  others <- setdiff(names(mf)[-1L], names(spec))
+  ## what is being held fixed, and at what: the model's variables, not the
+  ## columns its transformed terms occupy in the frame ("log(x)" beside x)
+  av <- unique(c(all.vars(object$formula), all.vars(object$zi_formula),
+                 all.vars(object$disp_formula)))
+  others <- setdiff(intersect(names(mf)[-1L], av), names(spec))
   ref <- ilm_scen_reference(mf)
 
   ## A population mean averages over every random term -- intercepts, slopes,

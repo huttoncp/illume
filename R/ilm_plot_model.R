@@ -133,7 +133,7 @@ ilm_plot_effect <- function(model, term = NULL, conf = 0.95, colour = "black",
   ## the frame the fit carried, the data named in the original call, or a frame
   ## the caller supplies.
   ## ilm_model() stores the model frame as $model, the same name lm() uses
-  mf <- model$model
+  mf <- ilm_data(model)
   if (!is.null(mf)) mf <- as.data.frame(mf)
   if (is.null(mf) && !is.null(data)) mf <- as.data.frame(data)
   if (is.null(mf)) {
