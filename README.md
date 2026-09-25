@@ -198,7 +198,7 @@ Exploring data, profiling and anomaly detection are `illumex`'s vignettes:
 ## How this package was built
 
 `illume` was developed in collaboration with
-[Claude Opus 5.5](https://www.anthropic.com), run at maximum reasoning effort,
+[Claude Opus 5.5](https://www.anthropic.com)
 under a human-in-the-loop model. The division of labour was consistent
 throughout and is worth stating plainly rather than leaving to be inferred.
 
