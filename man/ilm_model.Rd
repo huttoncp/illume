@@ -303,6 +303,33 @@ and \code{fit$checks} holds the full table with a reason and a suggested remedy
 for anything that is not \code{"OK"}.
 }
 
+\section{How smooth terms are named}{
+
+A smooth takes the name mgcv gives the smooth it builds, and three things
+are named from it:
+\itemize{
+\item \strong{the smooth itself}, as \code{fit$smooths} and the random terms list it:
+\code{"s(x)"} for \code{s(x)}, \code{"t2(x,z)"} for \code{t2(x, z)}, and \code{"s(x):z"} for a
+smooth with a numeric \code{by}, \code{s(x, by = z)};
+\item \strong{its unpenalised columns} among the fixed effects: the name with \code{.f1},
+\code{.f2}, ... after it, so \code{"s(x).f1"}, or \code{"s(x):z.f1"} and \code{"s(x):z.f2"};
+\item \strong{its penalised part}, the random term whose variance \code{summary()},
+\code{\link[=ilm_varcorr]{ilm_varcorr()}} and \code{fit$Sigma} report: the name itself, or \code{"t2(x,z).1"},
+\code{"t2(x,z).2"}, ... for a tensor product, which has a penalty per margin.
+}
+
+Two smooths may not share a name. \code{s(x) + s(x, k = 5)} stops, because the
+second would overwrite the first.
+
+\strong{What changed.} A smooth with a numeric \code{by} used to take the name of the
+same smooth without it: \code{"s(x)"}, with columns \code{"s(x).f1"} and
+\code{"s(x).f2"}. Beside a plain \code{s(x)} the two names collided: one smooth's
+penalised part was lost from the fit, and \code{predict()} on new rows stopped.
+Its columns are now \code{"s(x):z.f1"} and \code{"s(x):z.f2"}, and its variance
+\code{"s(x):z"}. Code that picked them out by the old names needs the new ones.
+A smooth without a \code{by} is named as before.
+}
+
 \examples{
 set.seed(1)
 n <- 300

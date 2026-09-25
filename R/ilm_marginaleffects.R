@@ -49,7 +49,7 @@ ilm_rebuild <- function(object, par) {
   tl <- names(object$opt$par)
   object$opt$par <- setNames(as.numeric(par), pn)
   nb <- p * C
-  object$beta <- matrix(object$opt$par[seq_len(nb)], p, C)
+  object$beta <- base::matrix(object$opt$par[seq_len(nb)], p, C)
   thv <- object$opt$par[nb + seq_len(sum(object$npc + object$npd))]
   K <- length(object$re)
   Sig <- vector("list", K); Lam <- vector("list", K); Sd <- list()
@@ -72,18 +72,41 @@ ilm_rebuild <- function(object, par) {
   if (!is.null(object$ar)) {
     La <- ilm_mkL_num(object$opt$par[grepl("^ar:L\\[", pn)], C)   # pnames is in fill order
     Sig[["ar"]] <- La %*% t(La)
-    ## CAR(1) parameterises the RANGE, not the correlation, so the raw
-    ## parameter does not pass through tanh there. Both forms return something
-    ## inside (-1, 1), so using the wrong one is not visible in the value.
     rr <- unname(object$opt$par[pn == "ar:rho_raw"])
     ## a random walk has no correlation parameter, and keeps rho = NA
-    if (identical(object$ar$type, "car1")) {
-      object$ar_range <- exp(rr)
-      object$rho <- exp(-1 / exp(rr))
-    } else if (length(rr)) object$rho <- tanh(rr)
+    if (length(rr)) {
+      tr <- ilm_rho_from_raw(object$ar$type, rr)
+      object$rho <- tr$rho
+      if (identical(object$ar$type, "car1")) object$ar_range <- tr$range
+    }
   }
   object$Sigma <- Sig; object$Lambda <- Lam; object$Sigma_d <- Sd
   ilm_rebuild_aux(object, tl)
+}
+
+## The correlation over time from its raw parameter, a number or a vector of
+## draws. CAR(1) parameterises the RANGE, not the correlation, so the raw
+## parameter does not pass through tanh there. Both forms return something
+## inside (-1, 1), so using the wrong one is not visible in the value.
+#' @keywords internal
+#' @noRd
+ilm_rho_from_raw <- function(type, rr) {
+  if (identical(type, "car1")) list(rho = exp(-1 / exp(rr)), range = exp(rr))
+  else list(rho = tanh(rr), range = NULL)
+}
+
+## The dispersion on its natural scale from its log -- a vector, or a matrix
+## with one column per draw -- on the scale the fit reports it on.
+#' @keywords internal
+#' @noRd
+ilm_disp_scale <- function(object, logdisp) {
+  d <- exp(logdisp)
+  ## the fit reports the residual SD on the unbiased (n - p) scale wherever
+  ## it can, so a rebuilt object has to use the same scale or the two are
+  ## not comparable
+  if (isTRUE(object$exact_df) && isTRUE(is.finite(object$resid_df)))
+    d <- d * sqrt(nrow(object$X) / object$resid_df)
+  d
 }
 
 ## The parameters that are NOT the mean and NOT the covariance structure.
@@ -106,12 +129,7 @@ ilm_rebuild_aux <- function(object, tl) {
   has_dm <- !is.null(object$Zd) || isTRUE(object$disp_mu)
 
   if (!is.null(fam) && fam$n_disp > 0L && !has_dm && any(tl == "logdisp")) {
-    d <- exp(unname(pe[tl == "logdisp"]))
-    ## the fit reports the residual SD on the unbiased (n - p) scale wherever
-    ## it can, so a rebuilt object has to use the same scale or the two are
-    ## not comparable
-    if (isTRUE(object$exact_df) && isTRUE(is.finite(object$resid_df)))
-      d <- d * sqrt(nrow(object$X) / object$resid_df)
+    d <- ilm_disp_scale(object, unname(pe[tl == "logdisp"]))
     object$dispersion <- stats::setNames(d, fam$disp_names)
   } else if (has_dm && any(tl %in% c("gamma", "mu_pow"))) {
     g  <- unname(pe[tl == "gamma"])
