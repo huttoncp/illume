@@ -53,12 +53,17 @@
 <div class="section level2">
 <h2 id="where-things-stand-2026-09-24-evening">Where things stand (2026-09-24, evening)<a class="anchor" aria-label="anchor" href="#where-things-stand-2026-09-24-evening"></a></h2>
 <ul><li>
-<strong>Merged:</strong> PRs #6 to #13 in illume and #4 in illumex. They cover the 0.0.8.9000 bump, the interpretation work, the remedies and REML documentation, the joint-draw order (D1), averaging over every random term (D2 to D4), the quadrature and scenario follow-up, the random walk with <code><a href="reference/ilm_cells.html">ilm_cells()</a></code>, and the padding in the prose numbers. Both packages were rebuilt from main (illume d793812, illumex c98ea7a) and installed into Craig’s R 4.4 and R 4.6.1 libraries.</li>
+<strong>Merged:</strong> PRs #6 to #16 in illume and #4 in illumex. Besides the 0.0.8.9000 work, the random walk with <code><a href="reference/ilm_cells.html">ilm_cells()</a></code> and the padding fix, that includes three corrections:
+<ul><li>#14, Kenward-Roger, now computed as pbkrtest does;</li>
+<li>#15, a REML fit’s random effects, which had been read from the wrong entries;</li>
+<li>#16, beta marginal means on the response scale.</li>
+</ul>
+Both packages were rebuilt from main (illume 74b71ab, illumex c98ea7a) and installed into Craig’s R 4.4 and R 4.6.1 libraries.</li>
 <li>
-<strong>In review:</strong> <code>kr-fix</code>, which fixes Kenward-Roger. The old one shrank the covariance, took Satterthwaite’s df, and its gate did not refuse what it said it refused. A review found it, and Craig put it ahead of the queue below.</li>
+<strong>In review:</strong> <code>accessors</code>: <code><a href="reference/ilm_ranef.html">ilm_ranef()</a></code>, <code><a href="reference/ilm_varcorr.html">ilm_varcorr()</a></code>, <code><a href="reference/ilm_normal_expect.html">ilm_normal_expect()</a></code> and the <code>fixef()</code> registration. It is the first half of the exports below. The second half, <code>ilm_draws()</code>, <code>ilm_matrices()</code> and <code>ilm_dist()</code>, comes next.</li>
 <li>
 <strong>Next, in the order agreed with Craig:</strong>
-<ol style="list-style-type: decimal"><li>The exports another agent asked for, which Craig approved: <code>ilm_matrices()</code> (new rows placed among the cells), <code>ilm_draws()</code> (joint draws of every parameter, matched by name), <code>ilm_dist()</code> (each family’s d/p/q/r in illume’s parameterisation), <code>ilm_normal_expect()</code> (the quadrature behind <code>predict(marginal = TRUE)</code>), and <code>ilm_ranef()</code> and <code>ilm_varcorr()</code>, registered on nlme’s generics. Also in that batch:
+<ol style="list-style-type: decimal"><li>The exports another agent asked for, which Craig approved: <code>ilm_matrices()</code> (new rows placed among the cells), <code>ilm_draws()</code> (joint draws of every parameter, matched by name), <code>ilm_dist()</code> (each family’s d/p/q/r in illume’s parameterisation), <code><a href="reference/ilm_normal_expect.html">ilm_normal_expect()</a></code> (the quadrature behind <code>predict(marginal = TRUE)</code>), and <code><a href="reference/ilm_ranef.html">ilm_ranef()</a></code> and <code><a href="reference/ilm_varcorr.html">ilm_varcorr()</a></code>, registered on nlme’s generics. Also in that batch:
 <ul><li>
 <code>fixef()</code> never reaches <code>fixef.ilm_model</code>, because the method is registered to illume’s own internal generic (<code>R/ilm_methods.R</code>), not nlme’s;</li>
 <li>predict’s <code>marginal</code> help should say “set to zero (a typical group)”;</li>

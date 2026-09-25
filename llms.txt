@@ -388,8 +388,6 @@ comes back is the same whatever was fitted.
   : A first-order autoregressive structure over evenly spaced time
 - [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
   : A continuous-time autoregressive structure over irregular time
-- [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
-  : The cells of a correlation over time
 - [`ilm_censor()`](https://huttoncp.github.io/illume/reference/ilm_censor.md)
   : Mark censored observations
 - [`ilm_cyclic()`](https://huttoncp.github.io/illume/reference/ilm_cyclic.md)
@@ -415,6 +413,25 @@ comes back is the same whatever was fitted.
   : Right-censored follow-up, in the survival convention
 - [`ilm_thresholds()`](https://huttoncp.github.io/illume/reference/ilm_thresholds.md)
   : Thresholds of a cumulative link fit
+
+## Parts of a fitted model
+
+The pieces of a fit, laid out by name for code built on it: its random
+effects, its variance components, the cells of a correlation over time,
+and the quadrature behind a population average.
+
+- [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  [`ranef(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  [`as.data.frame(`*`<ilm_ranef>`*`)`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  : Random effects of a fitted model
+- [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
+  [`VarCorr(`*`<ilm_model>`*`)`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
+  [`as.data.frame(`*`<ilm_VarCorr>`*`)`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md)
+  : Variance components of a fitted model
+- [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+  : The cells of a correlation over time
+- [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
+  : Expectation of a function of a normal variable
 
 ## Other designs
 

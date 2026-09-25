@@ -72,6 +72,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_model-accessors.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_model.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_moderation.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_normal_expect.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_pb_lrt.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_acf.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_plot_did.html</loc></url>
@@ -83,6 +84,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_power.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_power_design.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_power_n.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_ranef.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_rdd.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_re_mahalanobis.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_register_insight.html</loc></url>
@@ -104,6 +106,7 @@
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_svy_vcov.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_thresholds.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_trends.html</loc></url>
+<url><loc>https://huttoncp.github.io/illume/reference/ilm_varcorr.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_variogram.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_vcov_cluster.html</loc></url>
 <url><loc>https://huttoncp.github.io/illume/reference/ilm_zi_coef.html</loc></url>

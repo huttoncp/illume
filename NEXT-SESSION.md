@@ -8,28 +8,35 @@ Delete this file once the queue is empty.
 
 ## Where things stand (2026-09-24, evening)
 
-- **Merged:** PRs \#6 to \#13 in illume and \#4 in illumex. They cover
-  the 0.0.8.9000 bump, the interpretation work, the remedies and REML
-  documentation, the joint-draw order (D1), averaging over every random
-  term (D2 to D4), the quadrature and scenario follow-up, the random
-  walk with
-  [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md),
-  and the padding in the prose numbers. Both packages were rebuilt from
-  main (illume d793812, illumex c98ea7a) and installed into Craig’s R
-  4.4 and R 4.6.1 libraries.
-- **In review:** `kr-fix`, which fixes Kenward-Roger. The old one shrank
-  the covariance, took Satterthwaite’s df, and its gate did not refuse
-  what it said it refused. A review found it, and Craig put it ahead of
-  the queue below.
+- **Merged:** PRs \#6 to \#16 in illume and \#4 in illumex. Besides the
+  0.0.8.9000 work, the random walk with
+  [`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+  and the padding fix, that includes three corrections:
+  - \#14, Kenward-Roger, now computed as pbkrtest does;
+  - \#15, a REML fit’s random effects, which had been read from the
+    wrong entries;
+  - \#16, beta marginal means on the response scale.
+
+  Both packages were rebuilt from main (illume 74b71ab, illumex c98ea7a)
+  and installed into Craig’s R 4.4 and R 4.6.1 libraries.
+- **In review:** `accessors`:
+  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md),
+  [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md),
+  [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
+  and the `fixef()` registration. It is the first half of the exports
+  below. The second half, `ilm_draws()`, `ilm_matrices()` and
+  `ilm_dist()`, comes next.
 - **Next, in the order agreed with Craig:**
   1.  The exports another agent asked for, which Craig approved:
       `ilm_matrices()` (new rows placed among the cells), `ilm_draws()`
       (joint draws of every parameter, matched by name), `ilm_dist()`
       (each family’s d/p/q/r in illume’s parameterisation),
-      `ilm_normal_expect()` (the quadrature behind
-      `predict(marginal = TRUE)`), and `ilm_ranef()` and
-      `ilm_varcorr()`, registered on nlme’s generics. Also in that
-      batch:
+      [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
+      (the quadrature behind `predict(marginal = TRUE)`), and
+      [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+      and
+      [`ilm_varcorr()`](https://huttoncp.github.io/illume/reference/ilm_varcorr.md),
+      registered on nlme’s generics. Also in that batch:
       - `fixef()` never reaches `fixef.ilm_model`, because the method is
         registered to illume’s own internal generic (`R/ilm_methods.R`),
         not nlme’s;
