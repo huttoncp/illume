@@ -189,7 +189,7 @@ ilm_npar_d <- function(d, d_cor = TRUE)
 #' @keywords internal
 #' @noRd
 ilm_mkL_num <- function(v, C) {
-  L <- matrix(0, C, C); k <- 1L
+  L <- base::matrix(0, C, C); k <- 1L
   for (j in 1:C) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }
@@ -209,7 +209,7 @@ ilm_mkL_num <- function(v, C) {
 #' @keywords internal
 #' @noRd
 ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
-  L <- matrix(0, d, d); L[1, 1] <- 1; k <- 1L
+  L <- base::matrix(0, d, d); L[1, 1] <- 1; k <- 1L
   if (!d_cor) { for (i in 2:d) { L[i, i] <- exp(v[k]); k <- k + 1L }; return(L) }
   for (j in 1:d) for (i in j:d) {
     if (i == 1L && j == 1L) next
@@ -232,7 +232,7 @@ ilm_mkLd_num <- function(v, d, d_cor = TRUE) {
 #' @return A numeric matrix.
 #' @keywords internal
 #' @noRd
-ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
+ilm_mkD_num   <- function(v, C) base::diag(exp(v), C, C)
 
 #' Plain-numeric versions of the covariance factor builders
 #'
@@ -249,7 +249,7 @@ ilm_mkD_num   <- function(v, C) diag(exp(v), C, C)
 #' @keywords internal
 #' @noRd
 ilm_mkLam_num <- function(v, C, r) {
-  L <- matrix(0, C, r); k <- 1L
+  L <- base::matrix(0, C, r); k <- 1L
   for (j in 1:r) for (i in j:C) { L[i, j] <- if (i == j) exp(v[k]) else v[k]; k <- k + 1L }
   L
 }

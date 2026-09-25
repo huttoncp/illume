@@ -120,3 +120,109 @@ test_that("a fit without the precision stored forms it, and blocks subset", {
   expect_error(ilm_draws(f0, blocks = "nope"), "no block called")
   expect_output(print(dr), "joint draws")
 })
+
+## Each draw's natural values one at a time, through ilm_natural() -- the
+## slow path the draws' vectorised one must reproduce.
+drw_one_by_one <- function(f, dr) {
+  full <- unname(dr$draws)
+  lapply(seq_len(ncol(full)), function(j)
+    illume:::ilm_natural(f, illume:::ilm_coef_order(f, full[, j])))
+}
+
+drw_expect_natural <- function(f, dr) {
+  slow <- drw_one_by_one(f, dr)
+  nat <- dr$natural
+  along <- function(get) vapply(slow, function(x) as.numeric(get(x)),
+                                numeric(length(get(slow[[1L]]))))
+  for (nm in names(f$re)) {
+    expect_equal(as.numeric(nat$re[[nm]]),
+                 as.numeric(along(function(x) x$re[[nm]])), tolerance = 1e-12)
+    v <- ilm_varcorr(f)$re[[nm]]
+    if (nrow(v) > 1L)
+      expect_identical(dimnames(nat$re[[nm]])[1:2], dimnames(v))
+  }
+  lt <- nat$latent
+  if (!is.null(lt)) {
+    S <- if (identical(lt$type, "rw1")) "var_per_time" else "Sigma"
+    expect_equal(as.numeric(lt[[S]]),
+                 as.numeric(along(function(x) x$latent[[S]])), tolerance = 1e-12)
+    for (r in intersect(c("rho", "range"), names(lt)))
+      expect_equal(lt[[r]], as.numeric(along(function(x) x$latent[[r]])),
+                   tolerance = 1e-12)
+  }
+  if (!is.null(nat$dispersion))
+    expect_equal(unname(nat$dispersion),
+                 base::matrix(along(function(x) x$dispersion$value),
+                              nrow(nat$dispersion)), tolerance = 1e-12)
+}
+
+test_that("the draws' natural values are each draw's own transform", {
+  ## all the draws are transformed at once; each must be what ilm_natural()
+  ## gives for that draw alone -- a correlated and an uncorrelated random
+  ## slope under REML, a reduced-rank and a random-slope multinomial, a
+  ## CAR(1) with its range, and a modelled dispersion
+  d <- drw_data()
+  dm <- sim_mlmm(seed = 4, n_subj = 20, per = 10, J = 4)
+  fits <- list(
+    ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+              reml = TRUE, verbose = FALSE),
+    ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+              re_struct = list(id = list(d_cor = FALSE)), verbose = FALSE),
+    suppressMessages(ilm_model(y ~ x1 + (1 | subj), data = dm,
+                               family = "multinomial", verbose = FALSE,
+                               re_struct = list(subj = list(type = "rr",
+                                                            rank = 2)))),
+    suppressMessages(ilm_model(y ~ x1 + (1 + x1 | subj), data = dm,
+                               family = "multinomial", verbose = FALSE)),
+    suppressWarnings(ilm_model(y ~ x, data = d, family = "gaussian",
+                               ar = ilm_car1(~ t | id), verbose = FALSE)),
+    ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+              dispformula = ~ t, verbose = FALSE))
+  for (f in fits) drw_expect_natural(f, ilm_draws(f, nsim = 12, seed = 9))
+  ## past the first block of draws, which are formed 250 at a time
+  f <- fits[[1L]]
+  dr <- ilm_draws(f, nsim = 260, seed = 10)
+  expect_identical(dim(dr$natural$re$id), c(2L, 2L, 260L))
+  expect_length(dr$natural$dispersion, 260L)
+  drw_expect_natural(f, dr)
+})
+
+test_that("given = 'parameters' draws only the random effects and cells", {
+  d <- drw_data()
+  f <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+                 ar = ilm_rw1(~ t | id), verbose = FALSE)
+  dr <- ilm_draws(f, nsim = 4000, seed = 11, given = "parameters")
+  drawn <- dr$map$block %in% c("bvec", "B_ar")
+  expect_true(all(dr$draws[!drawn, ] == dr$mode[!drawn]))
+  expect_identical(dr$given, "parameters")
+  expect_identical(dr$held$n, 0L)
+  ## their distribution given the parameters: by ML, the Laplace
+  ## approximation's inner curvature, whose SDs are ilm_ranef()'s
+  r <- ilm_ranef(f)
+  r <- r[!is.na(r$row), ]        # a walk's anchors are not parameters
+  expect_equal(unname(apply(dr$draws[r$row, ], 1, stats::sd)), r$sd,
+               tolerance = 0.05)
+  expect_true(all(abs(rowMeans(dr$draws[r$row, ]) - r$mode) <
+                    5 * r$sd / sqrt(4000)))
+  ## the variance components are those at the estimate, in every draw
+  v <- ilm_varcorr(f)
+  expect_equal(as.numeric(dr$natural$re$id[, , 4000]), as.numeric(v$re$id))
+  expect_equal(stats::sd(dr$natural$latent$var_per_time[1, 1, ]), 0)
+  expect_output(print(dr), "every parameter held")
+
+  ## by REML the fixed effects are held as well, although TMB integrates
+  ## them out with the random effects; ilm_ranef()'s SDs integrate over them,
+  ## so the draws' are smaller
+  f2 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                  reml = TRUE, verbose = FALSE)
+  dr2 <- ilm_draws(f2, nsim = 4000, seed = 12, given = "parameters")
+  b <- dr2$map$block == "beta"
+  expect_true(all(dr2$draws[b, ] == dr2$mode[b]))
+  Q <- illume:::ilm_joint_prec(f2)
+  iv <- which(dr2$map$block == "bvec")
+  exact <- sqrt(diag(solve(as.matrix(Q[iv, iv]))))
+  expect_equal(unname(apply(dr2$draws[iv, ], 1, stats::sd)), unname(exact),
+               tolerance = 0.05)
+  r2 <- ilm_ranef(f2)
+  expect_true(all(exact < r2$sd[match(iv, r2$row)]))
+})

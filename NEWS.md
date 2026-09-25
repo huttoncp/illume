@@ -23,14 +23,17 @@
   - **Layout.** The rows are named by block, with a map that labels each
     one: coefficient, group and dimension, or cell.
   - **Natural scale.** Each draw's variance components are given on the
-    natural scale, through the same transform as `ilm_varcorr()`, so at the
-    estimate the two agree exactly.
+    natural scale, through the same transforms as `ilm_varcorr()`, so at the
+    estimate the two agree exactly. They are formed for all the draws at
+    once, so 1,000 draws take about as long with them as without.
   - **Boundaries.** Where a fit holds a boundary direction, the draws hold
     it exactly, by conditioning on it. The fit now keeps the directions it
     held and the Hessian its covariance came from.
   - **Options.** `given = "theta"` holds the variance parameters at their
-    estimates. `blocks` returns part of the vector. A fit made without
-    `joint = TRUE` has its precision formed on demand.
+    estimates. `given = "parameters"` holds every parameter and draws only
+    the random effects and the cells of a correlation over time, from their
+    distribution given the parameters. `blocks` returns part of the vector.
+    A fit made without `joint = TRUE` has its precision formed on demand.
 * `ilm_matrices()` gives the designs for new rows: the fixed design, each
   random term's design with each row's group matched by label, each
   smooth's penalised basis, and the zero part's and dispersion model's

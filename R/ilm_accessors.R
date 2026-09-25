@@ -371,8 +371,10 @@ ilm_varcorr <- function(object) {
 VarCorr.ilm_model <- function(x, sigma = 1, ...) ilm_varcorr(x)
 
 ## The variance parameters on their natural scale, from a fit or from a
-## parameter vector in opt$par order. ONE transform, ilm_rebuild(), so the
-## variance components at the estimate and those of any draw agree.
+## parameter vector in opt$par order. ONE set of transforms -- the numeric
+## builders, ilm_rho_from_raw() and ilm_disp_scale(), reached through
+## ilm_rebuild() here and through ilm_natural_draws() for many draws at once
+## -- so the variance components at the estimate and those of any draw agree.
 #' @keywords internal
 #' @noRd
 ilm_natural <- function(object, par = NULL) {
@@ -385,7 +387,8 @@ ilm_natural <- function(object, par = NULL) {
     S <- as.matrix(o$Sigma[[nm]])
     if (C == 1L) {
       d <- o$dk[k]
-      V <- S[1, 1] * (if (d > 1L) as.matrix(o$Sigma_d[[nm]]) else matrix(1, 1L, 1L))
+      V <- S[1, 1] * (if (d > 1L) as.matrix(o$Sigma_d[[nm]])
+                      else base::matrix(1, 1L, 1L))
       lab <- if (identical(e$kind, "basis")) "(penalised)"
              else if (!is.null(colnames(e$Z))) colnames(e$Z)
              else if (d == 1L) "(Intercept)" else paste0("z", seq_len(d))
@@ -435,7 +438,7 @@ ilm_natural <- function(object, par = NULL) {
 #' @keywords internal
 #' @noRd
 ilm_vc_attrs <- function(V, factor, kind) {
-  s <- sqrt(pmax(diag(V), 0))
+  s <- sqrt(pmax(base::diag(V), 0))
   R <- V / outer(s, s)
   R[!is.finite(R)] <- 0
   diag(R) <- 1
