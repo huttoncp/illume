@@ -202,13 +202,13 @@ The three marked (illumex) belong to `illumex`, the exploration package
 ## How this package was built
 
 `illume` was developed in collaboration with [Claude Opus
-5.5](https://www.anthropic.com), run at maximum reasoning effort, under
-a human-in-the-loop model: the model prototyped and drafted the
-implementation, the documentation and the simulation studies; the author
-specified what the package should be, set the standing constraints, made
-the decisions the design turned on, and rejected proposals. The author’s
-independent review and testing is *in progress at the time of writing*
-and will be complete before any release.
+5.5](https://www.anthropic.com) under a human-in-the-loop model: the
+model prototyped and drafted the implementation, the documentation and
+the simulation studies; the author specified what the package should be,
+set the standing constraints, made the decisions the design turned on,
+and rejected proposals. The author’s independent review and testing is
+*in progress at the time of writing* and will be complete before any
+release.
 
 It is disclosed because the provenance of a statistical tool is a
 reasonable thing for its users to know, and because venues increasingly

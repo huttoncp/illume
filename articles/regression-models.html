@@ -240,7 +240,7 @@ meaningless even though nothing in the output looks wrong.</p>
 <span><span class="co">#&gt; 4                                                       20.0 observations per level</span></span>
 <span><span class="co">#&gt; 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)</span></span>
 <span><span class="co">#&gt; 6                                          nlminb code 0 (relative convergence (4))</span></span>
-<span><span class="co">#&gt; 7                                                         max |gradient| = 1.64e-04</span></span>
+<span><span class="co">#&gt; 7                                                         max |gradient| = 1.62e-04</span></span>
 <span><span class="co">#&gt; 8              positive definite: TRUE; non-finite or non-positive variances: FALSE</span></span></code></pre></div>
 <p>Each check has one of five statuses. <code>OK</code> and
 <code>FAIL</code> are self-explanatory. <code>WARN</code> means
@@ -589,23 +589,39 @@ of them.</p>
 <span></span>
 <span><span class="va">f5</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d5</span>, family <span class="op">=</span> <span class="st">"multinomial"</span>,</span>
 <span>                verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in nlminb(opt$par, obj$fn, obj$gr, control = ctl): NA/NaN function</span></span>
+<span><span class="co">#&gt; evaluation</span></span>
+<span><span class="co">#&gt; Warning in nlminb(opt$par, obj$fn, obj$gr, control = ctl): NA/NaN function</span></span>
+<span><span class="co">#&gt; evaluation</span></span>
+<span><span class="co">#&gt; Warning in nlminb(o$par, obj$fn, obj$gr, lower = lo, control = ctl): NA/NaN</span></span>
+<span><span class="co">#&gt; function evaluation</span></span>
 <span><span class="co">#&gt; ilm_model(): the random-effect covariance of `subj` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.</span></span>
 <span><span class="va">rem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ilm_remedies.html">ilm_remedies</a></span><span class="op">(</span><span class="va">f5</span><span class="op">)</span></span>
 <span><span class="va">rem</span></span>
-<span><span class="co">#&gt; 6 remedies</span></span>
+<span><span class="co">#&gt; 8 remedies</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [1] structural -- re_levels[subj] (FAIL)</span></span>
+<span><span class="co">#&gt; [1] numerical -- optimizer, gradient, hessian (FAIL, FAIL, FAIL)</span></span>
+<span><span class="co">#&gt;     refit with 10 optimiser restarts from the solution reached, not 3: the</span></span>
+<span><span class="co">#&gt;     same model, fitted harder</span></span>
+<span><span class="co">#&gt;     change: restarts = 10L</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [2] structural -- re_levels[subj] (FAIL)</span></span>
 <span><span class="co">#&gt;     give 'subj' a reduced-rank category covariance, rr(1): 4 parameters</span></span>
 <span><span class="co">#&gt;     instead of 10</span></span>
 <span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 1L))</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [2] structural -- latent_budget (WARN)</span></span>
+<span><span class="co">#&gt; [3] structural -- latent_budget (WARN)</span></span>
 <span><span class="co">#&gt;     give 'subj', the term with the most latent values, a category</span></span>
 <span><span class="co">#&gt;     covariance of rank 3 (rr(3)), which cuts its latent values from 80 to</span></span>
 <span><span class="co">#&gt;     60</span></span>
 <span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 3L))</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [3] structural -- hessian, sigma_rank[subj] (BOUNDARY, BOUNDARY)</span></span>
+<span><span class="co">#&gt; [4] structural -- gradient, hessian (FAIL, FAIL)</span></span>
+<span><span class="co">#&gt;     simplify the random-effect structure; the other checks that are not OK</span></span>
+<span><span class="co">#&gt;     name the term</span></span>
+<span><span class="co">#&gt;     by hand: not something a refit can do</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; [5] structural -- hessian, sigma_rank[subj] (FAIL, FAIL)</span></span>
 <span><span class="co">#&gt;     refit with boundary = "avoid", a small penalty that keeps every</span></span>
 <span><span class="co">#&gt;     random-effect covariance inside its range. Each variance is then</span></span>
 <span><span class="co">#&gt;     assumed nonzero rather than estimated at zero, so do not test whether</span></span>
@@ -614,18 +630,18 @@ of them.</p>
 <span><span class="co">#&gt;     category is rare</span></span>
 <span><span class="co">#&gt;     change: boundary = "avoid"</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [4] structural -- sigma_rank[subj] (BOUNDARY)</span></span>
+<span><span class="co">#&gt; [6] structural -- sigma_rank[subj] (FAIL)</span></span>
 <span><span class="co">#&gt;     give 'subj' a category covariance of rank 2 (rr(2)) in place of us: the</span></span>
 <span><span class="co">#&gt;     directions dropped have no variance</span></span>
 <span><span class="co">#&gt;     change: re_struct = list(subj = list(type = "rr", rank = 2L))</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [5] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
+<span><span class="co">#&gt; [7] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
 <span><span class="co">#&gt;     pool levels of 'subj' that belong together, so that each level carries</span></span>
 <span><span class="co">#&gt;     more observations; the grouping then means something different, so</span></span>
 <span><span class="co">#&gt;     choose the pooling by what the levels are</span></span>
 <span><span class="co">#&gt;     by hand: not something a refit can do</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [6] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
+<span><span class="co">#&gt; [8] estimand -- re_levels[subj], latent_budget (FAIL, WARN)</span></span>
 <span><span class="co">#&gt;     drop 'subj' from the model. Its variance is not zero, so the standard</span></span>
 <span><span class="co">#&gt;     errors stop accounting for the grouping, and for a non-gaussian</span></span>
 <span><span class="co">#&gt;     response the fixed effects change meaning</span></span>
