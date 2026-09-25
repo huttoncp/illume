@@ -112,9 +112,17 @@ ilm_ranef <- function(object, ...) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
+  ilm_ranef_table(object, sd = TRUE)
+}
+
+## The table itself; `sd = FALSE` leaves out the conditional SDs, which cost a
+## sparse inverse, for callers that want only the layout.
+#' @keywords internal
+#' @noRd
+ilm_ranef_table <- function(object, sd = TRUE) {
   env <- object$obj$env
   pn <- names(env$par)
-  csd <- ilm_cond_sd(object)
+  csd <- if (sd) ilm_cond_sd(object) else rep(NA_real_, length(pn))
   pr <- object$sdr$par.random
   C <- object$C
   cats <- if (is.null(object$ylevels)) paste0("cat", seq_len(C))
@@ -171,7 +179,7 @@ ilm_ranef <- function(object, ...) {
       time = cl$time[ri], cell = ri,
       row = pos,
       mode = if (is.null(Ba)) rep(NA_real_, length(ri)) else Ba[cbind(ri, ci)],
-      sd = ifelse(is.na(pos), 0, csd[pos]))
+      sd = if (sd) ifelse(is.na(pos), 0, csd[pos]) else rep(NA_real_, length(pos)))
   }
 
   n <- vapply(parts, function(p) length(p$mode), 1L)

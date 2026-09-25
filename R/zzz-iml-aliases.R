@@ -171,6 +171,11 @@ iml_design <- ilm_design
 #' @export
 iml_did <- ilm_did
 
+#' @rdname ilm_draws
+#' @usage NULL
+#' @export
+iml_draws <- ilm_draws
+
 #' @rdname ilm_dsep
 #' @usage NULL
 #' @export
@@ -225,6 +230,11 @@ iml_iv <- ilm_iv
 #' @usage NULL
 #' @export
 iml_iv_ar <- ilm_iv_ar
+
+#' @rdname ilm_matrices
+#' @usage NULL
+#' @export
+iml_matrices <- ilm_matrices
 
 #' @rdname ilm_mediate
 #' @usage NULL

@@ -56,6 +56,8 @@ reference:
   contents:
   - ilm_ranef
   - ilm_varcorr
+  - ilm_draws
+  - ilm_matrices
   - ilm_cells
   - ilm_normal_expect
 - title: "Other designs"
