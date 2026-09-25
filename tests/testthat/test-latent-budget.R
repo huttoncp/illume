@@ -12,8 +12,10 @@ lb_counts <- function(seed = 1) {
 }
 
 test_that("a count at one observation per cell is warned, not failed", {
-  f <- suppressMessages(ilm_model(y ~ x, data = lb_counts(), family = "poisson",
-                                  ar = ilm_ar1(~ t | g), verbose = FALSE))
+  ## ilm_ar1() warns about one observation per cell as it is built; the
+  ## check is what is tested here
+  f <- suppressWarnings(suppressMessages(ilm_model(y ~ x, data = lb_counts(), family = "poisson",
+                                  ar = ilm_ar1(~ t | g), verbose = FALSE)))
   ck <- f$checks
   for (nm in c("latent_budget", "obs_per_ar_latent")) {
     expect_identical(ck$status[ck$check == nm], "WARN")
