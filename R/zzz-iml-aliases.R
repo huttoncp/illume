@@ -256,6 +256,11 @@ iml_model_formula <- ilm_model_formula
 #' @export
 iml_moderation <- ilm_moderation
 
+#' @rdname ilm_normal_expect
+#' @usage NULL
+#' @export
+iml_normal_expect <- ilm_normal_expect
+
 #' @rdname ilm_pb_lrt
 #' @usage NULL
 #' @export
@@ -310,6 +315,11 @@ iml_power_design <- ilm_power_design
 #' @usage NULL
 #' @export
 iml_power_n <- ilm_power_n
+
+#' @rdname ilm_ranef
+#' @usage NULL
+#' @export
+iml_ranef <- ilm_ranef
 
 #' @rdname ilm_rdd
 #' @usage NULL
@@ -420,6 +430,11 @@ iml_thresholds <- ilm_thresholds
 #' @usage NULL
 #' @export
 iml_trends <- ilm_trends
+
+#' @rdname ilm_varcorr
+#' @usage NULL
+#' @export
+iml_varcorr <- ilm_varcorr
 
 #' @rdname ilm_variogram
 #' @usage NULL

@@ -40,7 +40,6 @@ reference:
   contents:
   - ilm_ar1
   - ilm_car1
-  - ilm_cells
   - ilm_censor
   - ilm_cyclic
   - ilm_family
@@ -51,6 +50,14 @@ reference:
   - ilm_squeeze
   - ilm_surv
   - ilm_thresholds
+- title: "Parts of a fitted model"
+  desc: >
+    The pieces of a fit, laid out by name for code built on it: its random effects, its variance components, the cells of a correlation over time, and the quadrature behind a population average.
+  contents:
+  - ilm_ranef
+  - ilm_varcorr
+  - ilm_cells
+  - ilm_normal_expect
 - title: "Other designs"
   desc: >
     Identification strategies and sampling designs that are not a single regression.

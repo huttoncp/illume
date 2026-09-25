@@ -23,7 +23,7 @@ test_that("vcov warns when the Hessian is unusable", {
 
 test_that("fixef returns a predictors-by-categories matrix", {
   fit <- fit_basic()
-  B <- fixef(fit)
+  B <- nlme::fixef(fit)
   expect_equal(dim(B), c(ncol(fit$X), fit$C))
   expect_equal(colnames(B), fit$ylevels[seq_len(fit$C)])
   expect_equal(as.vector(B), unname(coef(fit)))

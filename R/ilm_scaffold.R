@@ -997,7 +997,7 @@ print.ilm_scaffold <- function(x, ...) {
     cat("\n  assumed coefficients (sum-to-zero across categories; the last,\n",
         "  '", s$categories[length(s$categories)],
         "', is minus the sum of the others)\n", sep = "")
-    print(round(fixef(x), 4))
+    print(round(fixef.ilm_model(x), 4))
   } else {
     cat("\n  assumed coefficients\n")
     print(round(stats::coef(x), 4))

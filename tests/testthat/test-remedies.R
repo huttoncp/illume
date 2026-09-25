@@ -51,8 +51,8 @@ test_that("a random intercept at a variance of zero is dropped, and nothing else
   expect_identical(rem$tier[hit], "structural")
   expect_true(any(rem$change == "boundary = \"avoid\""))
   expect_message(f2 <- ilm_apply_remedy(f, rem, rem$id[hit]), "no longer checked")
-  expect_equal(as.numeric(fixef(f2)), unname(coef(lm(y ~ x, d))), tolerance = 1e-5)
-  expect_equal(as.numeric(fixef(f2)), as.numeric(fixef(f)), tolerance = 1e-5)
+  expect_equal(as.numeric(nlme::fixef(f2)), unname(coef(lm(y ~ x, d))), tolerance = 1e-5)
+  expect_equal(as.numeric(nlme::fixef(f2)), as.numeric(nlme::fixef(f)), tolerance = 1e-5)
   ## the call is the one a person would have written, and it refits
   expect_identical(getCall(f2)$data, quote(d))
   expect_identical(getCall(f2)$verbose, FALSE)

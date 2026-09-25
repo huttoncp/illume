@@ -69,9 +69,13 @@ ilm_ar_draw <- function(ar, rho, Sar, C) {
 #' @noRd
 ilm_re_list_of <- function(fit) {
   rl <- lapply(fit$re, function(e) {
-    if (e$kind == "basis") list(basis = e$basis)
-    else if (e$d > 1L)     list(group = e$group, Z = e$Z)
-    else                   e$group
+    if (e$kind == "basis") return(list(basis = e$basis))
+    ## the labels travel with the codes, so a refit's random effects are
+    ## still named by the groups they belong to
+    g <- if (length(e$levels) == e$nl) factor(e$levels[e$group], levels = e$levels)
+         else e$group
+    if (e$d > 1L || !is.null(e$factor)) list(group = g, Z = e$Z, factor = e$factor)
+    else g
   })
   names(rl) <- names(fit$re); rl
 }

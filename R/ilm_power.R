@@ -205,6 +205,7 @@ ilm_power_stub <- function(st, rows, copy, nested, ar_nested) {
       e$basis <- e$basis[rows, , drop = FALSE]
     } else {
       e$group <- relabel(e$group, nested[k])
+      e$levels <- NULL                  # a drawn study's groups are new ones
       e$Z <- e$Z[rows, , drop = FALSE]
       e$nl <- max(e$group)
     }
@@ -242,6 +243,7 @@ ilm_power_stub_grid <- function(object, st, d) {
     } else {
       nm <- names(object$re)[k]
       e$group <- as.integer(factor(d[[nm]]))
+      e$levels <- levels(factor(d[[nm]]))
       e$Z <- ilm_re_design(object, k, d, e$d)
       e$nl <- max(e$group)
     }

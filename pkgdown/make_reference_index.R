@@ -26,8 +26,14 @@ grp <- list(
        "One engine, every family. The formula is lme4's and the object that comes back is the same whatever was fitted.",
        function(x) x %in% c("ilm_model", "ilm_fit", "ilm_family",
          "ilm_model_formula", "ilm_surv", "ilm_censor", "ilm_ar1", "ilm_car1",
-         "ilm_rw1", "ilm_cells",
+         "ilm_rw1",
          "ilm_fourier", "ilm_cyclic", "ilm_squeeze", "ilm_thresholds")),
+
+  list("Parts of a fitted model",
+       "The pieces of a fit, laid out by name for code built on it: its random effects, its variance components, the cells of a correlation over time, and the quadrature behind a population average.",
+       function(x) x %in% c("ilm_ranef", "ilm_varcorr", "ilm_cells",
+                            "ilm_normal_expect"),
+       c("ilm_ranef", "ilm_varcorr", "ilm_cells", "ilm_normal_expect")),
 
   list("Other designs",
        "Identification strategies and sampling designs that are not a single regression.",

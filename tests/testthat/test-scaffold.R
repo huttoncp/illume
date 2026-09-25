@@ -197,7 +197,7 @@ test_that("a multinomial scaffold reproduces the probabilities it was given", {
   ## sum-to-zero: a category's intercept is its log-probability less the
   ## average of all three
   lp <- log(cells["control", ])
-  expect_equal(unname(fixef(s)["(Intercept)", ]), unname((lp - mean(lp))[1:2]),
+  expect_equal(unname(nlme::fixef(s)["(Intercept)", ]), unname((lp - mean(lp))[1:2]),
                tolerance = 1e-8)
   ## the same study stated as coefficients, in either layout
   s2 <- ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
@@ -208,7 +208,7 @@ test_that("a multinomial scaffold reproduces the probabilities it was given", {
   s3 <- ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
                      n_unit = 200, family = "multinomial",
                      categories = c("none", "some", "full"),
-                     coefs = fixef(s), verbose = FALSE)
+                     coefs = nlme::fixef(s), verbose = FALSE)
   expect_equal(coef(s3), coef(s))
   expect_output(print(s), "minus the sum of the others")
 })

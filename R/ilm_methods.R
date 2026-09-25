@@ -8,8 +8,10 @@
 ## the sum-to-zero category contrasts), then the covariance parameters, then the
 ## AR block if present.
 
-## `fixef` lives in nlme/lme4; define the generic only if nothing else has.
-if (!exists("fixef")) fixef <- function(object, ...) UseMethod("fixef")
+## `fixef` is nlme's generic, which lme4 re-exports. The method is registered
+## on it, so fixef(fit) works whenever either package is attached. It used to
+## be registered on a generic of illume's own, defined when nothing else was
+## visible at build time, and nlme's and lme4's fixef() never reached it.
 
 #' Number of fixed-effect coefficients
 #'
@@ -142,7 +144,7 @@ vcov.ilm_model <- function(object, full = FALSE, ...) {
 #' @return A numeric matrix with one row per design column and one column per
 #'   category dimension.
 #' @rdname fixef.ilm_model
-#' @export
+#' @exportS3Method nlme::fixef
 fixef.ilm_model <- function(object, ...) {
   B <- object$beta
   dimnames(B) <- list(colnames(object$X), object$ylevels[seq_len(object$C)])
