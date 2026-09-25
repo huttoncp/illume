@@ -49,6 +49,15 @@ of time, and \code{range} its reciprocal decay; a random walk has
 \code{var_per_time}, the variance of a step one time unit long. The words in
 \code{meaning} are those of \code{\link[=ilm_cells]{ilm_cells()}}.
 
+\strong{Smooths.} A smooth's variance is that of its penalised basis
+coefficients, on the basis's own scale: a different basis for the same
+curve gives a different number. How wiggly the curve is, its matrix
+carries as \code{"edf"}: its effective degrees of freedom, as \code{mgcv} defines
+them (Wood 2017, section 6.1.2), with their maximum, the null space plus
+the basis, as \code{"edf_max"}. An edf near its maximum means the basis may be
+too small for the curve. For a multinomial outcome it is the total over
+the categories.
+
 \strong{Dispersion.} On the natural scale and named for what it is. For a
 gaussian model it is \code{sigma}, the residual standard DEVIATION, not the
 variance. With a dispersion model it varies by row, and this is its value

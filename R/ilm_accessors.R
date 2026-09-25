@@ -329,6 +329,15 @@ ilm_diag_inv <- function(H, chunk = 512L) {
 #' `var_per_time`, the variance of a step one time unit long. The words in
 #' `meaning` are those of [ilm_cells()].
 #'
+#' **Smooths.** A smooth's variance is that of its penalised basis
+#' coefficients, on the basis's own scale: a different basis for the same
+#' curve gives a different number. How wiggly the curve is, its matrix
+#' carries as `"edf"`: its effective degrees of freedom, as `mgcv` defines
+#' them (Wood 2017, section 6.1.2), with their maximum, the null space plus
+#' the basis, as `"edf_max"`. An edf near its maximum means the basis may be
+#' too small for the curve. For a multinomial outcome it is the total over
+#' the categories.
+#'
 #' **Dispersion.** On the natural scale and named for what it is. For a
 #' gaussian model it is `sigma`, the residual standard DEVIATION, not the
 #' variance. With a dispersion model it varies by row, and this is its value
@@ -363,7 +372,17 @@ ilm_varcorr <- function(object) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
-  structure(ilm_natural(object), class = "ilm_VarCorr")
+  v <- ilm_natural(object)
+  ## a smooth's effective degrees of freedom go with its variance, which is on
+  ## its basis's scale and says little on its own
+  for (nm in names(v$re)) {
+    ew <- ilm_edf_words(object, nm)
+    if (is.null(ew)) next
+    attr(v$re[[nm]], "edf") <- unname(object$edf[[ew$smooth]])
+    attr(v$re[[nm]], "edf_max") <- unname(attr(object$edf, "max")[[ew$smooth]])
+    attr(v$re[[nm]], "edf_label") <- paste0(ew$smooth, ": ", ew$label)
+  }
+  structure(v, class = "ilm_VarCorr")
 }
 
 #' @rdname ilm_varcorr
@@ -476,6 +495,13 @@ print.ilm_VarCorr <- function(x, digits = 4, ...) {
     print(data.frame(Groups = cc$grp, Between = paste(cc$var1, "and", cc$var2),
                      Corr = round(cc$sdcor, 3), stringsAsFactors = FALSE),
           row.names = FALSE, right = FALSE)
+  }
+  el <- unlist(lapply(x$re, attr, "edf_label"))
+  if (length(el)) {
+    cat("\nSmooths:\n")
+    cat(paste0(" ", el, "\n"), sep = "")
+    writeLines(strwrap(paste0("(", ilm_edf_note(), ")"), width = 78,
+                       indent = 1, exdent = 2))
   }
   if (!is.null(x$latent)) {
     lt <- x$latent

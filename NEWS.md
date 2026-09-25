@@ -1,6 +1,17 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* Each smooth's effective degrees of freedom are reported: on its line in
+  `summary()` ("edf 6.53 of 9"), and in `ilm_varcorr()` as the `"edf"` and
+  `"edf_max"` attributes of its matrix and a line in the print. They are
+  `mgcv`'s: on the same data they agree with `mgcv::gam()` to 1e-4 by ML and
+  by REML, and to 1e-3 for a binary response. The maximum is the smooth's
+  null space plus its basis, so an edf near it means the basis may be too
+  small. A smooth's SD, printed beside it as before, is on its basis's own
+  scale and not comparable across bases; both prints now say so. For a
+  multinomial outcome the edf is the total over the categories. It is
+  computed when the model is fitted, at about 1% of the fitting time, and
+  kept with the fit as `fit$edf`.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner

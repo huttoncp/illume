@@ -825,6 +825,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fit$contrasts <- ctr
   fit$model     <- mf
   fit$smooths   <- sm_store
+  ## each smooth's effective degrees of freedom, while the fit's tape is
+  ## still there to give them: a fit read back from disk has lost it
+  fit$edf       <- ilm_smooth_edf(fit)
   fit$bars      <- bars
   fit$na.action <- attr(mf, "na.action")
   fit$n_dropped <- n_drop
