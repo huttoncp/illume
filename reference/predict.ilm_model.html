@@ -67,7 +67,7 @@ with standard errors and intervals.</p>
 <span>  <span class="va">object</span>,</span>
 <span>  newdata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"response"</span>, <span class="st">"link"</span>, <span class="st">"class"</span><span class="op">)</span>,</span>
-<span>  groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typical"</span>, <span class="st">"population"</span><span class="op">)</span>,</span>
+<span>  groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typical"</span>, <span class="st">"population"</span>, <span class="st">"fitted"</span><span class="op">)</span>,</span>
 <span>  se.fit <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  interval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"confidence"</span><span class="op">)</span>,</span>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
@@ -99,8 +99,9 @@ predictors, or <code>"class"</code> for the most likely category.</p></dd>
 
 <dt id="arg-groups">groups<a class="anchor" aria-label="anchor" href="#arg-groups"></a></dt>
 <dd><p><code>"typical"</code> (the default) for a group with every random
-effect at zero, or <code>"population"</code> for the average over the groups. See
-"Which groups".</p></dd>
+effect at zero, <code>"population"</code> for the average over the groups, or
+<code>"fitted"</code> for each row's own group's estimated effects. See "Which
+groups".</p></dd>
 
 
 <dt id="arg-se-fit">se.fit<a class="anchor" aria-label="anchor" href="#arg-se-fit"></a></dt>
@@ -153,14 +154,16 @@ everyone. <code>groups</code> says which:</p><ul><li><p><code>"typical"</code> (
 prediction for a <strong>typical group</strong>: one exactly at the average.</p></li>
 <li><p><code>"population"</code> averages the prediction over the distribution of random
 effects, giving it for the <strong>population of groups as a whole</strong>.</p></li>
-</ul><p>These differ, sometimes substantially, because averaging and a nonlinear
-inverse link do not commute: the average of the transformed values is not
-the transform of the average. Through a softmax, the population's
-probabilities are pulled toward being more even across categories. Which
-you want depends on the question – "what do I expect for an average
-subject?" or "what proportion of the population falls in each category?"</p>
-<p>Each fitted group's own effects are what <code><a href="ilm_fitted.html">ilm_fitted()</a></code> uses, for the rows
-the model was fitted to, and <code><a href="ilm_ranef.html">ilm_ranef()</a></code> returns them.</p>
+<li><p><code>"fitted"</code> gives each row <strong>its own group's</strong> estimated effects, the
+conditional modes <code><a href="ilm_ranef.html">ilm_ranef()</a></code> reports, as lme4's <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> does by
+default. See "A fitted group's own prediction".</p></li>
+</ul><p>The first two differ, sometimes substantially, because averaging and a
+nonlinear inverse link do not commute: the average of the transformed
+values is not the transform of the average. Through a softmax, the
+population's probabilities are pulled toward being more even across
+categories. Which you want depends on the question – "what do I expect for
+an average subject?" or "what proportion of the population falls in each
+category?"</p>
 <p><code>marginal</code> is the old name for this choice: <code>marginal = FALSE</code> is
 <code>groups = "typical"</code>, and <code>marginal = TRUE</code> is <code>groups = "population"</code>. It
 still works, with a warning, and will be removed after the next release.</p>
@@ -193,6 +196,27 @@ call, and free of <code>ndraw</code>. A multinomial outcome has one dimension pe
 is averaged over <code>ndraw</code> draws with common random numbers.</p>
     </div>
     <div class="section level2">
+    <h2 id="a-fitted-group-s-own-prediction">A fitted group's own prediction<a class="anchor" aria-label="anchor" href="#a-fitted-group-s-own-prediction"></a></h2>
+
+
+<p><code>groups = "fitted"</code> adds each row's own group's estimated effects to the
+fixed part: every grouping term's, through the row's own values of any
+random slope, and with a correlation over time, the fitted value of the
+row's cell. Without <code>newdata</code> these are the rows the model was fitted to,
+and the prediction is <code><a href="ilm_fitted.html">ilm_fitted()</a></code>'s. New rows are matched to the fitted
+groups by label, and to the fitted cells by their time and group, so a
+correlation over time has to have been given by name,
+<code>ilm_ar1(~ time | group)</code> and the like.</p>
+<p>A row that has no estimated effect is an error, rather than being given the
+zero a typical group has:</p><ul><li><p>a group the fit has not seen, whose effect is unknown;</p></li>
+<li><p>a time off its group's fitted cells. Past the group's last cell, the
+latent value would have to be forecast, which <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> does not do.</p></li>
+</ul><p><code>groups = "typical"</code> or <code>"population"</code> answer for such rows instead. With
+<code>se.fit</code> or <code>interval</code>, the draws include the random effects and the cells,
+jointly with everything else, as <code><a href="ilm_draws.html">ilm_draws()</a></code> gives them. The intervals
+then carry the uncertainty in each group's own effect.</p>
+    </div>
+    <div class="section level2">
     <h2 id="uncertainty">Uncertainty<a class="anchor" aria-label="anchor" href="#uncertainty"></a></h2>
 
 
@@ -204,7 +228,8 @@ within 0 and 1; a symmetric interval on the probability scale would not.</p>
 coefficients. Without it only the fixed effects vary, which breaks the
 correlation described in <code>ilm_joint_draws()</code> and distorts intervals around
 smooths; a warning says so. <code><a href="ilm_model.html">ilm_model()</a></code> enables it automatically when the model
-contains smooths.</p>
+contains smooths. <code>groups = "fitted"</code> always draws jointly, as
+<code><a href="ilm_draws.html">ilm_draws()</a></code> does.</p>
 <p>Random-effect draws are held fixed across rows and across parameter draws
 ("common random numbers"). Without that, Monte Carlo noise would swamp
 comparisons between grid points, and <code>marginaleffects</code> would be unable to

@@ -13,7 +13,7 @@ predict(
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  groups = c("typical", "population"),
+  groups = c("typical", "population", "fitted"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
@@ -44,8 +44,8 @@ predict(
 - groups:
 
   `"typical"` (the default) for a group with every random effect at
-  zero, or `"population"` for the average over the groups. See "Which
-  groups".
+  zero, `"population"` for the average over the groups, or `"fitted"`
+  for each row's own group's estimated effects. See "Which groups".
 
 - se.fit:
 
@@ -100,18 +100,19 @@ suits everyone. `groups` says which:
 - `"population"` averages the prediction over the distribution of random
   effects, giving it for the **population of groups as a whole**.
 
-These differ, sometimes substantially, because averaging and a nonlinear
-inverse link do not commute: the average of the transformed values is
-not the transform of the average. Through a softmax, the population's
-probabilities are pulled toward being more even across categories. Which
-you want depends on the question – "what do I expect for an average
-subject?" or "what proportion of the population falls in each category?"
+- `"fitted"` gives each row **its own group's** estimated effects, the
+  conditional modes
+  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  reports, as lme4's [`predict()`](https://rdrr.io/r/stats/predict.html)
+  does by default. See "A fitted group's own prediction".
 
-Each fitted group's own effects are what
-[`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)
-uses, for the rows the model was fitted to, and
-[`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
-returns them.
+The first two differ, sometimes substantially, because averaging and a
+nonlinear inverse link do not commute: the average of the transformed
+values is not the transform of the average. Through a softmax, the
+population's probabilities are pulled toward being more even across
+categories. Which you want depends on the question – "what do I expect
+for an average subject?" or "what proportion of the population falls in
+each category?"
 
 `marginal` is the old name for this choice: `marginal = FALSE` is
 `groups = "typical"`, and `marginal = TRUE` is `groups = "population"`.
@@ -154,6 +155,34 @@ is the same on every call, and free of `ndraw`. A multinomial outcome
 has one dimension per category, and is averaged over `ndraw` draws with
 common random numbers.
 
+## A fitted group's own prediction
+
+`groups = "fitted"` adds each row's own group's estimated effects to the
+fixed part: every grouping term's, through the row's own values of any
+random slope, and with a correlation over time, the fitted value of the
+row's cell. Without `newdata` these are the rows the model was fitted
+to, and the prediction is
+[`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)'s.
+New rows are matched to the fitted groups by label, and to the fitted
+cells by their time and group, so a correlation over time has to have
+been given by name, `ilm_ar1(~ time | group)` and the like.
+
+A row that has no estimated effect is an error, rather than being given
+the zero a typical group has:
+
+- a group the fit has not seen, whose effect is unknown;
+
+- a time off its group's fitted cells. Past the group's last cell, the
+  latent value would have to be forecast, which
+  [`predict()`](https://rdrr.io/r/stats/predict.html) does not do.
+
+`groups = "typical"` or `"population"` answer for such rows instead.
+With `se.fit` or `interval`, the draws include the random effects and
+the cells, jointly with everything else, as
+[`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+gives them. The intervals then carry the uncertainty in each group's own
+effect.
+
 ## Uncertainty
 
 Standard errors and intervals come from simulation rather than a
@@ -168,6 +197,9 @@ breaks the correlation described in `ilm_joint_draws()` and distorts
 intervals around smooths; a warning says so.
 [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
 enables it automatically when the model contains smooths.
+`groups = "fitted"` always draws jointly, as
+[`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+does.
 
 Random-effect draws are held fixed across rows and across parameter
 draws ("common random numbers"). Without that, Monte Carlo noise would

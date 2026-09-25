@@ -15,9 +15,10 @@
     such a group’s prediction is a spread, not one value.
 
   Each function takes the words that apply to it, with its default
-  unchanged. [`predict()`](https://rdrr.io/r/stats/predict.html) and
+  unchanged. [`predict()`](https://rdrr.io/r/stats/predict.html) takes
+  `"typical"` (the default), `"population"` or `"fitted"`, and
   [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
-  take `"typical"` (the default) or `"population"`.
+  `"typical"` (the default) or `"population"`.
   [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md),
   [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md)
   and
@@ -27,6 +28,16 @@
   `ilm_model.groups`) or `"typical"`. Any other word is an error that
   says where it is answered.
 
+  - `predict(groups = "fitted")` is new. It gives each row its own
+    group’s estimated effects, as lme4’s
+    [`predict()`](https://rdrr.io/r/stats/predict.html) does by default,
+    and with a correlation over time the fitted value of the row’s cell.
+    New rows are matched to the fitted groups by label and to the fitted
+    cells by time. A group the fit has not seen, or a time off its
+    group’s fitted cells, is an error that names `"typical"` and
+    `"population"`, not a silent zero. Its intervals draw the random
+    effects with everything else, through
+    [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md).
   - The words replace `marginal` and `conditional`, which still work for
     one release, with a warning once per session: `marginal = TRUE` is
     `groups = "population"`, and `conditional = TRUE` is
