@@ -54,6 +54,26 @@
   [`predict()`](https://rdrr.io/r/stats/predict.html)’s. The smooth
   basis comes from the same code, now shared.
 
+- [`ilm_dist()`](https://huttoncp.github.io/illume/reference/ilm_dist.md)
+  gives a fit’s response distribution as functions: the density,
+  distribution and quantile functions, a random generator and the mean,
+  in illume’s own parameterisation.
+
+  - **Inputs.** They take linear predictors and internal parameters, a
+    draw from
+    [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+    say, rather than means. The inverse link, the dispersion’s
+    transform, the zero part’s mixing or truncation, a censored row’s
+    interval and an ordered response’s thresholds are all handled
+    inside.
+  - **Checked against the fit.** On a fit with nothing integrated out,
+    the density summed over the rows is the objective the optimiser
+    minimised, to 1e-9. That holds for every family, for censored
+    gaussian and survival responses, for frequency weights, for
+    zero-inflated and hurdle models and for dispersion models.
+  - **Not covered.** The flexible parametric survival families, whose
+    linear predictor depends on time itself.
+
 - [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
   exports the Gauss-Hermite quadrature behind
   `predict(marginal = TRUE)`, so code built on a fit averages over a

@@ -27,13 +27,16 @@ Delete this file once the queue is empty.
   below. The second half,
   [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md),
   [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
-  and `ilm_dist()`, comes next.
+  and
+  [`ilm_dist()`](https://huttoncp.github.io/illume/reference/ilm_dist.md),
+  comes next.
 - **Next, in the order agreed with Craig:**
   1.  The exports another agent asked for, which Craig approved:
       [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
       (new rows placed among the cells),
       [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
-      (joint draws of every parameter, matched by name), `ilm_dist()`
+      (joint draws of every parameter, matched by name),
+      [`ilm_dist()`](https://huttoncp.github.io/illume/reference/ilm_dist.md)
       (each family’s d/p/q/r in illume’s parameterisation),
       [`ilm_normal_expect()`](https://huttoncp.github.io/illume/reference/ilm_normal_expect.md)
       (the quadrature behind `predict(marginal = TRUE)`), and

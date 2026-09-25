@@ -67,6 +67,15 @@
 <strong>Options.</strong> <code>given = "theta"</code> holds the variance parameters at their estimates. <code>blocks</code> returns part of the vector. A fit made without <code>joint = TRUE</code> has its precision formed on demand.</li>
 </ul></li>
 <li><p><code><a href="../reference/ilm_matrices.html">ilm_matrices()</a></code> gives the designs for new rows: the fixed design, each random term’s design with each row’s group matched by label, each smooth’s penalised basis, and the zero part’s and dispersion model’s designs. It also places each new row among a correlation over time’s cells: the cell it falls on, the cells either side and the time to each. A prediction assembled from these matrices is <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>’s. The smooth basis comes from the same code, now shared.</p></li>
+<li>
+<p><code><a href="../reference/ilm_dist.html">ilm_dist()</a></code> gives a fit’s response distribution as functions: the density, distribution and quantile functions, a random generator and the mean, in illume’s own parameterisation.</p>
+<ul><li>
+<strong>Inputs.</strong> They take linear predictors and internal parameters, a draw from <code><a href="../reference/ilm_draws.html">ilm_draws()</a></code> say, rather than means. The inverse link, the dispersion’s transform, the zero part’s mixing or truncation, a censored row’s interval and an ordered response’s thresholds are all handled inside.</li>
+<li>
+<strong>Checked against the fit.</strong> On a fit with nothing integrated out, the density summed over the rows is the objective the optimiser minimised, to 1e-9. That holds for every family, for censored gaussian and survival responses, for frequency weights, for zero-inflated and hurdle models and for dispersion models.</li>
+<li>
+<strong>Not covered.</strong> The flexible parametric survival families, whose linear predictor depends on time itself.</li>
+</ul></li>
 <li><p><code><a href="../reference/ilm_normal_expect.html">ilm_normal_expect()</a></code> exports the Gauss-Hermite quadrature behind <code>predict(marginal = TRUE)</code>, so code built on a fit averages over a latent spread as its predictions do.</p></li>
 <li><p>Fixed: <code>fixef()</code> did not reach illume’s method. It was registered on a generic of illume’s own, so with nlme or lme4 attached, <code>fixef(fit)</code> stopped with “no applicable method”. It is now registered on nlme’s generic.</p></li>
 <li><p>A fit keeps each grouping term’s level labels, and a refit keeps them too.</p></li>
