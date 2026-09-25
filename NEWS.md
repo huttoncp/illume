@@ -264,6 +264,9 @@
   "the formula interface needs reformulas (or lme4)". reformulas (>= 0.4.0)
   is now imported. It is small: beyond what R ships, it brings only Rdpack
   and rbibutils.
+  - mgcv is imported too. Every formula is read by its `interpret.gam()`, so
+    it was needed just as unconditionally. It ships with R, so this costs
+    nothing, and it lets the "mgcv is required" check before each fit go.
 * `ilm_fit()` defaults to `family = "gaussian"`, as `glm.fit()` does, and to
   no random terms (`re_list = list()`), so `ilm_fit(X, y)` is a linear model.
   Its default was `"multinomial"`, where the package began. A call that gives

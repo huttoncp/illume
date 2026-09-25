@@ -58,14 +58,14 @@ Imports:
     utils,
     parallel,
     codetools,
-    reformulas (>= 0.4.0)
+    reformulas (>= 0.4.0),
+    mgcv
 Suggests:
     boot,
     lme4,
     glmmTMB,
     nlme,
     survival,
-    mgcv,
     car,
     marginaleffects,
     performance,

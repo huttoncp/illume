@@ -366,7 +366,6 @@ ilm_model_formula <- function(formula, data, family = "auto",
   auto <- is.null(family) || identical(family, "auto")
   fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
-  if (!requireNamespace("mgcv", quietly = TRUE)) stop("mgcv is required for the formula interface")
 
   ## Where the terms of the formula get evaluated. nobars(),
   ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying
