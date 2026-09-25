@@ -88,7 +88,7 @@ ilm_rem_term <- function(fit, term) {
     e <- tryCatch(str2lang(t), error = function(err) NULL)
     if (!is.call(e) || !sub("^mgcv::", "", deparse1(e[[1L]])) %in% c("s", "te", "ti", "t2"))
       next
-    lab <- tryCatch(eval(e, env)$label, error = function(err) NULL)
+    lab <- tryCatch(ilm_smooth_label(eval(e, env)), error = function(err) NULL)
     if (identical(lab, term)) return(t)
   }
   NULL

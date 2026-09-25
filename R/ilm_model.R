@@ -346,6 +346,29 @@ ilm_model <- function(formula, ...) {
 #' a property of the sample, and take conclusions from the slopes and from
 #' [ilm_plot_model()]'s effect curves.
 #'
+#' @section How smooth terms are named:
+#' A smooth takes the name mgcv gives the smooth it builds, and three things
+#' are named from it:
+#' * **the smooth itself**, as `fit$smooths` and the random terms list it:
+#'   `"s(x)"` for `s(x)`, `"t2(x,z)"` for `t2(x, z)`, and `"s(x):z"` for a
+#'   smooth with a numeric `by`, `s(x, by = z)`;
+#' * **its unpenalised columns** among the fixed effects: the name with `.f1`,
+#'   `.f2`, ... after it, so `"s(x).f1"`, or `"s(x):z.f1"` and `"s(x):z.f2"`;
+#' * **its penalised part**, the random term whose variance `summary()`,
+#'   [ilm_varcorr()] and `fit$Sigma` report: the name itself, or `"t2(x,z).1"`,
+#'   `"t2(x,z).2"`, ... for a tensor product, which has a penalty per margin.
+#'
+#' Two smooths may not share a name. `s(x) + s(x, k = 5)` stops, because the
+#' second would overwrite the first.
+#'
+#' **What changed.** A smooth with a numeric `by` used to take the name of the
+#' same smooth without it: `"s(x)"`, with columns `"s(x).f1"` and
+#' `"s(x).f2"`. Beside a plain `s(x)` the two names collided: one smooth's
+#' penalised part was lost from the fit, and `predict()` on new rows stopped.
+#' Its columns are now `"s(x):z.f1"` and `"s(x):z.f2"`, and its variance
+#' `"s(x):z"`. Code that picked them out by the old names needs the new ones.
+#' A smooth without a `by` is named as before.
+#'
 #' @return An object of class `"ilm_model"`.
 #' @rdname ilm_model
 #' @export
@@ -683,8 +706,18 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## ---- smooths: null space -> X, penalised blocks -> basis terms ----------
   re_list <- list(); sm_store <- list()
   for (sp in smsp) {
-    lab <- sp$label
     sob <- ilm_smooth(sp, mf)
+    ## mgcv's own name for the smooth it built: "s(x)", or "s(x):z" for a
+    ## numeric `by`. The name as written in the formula, "s(x)" for both,
+    ## used to key everything, so s(x) + s(x, by = z) gave the second the
+    ## first's name: it overwrote the first's penalised part, the two shared
+    ## column names, and predict() on new rows stopped on a column count.
+    lab <- ilm_smooth_label(sp)
+    if (lab %in% names(sm_store))
+      stop("two smooths are both called '", lab, "': the second would ",
+           "overwrite the first. Write each smooth once -- they differ only ",
+           "in their settings -- or give the second a copy of the ",
+           "variable under another name.", call. = FALSE)
     sm_store[[lab]] <- sob
     if (!is.null(sob$Xf) && ncol(sob$Xf)) {
       cn <- paste0(lab, ".f", seq_len(ncol(sob$Xf)))

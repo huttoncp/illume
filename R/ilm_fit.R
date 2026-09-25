@@ -509,6 +509,17 @@ ilm_smooth <- function(spec, data) {
   list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
 }
 
+## A smooth's name, as mgcv names the smooth it builds: the term as written,
+## "s(x)" or "t2(x,z)", with ":z" after it for a numeric `by` -- the name the
+## term, its unpenalised columns ("s(x):z.f1") and its variance go by. The
+## name as written alone cannot tell s(x) from s(x, by = z).
+#' @keywords internal
+#' @noRd
+ilm_smooth_label <- function(sp) {
+  by <- sp$by
+  if (is.null(by) || identical(by, "NA")) sp$label else paste0(sp$label, ":", by)
+}
+
 #' Build the table of model checks
 #'
 #' Each check records a status, what was measured, why it matters, and what to do
