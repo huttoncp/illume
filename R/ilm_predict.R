@@ -250,6 +250,67 @@ ilm_gh <- function(n = 40L) {
 ilm_gh_n <- function(s)
   as.integer(min(800, 40 * max(1, ceiling(max(s, 0, na.rm = TRUE)^2))))
 
+## Where the rule is centred, element by element: the peak of
+## h(eta + sd z) phi(z), found by Newton's method on its log. For a bounded h
+## -- an inverse logit, a probability -- the peak stays near zero, and a peak
+## within two standard deviations of it leaves the rule as it was: measured
+## over logit, probit and cloglog at SDs of 0.5 to 10, that threshold was
+## never less accurate than the plain rule, where one of 1 was, slightly, for
+## the cloglog. For an h that grows the mass moves away: exp(eta + sd z) phi(z)
+## peaks at z = sd, where a rule centred at zero has almost no nodes. There
+## the plain rule was 0.2% low at an SD of 10 and 19% low at 12, and past 13.8
+## its outer terms overflowed against weights that had underflowed to zero,
+## and the result was NaN.
+## `h` is always called on the whole vector, never a subset, because a caller's
+## h can be tied to its rows (a zero part's design, say).
+#' @keywords internal
+#' @noRd
+ilm_gh_shift <- function(h, eta, sd) {
+  n <- length(eta)
+  m <- numeric(n)
+  if (!n) return(m)
+  g <- function(z) {
+    v <- suppressWarnings(log(as.numeric(h(eta + sd * z))))
+    if (length(v) != n) rep(NA_real_, n) else v - z^2 / 2
+  }
+  d <- 1e-4
+  gm <- g(m)
+  ovf <- logical(n)
+  attr(m, "overflow") <- ovf
+  if (all(is.na(gm))) return(m)
+  for (it in seq_len(60L)) {
+    gp <- g(m + d); gn <- g(m - d)
+    ovf <- ovf | gp %in% Inf | gn %in% Inf
+    g1 <- (gp - gn) / (2 * d)
+    g2 <- (gp - 2 * gm + gn) / d^2
+    ok <- is.finite(g1) & is.finite(g2) & g2 < -0.5
+    step <- ifelse(ok, pmax(pmin(-g1 / g2, 5), -5), 0)
+    ## halved until the log-integrand does not fall: a full Newton step from
+    ## a fast-growing h can land where h has underflowed to zero, and there
+    ## the log is -Inf and nothing moves again
+    for (bt in seq_len(40L)) {
+      g_new <- g(m + step)
+      ovf <- ovf | g_new %in% Inf
+      bad <- step != 0 & !(is.finite(g_new) & g_new >= gm - 1e-12)
+      if (!any(bad)) break
+      step[bad] <- step[bad] / 2
+    }
+    step[bad] <- 0
+    m <- m + step
+    gm <- ifelse(step != 0, g_new, gm)
+    if (max(abs(step)) < 1e-10) break
+  }
+  ## only a peak the search reached is used; anywhere else the plain rule
+  ## stands, as it does for a peak within two standard deviations of zero
+  g1 <- (g(m + d) - g(m - d)) / (2 * d)
+  m[!is.finite(m) | !is.finite(g1) | abs(g1) > 1e-4 * pmax(1, abs(m)) |
+      abs(m) < 2] <- 0
+  ## where the integrand itself overflowed on the way, the expectation is too
+  ## large for double precision to represent at the nodes, and says so as Inf
+  attr(m, "overflow") <- ovf
+  m
+}
+
 #' Convert linear predictors to category probabilities
 #'
 #' Applies the softmax (multinomial logistic) transform so each row gives
@@ -593,10 +654,12 @@ predict.ilm_model <- function(object, newdata = NULL,
                matrix(zi_adj(linkinv(eta[, 1])), ncol = 1L))
     if (!multinom) {
       ## the zero part inside the integral: a hurdle's mean is not linear in
-      ## the count mean, so it cannot be applied to the average afterwards
-      gh <- ilm_gh(ilm_gh_n(sqrt(max(vrow)))); P <- 0
-      for (q in seq_along(gh$z))
-        P <- P + gh$w[q] * zi_adj(linkinv(eta[, 1] + sqrt(vrow) * gh$z[q]))
+      ## the count mean, so it cannot be applied to the average afterwards.
+      ## Through ilm_normal_expect(), so the two cannot differ: its rule is
+      ## centred where the integrand lives, which for a log link at a large
+      ## latent SD is far from zero.
+      P <- ilm_normal_expect(function(e) zi_adj(linkinv(e)), eta[, 1],
+                             sqrt(vrow))
       return(matrix(P, ncol = 1L))
     }
     P <- matrix(0, nrow(eta), object$J)

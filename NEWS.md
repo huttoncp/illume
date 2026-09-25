@@ -279,6 +279,23 @@
   every call and does not use `ndraw`; the effects and scenarios built on it
   no longer move with the seed. A multinomial outcome is still averaged by draws, now
   including an AR term.
+* Fixed: the quadrature behind a population average, and `ilm_normal_expect()`,
+  lost an integrand that grows, such as the mean under a log link, at a large
+  latent SD. `exp(eta + sd z)` times the normal density peaks at `z = sd`,
+  where a rule centred at zero has almost no nodes.
+  - **What it did.** At an SD of 10 the mean was 0.2% low, and at 12, 19%
+    low. From 13.8 the outer terms overflowed against weights that had
+    underflowed to zero, and the result was `NaN`. Draws of a variance reach
+    those SDs with few groups.
+  - **Now.** The rule is centred where the integrand peaks, when that is more
+    than two SDs from zero. A log link's mean is exact to 1e-13 up to an SD
+    of 20, and past that it is `Inf`, never `NaN`.
+  - **Unaffected.** A bounded integrand, such as an inverse logit, peaks
+    near zero and keeps the plain rule: its accuracy is unchanged, and
+    better than 1e-12 through a logit up to an SD of 6.
+  - `predict()` now averages through `ilm_normal_expect()` itself, so the two
+    cannot differ.
+  - Found by another agent.
 * Fixed: `ilm_emmeans(type = "response")` on a beta model returned the
   link-scale means: 0.37 where the proportion was 0.59. The inverse link was
   chosen by switching on the family's name, and beta fell through to the
