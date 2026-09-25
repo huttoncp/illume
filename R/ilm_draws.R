@@ -54,7 +54,9 @@
 #'
 #' A fit made without `joint = TRUE` has no joint precision stored, and it is
 #' formed here from the fit's compiled objective; a fit read back from disk no
-#' longer has that, and has to be refitted.
+#' longer has that, and has to be refitted. A fit without random effects
+#' needs neither: with nothing integrated out, its draws come from
+#' `vcov(fit, full = TRUE)`.
 #'
 #' @param object A fitted `"ilm_model"`.
 #' @param nsim Number of draws.
@@ -202,6 +204,27 @@ ilm_joint_prec <- function(object) {
   Q <- object$jointPrecision
   if (is.null(Q)) Q <- object$sdr$jointPrecision
   if (!is.null(Q)) return(Q)
+  ## With nothing integrated out -- a model without random effects, fitted by
+  ## maximum likelihood -- the whole parameter vector is fixed, and its
+  ## distribution is the one its standard errors come from: vcov(), with the
+  ## n / (n - p) that makes a gaussian fit's agree with lm(). sdreport()
+  ## forms a joint precision only when there is a random part, and its
+  ## absence used to be taken for a fit read back from disk, so no such
+  ## model could be drawn from.
+  if (!length(object$obj$env$random)) {
+    rn <- names(object$obj$env$par)
+    V <- suppressWarnings(stats::vcov(object, full = TRUE))
+    Q <- if (!is.null(V) && all(is.finite(V)))
+      tryCatch(solve(V), error = function(e) NULL)
+    if (is.null(Q))
+      stop("the fit's Hessian is not positive definite, so there is no ",
+           "distribution to draw from; see fit$checks", call. = FALSE)
+    if (!identical(dim(Q), rep(length(rn), 2L)))
+      stop("internal: the fit's covariance does not match its parameter ",
+           "vector", call. = FALSE)
+    dimnames(Q) <- list(rn, rn)
+    return(Q)
+  }
   Hf <- object$hessian_fixed
   if (is.null(Hf)) {
     if (!isTRUE(object$sdr$pdHess))
@@ -209,14 +232,17 @@ ilm_joint_prec <- function(object) {
            "distribution to draw from; see fit$checks", call. = FALSE)
     Hf <- solve(object$sdr$cov.fixed)
   }
+  err <- NULL
   s2 <- tryCatch(suppressWarnings(sdreport(object$obj, par.fixed = object$opt$par,
                                            hessian.fixed = Hf,
                                            getJointPrecision = TRUE)),
-                 error = function(e) NULL)
+                 error = function(e) { err <<- conditionMessage(e); NULL })
   if (is.null(s2) || is.null(s2$jointPrecision))
-    stop("this fit's compiled objective is gone -- it was read back from ",
-         "disk? -- so its joint precision cannot be formed. Refit it, with ",
-         "joint = TRUE to keep the precision with the fit.", call. = FALSE)
+    stop("the joint precision could not be formed from this fit's compiled ",
+         "objective", if (!is.null(err)) paste0(" (", err, ")"), ". A fit ",
+         "read back from disk has lost that objective and has to be ",
+         "refitted; with joint = TRUE the precision is kept with the fit.",
+         call. = FALSE)
   s2$jointPrecision
 }
 

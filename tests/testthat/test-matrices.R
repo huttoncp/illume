@@ -113,8 +113,37 @@ test_that("the zero part's and the dispersion model's designs come too", {
                  dispformula = ~ g, verbose = FALSE)
   nd <- data.frame(x = c(1, 2), z = c(0, 1), g = c("b", "a"))
   m <- ilm_matrices(f, nd)
-  expect_identical(colnames(m$zi), colnames(f$Zzi))
+  expect_identical(colnames(m$zi), paste0("zi:", colnames(f$Zzi)))
   expect_equal(matrix(m$zi, nrow(nd)), cbind(1, nd$z))
-  expect_identical(colnames(m$disp), colnames(f$Zd))
-  expect_equal(unname(m$disp[, "gb"]), c(1, 0))
+  expect_identical(colnames(m$disp), paste0("disp:", colnames(f$Zd)))
+  expect_equal(unname(m$disp[, "disp:gb"]), c(1, 0))
+  ## each column finds its coefficient by name, in coef() and in the draws
+  b <- stats::coef(f, full = TRUE)
+  expect_true(all(c(colnames(m$zi), colnames(m$disp)) %in% names(b)))
+  mp <- ilm_draws(f, nsim = 2, seed = 1)$map
+  expect_true(all(c(colnames(m$zi), colnames(m$disp)) %in% mp$term))
+  ## and the zero part's linear predictor for the new rows is the fit's own
+  eta_zi <- as.vector(m$zi %*% b[colnames(m$zi)])
+  expect_equal(eta_zi, as.vector(cbind(1, nd$z) %*% f$zi_gamma),
+               tolerance = 1e-12)
+})
+
+test_that("each Z's columns are named by dimension, a lone intercept too", {
+  ## unnamed for a random intercept alone, named with a slope: code reading
+  ## columns by name found no intercept column and dropped the group effects
+  d <- mat_data()
+  f1 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+                  verbose = FALSE)
+  f2 <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+                  verbose = FALSE)
+  nd <- data.frame(x = 0, t = 3, id = "s02")
+  z1 <- ilm_matrices(f1, nd)$re$id$Z
+  z2 <- ilm_matrices(f2, nd)$re$id$Z
+  expect_identical(colnames(z1), "(Intercept)")
+  expect_identical(colnames(z2), c("(Intercept)", "t"))
+  ## the same names ilm_ranef() and the draws map give the dimensions
+  expect_setequal(colnames(z1), unique(ilm_ranef(f1)$dim))
+  expect_setequal(colnames(z2), unique(ilm_ranef(f2)$dim))
+  mp <- ilm_draws(f2, nsim = 1, seed = 1, natural = FALSE)$map
+  expect_setequal(colnames(z2), unique(mp$dim[mp$block == "bvec"]))
 })
