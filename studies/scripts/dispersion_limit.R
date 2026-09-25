@@ -136,11 +136,11 @@ cat("fits:", nrow(res), " failed:", sum(!res$ok), " minutes:",
 r <- res[res$ok, ]
 for (fam in unique(r$family)) {
   x <- r[r$family == fam, ]
+  x <- x[!is.na(x$limit_ll) & !is.na(x$push_down), ]
   cat("\n==", fam, "==\n")
   at <- x$limit_ll & x$push_down
   cat(sprintf("at the limit (both labels): %d of %d\n", sum(at), nrow(x)))
   q <- function(v) if (length(v)) signif(stats::quantile(v, c(0, .5, 1), na.rm = TRUE), 3) else NA
-  x <- x[!is.na(x$limit_ll) & !is.na(x$push_down), ]
   cat("1/sqrt(disp), at the limit:     ", q(x$inv_sqrt[at]), "\n")
   cat("1/sqrt(disp), not at the limit: ", q(x$inv_sqrt[!at]), "\n")
   cat("labels disagree:", sum(x$limit_ll != x$push_down), "\n")
