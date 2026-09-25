@@ -282,6 +282,19 @@ Two rules for smooths: use `t2()` rather than `te()` for tensor products, and
 write them unqualified -- `s(x)`, not `mgcv::s(x)` -- because mgcv identifies
 smooths by name.
 
+A smooth is named as mgcv names it. `s(x)` is `"s(x)"`, and a smooth with a
+numeric `by`, `s(x, by = z)`, is `"s(x):z"`. Its unpenalised columns among the
+fixed effects carry the name with `.f1`, `.f2`, ... after it (`"s(x):z.f1"`),
+and its penalised part is the random term of that name. A smooth with a
+numeric `by` used to be called `"s(x)"`, with columns `"s(x).f1"` and
+`"s(x).f2"`. Beside a plain `s(x)` that collided, and the fit lost one of the
+two. The section "How smooth terms are named" in `?ilm_model` has the whole
+scheme.
+
+A numeric `by` variable is not also entered on its own. `s(x, by = z)` is not
+centred, so it already carries `z`'s main effect, and `y ~ z + s(x, by = z)`
+stops and says so.
+
 A random term's covariance is set through `re_struct`: a list with one element
 per term, named by its grouping variable, each element itself a list. Two
 settings go in it. `d_cor = FALSE` drops the correlation between a random

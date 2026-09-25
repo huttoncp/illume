@@ -116,6 +116,28 @@
   the layout from it instead of rebuilding it.
 * `summary()` names the correlation over time it fitted and gives its standard
   deviation. It used to call a CAR(1) term "ar1".
+* Fixed: `y ~ z + s(x, by = z)`, a numeric `by` variable beside its own
+  smooth, fitted with a failed Hessian and every standard error `NaN`, and
+  nothing said why. A smooth with a numeric `by` is not centred, so its
+  unpenalised part already spans `z` (and `z * x`) whatever the basis. The
+  two are one column. The fit now stops before it starts, saying so and
+  that dropping `z` is the fix (Wood 2017, p. 326). Found by another agent.
+* Fixed: a smooth with a numeric `by` took the name of the same smooth
+  without it, so `s(x) + s(x, by = z)` called both `"s(x)"`.
+  - **What it did.** The second overwrote the first's penalised part, so
+    the fit carried one random term too few. The two shared column names,
+    and `predict()` on new rows stopped on a column count.
+  - **Now.** Every smooth takes mgcv's own name: `"s(x):z"` for
+    `s(x, by = z)`. Its unpenalised columns are `"s(x):z.f1"`,
+    `"s(x):z.f2"`, and its variance is `"s(x):z"`. Two smooths with one name
+    stop instead of overwriting.
+  - **What changes for existing code.** A smooth with a numeric `by`, alone,
+    used to name its columns `"s(x).f1"` and `"s(x).f2"`. Code that picked
+    them out by those names needs the new ones. A smooth without a `by` is
+    named as before.
+  - `?ilm_model` has a section, "How smooth terms are named", with the
+    whole scheme, and the regression-models vignette says the same.
+  - Found by another agent.
 * `ilm_interpret()` says each effect in the response's own units, over a change
   a reader can picture: across the middle half of a numeric predictor, level by
   level for a factor, with the model's predictions at both ends, averaged over
