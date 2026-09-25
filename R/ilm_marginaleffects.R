@@ -157,9 +157,18 @@ ilm_rebuild_aux <- function(object, tl) {
 #' @param vcov Passed through by `marginaleffects`.
 #' @param newdata Optional data frame.
 #' @param type Prediction type.
-#' @param marginal Logical. Population-averaged predictions; defaults to the
-#'   `ilm_model.marginal` option, which is `TRUE`.
-#' @param ndraw Integer. Random-effect draws when `marginal = TRUE`.
+#' @param groups Which groups the predictions are for: `"population"`, the
+#'   average over the groups, or `"typical"`, a group with every random effect
+#'   at zero. Defaults to the `ilm_model.groups` option, which is
+#'   `"population"`. See [predict.ilm_model()]. Given to a `marginaleffects`
+#'   function, `groups` is passed on to this method with a warning from
+#'   `marginaleffects` that it does not know the argument; setting the option
+#'   instead avoids the warning.
+#' @param ndraw Integer. Random-effect draws when `groups = "population"`, for
+#'   a multinomial outcome.
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`. The option `ilm_model.marginal` is deprecated in
+#'   the same way.
 #' @param ... Unused.
 #' @return Parameters, a covariance matrix, a modified model, or a long-format
 #'   data frame of predictions with `rowid`, `group` and `estimate`.
@@ -188,9 +197,18 @@ get_coef.ilm_model <- function(model, ...) coef(model, full = TRUE)
 #' @param vcov Passed through by `marginaleffects`.
 #' @param newdata Optional data frame.
 #' @param type Prediction type.
-#' @param marginal Logical. Population-averaged predictions; defaults to the
-#'   `ilm_model.marginal` option, which is `TRUE`.
-#' @param ndraw Integer. Random-effect draws when `marginal = TRUE`.
+#' @param groups Which groups the predictions are for: `"population"`, the
+#'   average over the groups, or `"typical"`, a group with every random effect
+#'   at zero. Defaults to the `ilm_model.groups` option, which is
+#'   `"population"`. See [predict.ilm_model()]. Given to a `marginaleffects`
+#'   function, `groups` is passed on to this method with a warning from
+#'   `marginaleffects` that it does not know the argument; setting the option
+#'   instead avoids the warning.
+#' @param ndraw Integer. Random-effect draws when `groups = "population"`, for
+#'   a multinomial outcome.
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`. The option `ilm_model.marginal` is deprecated in
+#'   the same way.
 #' @param ... Unused.
 #' @return Parameters, a covariance matrix, a modified model, or a long-format
 #'   data frame of predictions with `rowid`, `group` and `estimate`.
@@ -236,9 +254,18 @@ set_coef.ilm_model <- function(model, coefs, ...) {
 #' @param vcov Passed through by `marginaleffects`.
 #' @param newdata Optional data frame.
 #' @param type Prediction type.
-#' @param marginal Logical. Population-averaged predictions; defaults to the
-#'   `ilm_model.marginal` option, which is `TRUE`.
-#' @param ndraw Integer. Random-effect draws when `marginal = TRUE`.
+#' @param groups Which groups the predictions are for: `"population"`, the
+#'   average over the groups, or `"typical"`, a group with every random effect
+#'   at zero. Defaults to the `ilm_model.groups` option, which is
+#'   `"population"`. See [predict.ilm_model()]. Given to a `marginaleffects`
+#'   function, `groups` is passed on to this method with a warning from
+#'   `marginaleffects` that it does not know the argument; setting the option
+#'   instead avoids the warning.
+#' @param ndraw Integer. Random-effect draws when `groups = "population"`, for
+#'   a multinomial outcome.
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`. The option `ilm_model.marginal` is deprecated in
+#'   the same way.
 #' @param ... Unused.
 #' @return Parameters, a covariance matrix, a modified model, or a long-format
 #'   data frame of predictions with `rowid`, `group` and `estimate`.
@@ -270,9 +297,18 @@ get_vcov.ilm_model <- function(model, vcov = NULL, ...) {
 #' @param vcov Passed through by `marginaleffects`.
 #' @param newdata Optional data frame.
 #' @param type Prediction type.
-#' @param marginal Logical. Population-averaged predictions; defaults to the
-#'   `ilm_model.marginal` option, which is `TRUE`.
-#' @param ndraw Integer. Random-effect draws when `marginal = TRUE`.
+#' @param groups Which groups the predictions are for: `"population"`, the
+#'   average over the groups, or `"typical"`, a group with every random effect
+#'   at zero. Defaults to the `ilm_model.groups` option, which is
+#'   `"population"`. See [predict.ilm_model()]. Given to a `marginaleffects`
+#'   function, `groups` is passed on to this method with a warning from
+#'   `marginaleffects` that it does not know the argument; setting the option
+#'   instead avoids the warning.
+#' @param ndraw Integer. Random-effect draws when `groups = "population"`, for
+#'   a multinomial outcome.
+#' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
+#'   is `groups = "typical"`. The option `ilm_model.marginal` is deprecated in
+#'   the same way.
 #' @param ... Unused.
 #' @return Parameters, a covariance matrix, a modified model, or a long-format
 #'   data frame of predictions with `rowid`, `group` and `estimate`.
@@ -283,12 +319,28 @@ get_vcov.ilm_model <- function(model, vcov = NULL, ...) {
 #' @rdname marginaleffects-methods
 #' @export
 get_predict.ilm_model <- function(model, newdata = NULL, type = "response",
-                             marginal = NULL, ndraw = 100L, ...) {
-  if (is.null(marginal))
-    marginal <- isTRUE(getOption("ilm_model.marginal", TRUE))   # PA is the default
+                             groups = NULL, ndraw = 100L, marginal = NULL,
+                             ...) {
+  ## The population's average is the default here, where predict() defaults
+  ## to a typical group. The old option still chooses, with a warning.
+  if (is.null(groups) && is.null(marginal)) {
+    old <- getOption("ilm_model.marginal")
+    groups <- if (is.null(old)) getOption("ilm_model.groups", "population")
+    else {
+      ilm_deprecated("option ilm_model.marginal", paste0(
+        "the option `ilm_model.marginal` is deprecated: use ",
+        "options(ilm_model.groups = \"population\") for TRUE, and ",
+        "options(ilm_model.groups = \"typical\") for FALSE."))
+      if (isTRUE(old)) "population" else "typical"
+    }
+  }
+  groups <- ilm_groups_arg(groups, c("population", "typical"),
+                           !is.null(groups), "get_predict()", marginal,
+                           "marginal",
+                           c(`TRUE` = "population", `FALSE` = "typical"))
   if (is.null(newdata)) newdata <- model$model
-  P <- predict(model, newdata = newdata, type = "response",
-               marginal = marginal, ndraw = ndraw)
+  P <- predict(model, newdata = newdata, type = "response", groups = groups,
+               ndraw = ndraw)
   n <- nrow(P)
   data.frame(rowid = rep(seq_len(n), times = ncol(P)),
              group = rep(colnames(P), each = n),

@@ -1,6 +1,34 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* **Which groups** a prediction, a fitted value or a residual is for is now
+  one argument, `groups`, with the same words everywhere:
+  - `"fitted"`: each group's own estimated effects;
+  - `"typical"`: every random effect at zero, a group exactly at the average;
+  - `"population"`: averaged over the groups;
+  - `"new"`: a group the fit has not seen. No function takes it yet: such a
+    group's prediction is a spread, not one value.
+
+  Each function takes the words that apply to it, with its default unchanged.
+  `predict()` and `ilm_ame()` take `"typical"` (the default) or
+  `"population"`. `ilm_fitted()`, `ilm_scores()` and `ilm_rqr()` take
+  `"fitted"` (the default) or `"typical"`. The `marginaleffects` bridge takes
+  `"population"` (the default, from the option `ilm_model.groups`) or
+  `"typical"`. Any other word is an error that says where it is answered.
+  - The words replace `marginal` and `conditional`, which still work for one
+    release, with a warning once per session: `marginal = TRUE` is
+    `groups = "population"`, and `conditional = TRUE` is `groups = "fitted"`.
+    The same holds for the option `ilm_model.marginal`.
+  - "Conditional" had meant two things: a fitted group's effects in
+    `ilm_fitted()`, and effects at zero in `predict()`'s help.
+* Fixed: the prints of `ilm_effects()` and of `ilm_emmeans()` for categories,
+  and the "Effect size and power" and "Workflow" vignettes, said `ilm_ame()`
+  gives the population-averaged effect. By default it gives a typical
+  group's. They now name `ilm_ame(groups = "population")`.
+* Fixed: `ilm_fitted()`'s help said it gives each category's probability for
+  an ordinal outcome. It gives the latent linear predictor, which the
+  thresholds cut into categories, as the checks and scores built on it
+  expect. `predict()` gives the probabilities.
 * `ilm_ranef()` lists a fitted model's random effects: the conditional modes,
   labelled by grouping variable, level and coefficient, with their conditional
   SDs. That is lme4's `condVar`, taken from the Laplace approximation's inner
@@ -54,8 +82,8 @@
   - **Not covered.** The flexible parametric survival families, whose linear
     predictor depends on time itself.
 * `ilm_normal_expect()` exports the Gauss-Hermite quadrature behind
-  `predict(marginal = TRUE)`, so code built on a fit averages over a latent
-  spread as its predictions do.
+  `predict(groups = "population")`, so code built on a fit averages over a
+  latent spread as its predictions do.
 * Fixed: `fixef()` did not reach illume's method. It was registered on a
   generic of illume's own, so with nlme or lme4 attached, `fixef(fit)`
   stopped with "no applicable method". It is now registered on nlme's
@@ -99,9 +127,9 @@
   a group's last cell from the fit (its mode, and its variance from the
   joint precision) agrees with the closed form to 1e-8. For other families it is
   the Laplace approximation, and the fit-time check on observations per
-  latent value applies to it as it does to CAR(1). `predict(marginal = TRUE)`
-  averages each row over its own spread, which grows with the time since its
-  group started.
+  latent value applies to it as it does to CAR(1).
+  `predict(groups = "population")` averages each row over its own spread,
+  which grows with the time since its group started.
 * `ilm_ar1()`, `ilm_car1()` and `ilm_rw1()` can name their two columns:
   `ilm_car1(~ day | id)`. `ilm_model()` reads them from its model frame, after
   rows with missing values are dropped, so the structure cannot fall out of
@@ -159,7 +187,7 @@
     position, every random effect was the entry p * C places before its
     own, and the first few were the fixed effects themselves.
   - **What it broke.** Everything conditional on the random effects, on
-    every REML mixed model: fitted values with `conditional = TRUE`, the
+    every REML mixed model: fitted values with each group's own effects, the
     quantile residuals, `ilm_check_predictive()`, the dispersion and zeros
     checks, and `ilm_plot_model(what = "random")`. On a gaussian random
     intercept, the conditional predictor averaged 0.208 against a response
@@ -186,16 +214,16 @@
   Poisson smooths, which have no such parameter, were unaffected. The draws
   are now centred parameter by parameter, and `test-joint-draws.R` holds the
   intervals to mgcv's.
-* Fixed: `predict(marginal = TRUE)` left an AR(1) or CAR(1) term out of the
-  average over the random effects. At any one row its latent value has the
+* Fixed: `predict(groups = "population")` left an AR(1) or CAR(1) term out of
+  the average over the random effects. At any one row its latent value has the
   stationary distribution, and it is now averaged over with the grouping
   terms: a Poisson model with a stationary AR variance of 0.59 averaged 1.40
   where its own simulations averaged 1.86, and now agrees with them and with
   the closed form.
 * With one linear predictor -- every family but the multinomial -- a row's
-  whole latent contribution is a single normal, so `predict(marginal = TRUE)`
-  now averages over it by Gauss-Hermite quadrature rather than by draws, with
-  more nodes as the latent SD grows. Against numerical integration it is
+  whole latent contribution is a single normal, so
+  `predict(groups = "population")` now averages over it by Gauss-Hermite
+  quadrature rather than by draws, with more nodes as the latent SD grows. Against numerical integration it is
   better than 1e-12 through a logit up to a latent SD of 6, and better than
   1e-9 through a complementary log-log up to 5; a fixed 40 nodes, as first
   written, drifted to 2e-5 at a logit SD of 3.5. It gives the same answer on
@@ -217,7 +245,7 @@
   each random term's intercept variance alone. A random slope was averaged as
   if it were an intercept, an AR term was left out, and a smooth lost its
   penalised part entirely: a gaussian `sin()` curve came out as -1.31 at its
-  peak of +1. Each mean now comes from `predict(marginal = TRUE)`, and the
+  peak of +1. Each mean now comes from `predict(groups = "population")`, and the
   interval draws the whole parameter vector, variance components included,
   where it drew the fixed effects alone. The estimate is the mean at the
   fitted parameters, which matches `predict()` exactly and does not move with

@@ -243,15 +243,17 @@ as `nnet::multinom(type = "probs")` does.
 head(round(predict(fit), 3))
 ```
 
-There is a choice to make here. With `marginal = FALSE` (the default) the random
-effects are set to zero, giving probabilities for a *typical* subject. With
-`marginal = TRUE` the prediction is averaged over the distribution of subjects,
-giving probabilities for the *population*.
+There is a choice to make here, and `groups` makes it. With
+`groups = "typical"` (the default) the random effects are set to zero, giving
+probabilities for a *typical* subject. With `groups = "population"` the
+prediction is averaged over the distribution of subjects, giving probabilities
+for the *population*. The subjects' own fitted effects are in `ilm_fitted()`,
+for the rows the model was fitted to.
 
 ```{r marginal}
 grid <- data.frame(x1 = 0, grp = factor(c("a", "b", "c"), levels = levels(dd$grp)))
-round(predict(fit, newdata = grid, marginal = FALSE), 3)
-round(predict(fit, newdata = grid, marginal = TRUE, ndraw = 200), 3)
+round(predict(fit, newdata = grid, groups = "typical"), 3)
+round(predict(fit, newdata = grid, groups = "population", ndraw = 200), 3)
 ```
 
 These differ because averaging and the softmax transform do not commute: the

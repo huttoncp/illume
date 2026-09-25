@@ -133,19 +133,29 @@ BIC.ilm_model <- function(object, ..., n = c("obs", "groups")) {
 #' Fitted values
 #'
 #' The fitted mean for each observation: the probability of each category for
-#' a multinomial or ordinal outcome, the fitted value otherwise.
+#' a multinomial outcome, the fitted value otherwise. For an ordinal outcome it
+#' is the latent linear predictor, which the thresholds cut into categories;
+#' [predict.ilm_model()] gives each category's probability.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param conditional Logical. `TRUE` evaluates the random effects at their
-#'   fitted values, giving in-sample fitted probabilities. `FALSE` sets grouping
-#'   and AR terms to zero. Smooth terms are included either way, because they
-#'   are mean structure rather than a population to average over.
+#' @param groups `"fitted"` (the default) uses each group's own estimated
+#'   random effects, and each AR, CAR or random-walk cell's, giving the
+#'   in-sample fitted values. `"typical"` sets them all to zero, for a group
+#'   exactly at the average. Smooth terms are included either way, because
+#'   they are mean structure rather than a population of groups. The average
+#'   over the groups is [predict.ilm_model()]'s `groups = "population"`.
+#' @param conditional Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE`
+#'   is `groups = "typical"`.
 #' @return A matrix with one row per observation: one column per category for
-#'   a multinomial or ordinal outcome, one column otherwise.
+#'   a multinomial outcome, one column otherwise.
 #' @export
-ilm_fitted <- function(object, conditional = TRUE) {
+ilm_fitted <- function(object, groups = c("fitted", "typical"),
+                       conditional = NULL) {
+  groups <- ilm_groups_arg(groups, c("fitted", "typical"), !missing(groups),
+                           "ilm_fitted()", conditional, "conditional",
+                           c(`TRUE` = "fitted", `FALSE` = "typical"))
   Tc <- contr.sum(object$J)
-  eta <- ilm_eta_hat(object, conditional)
+  eta <- ilm_eta_hat(object, identical(groups, "fitted"))
   if (object$C > 1L) {
     P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
     colnames(P) <- object$ylevels
@@ -251,7 +261,10 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' every miss alike, as they should for categories with no order.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param conditional Logical, as in [ilm_fitted()].
+#' @param groups `"fitted"` (the default) or `"typical"`: which random
+#'   effects the probabilities being scored use, as in [ilm_fitted()].
+#' @param conditional Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE`
+#'   is `groups = "typical"`.
 #' @return A named numeric vector: `log_score`, `brier`, `accuracy`, and for an
 #'   ordinal fit `rps`, on the 0 to 1 scale.
 #' @references
@@ -262,7 +275,12 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' Brier, G. W. (1950). Verification of forecasts expressed in terms of
 #' probability. *Monthly Weather Review*, 78(1), 1--3.
 #' @export
-ilm_scores <- function(object, conditional = TRUE) {
+ilm_scores <- function(object, groups = c("fitted", "typical"),
+                       conditional = NULL) {
+  groups <- ilm_groups_arg(groups, c("fitted", "typical"), !missing(groups),
+                           "ilm_scores()", conditional, "conditional",
+                           c(`TRUE` = "fitted", `FALSE` = "typical"))
+  conditional <- identical(groups, "fitted")
   ## A score compares a predicted PROBABILITY for each category with the one
   ## observed, so it needs a categorical outcome. Anything else used to reach
   ## the indexing below with a continuous response and die on "subscript out
@@ -285,7 +303,7 @@ ilm_scores <- function(object, conditional = TRUE) {
   P <- if (ord)
     ilm_ord_probs(ilm_eta_hat(object, conditional)[, 1L], object$zeta,
                   object$family$pfun)
-  else ilm_fitted(object, conditional)
+  else ilm_fitted(object, groups)
   ## a binary fit returns the probability of the second level only
   if (bin) { P <- cbind(1 - P[, 1], P[, 1]); y <- y + 1 }
   N <- nrow(P)
@@ -384,7 +402,7 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
   ll <- logLik(model); df <- attr(ll, "df"); n <- attr(ll, "nobs")
   ## the scoring rules exist for a categorical outcome only; elsewhere they
   ## are NA, with a note, rather than an error from deep inside
-  sc <- tryCatch(ilm_scores(model, conditional = TRUE),
+  sc <- tryCatch(ilm_scores(model, groups = "fitted"),
                  error = function(e) c(log_score = NA_real_, brier = NA_real_,
                                        accuracy = NA_real_))
   ll0 <- ilm_null_ll(model)

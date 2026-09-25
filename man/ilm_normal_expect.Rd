@@ -20,9 +20,9 @@ The expectation for each element: a vector shaped as \code{h(eta)}.
 }
 \description{
 \code{E[h(eta + sd * Z)]} for \code{Z} standard normal, by the Gauss-Hermite
-quadrature \code{predict(marginal = TRUE)} uses for a population average -- the
-same nodes and the same rule for how many -- so code built on a fit averages
-over a latent spread exactly as the fit's own predictions do.
+quadrature \code{predict(groups = "population")} uses for a population average
+-- the same nodes and the same rule for how many -- so code built on a fit
+averages over a latent spread exactly as the fit's own predictions do.
 }
 \details{
 The number of nodes grows with the spread: 40 times the smallest whole
@@ -40,5 +40,6 @@ ilm_normal_expect(stats::plogis, eta = 0.5, sd = 1.2)
 ilm_normal_expect(function(e) stats::dpois(3, exp(e)), eta = 1, sd = 0.6)
 }
 \seealso{
-\code{\link[=predict.ilm_model]{predict.ilm_model()}}, whose \code{marginal = TRUE} uses the same rule.
+\code{\link[=predict.ilm_model]{predict.ilm_model()}}, whose \code{groups = "population"} uses the
+same rule.
 }

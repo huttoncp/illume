@@ -17,8 +17,9 @@ get_predict.ilm_model(
   model,
   newdata = NULL,
   type = "response",
-  marginal = NULL,
+  groups = NULL,
   ndraw = 100L,
+  marginal = NULL,
   ...
 )
 }
@@ -35,10 +36,20 @@ get_predict.ilm_model(
 
 \item{type}{Prediction type.}
 
-\item{marginal}{Logical. Population-averaged predictions; defaults to the
-\code{ilm_model.marginal} option, which is \code{TRUE}.}
+\item{groups}{Which groups the predictions are for: \code{"population"}, the
+average over the groups, or \code{"typical"}, a group with every random effect
+at zero. Defaults to the \code{ilm_model.groups} option, which is
+\code{"population"}. See \code{\link[=predict.ilm_model]{predict.ilm_model()}}. Given to a \code{marginaleffects}
+function, \code{groups} is passed on to this method with a warning from
+\code{marginaleffects} that it does not know the argument; setting the option
+instead avoids the warning.}
 
-\item{ndraw}{Integer. Random-effect draws when \code{marginal = TRUE}.}
+\item{ndraw}{Integer. Random-effect draws when \code{groups = "population"}, for
+a multinomial outcome.}
+
+\item{marginal}{Deprecated. \code{TRUE} is \code{groups = "population"}, and \code{FALSE}
+is \code{groups = "typical"}. The option \code{ilm_model.marginal} is deprecated in
+the same way.}
 }
 \value{
 Parameters, a covariance matrix, a modified model, or a long-format
