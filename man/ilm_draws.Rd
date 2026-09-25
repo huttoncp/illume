@@ -87,7 +87,9 @@ curvature of the fit's inner optimisation at the conditional modes, which
 for a gaussian model is that distribution exactly. Their SDs are
 \code{\link[=ilm_ranef]{ilm_ranef()}}'s \code{sd}, except under REML, where \code{ilm_ranef()} integrates
 over the fixed effects and these hold them, so these are smaller. The
-variance components in \code{natural} are then those at the estimate.
+variance components in \code{natural} are then those at the estimate. A model
+without random effects has nothing left to draw: given its parameters the
+distribution is a point mass, and every draw sits at the estimate.
 
 \strong{\code{blocks}} returns only the named blocks of the parameter vector -- say
 \code{c("beta", "bvec")} -- which saves memory; the draw is joint either way.

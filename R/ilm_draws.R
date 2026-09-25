@@ -45,7 +45,9 @@
 #' for a gaussian model is that distribution exactly. Their SDs are
 #' [ilm_ranef()]'s `sd`, except under REML, where `ilm_ranef()` integrates
 #' over the fixed effects and these hold them, so these are smaller. The
-#' variance components in `natural` are then those at the estimate.
+#' variance components in `natural` are then those at the estimate. A model
+#' without random effects has nothing left to draw: given its parameters the
+#' distribution is a point mass, and every draw sits at the estimate.
 #'
 #' **`blocks`** returns only the named blocks of the parameter vector -- say
 #' `c("beta", "bvec")` -- which saves memory; the draw is joint either way.
