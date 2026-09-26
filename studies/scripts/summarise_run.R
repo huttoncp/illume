@@ -238,6 +238,56 @@ summarise_study <- function(dir, study) {
       "method can reconstruct hidden cells as well as the best one and still",
       "cover at half the nominal rate.")
 
+  } else if (study == "re_sd_limit") {
+    ## Where a random effect's SD short of zero is held: below a line, and
+    ## the objective flat when its log SD is pushed 3 lower. phase1 placed
+    ## the line; verify is the same design on fresh seeds, on the built rule.
+    one <- function(file) {
+      d <- read_all(dir, paste0("^", file, "$")); if (is.null(d)) return(NULL)
+      d <- d[d$ok & !is.na(d$ll_drop) & !is.na(d$push), ]
+      d$at <- d$ll_drop >= d$ll - 1e-3 & d$push <= 1e-3
+      tab <- do.call(rbind, lapply(c(5e-3, 1e-3), function(tol)
+        do.call(rbind, lapply(c(1e-3, 1e-2, 0.05, 0.1, 0.2, Inf), function(line) {
+          rl <- d$sd_hat < line & d$push <= tol
+          data.frame(tolerance = format(tol), line = format(line),
+                     holds = sum(rl), false_holds = sum(rl & !d$at),
+                     missed = sum(!rl & d$at), stringsAsFactors = FALSE)
+        }))))
+      list(d = d, tab = tab)
+    }
+    p1 <- one("re_sd_limit_phase1.csv"); v <- one("re_sd_limit_verify.csv")
+    if (is.null(p1) && is.null(v)) return(NULL)
+    lines <- c(paste0("A random effect's SD short of zero. A term is AT ITS BOUNDARY, by ",
+                      "labels from outside the rule, when the model without it fits as ",
+                      "well (log-likelihood within 1e-3) and the objective rises by at ",
+                      "most 1e-3 with its log SD pushed 3 lower. The rule holds an SD ",
+                      "below the line when the objective moves by at most the tolerance ",
+                      "there; the pre-registered tolerance was the dispersion's 5e-3."))
+    for (nm in c("phase1", "verify")) {
+      x <- if (nm == "phase1") p1 else v
+      if (is.null(x)) next
+      lines <- c(lines, "", paste0("**", if (nm == "phase1") "Placing the line" else
+                                     "Fresh seeds, on the built rule", "** (",
+                                   nrow(x$d), " fits, ", sum(x$d$at),
+                                   " at the boundary):"), "", md_table(x$tab))
+    }
+    if (!is.null(v) && "draws_finite" %in% names(v$d)) {
+      h <- grepl("(^|,)g(,|$)", v$d$held) | grepl("(^|,)g(,|$)", v$d$boundary)
+      r <- v$d$se_x[h] / v$d$se_x_drop[h]
+      lines <- c(lines, "", paste0(
+        "On the built rule (line 0.1, tolerance 1e-3): ", sum(h), " fits held, ",
+        sum(h & v$d$at), " of them at the boundary by the labels; the standard ",
+        "error of the slope runs ", num(min(r, na.rm = TRUE)), " to ",
+        num(max(r, na.rm = TRUE)), " times the refit without the term (median ",
+        num(stats::median(r, na.rm = TRUE)), ")."))
+    }
+    c(lines, "",
+      "CAVEAT that must travel with this result: the tolerance of 1e-3 was chosen",
+      "after the pre-registered run, which used 5e-3 and showed that no line above",
+      "1e-2 avoided new false holds with it; the fresh-seed run is the check on",
+      "that choice. The false holds that remain are those the old 1e-3 line",
+      "already made, where the refit without the term landed at a worse optimum.")
+
   } else if (study == "dispersion_limit") {
     ## Where a negative binomial's k or a beta's phi is at its unbounded
     ## limit, and whether the package's rule -- 1 / sqrt(dispersion) below
@@ -249,7 +299,7 @@ summarise_study <- function(dir, study) {
     if (is.null(d)) return(NULL)
     d <- d[d$ok & !is.na(d$limit_ll) & !is.na(d$push_down), ]
     d$at <- d$limit_ll & d$push_down
-    d$rule <- d$inv_sqrt < 1e-2 & d$push <= 5e-3
+    d$rule <- d$inv_sqrt < 1e-2 & d$push <= 1e-3
     tab <- do.call(rbind, lapply(split(d, list(d$family, d$design, d$disp),
                                        drop = TRUE), function(x)
       data.frame(family = x$family[1], design = x$design[1],
@@ -275,7 +325,7 @@ summarise_study <- function(dir, study) {
              "AND the objective does not rise by more than 1e-3 when the log ",
              "dispersion is pushed 3 further. The rule is the package's: ",
              "1 / sqrt(dispersion) below 1e-2 and the objective rising by at most ",
-             "5e-3 there."),
+             "1e-3 there (5e-3 before the random-effect study; see re_sd_limit)."),
       "", md_table(tab), "",
       fam_line("nbinom"), fam_line("beta"),
       paste0("The line alone, without the flatness test, flags ",
@@ -298,6 +348,7 @@ summarise_study <- function(dir, study) {
         if (is.null(g)) g <- read_all(dir, "^dispersion_limit_gaussian_phase1.csv$")
         if (is.null(g)) NULL else {
           g <- g[g$ok & !is.na(g$at), ]
+          g$rule <- g$rel < 1e-3 & g$push <= 1e-3   # the rule as it stands
           hg <- if ("held" %in% names(g)) grepl("dispersion", g$held) else rep(FALSE, nrow(g))
           c("",
             paste0("Gaussian residual SD at zero (", nrow(g), " fits; AR(1) at one ",
@@ -305,7 +356,7 @@ summarise_study <- function(dir, study) {
                    "random-intercept controls): at the limit when the objective ",
                    "does not rise by more than 1e-3 as log sigma is pushed 3 lower. ",
                    sum(g$at), " fits were at the limit; the rule -- sigma below 1e-3 ",
-                   "of the response's SD, and flat within 5e-3 -- flags ", sum(g$rule),
+                   "of the response's SD, and flat within 1e-3 -- flags ", sum(g$rule),
                    ", ", sum(g$rule & !g$at), " of them not at it, and misses ",
                    sum(!g$rule & g$at), ", whose sigma was ",
                    signif(min(g$rel[!g$rule & g$at]), 2), " to ",

@@ -1,6 +1,17 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* A random effect's SD that the optimiser left short of zero is held as a
+  variance at zero is. A random intercept beside an AR(1), whose correlation
+  over time took up each series' level, stopped at an SD of 0.0204: above
+  the 1e-3 line at which a variance is taken as zero, so nothing flagged
+  it, with a standard error of 535 on its log scale and draws running to
+  +/-1800. A single SD below 0.1 is now held when the likelihood is flat
+  below it -- the objective moves by at most 1e-3 when its log SD is pushed
+  3 lower. On 5,100 simulated fits this held 63 terms the old line missed,
+  each of which the model could drop without losing fit, and nothing else;
+  confirmed on fresh seeds (`studies/scripts/re_sd_limit.R`). Found by
+  another agent.
 * Each smooth's effective degrees of freedom are reported: on its line in
   `summary()` ("edf 6.53 of 9"), and in `ilm_varcorr()` as the `"edf"` and
   `"edf_max"` attributes of its matrix and a line in the print. They are

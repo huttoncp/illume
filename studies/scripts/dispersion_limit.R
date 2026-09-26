@@ -145,8 +145,8 @@ for (fam in unique(r$family)) {
   cat("1/sqrt(disp), not at the limit: ", q(x$inv_sqrt[!at]), "\n")
   cat("labels disagree:", sum(x$limit_ll != x$push_down), "\n")
   ## the rule as the package has it: past the line, and flat beyond it
-  rl <- x$inv_sqrt < 1e-2 & x$push <= 5e-3
-  cat(sprintf("rule (1/sqrt < 1e-2, push <= 5e-3) flags: %d; at the limit: %d; not at it: %d; missed at the limit: %d\n",
+  rl <- x$inv_sqrt < 1e-2 & x$push <= 1e-3
+  cat(sprintf("rule (1/sqrt < 1e-2, push <= 1e-3) flags: %d; at the limit: %d; not at it: %d; missed at the limit: %d\n",
               sum(rl), sum(rl & at), sum(rl & !at), sum(!rl & at)))
   for (line in c(1e-3, 1e-2))
     cat(sprintf("line %.0e alone flags: %d; not at the limit among them: %d\n",
