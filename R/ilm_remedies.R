@@ -27,7 +27,7 @@ ilm_rem_known <- c("category_counts", "weights_type", "re_levels",
                    "obs_per_level", "latent_budget", "obs_per_ar_latent",
                    "optimizer", "gradient", "hessian", "variance_boundary",
                    "smooth_shrinkage", "sigma_rank", "sigma_within",
-                   "rho_boundary", "parameter_aliasing")
+                   "rho_boundary", "dispersion_limit", "parameter_aliasing")
 
 ## one remedy: its tier, what it does in words, and the ilm_model() arguments
 ## that make it -- NULL when it has to be done by hand
@@ -323,7 +323,10 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
 
   obs_per_ar_latent = list(
     ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value"),
-    ilm_rem("estimand", "replace the AR term with a smooth of time, s(time), plus a random slope on time for the group: a trend and each group's departure from it, in place of a correlated process")),
+    ## s(time) describes the past and does not forecast: beyond the data a
+    ## smooth runs on its last slope, where a correlated process reverts,
+    ## so it is offered as a description only
+    ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts")),
 
   optimizer = if (status == "FAIL") list(ilm_rem_restarts(fit)) else list(),
 
@@ -332,11 +335,14 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
 
   hessian = if (status == "BOUNDARY") {
     held <- intersect(fit$hessian_held, ilm_rem_groups(fit))
+    ## a dispersion held alone is dispersion_limit's to remedy, and
+    ## boundary = "avoid" does nothing for it
+    if (!length(setdiff(fit$hessian_held, "dispersion"))) list()
     ## a term held at a variance of zero comes out; one held at a correlation
     ## of +/-1 is sigma_rank's or sigma_within's to simplify
-    c(lapply(held[vapply(held, function(h) ilm_rem_at_zero(fit, h), TRUE)],
-             function(h) ilm_rem_drop(fit, h)),
-      ilm_rem_avoid(fit))
+    else c(lapply(held[vapply(held, function(h) ilm_rem_at_zero(fit, h), TRUE)],
+                  function(h) ilm_rem_drop(fit, h)),
+           ilm_rem_avoid(fit))
   } else c(list(ilm_rem_restarts(fit)), ilm_rem_avoid(fit),
            list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
 
@@ -399,6 +405,18 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     else c(ilm_rem_dcor(fit, term), ilm_rem_noslope(fit, term),
            ilm_rem_avoid(fit))
   },
+
+  ## a negative binomial at k = infinity is the Poisson; a beta at phi =
+  ## infinity has no simpler family, only a term to look at
+  dispersion_limit = if (identical(fit$family$name, "nbinom"))
+    list(ilm_rem("structural", paste0(
+      "refit with family = \"poisson\": the data show no overdispersion ",
+      "beyond the model's other terms, so this is the same fit with one ",
+      "parameter fewer"), list(family = "poisson")))
+  else list(ilm_rem("structural", paste0(
+      "look at the term absorbing the variation: coarsen a correlation over ",
+      "time to a grid several observations share, or drop a random effect ",
+      "with one observation per level"))),
 
   rho_boundary = list(
     ilm_rem("structural", "coarsen the time grid given to the AR term, so that neighbouring observations share a latent value"),
