@@ -180,7 +180,7 @@ head(fit$checks[, c("check", "status", "detail")], 8)
 #> 4                                                       20.0 observations per level
 #> 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)
 #> 6                                          nlminb code 0 (relative convergence (4))
-#> 7                                                         max |gradient| = 1.62e-04
+#> 7                                                         max |gradient| = 1.64e-04
 #> 8              positive definite: TRUE; non-finite or non-positive variances: FALSE
 ```
 
@@ -617,39 +617,23 @@ d5$y <- factor(apply(P5, 1, function(p) sample(letters[1:5], 1, prob = p)))
 
 f5 <- ilm_model(y ~ x1 + (1 | subj), data = d5, family = "multinomial",
                 verbose = FALSE)
-#> Warning in nlminb(opt$par, obj$fn, obj$gr, control = ctl): NA/NaN function
-#> evaluation
-#> Warning in nlminb(opt$par, obj$fn, obj$gr, control = ctl): NA/NaN function
-#> evaluation
-#> Warning in nlminb(o$par, obj$fn, obj$gr, lower = lo, control = ctl): NA/NaN
-#> function evaluation
 #> ilm_model(): the random-effect covariance of `subj` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.
 rem <- ilm_remedies(f5)
 rem
-#> 8 remedies
+#> 6 remedies
 #> 
-#> [1] numerical -- optimizer, gradient, hessian (FAIL, FAIL, FAIL)
-#>     refit with 10 optimiser restarts from the solution reached, not 3: the
-#>     same model, fitted harder
-#>     change: restarts = 10L
-#> 
-#> [2] structural -- re_levels[subj] (FAIL)
+#> [1] structural -- re_levels[subj] (FAIL)
 #>     give 'subj' a reduced-rank category covariance, rr(1): 4 parameters
 #>     instead of 10
 #>     change: re_struct = list(subj = list(type = "rr", rank = 1L))
 #> 
-#> [3] structural -- latent_budget (WARN)
+#> [2] structural -- latent_budget (WARN)
 #>     give 'subj', the term with the most latent values, a category
 #>     covariance of rank 3 (rr(3)), which cuts its latent values from 80 to
 #>     60
 #>     change: re_struct = list(subj = list(type = "rr", rank = 3L))
 #> 
-#> [4] structural -- gradient, hessian (FAIL, FAIL)
-#>     simplify the random-effect structure; the other checks that are not OK
-#>     name the term
-#>     by hand: not something a refit can do
-#> 
-#> [5] structural -- hessian, sigma_rank[subj] (FAIL, FAIL)
+#> [3] structural -- hessian, sigma_rank[subj] (BOUNDARY, BOUNDARY)
 #>     refit with boundary = "avoid", a small penalty that keeps every
 #>     random-effect covariance inside its range. Each variance is then
 #>     assumed nonzero rather than estimated at zero, so do not test whether
@@ -658,18 +642,18 @@ rem
 #>     category is rare
 #>     change: boundary = "avoid"
 #> 
-#> [6] structural -- sigma_rank[subj] (FAIL)
+#> [4] structural -- sigma_rank[subj] (BOUNDARY)
 #>     give 'subj' a category covariance of rank 2 (rr(2)) in place of us: the
 #>     directions dropped have no variance
 #>     change: re_struct = list(subj = list(type = "rr", rank = 2L))
 #> 
-#> [7] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
+#> [5] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
 #>     pool levels of 'subj' that belong together, so that each level carries
 #>     more observations; the grouping then means something different, so
 #>     choose the pooling by what the levels are
 #>     by hand: not something a refit can do
 #> 
-#> [8] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
+#> [6] estimand -- re_levels[subj], latent_budget (FAIL, WARN)
 #>     drop 'subj' from the model. Its variance is not zero, so the standard
 #>     errors stop accounting for the grouping, and for a non-gaussian
 #>     response the fixed effects change meaning
