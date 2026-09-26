@@ -110,6 +110,14 @@ category covariance carries the scale.</p>
 of time, and <code>range</code> its reciprocal decay; a random walk has
 <code>var_per_time</code>, the variance of a step one time unit long. The words in
 <code>meaning</code> are those of <code><a href="ilm_cells.html">ilm_cells()</a></code>.</p>
+<p><strong>Smooths.</strong> A smooth's variance is that of its penalised basis
+coefficients, on the basis's own scale: a different basis for the same
+curve gives a different number. How wiggly the curve is, its matrix
+carries as <code>"edf"</code>: its effective degrees of freedom, as <code>mgcv</code> defines
+them (Wood 2017, section 6.1.2), with their maximum, the null space plus
+the basis, as <code>"edf_max"</code>. An edf near its maximum means the basis may be
+too small for the curve. For a multinomial outcome it is the total over
+the categories.</p>
 <p><strong>Dispersion.</strong> On the natural scale and named for what it is. For a
 gaussian model it is <code>sigma</code>, the residual standard DEVIATION, not the
 variance. With a dispersion model it varies by row, and this is its value
