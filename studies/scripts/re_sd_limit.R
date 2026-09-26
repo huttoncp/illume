@@ -52,6 +52,8 @@ NREP  <- if (length(args) >= 1) as.integer(args[1]) else 100L
 NCORE <- if (length(args) >= 2) as.integer(args[2]) else 2L
 sp    <- if (length(args) >= 3) args[3] else "."
 VERIFY <- length(args) >= 4 && identical(args[4], "verify")
+## a seed offset, so the confirmation runs on data the line was not chosen on
+OFFSET <- if (length(args) >= 5) as.integer(args[5]) else 0L
 dir.create(sp, showWarnings = FALSE, recursive = TRUE)
 
 fams <- data.frame(family = c("gaussian", "poisson", "binomial"),
@@ -66,7 +68,7 @@ jobs <- merge(cells, data.frame(rep = seq_len(NREP)))
 
 one <- function(job) {
   suppressMessages(library(illume))
-  seed <- 8191L * job$cell + job$rep
+  seed <- 8191L * job$cell + job$rep + OFFSET
   set.seed(seed)
   if (job$design == "ri_ar") {
     G <- 20L; Tn <- job$size
@@ -126,7 +128,7 @@ one <- function(job) {
 
 t0 <- Sys.time()
 cl <- parallel::makeCluster(NCORE)
-parallel::clusterExport(cl, "VERIFY")
+parallel::clusterExport(cl, c("VERIFY", "OFFSET"))
 res <- do.call(rbind, parallel::parLapplyLB(cl, split(jobs, seq_len(nrow(jobs))), one))
 parallel::stopCluster(cl)
 res$drop_ok <- res$ll_drop >= res$ll - 1e-3
@@ -143,15 +145,17 @@ cat("at the boundary by both labels:", sum(r$at), "of", nrow(r),
 q <- function(v) if (length(v)) signif(stats::quantile(v, c(0, .5, .99, 1), na.rm = TRUE), 3) else NA
 cat("SD at the boundary (min, median, 99%, max):", q(r$sd_hat[r$at]), "\n")
 cat("SD not at the boundary (min, median, 99%, max):", q(r$sd_hat[!r$at]), "\n")
-for (line in c(1e-3, 1e-2, 0.05, 0.1, 0.2, Inf)) {
-  rl <- r$sd_hat < line & r$push <= 5e-3
-  cat(sprintf("line %-6s + flat: holds %4d | at %4d | FALSE %3d | missed %3d\n",
-              format(line), sum(rl), sum(rl & r$at), sum(rl & !r$at), sum(!rl & r$at)))
+## the pre-registered tolerance, 5e-3, and the tighter 1e-3 the first run
+## pointed to
+for (TOL in c(5e-3, 1e-3)) for (line in c(1e-3, 1e-2, 0.05, 0.1, 0.2, Inf)) {
+  rl <- r$sd_hat < line & r$push <= TOL
+  cat(sprintf("tol %.0e line %-6s + flat: holds %4d | at %4d | FALSE %3d | missed %3d\n",
+              TOL, format(line), sum(rl), sum(rl & r$at), sum(rl & !r$at), sum(!rl & r$at)))
 }
 print(stats::aggregate(cbind(fits = 1, at = at, flagged_now = boundary != "") ~
                          family + design + size + sd, data = r, FUN = sum))
 if (VERIFY) {
-  h <- grepl("g", r$held) | grepl("g", r$boundary)
+  h <- grepl("(^|,)g(,|$)", r$held) | grepl("(^|,)g(,|$)", r$boundary)
   cat("held:", sum(h), "| of them at the boundary:", sum(h & r$at),
       "| SE(x) ratio to the refit without the term (min, median, max):",
       q((r$se_x / r$se_x_drop)[h]), "| finite draws:",

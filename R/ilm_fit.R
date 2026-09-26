@@ -1182,7 +1182,7 @@ ilm_hessian <- function(gr, par, h = 1e-4) {
 ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
                            fam = NULL, ysd = NA_real_) {
   it <- which(pn == "theta")
-  blocks <- list(); flagged <- character(0)
+  blocks <- list(); flagged <- character(0); maybe <- character(0)
   for (k in seq_along(re)) {
     nm <- names(re)[k]
     blocks[[nm]] <- it[(toff[k] + 1L):toff[k + 1L]]
@@ -1197,6 +1197,11 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
       bad <- any(sv[-1] / sv[1] < 1e-3) || max(abs(R[upper.tri(R)])) > 0.999
     }
     if (bad) flagged <- c(flagged, nm)
+    ## a single SD under the wider line is a candidate, held only where the
+    ## likelihood is flat below it (ilm_re_flat)
+    else if (!identical(re[[k]]$kind, "basis") && length(sdv) == 1L &&
+             dk[k] == 1L && isTRUE(sdv < ilm_re_sd_limit))
+      maybe <- c(maybe, nm)
   }
   if (!is.null(ar)) {
     blocks[["ar"]] <- which(pn %in% c("lchol_ar", "rho_raw"))
@@ -1232,7 +1237,8 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
     flagged <- c(flagged, "dispersion")
     keep <- setdiff(keep, id)
   }
-  list(blocks = blocks, flagged = flagged, keep = keep)
+  list(blocks = blocks, flagged = flagged, keep = keep, maybe = maybe,
+       force = character(0))
 }
 
 ## WHERE A DISPERSION IS AT ITS LIMIT. A negative binomial is a Poisson whose
@@ -1285,6 +1291,41 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
   cb$flagged <- setdiff(cb$flagged, "dispersion")
   cb$blocks[["dispersion"]] <- NULL
   cb$keep <- sort(c(cb$keep, id))
+  cb
+}
+
+## A RANDOM EFFECT'S SD SHORT OF ZERO. The optimiser can stop on a flat
+## likelihood well above the 1e-3 line at which a variance is taken as zero:
+## a random intercept beside an AR(1), whose correlation over time took up
+## each series' level, stopped at an SD of 0.0204, with an SE of 535 on its
+## log scale, TMB calling the Hessian positive definite, and draws of it
+## running to +/-1800. A single SD under ilm_re_sd_limit is held when the
+## objective moves by at most ilm_re_flat_tol with its log SD pushed 3
+## lower -- the dispersion's two-part rule -- and then held whatever its
+## curvature, as the dispersion is. Measured on 5,100 fits
+## (studies/scripts/re_sd_limit.R): with the line at 0.1 and a tolerance of
+## 1e-3, 63 fits the old rule missed are held, and in every one the model
+## without the term fits as well; the dispersion's looser 5e-3 would have
+## held 46 terms whose removal cost more than that. Confirmed on fresh seeds.
+ilm_re_sd_limit <- 0.1
+ilm_re_flat_tol <- 1e-3
+
+#' @keywords internal
+#' @noRd
+ilm_re_flat <- function(obj, par, cb) {
+  if (!length(cb$maybe)) return(cb)
+  f0 <- tryCatch(obj$fn(par), error = function(e) NA_real_)
+  for (nm in cb$maybe) {
+    id <- cb$blocks[[nm]]
+    p2 <- par; p2[id] <- p2[id] - 3
+    f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
+    if (isTRUE(f1 - f0 <= ilm_re_flat_tol)) {
+      cb$flagged <- c(cb$flagged, nm)
+      cb$force <- c(cb$force, nm)
+    }
+  }
+  ## the tape last evaluated at a pushed point; put it back at the optimum
+  invisible(tryCatch(obj$fn(par), error = function(e) NULL))
   cb
 }
 
@@ -1508,10 +1549,9 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     ## a dispersion at its limit is held whatever its curvature: flagged, the
     ## fit is the limit model, and the optimiser stopped where the gradient
     ## got small, which can leave a curvature just above the flat line
-    dv <- unlist(cb$blocks[intersect(cb$flagged, "dispersion")],
-                 use.names = FALSE)
-    dr <- unlist(cb$blocks[setdiff(cb$flagged, "dispersion")],
-                 use.names = FALSE)
+    hold <- intersect(cb$flagged, c("dispersion", cb$force))
+    dv <- unlist(cb$blocks[hold], use.names = FALSE)
+    dr <- unlist(cb$blocks[setdiff(cb$flagged, hold)], use.names = FALSE)
     d <- c(dr, dv)
     if (length(d) && !any(cb$keep %in% d)) {
       vec <- matrix(0, length(d), length(d)); flat <- rep(FALSE, length(d))
@@ -2545,6 +2585,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## below, which reads the joint precision out of sdr.
   cb <- ilm_disp_flat(obj, opt$par, pn, cb,
                       side = if (is.null(fam$disp_limit)) 1L else fam$disp_limit)
+  cb <- ilm_re_flat(obj, opt$par, cb)
   hess <- ilm_hess_recover(obj, opt, sdr, cb, joint || reml)
   sdr <- hess$sdr
 
