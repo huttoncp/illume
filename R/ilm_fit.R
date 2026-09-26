@@ -781,6 +781,16 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     identical(if (is.list(family)) family$name else family, "gaussian")
   st <- if (gaus) "OK" else
         if (ratio < 3) "FAIL" else if (ratio < 5) "WARN" else "OK"
+  ## PROVISIONAL FOR ONE LINEAR PREDICTOR. These row thresholds were
+  ## calibrated on multinomial data, where one categorical observation says
+  ## little about its latent value. A count says more: 40 of 40 Poisson AR(1)
+  ## fits at one observation per cell had positive definite Hessians and an
+  ## unattenuated rho, and forecast coverage was nominal, yet every one was
+  ## FAILED here. Until the thresholds are recalibrated on the information
+  ## each latent value carries (studies/scripts/latent_budget.R), a family
+  ## with one linear predictor is warned, not failed.
+  prov <- !gaus && C == 1L
+  if (prov && st == "FAIL") st <- "WARN"
   sug <- ""
   if (st != "OK") {
     big <- names(lat)[which.max(lat)]
@@ -806,7 +816,8 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     sprintf("%.2f observations per latent value (%g observations, %d latent values: %s)%s",
             ratio, N, tot, paste(sprintf("%s %d", names(lat), lat), collapse = ", "),
             if (gaus) "; not a constraint for a gaussian response, where the Laplace approximation is exact" else ""),
-    if (st != "OK") "too few observations per latent value; the Laplace approximation attenuates the variance components and the covariance estimates go rank deficient, even when every individual term passes its own level check" else "",
+    if (st != "OK") paste0("too few observations per latent value; the Laplace approximation attenuates the variance components and the covariance estimates go rank deficient, even when every individual term passes its own level check",
+                           if (prov) ". For a family with one linear predictor this line is provisional -- it was set on categorical data, where one observation says less about its latent value -- so it warns rather than fails" else "") else "",
     sug)
 
   if (!is.null(ar)) {
@@ -816,18 +827,21 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
     ## the reason given above: one latent per observation is what continuous
     ## time produces, and coverage there is nominal.
     thin <- !gaus && r2 < 4
+    ## provisional for one linear predictor, as the budget above is
     ck <- ilm_add_check(ck, "obs_per_ar_latent",
-      if (gaus) "OK" else if (r2 < 2) "FAIL" else if (r2 < 4) "WARN" else "OK",
+      if (gaus) "OK" else if (r2 < 2 && !prov) "FAIL" else if (r2 < 4) "WARN" else "OK",
       sprintf("%.2f observations per %s latent time point (%d time points)%s",
               r2, lab, as.integer(nlat),
               if (gaus && r2 < 4) "; expected for continuous time and not a problem for a gaussian response" else ""),
-      if (thin) paste0("the latent process carries about one categorical observation per latent value; Laplace attenuates the variance components",
-                       if (identical(ar$type, "rw1")) "" else " and rho is driven toward the boundary") else "",
+      if (thin) paste0("the latent process carries about ", if (prov) "one" else "one categorical",
+                       " observation per latent value; Laplace attenuates the variance components",
+                       if (identical(ar$type, "rw1")) "" else " and rho is driven toward the boundary",
+                       if (prov) ". For a family with one linear predictor this line is provisional -- it was set on categorical data -- so it warns rather than fails" else "") else "",
       if (thin) {
         switch(ar$type,
-               car1 = "coarsen the time passed to ilm_car1() so observations share a latent value, or replace the term with s(time) plus a random slope",
-               rw1 = "coarsen the time passed to ilm_rw1() so observations share a latent value, or replace the term with s(time) plus a random slope",
-               "coarsen the AR time grid, or replace AR with s(time) plus a random slope")
+               car1 = "coarsen the time passed to ilm_car1() so observations share a latent value",
+               rw1 = "coarsen the time passed to ilm_rw1() so observations share a latent value",
+               "coarsen the AR time grid so observations share a latent value")
       } else "")
   }
   ck
