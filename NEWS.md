@@ -1,6 +1,26 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* A dispersion at its unbounded limit is held as a covariance at its
+  boundary is. A negative binomial's k, or a beta's precision phi, can run off
+  to infinity when the model's other terms -- a correlation over time, a
+  random intercept -- carry all the variation. The optimiser then stopped
+  wherever the gradient got small, with a standard error to match, and draws
+  of log k spanned hundreds either way, reaching a k of zero where `rnbinom()`
+  returns NA. Such a fit is now held when 1 / sqrt(k) (or phi) is below 1e-2
+  and the likelihood is flat beyond it: `fit$hessian_held` names
+  `"dispersion"`, the new check `dispersion_limit` is BOUNDARY, `ilm_draws()`
+  leaves it fixed, and `summary()`, `print()`, the message at fitting and
+  `ilm_remedies()` say that the data show no overdispersion beyond the
+  model's other terms and that `family = "poisson"` is the simpler
+  equivalent. The fixed effects' standard errors are then the Poisson
+  model's. The line and the flatness test were measured on 600 simulated
+  fits (`studies/scripts/dispersion_limit.R`). A gaussian residual SD at
+  zero -- a correlation over time at one observation per cell taking up all
+  the noise -- is held the same way, when sigma is below 1e-3 of the
+  response's SD and the likelihood is flat below it; there the remedy is to
+  coarsen the grid (`studies/scripts/dispersion_limit_gaussian.R`). Found by
+  another agent.
 * **Which groups** a prediction, a fitted value or a residual is for is now
   one argument, `groups`, with the same words everywhere:
   - `"fitted"`: each group's own estimated effects;

@@ -238,6 +238,91 @@ summarise_study <- function(dir, study) {
       "method can reconstruct hidden cells as well as the best one and still",
       "cover at half the nominal rate.")
 
+  } else if (study == "dispersion_limit") {
+    ## Where a negative binomial's k or a beta's phi is at its unbounded
+    ## limit, and whether the package's rule -- 1 / sqrt(dispersion) below
+    ## 1e-2 and the objective flat beyond it -- holds those fits and no
+    ## others. phase1 is the run before the hold, verify the one after it.
+    d1 <- read_all(dir, "^dispersion_limit_phase1.csv$")
+    d2 <- read_all(dir, "^dispersion_limit_verify.csv$")
+    d <- if (!is.null(d2)) d2 else d1
+    if (is.null(d)) return(NULL)
+    d <- d[d$ok & !is.na(d$limit_ll) & !is.na(d$push_down), ]
+    d$at <- d$limit_ll & d$push_down
+    d$rule <- d$inv_sqrt < 1e-2 & d$push <= 5e-3
+    tab <- do.call(rbind, lapply(split(d, list(d$family, d$design, d$disp),
+                                       drop = TRUE), function(x)
+      data.frame(family = x$family[1], design = x$design[1],
+                 true_disp = format(x$disp[1]), fits = nrow(x), at_limit = sum(x$at),
+                 rule_flags = sum(x$rule),
+                 held = if ("held" %in% names(x)) sum(grepl("dispersion", x$held))
+                        else NA_integer_,
+                 stringsAsFactors = FALSE)))
+    tab <- tab[order(tab$family, tab$design, as.numeric(tab$true_disp)), ]
+    fam_line <- function(f) {
+      x <- d[d$family == f, ]
+      paste0(f, ": ", sum(x$at), " of ", nrow(x), " fits at the limit; the rule ",
+             "flags ", sum(x$rule), ", ", sum(x$rule & !x$at), " of them not at it, ",
+             "and misses ", sum(!x$rule & x$at), ". At the limit 1 / sqrt(dispersion) ",
+             "had a 99th percentile of ", signif(stats::quantile(x$inv_sqrt[x$at], .99), 3),
+             "; not at it, a minimum of ", signif(min(x$inv_sqrt[!x$at]), 3), ".")
+    }
+    nb <- d[d$family == "nbinom", ]
+    h <- grepl("dispersion", nb$held)
+    c(paste0("A dispersion at its unbounded limit. Fits are labelled from outside ",
+             "the rule: at the limit when a model at the limit fits as well (for ",
+             "the negative binomial, the Poisson refit's log-likelihood within 1e-3) ",
+             "AND the objective does not rise by more than 1e-3 when the log ",
+             "dispersion is pushed 3 further. The rule is the package's: ",
+             "1 / sqrt(dispersion) below 1e-2 and the objective rising by at most ",
+             "5e-3 there."),
+      "", md_table(tab), "",
+      fam_line("nbinom"), fam_line("beta"),
+      paste0("The line alone, without the flatness test, flags ",
+             sum(d$family == "beta" & d$inv_sqrt < 1e-2 & !d$at), " beta fits ",
+             "not at the limit: curved optima at phi up to ",
+             signif(max(exp(d$logdisp[d$family == "beta" & d$inv_sqrt < 1e-2 & !d$at])), 2),
+             ", where a correlation over time interpolates nearly noiseless data."),
+      if (!is.null(d2) && any(h))
+        paste0("After the hold: ", sum(h), " negative binomial fits held; their ",
+               "fixed-effect standard error of x runs ",
+               num(min(nb$se_ratio_x[h], na.rm = TRUE)), " to ",
+               num(max(nb$se_ratio_x[h], na.rm = TRUE)), " times the Poisson refit's ",
+               "(median ", num(stats::median(nb$se_ratio_x[h], na.rm = TRUE)), "), and ",
+               sum(d$draws_finite[grepl("dispersion", d$held)], na.rm = TRUE), " of ",
+               sum(grepl("dispersion", d$held)), " held fits have draws of the log ",
+               "dispersion within 50."),
+      {
+        ## the gaussian residual SD at zero, from dispersion_limit_gaussian.R
+        g <- read_all(dir, "^dispersion_limit_gaussian_verify.csv$")
+        if (is.null(g)) g <- read_all(dir, "^dispersion_limit_gaussian_phase1.csv$")
+        if (is.null(g)) NULL else {
+          g <- g[g$ok & !is.na(g$at), ]
+          hg <- if ("held" %in% names(g)) grepl("dispersion", g$held) else rep(FALSE, nrow(g))
+          c("",
+            paste0("Gaussian residual SD at zero (", nrow(g), " fits; AR(1) at one ",
+                   "observation per cell with noise SD 0.5, 0.2 and 0.05, and two ",
+                   "random-intercept controls): at the limit when the objective ",
+                   "does not rise by more than 1e-3 as log sigma is pushed 3 lower. ",
+                   sum(g$at), " fits were at the limit; the rule -- sigma below 1e-3 ",
+                   "of the response's SD, and flat within 5e-3 -- flags ", sum(g$rule),
+                   ", ", sum(g$rule & !g$at), " of them not at it, and misses ",
+                   sum(!g$rule & g$at), ", whose sigma was ",
+                   signif(min(g$rel[!g$rule & g$at]), 2), " to ",
+                   signif(max(g$rel[!g$rule & g$at]), 2), " of the response's SD. ",
+                   "Not at the limit, sigma was at least ", signif(min(g$rel[!g$at]), 2),
+                   " of it, so no line separates those few: the flatness test does. ",
+                   if (any(hg)) paste0("After the hold, ", sum(hg), " fits held, all ",
+                                       "with draws of log sigma within 50: ",
+                                       sum(g$draws_finite[hg], na.rm = TRUE), " of ",
+                                       sum(hg), ".") else ""))
+        }
+      },
+      "",
+      "CAVEAT that must travel with this result: a fit at the limit that the",
+      "optimiser left unconverged -- the objective still falling steeply as the",
+      "dispersion grows -- is not held; it stays a failure, as it should.")
+
   } else if (study == "boundary_se") {
     ## Which standard errors the fixed effects get when a random-effect
     ## covariance sits at its boundary. Every dataset is fitted once and its

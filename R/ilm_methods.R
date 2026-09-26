@@ -42,12 +42,18 @@ ilm_warn_hess <- function(object, full = FALSE) {
   ## parameters too is, because the ones along a held direction carry no
   ## uncertainty.
   if (length(object$hessian_held)) {
-    if (full)
-      warning("the covariance of ", paste(object$hessian_held, collapse = ", "),
+    hc <- setdiff(object$hessian_held, "dispersion")
+    if (full && length(hc))
+      warning("the covariance of ", paste(hc, collapse = ", "),
               " sits at a boundary, and the direction in which it cannot be ",
               "resolved is held at its estimate, so the rows of the ",
               "parameters along it carry no uncertainty here. The fixed ",
               "effects are unaffected; see fit$checks.", call. = FALSE)
+    if (full && "dispersion" %in% object$hessian_held)
+      warning("the ", ilm_disp_limit_words(object$family$name)$short,
+              "; it is held at its estimate, so its row carries no ",
+              "uncertainty here. The fixed effects are unaffected; see ",
+              "fit$checks.", call. = FALSE)
     return(invisible())
   }
   warning("Hessian is not positive definite: this covariance matrix is unusable ",
