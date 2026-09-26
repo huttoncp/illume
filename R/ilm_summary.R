@@ -163,8 +163,11 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   for (k in seq_along(o$re)) {
     nm <- names(o$re)[k]; s <- o$re_struct[[k]]; e <- o$re[[k]]
     unit <- if (e$kind == "basis") "basis functions" else "levels"
-    cat(sprintf(" %s  [%s%s]  %d %s\n", nm, ilm_str_label(s),
-                if (e$d > 1L) sprintf(", %d-dim", e$d) else "", e$nl, unit))
+    ## a smooth's SD is on its basis's scale; its edf says how wiggly it is
+    ew <- ilm_edf_words(o, nm)
+    cat(sprintf(" %s  [%s%s]  %d %s%s\n", nm, ilm_str_label(s),
+                if (e$d > 1L) sprintf(", %d-dim", e$d) else "", e$nl, unit,
+                if (is.null(ew)) "" else paste0(", ", ew$label)))
     S <- o$Sigma[[k]]
     if (C <= max_corr_dim) {
       print(ilm_fmt_corr(S, o$ylevels[seq_len(C)], 3))
@@ -173,6 +176,9 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
           paste(sprintf("%.3f", sqrt(diag(S))), collapse = " "), "\n", sep = "")
       cat("   (correlation matrix suppressed at C = ", C, "; see fit$Sigma)\n", sep = "")
     }
+    if (!is.null(ew))
+      writeLines(strwrap(paste0("(", ilm_edf_note(), ")"), width = 78, indent = 3,
+                         exdent = 4))
     if (!is.null(o$Sigma_d[[nm]])) {
       Sd <- o$Sigma_d[[nm]]; sv <- sqrt(diag(Sd))
       cat(sprintf("   within-group: SD ratios %s | correlation %.3f\n",
