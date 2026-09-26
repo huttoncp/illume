@@ -20,9 +20,12 @@ rsd_data <- function() {
 
 test_that("an intercept SD stopped short of zero on a flat likelihood is held", {
   d <- rsd_data()
-  expect_message(f <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
-                                ar = ilm_ar1(~ t | g), verbose = FALSE),
-                 "edge of its range")
+  ## (ilm_ar1() warns of one observation per cell as it is built, which is
+  ## the design here, not what is tested)
+  expect_message(f <- suppressWarnings(
+    ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+              ar = ilm_ar1(~ t | g), verbose = FALSE)),
+    "edge of its range")
   sd_g <- sqrt(ilm_varcorr(f)$re$g[1, 1])
   expect_gt(sd_g, 1e-3)                    # above the old line
   expect_true("g" %in% f$hessian_held)
@@ -33,8 +36,8 @@ test_that("an intercept SD stopped short of zero on a flat likelihood is held", 
   expect_true(all(th == th[1]))
   expect_true(all(is.finite(dr$natural$re$g)))
   ## the fixed effects are the model without the term's, near enough
-  f0 <- ilm_model(y ~ x, data = d, family = "gaussian",
-                  ar = ilm_ar1(~ t | g), verbose = FALSE)
+  f0 <- suppressWarnings(ilm_model(y ~ x, data = d, family = "gaussian",
+                                   ar = ilm_ar1(~ t | g), verbose = FALSE))
   expect_equal(sqrt(diag(vcov(f)))[["x"]], sqrt(diag(vcov(f0)))[["x"]],
                tolerance = 0.02)
 })
