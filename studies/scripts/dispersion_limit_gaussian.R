@@ -6,7 +6,7 @@
 ## fit in 500 of another agent's study had it at 0.0004, and draws of log
 ## sigma spanned -529 to +466. The rule adapted from dispersion_limit.R holds
 ## sigma when it is below 1e-3 of the response's SD -- as a random effect's
-## SD below 1e-3 is taken as zero -- and the objective moves by at most 5e-3
+## SD below 1e-3 is taken as zero -- and the objective moves by at most 1e-3
 ## when log sigma is pushed 3 lower. This measures whether that line
 ## separates the fits whose optimum is sigma = 0 from the rest.
 ##
@@ -86,7 +86,7 @@ parallel::clusterExport(cl, "VERIFY")
 res <- do.call(rbind, parallel::parLapplyLB(cl, split(jobs, seq_len(nrow(jobs))), one))
 parallel::stopCluster(cl)
 res$at <- res$push <= 1e-3
-res$rule <- res$rel < 1e-3 & res$push <= 5e-3
+res$rule <- res$rel < 1e-3 & res$push <= 1e-3
 tag <- if (VERIFY) "verify" else "phase1"
 utils::write.csv(res, file.path(sp, paste0("dispersion_limit_gaussian_", tag, ".csv")),
                  row.names = FALSE)

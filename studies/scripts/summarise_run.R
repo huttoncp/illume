@@ -299,7 +299,7 @@ summarise_study <- function(dir, study) {
     if (is.null(d)) return(NULL)
     d <- d[d$ok & !is.na(d$limit_ll) & !is.na(d$push_down), ]
     d$at <- d$limit_ll & d$push_down
-    d$rule <- d$inv_sqrt < 1e-2 & d$push <= 5e-3
+    d$rule <- d$inv_sqrt < 1e-2 & d$push <= 1e-3
     tab <- do.call(rbind, lapply(split(d, list(d$family, d$design, d$disp),
                                        drop = TRUE), function(x)
       data.frame(family = x$family[1], design = x$design[1],
@@ -325,7 +325,7 @@ summarise_study <- function(dir, study) {
              "AND the objective does not rise by more than 1e-3 when the log ",
              "dispersion is pushed 3 further. The rule is the package's: ",
              "1 / sqrt(dispersion) below 1e-2 and the objective rising by at most ",
-             "5e-3 there."),
+             "1e-3 there (5e-3 before the random-effect study; see re_sd_limit)."),
       "", md_table(tab), "",
       fam_line("nbinom"), fam_line("beta"),
       paste0("The line alone, without the flatness test, flags ",
@@ -348,6 +348,7 @@ summarise_study <- function(dir, study) {
         if (is.null(g)) g <- read_all(dir, "^dispersion_limit_gaussian_phase1.csv$")
         if (is.null(g)) NULL else {
           g <- g[g$ok & !is.na(g$at), ]
+          g$rule <- g$rel < 1e-3 & g$push <= 1e-3   # the rule as it stands
           hg <- if ("held" %in% names(g)) grepl("dispersion", g$held) else rep(FALSE, nrow(g))
           c("",
             paste0("Gaussian residual SD at zero (", nrow(g), " fits; AR(1) at one ",
@@ -355,7 +356,7 @@ summarise_study <- function(dir, study) {
                    "random-intercept controls): at the limit when the objective ",
                    "does not rise by more than 1e-3 as log sigma is pushed 3 lower. ",
                    sum(g$at), " fits were at the limit; the rule -- sigma below 1e-3 ",
-                   "of the response's SD, and flat within 5e-3 -- flags ", sum(g$rule),
+                   "of the response's SD, and flat within 1e-3 -- flags ", sum(g$rule),
                    ", ", sum(g$rule & !g$at), " of them not at it, and misses ",
                    sum(!g$rule & g$at), ", whose sigma was ",
                    signif(min(g$rel[!g$rule & g$at]), 2), " to ",

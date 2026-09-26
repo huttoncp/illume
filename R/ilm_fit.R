@@ -1270,10 +1270,13 @@ ilm_sigma_limit <- 1e-3
 
 ## ...and the likelihood flat beyond it: pushing the log dispersion 3 further
 ## -- k or phi twenty times larger -- changes the objective, with the random
-## effects re-optimised, by at most ilm_disp_flat_tol, a deviance of 0.01.
-## At the limit it changed by 2.5e-5 at most for the negative binomial and
-## 9e-4 for the beta; at the curved beta optima, by 1e-3 to 1e4.
-ilm_disp_flat_tol <- 5e-3
+## effects re-optimised, by at most ilm_disp_flat_tol, a deviance of 0.002.
+## At the limit it changed by 1.1e-5 at most for the negative binomial and
+## 9e-4 for the beta; at the curved beta optima, by 1e-3 to 1e4. The first
+## version allowed 5e-3, which held 3 beta fits at 1.2e-3 to 3.3e-3; the
+## random-effect study (re_sd_limit.R) showed that looser tolerance holding
+## terms the model could not drop, so both rules use 1e-3.
+ilm_disp_flat_tol <- 1e-3
 
 ## A dispersion past the line stays flagged only where the likelihood is flat
 ## beyond it.
@@ -1305,10 +1308,11 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
 ## curvature, as the dispersion is. Measured on 5,100 fits
 ## (studies/scripts/re_sd_limit.R): with the line at 0.1 and a tolerance of
 ## 1e-3, 63 fits the old rule missed are held, and in every one the model
-## without the term fits as well; the dispersion's looser 5e-3 would have
-## held 46 terms whose removal cost more than that. Confirmed on fresh seeds.
+## without the term fits as well; a looser 5e-3 would have held 46 terms
+## whose removal cost more than that. Confirmed on fresh seeds. The
+## tolerance is the dispersion rule's.
 ilm_re_sd_limit <- 0.1
-ilm_re_flat_tol <- 1e-3
+ilm_re_flat_tol <- ilm_disp_flat_tol
 
 #' @keywords internal
 #' @noRd
