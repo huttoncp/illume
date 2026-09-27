@@ -1,6 +1,12 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_scores()`, `ilm_calibration()` and `ilm_contrast()` are S3 generics,
+  so a package whose own objects predict category probabilities, or hold
+  estimates with a joint covariance, can give them methods and its users can
+  call the same functions. What a fitted model or an `ilm_emmeans()` result
+  gets is unchanged; anything with no method is refused with a sentence
+  saying what the function needs.
 * A random effect's SD that the optimiser left short of zero is held as a
   variance at zero is. A random intercept beside an AR(1), whose correlation
   over time took up each series' level, stopped at an SD of 0.0204: above
