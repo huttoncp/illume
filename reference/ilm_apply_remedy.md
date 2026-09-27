@@ -33,10 +33,12 @@ ilm_apply_remedy(
 
   The list from
   [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
-  for `object` that the remedy was chosen from. Required rather than
-  recomputed, so the remedy made is always the one that was read – a
-  list that includes the standalone checks numbers its remedies
-  differently from one that does not.
+  for `object` that the remedy was chosen from – whether illume's own,
+  or another package's built with
+  [`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md).
+  Required rather than recomputed, so the remedy made is always the one
+  that was read – a list that includes the standalone checks numbers its
+  remedies differently from one that does not.
 
 - which:
 
@@ -107,9 +109,9 @@ rem
 #> 
 #> Refit with one by ilm_apply_remedy(fit, <this list>, id). Numerical is the
 #> same model fitted harder; structural changes the random-effect or variance
-#> structure and not what the fixed effects mean; estimand changes what they
-#> estimate or what their standard errors account for, so apply one of those
-#> only by choice.
+#> structure, or how the variances are estimated, and not what the fixed
+#> effects mean; estimand changes what they estimate or what their standard
+#> errors account for, so apply one of those only by choice.
 f2 <- ilm_apply_remedy(f, rem, 1,
                        reason = "the groups were not expected to differ")
 #> ilm_apply_remedy(): refitted with formula = y ~ x.

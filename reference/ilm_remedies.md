@@ -16,7 +16,13 @@ and
 ## Usage
 
 ``` r
-ilm_remedies(object, dispersion = NULL, zeros = NULL, variance = NULL)
+ilm_remedies(object, ...)
+
+# Default S3 method
+ilm_remedies(object, ...)
+
+# S3 method for class 'ilm_model'
+ilm_remedies(object, dispersion = NULL, zeros = NULL, variance = NULL, ...)
 
 # S3 method for class 'ilm_remedies'
 print(x, ...)
@@ -26,7 +32,12 @@ print(x, ...)
 
 - object:
 
-  A fitted `"ilm_model"` object.
+  A fitted `"ilm_model"` object, or a result whose package gives
+  `ilm_remedies()` a method.
+
+- ...:
+
+  Unused.
 
 - dispersion, zeros, variance:
 
@@ -40,10 +51,6 @@ print(x, ...)
 - x:
 
   An `"ilm_remedies"` object.
-
-- ...:
-
-  Unused.
 
 ## Value
 
@@ -64,11 +71,13 @@ Each remedy has a tier, which says what applying it would change:
 
 - `structural`:
 
-  A different random-effect or variance structure, whose fixed effects
-  mean what they meant before: a term whose variance is estimated at
-  zero removed (the fit is the same without it), a covariance of lower
-  rank, a dispersion model, a zero part, a negative binomial in place of
-  a poisson, or the boundary-avoiding penalty with its measured costs.
+  A different random-effect or variance structure, or a different way of
+  estimating the variances, whose fixed effects mean what they meant
+  before: a term whose variance is estimated at zero removed (the fit is
+  the same without it), a covariance of lower rank, a dispersion model,
+  a zero part, a negative binomial in place of a poisson, the
+  boundary-avoiding penalty with its measured costs, or REML in place of
+  maximum likelihood.
 
 - `estimand`:
 
@@ -82,12 +91,22 @@ Some can only be made by hand – which categories to merge is a question
 about what they mean – and those have no `change`. A remedy is a
 candidate, not a cure: refit, and read the checks of the new fit.
 
+`ilm_remedies()` is a generic. Another package whose diagnostics name
+remedies that are refits of an illume model gives its own results a
+method, built with
+[`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md),
+and
+[`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+applies them as it applies these.
+
 ## See also
 
 [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
 to refit with one,
 [`summary.ilm_model()`](https://huttoncp.github.io/illume/reference/summary.ilm_model.md)
-for the checks themselves.
+for the checks themselves,
+[`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md)
+for remedies from another package's diagnostics.
 
 ## Examples
 
@@ -122,7 +141,7 @@ ilm_remedies(f)
 #> 
 #> Refit with one by ilm_apply_remedy(fit, <this list>, id). Numerical is the
 #> same model fitted harder; structural changes the random-effect or variance
-#> structure and not what the fixed effects mean; estimand changes what they
-#> estimate or what their standard errors account for, so apply one of those
-#> only by choice.
+#> structure, or how the variances are estimated, and not what the fixed
+#> effects mean; estimand changes what they estimate or what their standard
+#> errors account for, so apply one of those only by choice.
 ```

@@ -88,7 +88,8 @@ and which checks are not OK after the refit.</p>
 
 <dt id="arg-remedies">remedies<a class="anchor" aria-label="anchor" href="#arg-remedies"></a></dt>
 <dd><p>The list from <code><a href="ilm_remedies.html">ilm_remedies()</a></code> for <code>object</code> that the
-remedy was chosen from. Required rather than recomputed, so the remedy
+remedy was chosen from – whether illume's own, or another package's
+built with <code><a href="ilm_remedy_table.html">ilm_remedy_table()</a></code>. Required rather than recomputed, so the remedy
 made is always the one that was read – a list that includes the
 standalone checks numbers its remedies differently from one that does
 not.</p></dd>
@@ -162,9 +163,9 @@ inside a function from a formula written outside it.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Refit with one by ilm_apply_remedy(fit, &lt;this list&gt;, id). Numerical is the</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> same model fitted harder; structural changes the random-effect or variance</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> structure and not what the fixed effects mean; estimand changes what they</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> estimate or what their standard errors account for, so apply one of those</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> only by choice.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> structure, or how the variances are estimated, and not what the fixed</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> effects mean; estimand changes what they estimate or what their standard</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> errors account for, so apply one of those only by choice.</span>
 <span class="r-in"><span><span class="va">f2</span> <span class="op">&lt;-</span> <span class="fu">ilm_apply_remedy</span><span class="op">(</span><span class="va">f</span>, <span class="va">rem</span>, <span class="fl">1</span>,</span></span>
 <span class="r-in"><span>                       reason <span class="op">=</span> <span class="st">"the groups were not expected to differ"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ilm_apply_remedy(): refitted with formula = y ~ x.</span>

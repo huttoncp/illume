@@ -4,6 +4,43 @@
 
 - illume now requires illumex 0.0.8.9000.
 
+- [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  is a generic, and
+  [`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md)
+  builds the table its methods return, so another package whose
+  diagnostics name a remedy that is a refit of an illume model – a
+  negative binomial, a dispersion or zero part – hands its users
+  remedies that
+  [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+  applies exactly as it applies illume’s own: listed, merged where
+  several checks name one change, ordered by tier, and tied to their
+  fit. The table is checked as it is built: every argument must be one
+  of
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s,
+  a formula is read where the model’s own was written, and a check may
+  not take the name of one of illume’s own. The `change` column is
+  written from the arguments, never passed in. Calls on a fitted model
+  are unchanged.
+
+- [`c()`](https://rdrr.io/r/base/c.html) combines remedy tables for one
+  fit – illume’s own and other packages’ – into one numbered list: a
+  change several lists name is listed once with every check that named
+  it, a check named twice appears once, and where two lists put one
+  change in different tiers it takes the more cautious. Tables for
+  different fits are not combined.
+
+- After a refit with a remedy for a check the fit does not make itself –
+  another package’s –
+  [`ilm_apply_remedy()`](https://huttoncp.github.io/illume/reference/ilm_apply_remedy.md)
+  says to run that check again on the new fit, as it does for
+  [`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md)
+  and the other standalone checks, rather than that the check is “no
+  longer checked”.
+
+- The structural tier of a remedy includes a change in how the variances
+  are estimated, such as REML in place of maximum likelihood: the model
+  and what its fixed effects mean stay the same.
+
 - [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md),
   [`ilm_calibration()`](https://huttoncp.github.io/illume/reference/ilm_calibration.md)
   and

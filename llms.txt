@@ -500,6 +500,9 @@ and names a remedy that exists in this package when it is not.
 - [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
   [`print(`*`<ilm_remedies>`*`)`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
   : Remedies for what a model's checks found
+- [`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md)
+  [`c(`*`<ilm_remedies>`*`)`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md)
+  : A table of remedies from another package's diagnostics
 - [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md)
   : Randomised quantile residuals
 - [`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md)
