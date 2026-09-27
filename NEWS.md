@@ -1,4 +1,4 @@
-# illume 0.0.8.9000
+# illume 0.0.8.9001
 
 * illume now requires illumex 0.0.8.9000.
 * `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
