@@ -43,8 +43,15 @@ the levels are ordered and equally spaced.}
 \item{seed}{Random seed for that simulation.}
 }
 \value{
-A data frame with \code{contrast}, \code{estimate}, \code{se}, \code{lower}, \code{upper},
-\code{p_value}, \code{p_adj} and \code{adjust}.
+A data frame with \code{contrast}, \code{estimate}, \code{se}, \code{df}, \code{lower},
+\code{upper}, \code{p_value}, \code{p_adj} and \code{adjust}. The \code{df} are those of the
+method the means or slopes were tested with: the contrasts of an
+\code{\link[=ilm_trends]{ilm_trends()}} result tested on Satterthwaite's or Kenward-Roger's df
+get their own df by the same method; means from \code{\link[=ilm_emmeans]{ilm_emmeans()}} give
+the exact residual df where nothing was integrated out and \code{Inf} (a z
+test) otherwise. Under \code{"max_t"} the joint reference is a multivariate t
+on the smallest of the contrasts' df, which keeps the joint coverage for
+every row.
 }
 \description{
 Differences between the means from \code{\link[=ilm_emmeans]{ilm_emmeans()}}, with intervals and a

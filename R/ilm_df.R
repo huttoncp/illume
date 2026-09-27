@@ -220,7 +220,10 @@ ilm_kr_max_n <- 4000L
 #' @return A list with `df`, the `method` actually used, and for
 #'   Kenward-Roger the adjusted covariance `V` and `scale`, the factor by which
 #'   the Wald F formed with `V` is multiplied before it is referred to
-#'   F(q, df).
+#'   F(q, df). When Satterthwaite's df cannot be formed for `L` -- the
+#'   variance components have no usable covariance, or the contrast's
+#'   variance does not depend on them -- `method` is `"asymptotic"`, `df` is
+#'   `Inf`, and `reason` says why.
 #' @references
 #' Kenward, M. G., & Roger, J. H. (1997). Small sample inference for fixed
 #' effects from restricted maximum likelihood. *Biometrics*, 53(3), 983--997.
@@ -348,42 +351,57 @@ ilm_theta_vcov <- function(object) {
 #' @param object A fitted `"ilm_model"` object.
 #' @param L Contrast matrix.
 #' @param h Step size.
-#' @return A list with `df` and `method`.
+#' @return A list with `df` and `method`. When Satterthwaite's df cannot be
+#'   formed the reference is the normal: `df = Inf`, `method = "asymptotic"`,
+#'   and `reason` says why, for the caller to state -- a z test must never
+#'   pass for the t test that was asked for.
 #' @keywords internal
 #' @noRd
 ilm_df_satt <- function(object, L, h = 1e-5) {
+  fell <- function(reason)
+    list(df = Inf, method = "asymptotic", V = NULL, reason = reason)
   gr <- ilm_vbeta_grad(object, L, h = h)
+  if (is.null(gr))
+    return(fell(paste("the fixed effects' covariance could not be",
+                      "differentiated along the variance components")))
   A  <- ilm_theta_vcov(object)
-  if (is.null(gr) || is.null(A))
-    return(list(df = Inf, method = "asymptotic", V = NULL))
+  if (is.null(A))
+    return(fell(paste("the variance components have no usable sampling",
+                      "covariance")))
   V0 <- gr$V0; G <- gr$G
   q <- nrow(L)
 
   ## one row: no rotation needed
   nu_of <- function(l) {
     d <- as.numeric(l %*% V0 %*% l)
-    if (!is.finite(d) || d <= 0) return(NA_real_)
+    if (!is.finite(d) || d <= 0)
+      return(structure(NA_real_, reason = "the contrast has no variance"))
     g <- vapply(G, function(Gj) as.numeric(l %*% Gj %*% l), numeric(1))
     den <- as.numeric(t(g) %*% A %*% g)
-    if (!is.finite(den) || den <= 0) return(NA_real_)
+    if (!is.finite(den) || den <= 0)
+      return(structure(NA_real_, reason = paste(
+        "the contrast's variance does not move with any variance component",
+        "that was estimated")))
     2 * d^2 / den
   }
   if (q == 1L) {
     nu <- nu_of(as.numeric(L))
-    return(list(df = if (is.na(nu)) Inf else nu, method = "satterthwaite",
-                V = NULL))
+    if (is.na(nu)) return(fell(attr(nu, "reason")))
+    return(list(df = nu, method = "satterthwaite", V = NULL))
   }
 
   ## several rows: rotate to the basis where L Vb L' is diagonal
   LVL <- L %*% V0 %*% t(L)
   ev <- eigen((LVL + t(LVL)) / 2, symmetric = TRUE)
   keep <- ev$values > max(ev$values) * 1e-10
-  if (!any(keep)) return(list(df = Inf, method = "asymptotic", V = NULL))
+  if (!any(keep)) return(fell("the contrasts have no variance"))
   P <- t(ev$vectors[, keep, drop = FALSE])       # rows are the new contrasts
   Lr <- P %*% L
   nus <- vapply(seq_len(nrow(Lr)), function(m) nu_of(Lr[m, ]), numeric(1))
   nus <- nus[is.finite(nus) & nus > 2]
-  if (!length(nus)) return(list(df = Inf, method = "asymptotic", V = NULL))
+  if (!length(nus))
+    return(fell(paste("no direction of the contrasts has a Satterthwaite df",
+                      "above 2")))
   E <- sum(nus / (nus - 2))
   qq <- length(nus)
   df <- if (E > qq) 2 * E / (E - qq) else Inf

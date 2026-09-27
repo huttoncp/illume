@@ -82,7 +82,10 @@
 #'   `"auto"`, `"satterthwaite"`, `"kenward-roger"`, `"residual"`,
 #'   `"asymptotic"`, or a single number. See [ilm_denom_df()]. `"auto"` gives
 #'   an exact t where nothing was integrated out, Satterthwaite for a gaussian
-#'   mixed model, and a z test otherwise.
+#'   mixed model, and a z test otherwise. A method named for a fit it does
+#'   not apply to stops with the reason. A slope whose Satterthwaite df
+#'   cannot be formed is tested as z, with a warning, and the printed header
+#'   names it and why.
 #' @return A data frame of class `"ilm_emm"`, one row per level of `specs`,
 #'   with `estimate`, `se`, `df`, `statistic`, `p.value`, `lower` and `upper`.
 #'   Being an `"ilm_emm"` it can be passed straight to [ilm_contrast()].
@@ -180,10 +183,10 @@ ilm_trends <- function(object, specs, var, at = NULL,
     se <- sqrt(pmax(diag(Vem), 0))
   }
   stat <- est / se
-  pval <- if (is.finite(ddf[1])) 2 * stats::pt(-abs(stat), ddf) else
-    2 * stats::pnorm(-abs(stat))
-  crit <- if (is.finite(ddf[1])) stats::qt(1 - (1 - level) / 2, ddf) else
-    stats::qnorm(1 - (1 - level) / 2)
+  ## each row on its own df: pt() and qt() at Inf are pnorm() and qnorm(), so
+  ## a row that fell back is a z test and the rest keep their t
+  pval <- 2 * stats::pt(-abs(stat), as.numeric(ddf))
+  crit <- stats::qt(1 - (1 - level) / 2, as.numeric(ddf))
 
   out <- if (length(specs))
     as.data.frame(do.call(rbind, strsplit(lv, "\r", fixed = TRUE)),
@@ -200,7 +203,8 @@ ilm_trends <- function(object, specs, var, at = NULL,
   structure(out, class = c("ilm_trends", "ilm_emm", "data.frame"),
             L = L, V = Vem, specs = specs, weights = weights, type = "link",
             level = level, family = fam, object = object, var = var,
-            delta = h, df_method = attr(ddf, "method"))
+            delta = h, df_method = attr(ddf, "method"),
+            df_fallback = attr(ddf, "fallback"))
 }
 
 ## A multinomial fit's slopes: one per category in every level of `specs`, the
@@ -249,13 +253,22 @@ ilm_trends_multinom <- function(object, av, specs, V, b, level, weights, var,
 #' Satterthwaite for a gaussian mixed model, and infinite otherwise -- which
 #' recovers the z test the package used before finite df existed.
 #'
+#' A row whose Satterthwaite df cannot be formed is tested against the normal,
+#' and that is said -- in a warning now and in the table's header when it is
+#' printed -- never left to pass for the t test the rest of the table has.
+#' A method asked for by name that does not apply to the fit stops, with the
+#' reason, as Kenward-Roger always has.
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param L The contrast matrix, one row per level.
 #' @param df What the caller asked for: a method name or a number.
-#' @return A numeric vector of df, carrying a `"method"` attribute.
+#' @param what What a row is, for the warning: "slope", "contrast".
+#' @return A numeric vector of df, carrying a `"method"` attribute and, when
+#'   some rows fell back to the normal, a `"fallback"` attribute: a list of
+#'   those `rows` and the `reason`.
 #' @keywords internal
 #' @noRd
-ilm_trend_df <- function(object, L, df) {
+ilm_trend_df <- function(object, L, df, what = "slope") {
   if (is.numeric(df))
     return(structure(rep(as.numeric(df)[1], nrow(L)), method = "supplied"))
   meth <- match.arg(as.character(df)[1],
@@ -276,15 +289,41 @@ ilm_trend_df <- function(object, L, df) {
       ilm_df_kr(object, L[i, , drop = FALSE], parts = parts)$df, numeric(1))
     return(structure(out, method = "kenward-roger", V = parts$PhiA))
   }
-  out <- vapply(seq_len(nrow(L)), function(i) {
-    r <- tryCatch(ilm_denom_df(object, L[i, , drop = FALSE], method = meth),
-                  error = function(e) list(df = Inf, method = "asymptotic"))
-    r$df
-  }, numeric(1))
-  used <- tryCatch(ilm_denom_df(object, L[1, , drop = FALSE],
-                                method = meth)$method,
-                   error = function(e) "asymptotic")
-  structure(out, method = used)
+  ## "auto" resolves to a method that applies; a method named for a fit it
+  ## does not apply to stops in ilm_denom_df() with the reason, as above
+  rs <- lapply(seq_len(nrow(L)), function(i)
+    ilm_denom_df(object, L[i, , drop = FALSE], method = meth))
+  out <- vapply(rs, function(r) as.numeric(r$df), numeric(1))
+  why <- lapply(rs, `[[`, "reason")
+  fb <- which(!vapply(why, is.null, TRUE))
+  used <- if (length(fb) == length(rs)) "asymptotic"
+          else rs[[setdiff(seq_along(rs), fb)[1L]]]$method
+  if (!length(fb)) return(structure(out, method = used))
+  reason <- paste(unique(unlist(why[fb])), collapse = "; ")
+  warning(sprintf(
+    "Satterthwaite degrees of freedom could not be formed for %s: %s. %s tested against the normal -- a z test -- instead.",
+    if (length(fb) == length(rs)) paste0("any ", what)
+    else sprintf("%s %s", if (length(fb) == 1L) what else paste0(what, "s"),
+                 paste(fb, collapse = ", ")),
+    reason,
+    if (length(fb) == 1L) "It is" else "They are"), call. = FALSE)
+  structure(out, method = used, fallback = list(rows = fb, reason = reason))
+}
+
+## the reference a table's rows were tested against, in words, for a header:
+## the method, and any rows that fell back to the normal and why
+#' @keywords internal
+#' @noRd
+ilm_df_words <- function(method, fallback = NULL, what = "row") {
+  base <- if (identical(method, "asymptotic")) "z tests" else
+    paste0("t tests on ", method, " df")
+  if (is.null(fallback)) return(base)
+  if (identical(method, "asymptotic"))
+    return(paste0(base, ": Satterthwaite's df could not be formed (",
+                  fallback$reason, ")"))
+  sprintf("%s; z tests for %s %s, whose df could not be formed (%s)", base,
+          if (length(fallback$rows) == 1L) what else paste0(what, "s"),
+          paste(fallback$rows, collapse = ", "), fallback$reason)
 }
 
 #' @export
@@ -293,10 +332,9 @@ print.ilm_trends <- function(x, digits = 4, ...) {
   cat("Estimated marginal slopes of `", v, "`", sep = "")
   if (length(sp)) cat(" within ", paste(sp, collapse = " x "), sep = "")
   cat("\n")
-  dm <- attr(x, "df_method")
-  cat("  averaged with ", attr(x, "weights"), " weights; ",
-      if (identical(dm, "asymptotic")) "z tests" else
-        paste0("t tests on ", dm, " df"), "\n", sep = "")
+  cat(ilm_wrap(paste0("averaged with ", attr(x, "weights"), " weights; ",
+                      ilm_df_words(attr(x, "df_method"), attr(x, "df_fallback"))),
+               indent = "  "), "\n", sep = "")
   d <- as.data.frame(x)
   num <- vapply(d, is.numeric, TRUE)
   d[num] <- lapply(d[num], function(z) round(z, digits))
