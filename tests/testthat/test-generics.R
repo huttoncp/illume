@@ -40,7 +40,9 @@ test_that("a fitted model gets what it got before, positional arguments too", {
   e <- ilm_emmeans(f, "g")
   expect_identical(ilm_contrast(e, nsim = 2000L),
                    illume:::ilm_contrast.ilm_emm(e, nsim = 2000L))
-  cal <- ilm_calibration(f, nbins = 5L, B = 20L, seed = 3L)
-  expect_identical(cal, illume:::ilm_calibration.ilm_model(f, nbins = 5L,
-                                                           B = 20L, seed = 3L))
+  ## B = 20 draws the warning that the envelope is unstable; the point here
+  ## is only that the generic and the method agree
+  cal <- suppressWarnings(ilm_calibration(f, nbins = 5L, B = 20L, seed = 3L))
+  expect_identical(cal, suppressWarnings(illume:::ilm_calibration.ilm_model(
+    f, nbins = 5L, B = 20L, seed = 3L)))
 })
