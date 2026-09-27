@@ -7,6 +7,12 @@ with intervals and a multiplicity adjustment.
 ## Usage
 
 ``` r
+ilm_contrast(object, ...)
+
+# Default S3 method
+ilm_contrast(object, ...)
+
+# S3 method for class 'ilm_emm'
 ilm_contrast(
   object,
   method = c("pairwise", "trt.vs.ctrl", "poly"),
@@ -14,7 +20,8 @@ ilm_contrast(
   adjust = c("max_t", "bonferroni", "none"),
   level = 0.95,
   nsim = 20000L,
-  seed = 1L
+  seed = 1L,
+  ...
 )
 ```
 
@@ -25,6 +32,12 @@ ilm_contrast(
   An
   [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
   result.
+
+- ...:
+
+  Arguments for methods. `ilm_contrast()` is a generic, so a package
+  whose own objects hold estimates with a joint covariance can give them
+  a method.
 
 - method:
 

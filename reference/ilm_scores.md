@@ -8,7 +8,13 @@ probabilistic predictions.
 ## Usage
 
 ``` r
-ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL)
+ilm_scores(object, ...)
+
+# Default S3 method
+ilm_scores(object, ...)
+
+# S3 method for class 'ilm_model'
+ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL, ...)
 ```
 
 ## Arguments
@@ -16,6 +22,11 @@ ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL)
 - object:
 
   A fitted `"ilm_model"` object.
+
+- ...:
+
+  Arguments for methods. `ilm_scores()` is a generic, so a package whose
+  own objects predict category probabilities can give them a method.
 
 - groups:
 

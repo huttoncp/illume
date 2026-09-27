@@ -4,6 +4,18 @@
 
 - illume now requires illumex 0.0.8.9000.
 
+- [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md),
+  [`ilm_calibration()`](https://huttoncp.github.io/illume/reference/ilm_calibration.md)
+  and
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
+  are S3 generics, so a package whose own objects predict category
+  probabilities, or hold estimates with a joint covariance, can give
+  them methods and its users can call the same functions. What a fitted
+  model or an
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+  result gets is unchanged; anything with no method is refused with a
+  sentence saying what the function needs.
+
 - A random effect’s SD that the optimiser left short of zero is held as
   a variance at zero is. A random intercept beside an AR(1), whose
   correlation over time took up each series’ level, stopped at an SD of

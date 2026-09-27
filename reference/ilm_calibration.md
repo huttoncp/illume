@@ -9,7 +9,13 @@ plot.
 ## Usage
 
 ``` r
-ilm_calibration(object, nbins = 10L, B = 200L, seed = 1L)
+ilm_calibration(object, ...)
+
+# Default S3 method
+ilm_calibration(object, ...)
+
+# S3 method for class 'ilm_model'
+ilm_calibration(object, nbins = 10L, B = 200L, seed = 1L, ...)
 ```
 
 ## Arguments
@@ -17,6 +23,12 @@ ilm_calibration(object, nbins = 10L, B = 200L, seed = 1L)
 - object:
 
   A fitted `"ilm_model"` object.
+
+- ...:
+
+  Arguments for methods. `ilm_calibration()` is a generic, so a package
+  whose own objects predict category probabilities can give them a
+  method.
 
 - nbins:
 
