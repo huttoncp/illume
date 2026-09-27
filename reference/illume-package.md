@@ -1,10 +1,10 @@
-# illume: A Unified Engine for Exploration and Frequentist Inference
+# illume: A Unified Engine for Frequentist Inference
 
 A frequentist regression workflow aimed at **inference** rather than
-prediction, together with the exploratory steps that precede it. One
-engine fits gaussian, binomial, Poisson, negative binomial, multinomial,
-beta, ordinal, zero-inflated, hurdle and survival models, so every model
-returns the same object and shares the same methods and diagnostics.
+prediction. One engine fits gaussian, binomial, Poisson, negative
+binomial, multinomial, beta, ordinal, zero-inflated, hurdle and survival
+models, so every model returns the same object and shares the same
+methods and diagnostics.
 
 ## What problem this solves
 

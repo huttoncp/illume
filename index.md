@@ -1,6 +1,6 @@
 # illume
 
-**A Unified Engine for Exploration and Frequentist Inference.**
+**A Unified Engine for Frequentist Inference.**
 
 `illume` is an analysis workflow for R aimed at **inference** rather
 than prediction. It covers the path from a sample-size calculation,

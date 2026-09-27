@@ -68,7 +68,14 @@ and which checks are not OK after the refit.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_apply_remedy</span><span class="op">(</span><span class="va">object</span>, <span class="va">remedies</span>, <span class="va">which</span>, data <span class="op">=</span> <span class="cn">NULL</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_apply_remedy</span><span class="op">(</span></span>
+<span>  <span class="va">object</span>,</span>
+<span>  <span class="va">remedies</span>,</span>
+<span>  <span class="va">which</span>,</span>
+<span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  reason <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -98,11 +105,20 @@ not.</p></dd>
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical. Print the new fit's checks as it is fitted.</p></dd>
 
+
+<dt id="arg-reason">reason<a class="anchor" aria-label="anchor" href="#arg-reason"></a></dt>
+<dd><p>Optional: why this remedy is being made, in a sentence –
+"the zero check failed and the excess zeros are structural", "a
+reviewer asked for the simpler model". It is kept in the new fit's
+<code>remedy_log</code> beside the remedy, so the record of how the model was
+reached says why each change was made as well as what it was.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The refitted model. Its <code>remedy_log</code> holds every remedy applied
-to reach it, in order: the check, status, tier, remedy and change.</p>
+to reach it, in order: the check, status, tier, remedy and change, and
+the <code>reason</code> given for it (<code>NA</code> where none was).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -149,8 +165,10 @@ inside a function from a formula written outside it.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> structure and not what the fixed effects mean; estimand changes what they</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> estimate or what their standard errors account for, so apply one of those</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> only by choice.</span>
-<span class="r-in"><span><span class="va">f2</span> <span class="op">&lt;-</span> <span class="fu">ilm_apply_remedy</span><span class="op">(</span><span class="va">f</span>, <span class="va">rem</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">f2</span> <span class="op">&lt;-</span> <span class="fu">ilm_apply_remedy</span><span class="op">(</span><span class="va">f</span>, <span class="va">rem</span>, <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                       reason <span class="op">=</span> <span class="st">"the groups were not expected to differ"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ilm_apply_remedy(): refitted with formula = y ~ x.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   reason given: the groups were not expected to differ</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   hessian: BOUNDARY -&gt; OK</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   variance_boundary: WARN -&gt; no longer checked, as the term is gone</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   every check is OK after the refit</span>
@@ -159,8 +177,8 @@ inside a function from a formula written outside it.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 hessian, variance_boundary BOUNDARY, WARN structural</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                                                                                                                                                                                                                                            remedy</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 drop 'g': its variance is estimated at zero, so the fixed effects are the same without it and their standard errors barely move. Keep it instead if the design calls for it -- repeated measures, say -- since a zero estimate is not evidence of no clustering</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            change</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 formula = y ~ x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            change                                 reason</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 formula = y ~ x the groups were not expected to differ</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

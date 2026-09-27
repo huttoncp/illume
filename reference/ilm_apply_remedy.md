@@ -13,7 +13,14 @@ checks are not OK after the refit.
 ## Usage
 
 ``` r
-ilm_apply_remedy(object, remedies, which, data = NULL, verbose = FALSE)
+ilm_apply_remedy(
+  object,
+  remedies,
+  which,
+  data = NULL,
+  verbose = FALSE,
+  reason = NULL
+)
 ```
 
 ## Arguments
@@ -43,10 +50,19 @@ ilm_apply_remedy(object, remedies, which, data = NULL, verbose = FALSE)
 
   Logical. Print the new fit's checks as it is fitted.
 
+- reason:
+
+  Optional: why this remedy is being made, in a sentence – "the zero
+  check failed and the excess zeros are structural", "a reviewer asked
+  for the simpler model". It is kept in the new fit's `remedy_log`
+  beside the remedy, so the record of how the model was reached says why
+  each change was made as well as what it was.
+
 ## Value
 
 The refitted model. Its `remedy_log` holds every remedy applied to reach
-it, in order: the check, status, tier, remedy and change.
+it, in order: the check, status, tier, remedy and change, and the
+`reason` given for it (`NA` where none was).
 
 ## Details
 
@@ -94,8 +110,10 @@ rem
 #> structure and not what the fixed effects mean; estimand changes what they
 #> estimate or what their standard errors account for, so apply one of those
 #> only by choice.
-f2 <- ilm_apply_remedy(f, rem, 1)
+f2 <- ilm_apply_remedy(f, rem, 1,
+                       reason = "the groups were not expected to differ")
 #> ilm_apply_remedy(): refitted with formula = y ~ x.
+#>   reason given: the groups were not expected to differ
 #>   hessian: BOUNDARY -> OK
 #>   variance_boundary: WARN -> no longer checked, as the term is gone
 #>   every check is OK after the refit
@@ -104,6 +122,6 @@ f2$remedy_log
 #> 1 hessian, variance_boundary BOUNDARY, WARN structural
 #>                                                                                                                                                                                                                                                            remedy
 #> 1 drop 'g': its variance is estimated at zero, so the fixed effects are the same without it and their standard errors barely move. Keep it instead if the design calls for it -- repeated measures, say -- since a zero estimate is not evidence of no clustering
-#>            change
-#> 1 formula = y ~ x
+#>            change                                 reason
+#> 1 formula = y ~ x the groups were not expected to differ
 ```
