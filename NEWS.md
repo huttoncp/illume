@@ -1,6 +1,18 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_scores()`, `ilm_calibration()` and `ilm_contrast()` are S3 generics,
+  so a package whose own objects predict category probabilities, or hold
+  estimates with a joint covariance, can give them methods and its users can
+  call the same functions. What a fitted model or an `ilm_emmeans()` result
+  gets is unchanged; anything with no method is refused with a sentence
+  saying what the function needs.
+* `ilm_apply_remedy()` takes a `reason`: why the remedy is being made, in a
+  sentence. It is kept in the new fit's `remedy_log`, in a `reason` column
+  beside the check, tier and change (`NA` where none was given), and the
+  refit's message repeats it, so the record of how a model was reached says
+  why each change was made as well as what it was. A log from an earlier
+  fit gains the column when the next remedy is applied.
 * `inst/REFERENCES.bib` lists every work the documentation cites, one
   entry each, under stable keys (`Kenward1997`, `vanBuuren2011`) that
   documents can cite. A test keeps it and the `@references` blocks in step

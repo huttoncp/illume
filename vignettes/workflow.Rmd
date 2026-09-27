@@ -225,8 +225,9 @@ Most remedies are a change to one argument of `ilm_model()`, and
 ```{r}
 rem <- ilm_remedies(fit, zeros = ilm_check_zeros(fit))
 rem                                          # tier, remedy, and the change
-fit2 <- ilm_apply_remedy(fit, rem, 1)        # refit with remedy 1
-fit2$remedy_log                              # how fit2 was reached
+fit2 <- ilm_apply_remedy(fit, rem, 1,       # refit with remedy 1, and say why
+                         reason = "the excess zeros are structural")
+fit2$remedy_log                              # how fit2 was reached, and why
 ```
 
 If the variance structure is the worry rather than the mean structure,

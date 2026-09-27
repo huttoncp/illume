@@ -265,6 +265,8 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #'   effects the probabilities being scored use, as in [ilm_fitted()].
 #' @param conditional Deprecated. `TRUE` is `groups = "fitted"`, and `FALSE`
 #'   is `groups = "typical"`.
+#' @param ... Arguments for methods. `ilm_scores()` is a generic, so a package
+#'   whose own objects predict category probabilities can give them a method.
 #' @return A named numeric vector: `log_score`, `brier`, `accuracy`, and for an
 #'   ordinal fit `rps`, on the 0 to 1 scale.
 #' @references
@@ -275,8 +277,19 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
 #' Brier, G. W. (1950). Verification of forecasts expressed in terms of
 #' probability. *Monthly Weather Review*, 78(1), 1--3.
 #' @export
-ilm_scores <- function(object, groups = c("fitted", "typical"),
-                       conditional = NULL) {
+ilm_scores <- function(object, ...) UseMethod("ilm_scores")
+
+#' @rdname ilm_scores
+#' @export
+ilm_scores.default <- function(object, ...)
+  stop("ilm_scores() scores a fitted model's category probabilities, so it ",
+       "needs a fitted ilm_model (or an object whose package gives it a ",
+       "method), not ", class(object)[1], call. = FALSE)
+
+#' @rdname ilm_scores
+#' @export
+ilm_scores.ilm_model <- function(object, groups = c("fitted", "typical"),
+                                 conditional = NULL, ...) {
   groups <- ilm_groups_arg(groups, c("fitted", "typical"), !missing(groups),
                            "ilm_scores()", conditional, "conditional",
                            c(`TRUE` = "fitted", `FALSE` = "typical"))

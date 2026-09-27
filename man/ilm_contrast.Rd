@@ -2,21 +2,32 @@
 % Please edit documentation in R/ilm_emmeans.R, R/zzz-iml-aliases.R
 \name{ilm_contrast}
 \alias{ilm_contrast}
+\alias{ilm_contrast.default}
+\alias{ilm_contrast.ilm_emm}
 \alias{iml_contrast}
 \title{Compare estimated marginal means}
 \usage{
-ilm_contrast(
+ilm_contrast(object, ...)
+
+\method{ilm_contrast}{default}(object, ...)
+
+\method{ilm_contrast}{ilm_emm}(
   object,
   method = c("pairwise", "trt.vs.ctrl", "poly"),
   ref = NULL,
   adjust = c("max_t", "bonferroni", "none"),
   level = 0.95,
   nsim = 20000L,
-  seed = 1L
+  seed = 1L,
+  ...
 )
 }
 \arguments{
 \item{object}{An \code{\link[=ilm_emmeans]{ilm_emmeans()}} result.}
+
+\item{...}{Arguments for methods. \code{ilm_contrast()} is a generic, so a
+package whose own objects hold estimates with a joint covariance can give
+them a method.}
 
 \item{method}{\code{"pairwise"}, \code{"trt.vs.ctrl"} or \code{"poly"}. The last assumes
 the levels are ordered and equally spaced.}
