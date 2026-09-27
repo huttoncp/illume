@@ -9,10 +9,15 @@
 ##
 ## Each remedy has a TIER, which says what applying it would change:
 ##   numerical   the same model, fitted harder (more optimiser restarts)
-##   structural  a different random-effect or variance structure, whose fixed
+##   structural  a different random-effect or variance structure, or a
+##               different way of estimating the variances, whose fixed
 ##               effects mean what they meant before: a term at a variance of
 ##               zero removed, a covariance of lower rank, a dispersion or
-##               zero part, a penalty that keeps a covariance off its edge
+##               zero part, a penalty that keeps a covariance off its edge,
+##               REML in place of ML
+## Remedies can also come from another package's diagnostics, through
+## ilm_remedy_table(); they are applied the same way, and the tiers mean the
+## same thing there.
 ##   estimand    a change to what the fixed effects estimate, or to what their
 ##               standard errors account for: a random effect whose variance
 ##               is not zero removed, categories merged, levels pooled
@@ -526,12 +531,13 @@ ilm_rem_change <- function(args) {
 #' \describe{
 #'   \item{`numerical`}{The same model, fitted harder: more optimiser
 #'     restarts.}
-#'   \item{`structural`}{A different random-effect or variance structure,
-#'     whose fixed effects mean what they meant before: a term whose variance
-#'     is estimated at zero removed (the fit is the same without it), a
-#'     covariance of lower rank, a dispersion model, a zero part, a negative
-#'     binomial in place of a poisson, or the boundary-avoiding penalty with
-#'     its measured costs.}
+#'   \item{`structural`}{A different random-effect or variance structure, or
+#'     a different way of estimating the variances, whose fixed effects mean
+#'     what they meant before: a term whose variance is estimated at zero
+#'     removed (the fit is the same without it), a covariance of lower rank,
+#'     a dispersion model, a zero part, a negative binomial in place of a
+#'     poisson, the boundary-avoiding penalty with its measured costs, or
+#'     REML in place of maximum likelihood.}
 #'   \item{`estimand`}{A change to what the fixed effects estimate, or to
 #'     what their standard errors account for: a random effect whose variance
 #'     is not zero removed, categories merged, levels pooled. Apply one only
@@ -542,18 +548,26 @@ ilm_rem_change <- function(args) {
 #' what they mean -- and those have no `change`. A remedy is a candidate, not
 #' a cure: refit, and read the checks of the new fit.
 #'
-#' @param object A fitted `"ilm_model"` object.
+#' `ilm_remedies()` is a generic. Another package whose diagnostics name
+#' remedies that are refits of an illume model gives its own results a
+#' method, built with [ilm_remedy_table()], and [ilm_apply_remedy()] applies
+#' them as it applies these.
+#'
+#' @param object A fitted `"ilm_model"` object, or a result whose package
+#'   gives `ilm_remedies()` a method.
 #' @param dispersion,zeros,variance Optional results of
 #'   [ilm_check_dispersion()], [ilm_check_zeros()] and
 #'   [ilm_check_variance()] run on `object`, whose remedies are then listed
 #'   too.
+#' @param ... Arguments for methods.
 #' @return A data frame of class `"ilm_remedies"`, one row per remedy, with
 #'   `id`, the `check` (or checks) it answers and its `status`, the `tier`,
 #'   the `remedy` in words, and the `change`: the [ilm_model()] arguments that
 #'   make it, as code, or `""` when it is made by hand. An empty data frame
 #'   when every check is OK.
 #' @seealso [ilm_apply_remedy()] to refit with one, [summary.ilm_model()] for
-#'   the checks themselves.
+#'   the checks themselves, [ilm_remedy_table()] for remedies from another
+#'   package's diagnostics.
 #' @examples
 #' ## x and y vary within groups only, so the groups differ by nothing and
 #' ## the random intercept's variance is estimated at zero
@@ -564,10 +578,19 @@ ilm_rem_change <- function(args) {
 #' f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 #' ilm_remedies(f)
 #' @export
-ilm_remedies <- function(object, dispersion = NULL, zeros = NULL, variance = NULL) {
-  if (!inherits(object, "ilm_model"))
-    stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
-         call. = FALSE)
+ilm_remedies <- function(object, ...) UseMethod("ilm_remedies")
+
+#' @rdname ilm_remedies
+#' @export
+ilm_remedies.default <- function(object, ...)
+  stop("`object` must be a fitted ilm_model object, or a result whose ",
+       "package gives ilm_remedies() a method, not ", class(object)[1], ".",
+       call. = FALSE)
+
+#' @rdname ilm_remedies
+#' @export
+ilm_remedies.ilm_model <- function(object, dispersion = NULL, zeros = NULL,
+                                   variance = NULL, ...) {
   rows <- list()
   add <- function(check, status, rs)
     for (r in rs) rows[[length(rows) + 1L]] <<- c(list(check = check, status = status), r)
@@ -587,7 +610,16 @@ ilm_remedies <- function(object, dispersion = NULL, zeros = NULL, variance = NUL
            call. = FALSE)
     add(paste0("ilm_check_", nm), res$status, ilm_rem_standalone(object, nm, res))
   }
+  ilm_rem_assemble(object, rows)
+}
 
+## The table from its rows -- each a list of check, status, tier, remedy and
+## args -- for ilm_remedies() and ilm_remedy_table() alike, so a remedy from
+## another package is listed, merged, ordered and tied to its fit exactly as
+## illume's own are.
+#' @keywords internal
+#' @noRd
+ilm_rem_assemble <- function(object, rows) {
   if (length(rows)) {
     tab <- data.frame(
       check  = vapply(rows, `[[`, "", "check"),
@@ -624,6 +656,133 @@ ilm_remedies <- function(object, dispersion = NULL, zeros = NULL, variance = NUL
             fit_id = ilm_rem_id(object))
 }
 
+## what a check can say when it names a remedy: an OK check names none
+ilm_rem_statuses <- c("WARN", "FAIL", "BOUNDARY", "INCONCLUSIVE")
+
+#' A table of remedies from another package's diagnostics
+#'
+#' For a package whose diagnostics find something wrong with an illume model
+#' and name a remedy that is a refit of it -- a negative binomial for counts
+#' more variable than a poisson allows, a dispersion or zero part -- so that
+#' its users apply those remedies as they apply illume's own, with
+#' [ilm_apply_remedy()]. Its `ilm_remedies()` method builds the table here:
+#'
+#' ```
+#' ilm_remedies.my_calibration <- function(object, ...)
+#'   ilm_remedy_table(object$fit, check = "pit_shape", status = "FAIL",
+#'                    tier = "structural", remedy = "...",
+#'                    args = list(list(family = "nbinom")))
+#' ```
+#'
+#' The table is tied to `object` as illume's own are: listed, merged when
+#' several checks name the same change, and ordered by tier the same way, and
+#' refused by [ilm_apply_remedy()] for any other fit. The `change` column is
+#' written from `args`, never passed in, so the change a person reads is the
+#' refit that is made.
+#'
+#' A remedy that is not a refit of the model -- more simulations, another
+#' kind of fold, a recalibration -- is not something [ilm_apply_remedy()] can
+#' make. List it by hand, with `args = NULL` for its row, or leave it to the
+#' package's own output.
+#'
+#' @param object The fitted `"ilm_model"` the remedies would refit.
+#' @param check Character: the name of the check each remedy answers. Not one
+#'   of the fit's own checks, nor an `ilm_check_` name -- those are
+#'   [ilm_remedies()]'s, and the report after a refit reads them from the fit.
+#' @param status Character: what the check found, `"WARN"`, `"FAIL"`,
+#'   `"BOUNDARY"` or `"INCONCLUSIVE"`.
+#' @param tier Character: `"numerical"`, `"structural"` or `"estimand"`, as
+#'   in [ilm_remedies()].
+#' @param remedy Character: the remedy in words, a sentence a person can act
+#'   on.
+#' @param args A list with one element per row: a named list of
+#'   [ilm_model()] arguments that make the remedy, or `NULL` for one made by
+#'   hand. `NULL` makes every row by hand. The data and `verbose` are not
+#'   arguments a remedy sets. A formula is evaluated where the model's own
+#'   formula was written, so names in it mean what they mean there.
+#' @return A data frame of class `"ilm_remedies"`, as from [ilm_remedies()].
+#' @seealso [ilm_remedies()], [ilm_apply_remedy()].
+#' @examples
+#' set.seed(2)
+#' d <- data.frame(x = rnorm(300))
+#' d$y <- rnbinom(300, mu = exp(1 + 0.5 * d$x), size = 1.5)
+#' f <- ilm_model(y ~ x, data = d, family = "poisson", verbose = FALSE)
+#' ## what another package's diagnostic of this fit would hand back
+#' rem <- ilm_remedy_table(f, check = "pit_shape", status = "FAIL",
+#'   tier = "structural",
+#'   remedy = "the intervals are too narrow: refit as a negative binomial",
+#'   args = list(list(family = "nbinom")))
+#' rem
+#' f2 <- ilm_apply_remedy(f, rem, 1)
+#' @export
+ilm_remedy_table <- function(object, check, status, tier, remedy, args = NULL) {
+  if (!inherits(object, "ilm_model"))
+    stop("`object` must be the fitted ilm_model object the remedies would ",
+         "refit, not ", class(object)[1], ".", call. = FALSE)
+  txt <- list(check = check, status = status, tier = tier, remedy = remedy)
+  for (nm in names(txt)) {
+    v <- txt[[nm]]
+    if (!is.character(v) || anyNA(v) || !all(nzchar(trimws(v))))
+      stop("`", nm, "` must be character, with no missing or empty entries.",
+           call. = FALSE)
+  }
+  n <- length(check)
+  if (any(lengths(txt) != n))
+    stop("`check`, `status`, `tier` and `remedy` must have one entry per ",
+         "remedy, and have lengths ", paste(lengths(txt), collapse = ", "), ".",
+         call. = FALSE)
+  bad <- setdiff(status, ilm_rem_statuses)
+  if (length(bad))
+    stop("`status` must be one of ", paste(ilm_rem_statuses, collapse = ", "),
+         " -- a check that is OK names no remedy -- not ",
+         paste(unique(bad), collapse = ", "), ".", call. = FALSE)
+  bad <- setdiff(tier, ilm_rem_tiers)
+  if (length(bad))
+    stop("`tier` must be one of ", paste(ilm_rem_tiers, collapse = ", "),
+         ", not ", paste(unique(bad), collapse = ", "), ".", call. = FALSE)
+  ## a merged row lists its checks with commas between them
+  if (any(grepl(",", check, fixed = TRUE)))
+    stop("`check` names must not contain a comma.", call. = FALSE)
+  ## the report after a refit reads the fit's own checks from the new fit;
+  ## another check of the same name would be reported as that one
+  own <- unique(c(object$checks$check, ilm_rem_known))
+  bad <- check[check %in% own | startsWith(check, "ilm_check_")]
+  if (length(bad))
+    stop("`check` names a check of illume's own (", paste(unique(bad), collapse = ", "),
+         "): its remedies come from ilm_remedies(). Name the check that ",
+         "found the problem.", call. = FALSE)
+
+  if (is.null(args)) args <- vector("list", n)
+  if (!is.list(args) || length(args) != n)
+    stop("`args` must be a list with one element per remedy -- a named list ",
+         "of ilm_model() arguments, or NULL for one made by hand.", call. = FALSE)
+  ok <- setdiff(names(formals(ilm_model_formula)), c("data", "verbose"))
+  env <- environment(object$formula)
+  for (i in seq_len(n)) {
+    a <- args[[i]]
+    if (is.null(a)) next
+    if (!is.list(a) || !length(a) || is.null(names(a)) || !all(nzchar(names(a))))
+      stop("`args[[", i, "]]` must be a named list of ilm_model() arguments, ",
+           "or NULL for a remedy made by hand: `args` holds one such list per ",
+           "remedy, so a single remedy is args = list(list(family = ",
+           "\"nbinom\")).", call. = FALSE)
+    no <- setdiff(names(a), ok)
+    if (length(no))
+      stop("`args[[", i, "]]` sets ", paste(no, collapse = ", "), ", which ",
+           if (length(no) == 1L) "is not an argument" else "are not arguments",
+           " of ilm_model() that a remedy can set. A setting of another ",
+           "package's own belongs in its output, or in a remedy made by hand ",
+           "(args = NULL).", call. = FALSE)
+    for (k in names(a))
+      if (inherits(a[[k]], "formula") && !is.null(env)) environment(a[[k]]) <- env
+    args[[i]] <- a
+  }
+  rows <- lapply(seq_len(n), function(i)
+    list(check = check[i], status = status[i], tier = tier[i],
+         remedy = remedy[i], args = args[[i]]))
+  ilm_rem_assemble(object, rows)
+}
+
 #' @rdname ilm_remedies
 #' @param x An `"ilm_remedies"` object.
 #' @param ... Unused.
@@ -647,7 +806,8 @@ print.ilm_remedies <- function(x, ...) {
   cat(ilm_wrap(paste0(
     "Refit with one by ilm_apply_remedy(fit, <this list>, id). Numerical is ",
     "the same model fitted harder; structural changes the ",
-    "random-effect or variance structure and not what the fixed effects mean; ",
+    "random-effect or variance structure, or how the variances are ",
+    "estimated, and not what the fixed effects mean; ",
     "estimand changes what they estimate or what their standard errors ",
     "account for, so apply one of those only by choice.")), "\n", sep = "")
   invisible(x)
@@ -668,7 +828,8 @@ print.ilm_remedies <- function(x, ...) {
 #'
 #' @param object A fitted `"ilm_model"` object, from the formula interface.
 #' @param remedies The list from [ilm_remedies()] for `object` that the
-#'   remedy was chosen from. Required rather than recomputed, so the remedy
+#'   remedy was chosen from -- whether illume's own, or another package's
+#'   built with [ilm_remedy_table()]. Required rather than recomputed, so the remedy
 #'   made is always the one that was read -- a list that includes the
 #'   standalone checks numbers its remedies differently from one that does
 #'   not.
@@ -714,7 +875,8 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
          "this model did not come from it. Fit it with ilm_model() and a ",
          "formula first.", call. = FALSE)
   if (!inherits(remedies, "ilm_remedies"))
-    stop("`remedies` must come from ilm_remedies().", call. = FALSE)
+    stop("`remedies` must come from ilm_remedies() or ilm_remedy_table().",
+         call. = FALSE)
   if (is.null(attr(remedies, "fit_id")) || is.null(attr(remedies, "args")))
     stop("`remedies` has lost what ties it to its fit, as a subset of it ",
          "does. Pass the whole list from ilm_remedies() and choose with ",
@@ -784,7 +946,9 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
   st0 <- trimws(strsplit(remedies$status[i], ",", fixed = TRUE)[[1L]])
   ck <- fit$checks
   now <- vapply(seq_along(trig), function(k) {
-    if (startsWith(trig[k], "ilm_check_"))
+    ## a check the fit did not make itself -- a standalone ilm_check_*(), or
+    ## another package's -- is not in the new fit either; it has to be run
+    if (startsWith(trig[k], "ilm_check_") || !trig[k] %in% object$checks$check)
       return(sprintf("  %s: %s before; run it again on the new fit", trig[k], st0[k]))
     a <- ck$status[ck$check == trig[k]]
     sprintf("  %s: %s -> %s", trig[k], st0[k],

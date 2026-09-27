@@ -2,16 +2,25 @@
 % Please edit documentation in R/ilm_remedies.R, R/zzz-iml-aliases.R
 \name{ilm_remedies}
 \alias{ilm_remedies}
+\alias{ilm_remedies.default}
+\alias{ilm_remedies.ilm_model}
 \alias{print.ilm_remedies}
 \alias{iml_remedies}
 \title{Remedies for what a model's checks found}
 \usage{
-ilm_remedies(object, dispersion = NULL, zeros = NULL, variance = NULL)
+ilm_remedies(object, ...)
+
+\method{ilm_remedies}{default}(object, ...)
+
+\method{ilm_remedies}{ilm_model}(object, dispersion = NULL, zeros = NULL, variance = NULL, ...)
 
 \method{print}{ilm_remedies}(x, ...)
 }
 \arguments{
-\item{object}{A fitted \code{"ilm_model"} object.}
+\item{object}{A fitted \code{"ilm_model"} object, or a result whose package
+gives \code{ilm_remedies()} a method.}
+
+\item{...}{Unused.}
 
 \item{dispersion, zeros, variance}{Optional results of
 \code{\link[=ilm_check_dispersion]{ilm_check_dispersion()}}, \code{\link[=ilm_check_zeros]{ilm_check_zeros()}} and
@@ -19,8 +28,6 @@ ilm_remedies(object, dispersion = NULL, zeros = NULL, variance = NULL)
 too.}
 
 \item{x}{An \code{"ilm_remedies"} object.}
-
-\item{...}{Unused.}
 }
 \value{
 A data frame of class \code{"ilm_remedies"}, one row per remedy, with
@@ -42,12 +49,13 @@ Each remedy has a tier, which says what applying it would change:
 \describe{
 \item{\code{numerical}}{The same model, fitted harder: more optimiser
 restarts.}
-\item{\code{structural}}{A different random-effect or variance structure,
-whose fixed effects mean what they meant before: a term whose variance
-is estimated at zero removed (the fit is the same without it), a
-covariance of lower rank, a dispersion model, a zero part, a negative
-binomial in place of a poisson, or the boundary-avoiding penalty with
-its measured costs.}
+\item{\code{structural}}{A different random-effect or variance structure, or
+a different way of estimating the variances, whose fixed effects mean
+what they meant before: a term whose variance is estimated at zero
+removed (the fit is the same without it), a covariance of lower rank,
+a dispersion model, a zero part, a negative binomial in place of a
+poisson, the boundary-avoiding penalty with its measured costs, or
+REML in place of maximum likelihood.}
 \item{\code{estimand}}{A change to what the fixed effects estimate, or to
 what their standard errors account for: a random effect whose variance
 is not zero removed, categories merged, levels pooled. Apply one only
@@ -57,6 +65,11 @@ Remedies are listed numerical first, then structural, then estimand. Some
 can only be made by hand -- which categories to merge is a question about
 what they mean -- and those have no \code{change}. A remedy is a candidate, not
 a cure: refit, and read the checks of the new fit.
+
+\code{ilm_remedies()} is a generic. Another package whose diagnostics name
+remedies that are refits of an illume model gives its own results a
+method, built with \code{\link[=ilm_remedy_table]{ilm_remedy_table()}}, and \code{\link[=ilm_apply_remedy]{ilm_apply_remedy()}} applies
+them as it applies these.
 }
 \examples{
 ## x and y vary within groups only, so the groups differ by nothing and
@@ -70,5 +83,6 @@ ilm_remedies(f)
 }
 \seealso{
 \code{\link[=ilm_apply_remedy]{ilm_apply_remedy()}} to refit with one, \code{\link[=summary.ilm_model]{summary.ilm_model()}} for
-the checks themselves.
+the checks themselves, \code{\link[=ilm_remedy_table]{ilm_remedy_table()}} for remedies from another
+package's diagnostics.
 }

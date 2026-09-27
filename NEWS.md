@@ -1,6 +1,23 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
+  its methods return, so another package whose diagnostics name a remedy
+  that is a refit of an illume model -- a negative binomial, a dispersion or
+  zero part -- hands its users remedies that `ilm_apply_remedy()` applies
+  exactly as it applies illume's own: listed, merged where several checks
+  name one change, ordered by tier, and tied to their fit. The table is
+  checked as it is built: every argument must be one of `ilm_model()`'s,
+  a formula is read where the model's own was written, and a check may not
+  take the name of one of illume's own. The `change` column is written from
+  the arguments, never passed in. Calls on a fitted model are unchanged.
+* After a refit with a remedy for a check the fit does not make itself --
+  another package's -- `ilm_apply_remedy()` says to run that check again on
+  the new fit, as it does for `ilm_check_dispersion()` and the other
+  standalone checks, rather than that the check is "no longer checked".
+* The structural tier of a remedy includes a change in how the variances
+  are estimated, such as REML in place of maximum likelihood: the model and
+  what its fixed effects mean stay the same.
 * `ilm_scores()`, `ilm_calibration()` and `ilm_contrast()` are S3 generics,
   so a package whose own objects predict category probabilities, or hold
   estimates with a joint covariance, can give them methods and its users can
