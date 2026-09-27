@@ -14,7 +14,7 @@ A dispersion at its unbounded limit. Fits are labelled from outside the rule: at
 | family | design | true_disp | fits | at_limit | rule_flags | held |
 |---|---|---|---|---|---|---|
 | beta | ar1 | 20 | 50 | 5 | 5 | 5 |
-| beta | ar1 | 200 | 50 | 41 | 41 | 42 |
+| beta | ar1 | 200 | 50 | 41 | 41 | 39 |
 | beta | ar1 | 10000 | 49 | 44 | 44 | 42 |
 | beta | ri | 20 | 50 | 0 | 0 | 0 |
 | beta | ri | 200 | 50 | 0 | 0 | 0 |
@@ -29,7 +29,7 @@ A dispersion at its unbounded limit. Fits are labelled from outside the rule: at
 nbinom: 154 of 350 fits at the limit; the rule flags 153, 0 of them not at it, and misses 1. At the limit 1 / sqrt(dispersion) had a 99th percentile of 0.00191; not at it, a minimum of 0.0505.
 beta: 90 of 249 fits at the limit; the rule flags 90, 0 of them not at it, and misses 0. At the limit 1 / sqrt(dispersion) had a 99th percentile of 0.000556; not at it, a minimum of 2.07e-08.
 The line alone, without the flatness test, flags 8 beta fits not at the limit: curved optima at phi up to 2.3e+15, where a correlation over time interpolates nearly noiseless data.
-After the hold: 153 negative binomial fits held; their fixed-effect standard error of x runs 0.989 to 1.000 times the Poisson refit's (median 1.000), and 242 of 242 held fits have draws of the log dispersion within 50.
+After the hold: 153 negative binomial fits held; their fixed-effect standard error of x runs 0.996 to 1.000 times the Poisson refit's (median 1.000), and 239 of 239 held fits have draws of the log dispersion within 50.
 
 Gaussian residual SD at zero (500 fits; AR(1) at one observation per cell with noise SD 0.5, 0.2 and 0.05, and two random-intercept controls): at the limit when the objective does not rise by more than 1e-3 as log sigma is pushed 3 lower. 93 fits were at the limit; the rule -- sigma below 1e-3 of the response's SD, and flat within 1e-3 -- flags 89, 0 of them not at it, and misses 4, whose sigma was 0.021 to 0.034 of the response's SD. Not at the limit, sigma was at least 0.038 of it, so no line separates those few: the flatness test does. After the hold, 88 fits held, all with draws of log sigma within 50: 88 of 88.
 
