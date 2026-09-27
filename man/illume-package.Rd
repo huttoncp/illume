@@ -7,8 +7,7 @@
 \title{illume: A Unified Engine for Frequentist Inference}
 \description{
 A frequentist regression workflow aimed at \strong{inference} rather than
-prediction, together with the exploratory steps that precede it. One engine
-fits gaussian, binomial, Poisson, negative binomial, multinomial, beta,
+prediction. One engine fits gaussian, binomial, Poisson, negative binomial, multinomial, beta,
 ordinal, zero-inflated, hurdle and survival models, so every model returns
 the same object and shares the same methods and diagnostics.
 }
