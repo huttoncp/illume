@@ -121,3 +121,54 @@ test_that("a table illume could not refit correctly is refused when built", {
   expect_identical(nrow(rem0), 0L)
   expect_output(print(rem0), "No remedies")
 })
+
+test_that("c() makes one list for a fit, with no remedy or check twice", {
+  f <- nb_fit()
+  own <- ilm_remedies(f, dispersion = suppressMessages(
+    ilm_check_dispersion(f, B = 100)))
+  expect_true(any(own$change == "family = \"nbinom\""))
+  ext <- ilm_remedy_table(f, c("pit_shape", "interval_width"), c("FAIL", "WARN"),
+                          c("structural", "estimand"),
+                          c("refit as a negative binomial",
+                            "add the predictor the forecasts miss"),
+                          args = list(list(family = "nbinom"), NULL))
+  all <- c(own, ext)
+  expect_s3_class(all, "ilm_remedies")
+  expect_identical(all$id, seq_len(nrow(all)))
+  ## the negative binomial once, answering both checks that named it
+  nb <- which(all$change == "family = \"nbinom\"")
+  expect_length(nb, 1L)
+  expect_identical(all$check[nb], "ilm_check_dispersion, pit_shape")
+  expect_false(anyDuplicated(ifelse(nzchar(all$change), all$change, all$remedy)) > 0L)
+  ## ordered by tier
+  expect_false(is.unsorted(match(all$tier, illume:::ilm_rem_tiers)))
+  ## and it applies, reporting both checks as ones to run again
+  msg <- capture_messages(f2 <- ilm_apply_remedy(f, all, all$id[nb]))
+  expect_match(paste(msg, collapse = ""), "ilm_check_dispersion: .* run it again")
+  expect_match(paste(msg, collapse = ""), "pit_shape: FAIL before; run it again")
+  expect_identical(f2$family$name, "nbinom")
+
+  ## the same list twice is the list once
+  twice <- c(ext, ext)
+  expect_identical(nrow(twice), nrow(ext))
+  expect_identical(twice$check, ext$check)
+  ## a change two lists put in different tiers takes the more cautious
+  cau <- c(ext, ilm_remedy_table(f, "coverage", "WARN", "estimand",
+                                 "a negative binomial", list(list(family = "nbinom"))))
+  expect_identical(cau$tier[cau$change == "family = \"nbinom\""], "estimand")
+})
+
+test_that("c() refuses tables it cannot combine", {
+  f <- nb_fit()
+  ext <- ilm_remedy_table(f, "pit_shape", "FAIL", "structural", "negative binomial",
+                          list(list(family = "nbinom")))
+  g <- suppressMessages(ilm_apply_remedy(f, ext, 1))
+  other <- ilm_remedy_table(g, "pit_shape", "WARN", "structural", "a zero part",
+                            list(list(ziformula = ~ 1)))
+  expect_error(c(ext, other), "different fits")
+  expect_error(c(ext, data.frame(a = 1)), "only remedy tables")
+  ## a subset of the rows keeps its tie, and its remedies are listed once
+  expect_identical(nrow(c(ext, ext[1, ])), nrow(ext))
+  lost <- ext; attr(lost, "fit_id") <- NULL
+  expect_error(c(ext, lost), "lost what ties it to its fit")
+})

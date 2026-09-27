@@ -2,10 +2,13 @@
 % Please edit documentation in R/ilm_remedies.R, R/zzz-iml-aliases.R
 \name{ilm_remedy_table}
 \alias{ilm_remedy_table}
+\alias{c.ilm_remedies}
 \alias{iml_remedy_table}
 \title{A table of remedies from another package's diagnostics}
 \usage{
 ilm_remedy_table(object, check, status, tier, remedy, args = NULL)
+
+\method{c}{ilm_remedies}(...)
 }
 \arguments{
 \item{object}{The fitted \code{"ilm_model"} the remedies would refit.}
@@ -28,6 +31,9 @@ on.}
 hand. \code{NULL} makes every row by hand. The data and \code{verbose} are not
 arguments a remedy sets. A formula is evaluated where the model's own
 formula was written, so names in it mean what they mean there.}
+
+\item{...}{For \code{c()}: remedy tables for the same fit, from
+\code{\link[=ilm_remedies]{ilm_remedies()}} or \code{ilm_remedy_table()}.}
 }
 \value{
 A data frame of class \code{"ilm_remedies"}, as from \code{\link[=ilm_remedies]{ilm_remedies()}}.
@@ -56,6 +62,13 @@ A remedy that is not a refit of the model -- more simulations, another
 kind of fold, a recalibration -- is not something \code{\link[=ilm_apply_remedy]{ilm_apply_remedy()}} can
 make. List it by hand, with \code{args = NULL} for its row, or leave it to the
 package's own output.
+
+\code{c()} combines remedy tables for the same fit -- illume's own
+and other packages' -- into one list, numbered afresh: a change several
+lists name is listed once, with every check that named it, and the
+remedies are ordered by tier as in each list alone. Where two lists put
+one change in different tiers it takes the more cautious. Tables for
+different fits are not combined.
 }
 \examples{
 set.seed(2)
@@ -69,6 +82,8 @@ rem <- ilm_remedy_table(f, check = "pit_shape", status = "FAIL",
   args = list(list(family = "nbinom")))
 rem
 f2 <- ilm_apply_remedy(f, rem, 1)
+## one list, illume's remedies and the other package's together
+c(ilm_remedies(f), rem)
 }
 \seealso{
 \code{\link[=ilm_remedies]{ilm_remedies()}}, \code{\link[=ilm_apply_remedy]{ilm_apply_remedy()}}.

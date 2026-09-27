@@ -11,6 +11,11 @@
   a formula is read where the model's own was written, and a check may not
   take the name of one of illume's own. The `change` column is written from
   the arguments, never passed in. Calls on a fitted model are unchanged.
+* `c()` combines remedy tables for one fit -- illume's own and other
+  packages' -- into one numbered list: a change several lists name is
+  listed once with every check that named it, a check named twice appears
+  once, and where two lists put one change in different tiers it takes the
+  more cautious. Tables for different fits are not combined.
 * After a refit with a remedy for a check the fit does not make itself --
   another package's -- `ilm_apply_remedy()` says to run that check again on
   the new fit, as it does for `ilm_check_dispersion()` and the other

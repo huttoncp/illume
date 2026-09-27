@@ -619,7 +619,7 @@ ilm_remedies.ilm_model <- function(object, dispersion = NULL, zeros = NULL,
 ## illume's own are.
 #' @keywords internal
 #' @noRd
-ilm_rem_assemble <- function(object, rows) {
+ilm_rem_assemble <- function(object, rows, fit_id = ilm_rem_id(object)) {
   if (length(rows)) {
     tab <- data.frame(
       check  = vapply(rows, `[[`, "", "check"),
@@ -631,12 +631,19 @@ ilm_rem_assemble <- function(object, rows) {
     args <- lapply(rows, `[[`, "args")
     ## One remedy answering several checks is listed once: more restarts for
     ## the optimiser and the gradient, the penalty for every term at its edge.
+    ## A check named twice -- two lists of the same fit combined -- is named
+    ## once, and a change two sources put in different tiers takes the more
+    ## cautious: the tier says what may be tried without asking.
     key <- ifelse(nzchar(tab$change), tab$change, tab$remedy)
     first <- !duplicated(key)
     for (k in which(first)) {
       same <- which(key == key[k])
-      tab$check[k] <- paste(tab$check[same], collapse = ", ")
-      tab$status[k] <- paste(tab$status[same], collapse = ", ")
+      ck <- unlist(strsplit(tab$check[same], ", ", fixed = TRUE))
+      st <- unlist(strsplit(tab$status[same], ", ", fixed = TRUE))
+      keep <- !duplicated(ck)
+      tab$check[k] <- paste(ck[keep], collapse = ", ")
+      tab$status[k] <- paste(st[keep], collapse = ", ")
+      tab$tier[k] <- ilm_rem_tiers[max(match(tab$tier[same], ilm_rem_tiers))]
     }
     tab <- tab[first, , drop = FALSE]; args <- args[first]
     o <- order(match(tab$tier, ilm_rem_tiers), seq_len(nrow(tab)))
@@ -653,7 +660,7 @@ ilm_rem_assemble <- function(object, rows) {
   ## whole, and must not hand row 3's remedy the arguments of row 1
   names(args) <- as.character(tab$id)
   structure(tab, class = c("ilm_remedies", "data.frame"), args = args,
-            fit_id = ilm_rem_id(object))
+            fit_id = fit_id)
 }
 
 ## what a check can say when it names a remedy: an OK check names none
@@ -781,6 +788,44 @@ ilm_remedy_table <- function(object, check, status, tier, remedy, args = NULL) {
     list(check = check[i], status = status[i], tier = tier[i],
          remedy = remedy[i], args = args[[i]]))
   ilm_rem_assemble(object, rows)
+}
+
+#' @rdname ilm_remedy_table
+#' @details `c()` combines remedy tables for the same fit -- illume's own
+#'   and other packages' -- into one list, numbered afresh: a change several
+#'   lists name is listed once, with every check that named it, and the
+#'   remedies are ordered by tier as in each list alone. Where two lists put
+#'   one change in different tiers it takes the more cautious. Tables for
+#'   different fits are not combined.
+#' @param ... For `c()`: remedy tables for the same fit, from
+#'   [ilm_remedies()] or `ilm_remedy_table()`.
+#' @examples
+#' ## one list, illume's remedies and the other package's together
+#' c(ilm_remedies(f), rem)
+#' @export
+c.ilm_remedies <- function(...) {
+  tabs <- list(...)
+  tabs <- tabs[!vapply(tabs, is.null, TRUE)]
+  if (!all(vapply(tabs, inherits, TRUE, "ilm_remedies")))
+    stop("only remedy tables, from ilm_remedies() or ilm_remedy_table(), ",
+         "can be combined.", call. = FALSE)
+  ids <- lapply(tabs, attr, "fit_id")
+  if (any(vapply(ids, is.null, TRUE)) ||
+      any(vapply(tabs, function(t) is.null(attr(t, "args")), TRUE)))
+    stop("a remedy table has lost what ties it to its fit, as a subset of it ",
+         "does. Combine the whole tables.", call. = FALSE)
+  if (length(unique(ids)) > 1L)
+    stop("these remedy tables were listed for different fits, and only one ",
+         "fit's remedies can be combined.", call. = FALSE)
+  rows <- list()
+  for (t in tabs) {
+    a <- attr(t, "args")
+    for (i in seq_len(nrow(t)))
+      rows[[length(rows) + 1L]] <- list(
+        check = t$check[i], status = t$status[i], tier = t$tier[i],
+        remedy = t$remedy[i], args = a[[as.character(t$id[i])]])
+  }
+  ilm_rem_assemble(NULL, rows, fit_id = ids[[1L]])
 }
 
 #' @rdname ilm_remedies
