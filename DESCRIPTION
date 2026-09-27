@@ -1,14 +1,14 @@
 Package: illume
 Type: Package
-Title: A Unified Engine for Exploration and Frequentist Inference
+Title: A Unified Engine for Frequentist Inference
 Version: 0.0.8.9000
 Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
                   email = "craig.hutton@gmail.com")
 Description: A frequentist regression workflow built around inference rather
-    than prediction, together with the exploratory steps that precede it. One
-    engine fits gaussian, binomial, Poisson, negative binomial, multinomial,
-    beta, ordinal, zero-inflated, hurdle and accelerated failure time models by
+    than prediction. One engine fits gaussian, binomial, Poisson, negative
+    binomial, multinomial, beta, ordinal, zero-inflated, hurdle and
+    accelerated failure time models by
     approximate maximum likelihood using the Laplace approximation via 'RTMB',
     with 'lme4'-style formulas supporting crossed and nested random intercepts
     and slopes, penalised smooth terms via 'mgcv', non-constant dispersion,
