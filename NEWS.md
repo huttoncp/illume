@@ -7,6 +7,12 @@
   call the same functions. What a fitted model or an `ilm_emmeans()` result
   gets is unchanged; anything with no method is refused with a sentence
   saying what the function needs.
+* `ilm_apply_remedy()` takes a `reason`: why the remedy is being made, in a
+  sentence. It is kept in the new fit's `remedy_log`, in a `reason` column
+  beside the check, tier and change (`NA` where none was given), and the
+  refit's message repeats it, so the record of how a model was reached says
+  why each change was made as well as what it was. A log from an earlier
+  fit gains the column when the next remedy is applied.
 * A random effect's SD that the optimiser left short of zero is held as a
   variance at zero is. A random intercept beside an AR(1), whose correlation
   over time took up each series' level, stopped at an SD of 0.0204: above

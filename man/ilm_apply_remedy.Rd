@@ -5,7 +5,14 @@
 \alias{iml_apply_remedy}
 \title{Refit a model with one of its remedies}
 \usage{
-ilm_apply_remedy(object, remedies, which, data = NULL, verbose = FALSE)
+ilm_apply_remedy(
+  object,
+  remedies,
+  which,
+  data = NULL,
+  verbose = FALSE,
+  reason = NULL
+)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object, from the formula interface.}
@@ -21,10 +28,17 @@ not.}
 \item{data}{The data the model was fitted to, when it cannot be found.}
 
 \item{verbose}{Logical. Print the new fit's checks as it is fitted.}
+
+\item{reason}{Optional: why this remedy is being made, in a sentence --
+"the zero check failed and the excess zeros are structural", "a
+reviewer asked for the simpler model". It is kept in the new fit's
+\code{remedy_log} beside the remedy, so the record of how the model was
+reached says why each change was made as well as what it was.}
 }
 \value{
 The refitted model. Its \code{remedy_log} holds every remedy applied
-to reach it, in order: the check, status, tier, remedy and change.
+to reach it, in order: the check, status, tier, remedy and change, and
+the \code{reason} given for it (\code{NA} where none was).
 }
 \description{
 Makes one remedy from \code{\link[=ilm_remedies]{ilm_remedies()}}: refits the model through its own
@@ -47,7 +61,8 @@ d$y <- 1 + 0.5 * d$x + d$e - ave(d$e, d$g)   # no group effect at all
 f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 rem <- ilm_remedies(f)
 rem
-f2 <- ilm_apply_remedy(f, rem, 1)
+f2 <- ilm_apply_remedy(f, rem, 1,
+                       reason = "the groups were not expected to differ")
 f2$remedy_log
 }
 \seealso{
