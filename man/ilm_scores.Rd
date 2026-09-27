@@ -2,13 +2,22 @@
 % Please edit documentation in R/ilm_ic.R, R/zzz-iml-aliases.R
 \name{ilm_scores}
 \alias{ilm_scores}
+\alias{ilm_scores.default}
+\alias{ilm_scores.ilm_model}
 \alias{iml_scores}
 \title{Proper scoring rules for a categorical outcome}
 \usage{
-ilm_scores(object, groups = c("fitted", "typical"), conditional = NULL)
+ilm_scores(object, ...)
+
+\method{ilm_scores}{default}(object, ...)
+
+\method{ilm_scores}{ilm_model}(object, groups = c("fitted", "typical"), conditional = NULL, ...)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
+
+\item{...}{Arguments for methods. \code{ilm_scores()} is a generic, so a package
+whose own objects predict category probabilities can give them a method.}
 
 \item{groups}{\code{"fitted"} (the default) or \code{"typical"}: which random
 effects the probabilities being scored use, as in \code{\link[=ilm_fitted]{ilm_fitted()}}.}

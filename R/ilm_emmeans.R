@@ -519,6 +519,9 @@ ilm_contrast_matrix <- function(lab, method, ref = NULL) {
 #' @param level Confidence level for the family.
 #' @param nsim Draws used to find the studentized-maximum critical value.
 #' @param seed Random seed for that simulation.
+#' @param ... Arguments for methods. `ilm_contrast()` is a generic, so a
+#'   package whose own objects hold estimates with a joint covariance can give
+#'   them a method.
 #' @return A data frame with `contrast`, `estimate`, `se`, `lower`, `upper`,
 #'   `p_value`, `p_adj` and `adjust`.
 #' @seealso [ilm_emmeans()], [illumex::ilm_boot_diff()] for the same comparison made
@@ -530,14 +533,22 @@ ilm_contrast_matrix <- function(lab, method, ref = NULL) {
 #' fit <- ilm_model(y ~ g + x, data = d, family = "gaussian", verbose = FALSE)
 #' ilm_contrast(ilm_emmeans(fit, "g"))
 #' @export
-ilm_contrast <- function(object, method = c("pairwise", "trt.vs.ctrl", "poly"),
-                         ref = NULL,
-                         adjust = c("max_t", "bonferroni", "none"),
-                         level = 0.95, nsim = 20000L, seed = 1L) {
+ilm_contrast <- function(object, ...) UseMethod("ilm_contrast")
+
+#' @rdname ilm_contrast
+#' @export
+ilm_contrast.default <- function(object, ...)
+  stop("`object` must be an ilm_emmeans() result (or an object whose package ",
+       "gives ilm_contrast() a method), not ", class(object)[1], call. = FALSE)
+
+#' @rdname ilm_contrast
+#' @export
+ilm_contrast.ilm_emm <- function(object,
+                                 method = c("pairwise", "trt.vs.ctrl", "poly"),
+                                 ref = NULL,
+                                 adjust = c("max_t", "bonferroni", "none"),
+                                 level = 0.95, nsim = 20000L, seed = 1L, ...) {
   method <- match.arg(method); adjust <- match.arg(adjust)
-  if (!inherits(object, "ilm_emm"))
-    stop("`object` must be an ilm_emmeans() result, not ", class(object)[1],
-         call. = FALSE)
   sp <- attr(object, "specs")
   ## cell weights average each group over its own covariate mix, so a
   ## difference between two of them is not an adjusted comparison
