@@ -18,7 +18,8 @@ ilm_apply_remedy(
 \item{object}{A fitted \code{"ilm_model"} object, from the formula interface.}
 
 \item{remedies}{The list from \code{\link[=ilm_remedies]{ilm_remedies()}} for \code{object} that the
-remedy was chosen from. Required rather than recomputed, so the remedy
+remedy was chosen from -- whether illume's own, or another package's
+built with \code{\link[=ilm_remedy_table]{ilm_remedy_table()}}. Required rather than recomputed, so the remedy
 made is always the one that was read -- a list that includes the
 standalone checks numbers its remedies differently from one that does
 not.}

@@ -94,6 +94,7 @@ reference:
   - ilm_consistency
   - ilm_re_mahalanobis
   - ilm_remedies
+  - ilm_remedy_table
   - ilm_rqr
   - ilm_rqr_test
   - ilm_scores

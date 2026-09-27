@@ -361,6 +361,11 @@ iml_register_marginaleffects <- ilm_register_marginaleffects
 #' @export
 iml_remedies <- ilm_remedies
 
+#' @rdname ilm_remedy_table
+#' @usage NULL
+#' @export
+iml_remedy_table <- ilm_remedy_table
+
 #' @rdname ilm_robust
 #' @usage NULL
 #' @export
