@@ -1,6 +1,14 @@
 # illume 0.0.8.9000
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_interpret()` on an `ilm_dag_model()` describes the exposure's effect
+  and nothing else. It used to describe every coefficient of the fit in
+  causal language, so an adjustment covariate was said to "affect" the
+  outcome -- in the documented example a confounder with no arrow into the
+  outcome at all -- which the graph does not license (the "Table 2
+  fallacy"). The covariates are now named as adjusted for, with their
+  coefficients not interpreted, and when several adjustment sets identify
+  the effect the prose says which one it describes.
 * `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
   its methods return, so another package whose diagnostics name a remedy
   that is a refit of an illume model -- a negative binomial, a dispersion or
