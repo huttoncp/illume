@@ -4,7 +4,7 @@
 \name{illume-package}
 \alias{illume}
 \alias{illume-package}
-\title{illume: A Unified Engine for Exploration and Frequentist Inference}
+\title{illume: A Unified Engine for Frequentist Inference}
 \description{
 A frequentist regression workflow aimed at \strong{inference} rather than
 prediction, together with the exploratory steps that precede it. One engine

@@ -1,4 +1,4 @@
-#' illume: A Unified Engine for Exploration and Frequentist Inference
+#' illume: A Unified Engine for Frequentist Inference
 #'
 #' A frequentist regression workflow aimed at **inference** rather than
 #' prediction, together with the exploratory steps that precede it. One engine

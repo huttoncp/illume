@@ -78,7 +78,7 @@ Delete this file once the queue is empty.
   to that version's `NEWS.md`.
 - Every diagnostic names a remedy that exists in-package.
 - `ilm_*` prefix, sum-to-zero contrasts, bespoke in-package diagnostics.
-- Title, everywhere: **"A Unified Engine for Exploration and Frequentist
+- Title, everywhere: **"A Unified Engine for Frequentist
   Inference"** (DESCRIPTION and README both already updated).
 
 ## The lesson that keeps being confirmed
