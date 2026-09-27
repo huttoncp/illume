@@ -249,3 +249,31 @@ test_that("remedies belong to their fit, and the data are found or asked for", {
     detail = "largest |parameter correlation| = 0.970 (beta.(Intercept) <-> theta)")
   expect_match(al[[1L]]$remedy, "(beta.(Intercept) <-> theta)", fixed = TRUE)
 })
+
+test_that("a reason given for a remedy is kept in the log and said", {
+  d <- zero_data()
+  f <- suppressMessages(ilm_model(y ~ x + (1 | g) + (1 | h), data = d, verbose = FALSE))
+  r1 <- ilm_remedies(f)
+  i1 <- which(r1$change == "formula = y ~ x + (1 | h)")
+  expect_message(
+    f2 <- ilm_apply_remedy(f, r1, r1$id[i1],
+                           reason = "  the groups were not expected to differ "),
+    "reason given: the groups were not expected to differ\n", fixed = TRUE)
+  expect_identical(f2$remedy_log$reason, "the groups were not expected to differ")
+  ## a remedy made without one logs NA, and the log stays one table
+  r2 <- ilm_remedies(f2)
+  f3 <- suppressMessages(ilm_apply_remedy(f2, r2,
+                                          r2$id[r2$change == "formula = y ~ x"]))
+  expect_identical(f3$remedy_log$reason,
+                   c("the groups were not expected to differ", NA))
+  ## a log written before reasons were kept takes one without complaint
+  f2$remedy_log$reason <- NULL
+  f4 <- suppressMessages(ilm_apply_remedy(f2, r2,
+                                          r2$id[r2$change == "formula = y ~ x"],
+                                          reason = "simpler"))
+  expect_identical(f4$remedy_log$reason, c(NA, "simpler"))
+  expect_error(ilm_apply_remedy(f, r1, r1$id[i1], reason = c("a", "b")),
+               "single sentence")
+  expect_error(ilm_apply_remedy(f, r1, r1$id[i1], reason = "  "),
+               "single sentence")
+})

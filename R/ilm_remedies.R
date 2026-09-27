@@ -675,8 +675,14 @@ print.ilm_remedies <- function(x, ...) {
 #' @param which The `id` of the remedy to make.
 #' @param data The data the model was fitted to, when it cannot be found.
 #' @param verbose Logical. Print the new fit's checks as it is fitted.
+#' @param reason Optional: why this remedy is being made, in a sentence --
+#'   "the zero check failed and the excess zeros are structural", "a
+#'   reviewer asked for the simpler model". It is kept in the new fit's
+#'   `remedy_log` beside the remedy, so the record of how the model was
+#'   reached says why each change was made as well as what it was.
 #' @return The refitted model. Its `remedy_log` holds every remedy applied
-#'   to reach it, in order: the check, status, tier, remedy and change.
+#'   to reach it, in order: the check, status, tier, remedy and change, and
+#'   the `reason` given for it (`NA` where none was).
 #' @seealso [ilm_remedies()].
 #' @examples
 #' set.seed(1)
@@ -686,14 +692,22 @@ print.ilm_remedies <- function(x, ...) {
 #' f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 #' rem <- ilm_remedies(f)
 #' rem
-#' f2 <- ilm_apply_remedy(f, rem, 1)
+#' f2 <- ilm_apply_remedy(f, rem, 1,
+#'                        reason = "the groups were not expected to differ")
 #' f2$remedy_log
 #' @export
 ilm_apply_remedy <- function(object, remedies, which, data = NULL,
-                             verbose = FALSE) {
+                             verbose = FALSE, reason = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
+  if (!is.null(reason)) {
+    if (!is.character(reason) || length(reason) != 1L || is.na(reason) ||
+        !nzchar(trimws(reason)))
+      stop("`reason` must be a single sentence saying why the remedy is made, ",
+           "or NULL.", call. = FALSE)
+    reason <- trimws(reason)
+  }
   cl <- object$call
   if (is.null(cl) || !inherits(object$formula, "formula"))
     stop("a remedy is made by refitting through the formula interface, and ",
@@ -750,10 +764,15 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
   ## remedy find the data where this one did
   fit$call$data <- cl$data
   fit$call$verbose <- cl$verbose
-  fit$remedy_log <- rbind(object$remedy_log, data.frame(
+  ## a log from before reasons were kept has no column for them
+  old <- object$remedy_log
+  if (!is.null(old) && is.null(old$reason)) old$reason <- NA_character_
+  fit$remedy_log <- rbind(old, data.frame(
     check = remedies$check[i], status = remedies$status[i],
     tier = remedies$tier[i], remedy = remedies$remedy[i],
-    change = remedies$change[i], stringsAsFactors = FALSE))
+    change = remedies$change[i],
+    reason = if (is.null(reason)) NA_character_ else reason,
+    stringsAsFactors = FALSE))
   if (nrow(fit$X) != nrow(object$X))
     warning("the refit used ", nrow(fit$X), " rows against the original ",
             nrow(object$X), ": a variable the remedy brought in has missing ",
@@ -773,6 +792,7 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
   }, "")
   bad <- ck[ck$status != "OK", , drop = FALSE]
   message("ilm_apply_remedy(): refitted with ", remedies$change[i], ".\n",
+          if (!is.null(reason)) paste0("  reason given: ", reason, "\n"),
           paste(unique(now), collapse = "\n"), "\n",
           if (nrow(bad)) paste0("  not OK after the refit: ",
                                 paste(sprintf("%s (%s)", bad$check, bad$status), collapse = ", "))
