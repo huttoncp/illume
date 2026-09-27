@@ -23,6 +23,12 @@
 * The structural tier of a remedy includes a change in how the variances
   are estimated, such as REML in place of maximum likelihood: the model and
   what its fixed effects mean stay the same.
+* `ilm_interpret()` no longer says "The interval includes zero" about a
+  factor with three or more levels, whose sentence shows no interval: the
+  flag came from the difference between the last level and the first, which
+  the sentence never reported. The verdict there is the joint test of every
+  level, as before. The README's worked example uses columns `ilm_sim()`
+  makes, and income on a scale the model fits well. Found by another agent.
 * `ilm_scores()`, `ilm_calibration()` and `ilm_contrast()` are S3 generics,
   so a package whose own objects predict category probabilities, or hold
   estimates with a joint covariance, can give them methods and its users can

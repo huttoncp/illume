@@ -315,7 +315,9 @@ ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4) {
   mk <- function(i) data.frame(estimate = est[i], se = se[i],
                                lower = est[i] - crit * se[i],
                                upper = est[i] + crit * se[i])
-  pred <- cbind(data.frame(value = rep(as.character(values), each = nc),
+  ## a number stays a number, and a level its label
+  pred <- cbind(data.frame(value = rep(if (is.numeric(x)) values
+                                       else as.character(values), each = nc),
                            category = if (is.null(cats)) NA_character_
                                       else rep(cats, length(values)),
                            stringsAsFactors = FALSE), mk(seq_len(np)))
@@ -442,9 +444,14 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
       body <- sprintf("Setting %s to '%s' rather than '%s' %s %s from %s to %s: by %s%s.",
                       vn, vals[2], vals[1], if (up) "raises" else "lowers", what,
                       fmt(e[1]), fmt(e[2]), mag, ci)
-    else
+    else {
       body <- sprintf("%s is %s.", ilm_cap(what),
                       ilm_and(sprintf("%s for '%s'", fmt(e), vals)))
+      ## three or more levels: no interval is shown, so none may be spoken
+      ## of below -- the verdict there is the joint test of every level, and
+      ## the last-against-first interval was never the statement's to make
+      ci_note <- FALSE
+    }
   } else {
     pr <- ap$pred
     ks <- ap$cats
