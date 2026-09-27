@@ -1221,6 +1221,12 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
       eff <- if (car) rho^stats::median(ar$gap) else rho
       if (abs(eff) > 0.99 || any(sqrt(pmax(diag(Sa), 0)) < 1e-3) || flat)
         flagged <- c(flagged, "ar")
+      ## a gaussian AR(1)'s single SD under the wider line is a candidate,
+      ## held only where the likelihood is flat below it (ilm_re_flat)
+      else if (identical(ar$type, "ar1") && identical(fam$name, "gaussian") &&
+               nrow(Sa) == 1L && is.finite(ysd) &&
+               isTRUE(sqrt(max(Sa[1, 1], 0)) / ysd < ilm_ar_sd_limit))
+        maybe <- c(maybe, "ar")
     }
   }
   ## A dispersion at its unbounded limit is the same kind of edge: the
@@ -1266,7 +1272,25 @@ ilm_disp_limit <- 1e-2
 ## below 1e-3, here of the response's SD so that the line does not depend on
 ## its units -- and the same flatness test, with log sigma pushed 3 LOWER
 ## (studies/scripts/dispersion_limit_gaussian.R).
-ilm_sigma_limit <- 1e-3
+##
+## The line was 1e-3 of the response's SD, and the optimiser can stop well
+## above it on the flat likelihood: at 0.023 to 0.05 of it in a panel of
+## noise-free AR(1) series, with draws of sigma to 1e14 and beyond. Measured
+## on 6,300 gaussian fits (studies/scripts/sigma_limit.R): no fit the
+## flatness test calls flat had sigma above 0.107 of sd(y), and no line up to
+## 0.2 held a fit that was not at its boundary, so the line is 0.2 -- the
+## flatness test does the work, the line keeps it to small sigmas.
+ilm_sigma_limit <- 0.2
+
+## A GAUSSIAN AR(1)'s SD SHORT OF ZERO, the mirror case: with weak
+## correlation the residual takes up the latent's variance, and its SD stops
+## short of zero on a flat likelihood. Held by the random-effect SD's rule --
+## below ilm_ar_sd_limit of sd(y), and the objective moving by at most
+## ilm_re_flat_tol with its log SD pushed 3 lower -- measured on the same
+## 6,300 fits: no false hold at any line, 1,363 held against 1,267 at 1e-3.
+## Gaussian responses only; for other families the latent's scale is the
+## link's, and that case is not yet measured.
+ilm_ar_sd_limit <- 0.2
 
 ## ...and the likelihood flat beyond it: pushing the log dispersion 3 further
 ## -- k or phi twenty times larger -- changes the objective, with the random
@@ -1290,6 +1314,7 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
   f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
   ## the tape last evaluated at the pushed point; put it back at the optimum
   invisible(tryCatch(obj$fn(par), error = function(e) NULL))
+  cb$push[["dispersion"]] <- f1 - f0
   if (isTRUE(f1 - f0 <= ilm_disp_flat_tol)) return(cb)
   cb$flagged <- setdiff(cb$flagged, "dispersion")
   cb$blocks[["dispersion"]] <- NULL
@@ -1321,11 +1346,30 @@ ilm_re_flat <- function(obj, par, cb) {
   f0 <- tryCatch(obj$fn(par), error = function(e) NA_real_)
   for (nm in cb$maybe) {
     id <- cb$blocks[[nm]]
+    ## an AR block is its log SD and its correlation; only the SD is pushed
+    if (identical(nm, "ar")) id <- id[names(par)[id] == "lchol_ar"]
     p2 <- par; p2[id] <- p2[id] - 3
     f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
+    cb$push[[nm]] <- f1 - f0
     if (isTRUE(f1 - f0 <= ilm_re_flat_tol)) {
       cb$flagged <- c(cb$flagged, nm)
       cb$force <- c(cb$force, nm)
+    }
+  }
+  ## A gaussian residual SD and an AR SD can both look flat when the noise
+  ## and the latent are interchangeable, their sum determined; holding both
+  ## would set the total to zero, which the data refute (in 221 such fits,
+  ## pushing both together was never flat). Only the one whose own push
+  ## moves the objective least is held.
+  if ("ar" %in% cb$force && "dispersion" %in% cb$flagged &&
+      is.finite(cb$push[["ar"]] %||% NA) && is.finite(cb$push[["dispersion"]] %||% NA)) {
+    drop <- if (cb$push[["dispersion"]] <= cb$push[["ar"]]) "ar" else "dispersion"
+    cb$flagged <- setdiff(cb$flagged, drop)
+    cb$force <- setdiff(cb$force, drop)
+    if (identical(drop, "dispersion")) {
+      id <- cb$blocks[["dispersion"]]
+      cb$blocks[["dispersion"]] <- NULL
+      cb$keep <- sort(c(cb$keep, id))
     }
   }
   ## the tape last evaluated at a pushed point; put it back at the optimum
