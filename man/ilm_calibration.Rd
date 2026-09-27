@@ -2,13 +2,23 @@
 % Please edit documentation in R/ilm_diagnostics.R, R/zzz-iml-aliases.R
 \name{ilm_calibration}
 \alias{ilm_calibration}
+\alias{ilm_calibration.default}
+\alias{ilm_calibration.ilm_model}
 \alias{iml_calibration}
 \title{Calibration of predicted probabilities}
 \usage{
-ilm_calibration(object, nbins = 10L, B = 200L, seed = 1L)
+ilm_calibration(object, ...)
+
+\method{ilm_calibration}{default}(object, ...)
+
+\method{ilm_calibration}{ilm_model}(object, nbins = 10L, B = 200L, seed = 1L, ...)
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
+
+\item{...}{Arguments for methods. \code{ilm_calibration()} is a generic, so a
+package whose own objects predict category probabilities can give them a
+method.}
 
 \item{nbins}{Integer. Number of bins of predicted probability.}
 

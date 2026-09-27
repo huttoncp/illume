@@ -283,10 +283,25 @@ ilm_sim_from_P <- function(P, B, seed = 1L) {
 #' @param nbins Integer. Number of bins of predicted probability.
 #' @param B Integer. Simulated datasets for the band.
 #' @param seed Integer. Random seed.
+#' @param ... Arguments for methods. `ilm_calibration()` is a generic, so a
+#'   package whose own objects predict category probabilities can give them a
+#'   method.
 #' @return A list with one element per category, each holding mean predicted and
 #'   observed proportions per bin plus the simulated interval.
 #' @export
-ilm_calibration <- function(object, nbins = 10L, B = 200L, seed = 1L) {
+ilm_calibration <- function(object, ...) UseMethod("ilm_calibration")
+
+#' @rdname ilm_calibration
+#' @export
+ilm_calibration.default <- function(object, ...)
+  stop("ilm_calibration() compares a fitted model's predicted probabilities ",
+       "with what was observed, so it needs a fitted ilm_model (or an object ",
+       "whose package gives it a method), not ", class(object)[1], call. = FALSE)
+
+#' @rdname ilm_calibration
+#' @export
+ilm_calibration.ilm_model <- function(object, nbins = 10L, B = 200L, seed = 1L,
+                                      ...) {
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   ## Calibration compares predicted PROBABILITIES against observed frequencies,
   ## so it needs a model that predicts a probability. For gaussian, Poisson and
