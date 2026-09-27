@@ -548,6 +548,7 @@ ilm_contrast.ilm_emm <- function(object,
                                  ref = NULL,
                                  adjust = c("max_t", "bonferroni", "none"),
                                  level = 0.95, nsim = 20000L, seed = 1L, ...) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   method <- match.arg(method); adjust <- match.arg(adjust)
   sp <- attr(object, "specs")
   ## cell weights average each group over its own covariate mix, so a

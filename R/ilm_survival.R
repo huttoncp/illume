@@ -208,6 +208,7 @@ ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
                               colour = "#2C7FB8", fill = "grey85",
                               alpha = NULL, size = 1, main = NULL,
                               verbose = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)

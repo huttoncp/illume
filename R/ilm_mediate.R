@@ -129,6 +129,7 @@ ilm_mediate <- function(model_m, model_y, treat, mediator,
                         control_value = NULL, treat_value = NULL,
                         sims = 1000L, level = 0.95, seed = 1L,
                         progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   for (nm in c("model_m", "model_y")) {
     o <- get(nm)
     if (!inherits(o, "ilm_model"))

@@ -117,6 +117,7 @@ ilm_check_collinearity <- function(object, warn = sqrt(5), fail = sqrt(10)) {
 #' ilm_check_predictive(f, B = 30)
 #' @export
 ilm_check_predictive <- function(object, B = 50L, seed = 1L, plot = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -201,6 +202,7 @@ ilm_check_predictive <- function(object, B = 50L, seed = 1L, plot = TRUE) {
 #' ilm_check_dispersion(f, B = 200)
 #' @export
 ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -283,6 +285,7 @@ ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
 #' ilm_check_zeros(f, B = 200)
 #' @export
 ilm_check_zeros <- function(object, B = 200L, seed = 1L) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -469,6 +472,7 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 ilm_check_variance <- function(object, by = NULL, B = 100L, seed = 1L,
                                ncores = 1L, plot = TRUE, verbose = TRUE,
                                progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)

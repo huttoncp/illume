@@ -23,6 +23,22 @@
 * The structural tier of a remedy includes a change in how the variances
   are estimated, such as REML in place of maximum likelihood: the model and
   what its fixed effects mean stay the same.
+* A function given a seed puts the user's random-number stream back as it
+  leaves -- as it was, or absent if it was absent. Every function with a
+  `seed` argument set it and left the stream there, `predict()` included
+  (its `seed` defaults to 1), so the user's next random draw came out the
+  same whatever came before it. Seeded results are unchanged; with
+  `seed = NULL` a function draws from the user's stream, as any R code
+  does. The 29 functions: `predict()`, `ilm_appraise()`, `ilm_calibration()`,
+  `ilm_check_ar()`, `ilm_check_covariate()`, `ilm_check_dispersion()`,
+  `ilm_check_omitted()`, `ilm_check_predictive()`,
+  `ilm_check_proportional()`, `ilm_check_variance()`, `ilm_check_zeros()`,
+  `ilm_consistency()`, `ilm_contrast()`, `ilm_draws()`, `ilm_impute()`,
+  `ilm_mediate()`, `ilm_moderation()`, `ilm_pb_lrt()`, `ilm_plot_acf()`,
+  `ilm_plot_survival()`, `ilm_power()`, `ilm_power_design()`, `ilm_rqr()`,
+  `ilm_rqr_test()`, `ilm_scaffold()`, `ilm_scenario()`, `ilm_simulate()`,
+  `ilm_surv()` and `ilm_variogram()`; a test fails if a new seeded function
+  does not do the same.
 * `ilm_refit(fit, data = NULL, y = NULL)` fits the same model again: to a
   new response for the rows it was fitted to, in the layout
   `ilm_simulate()` returns -- the parametric bootstrap's refit, censoring

@@ -175,6 +175,7 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
                          within = NULL, contrasts = NULL, seed = 1L,
                          verbose = TRUE, categories = NULL,
                          thresholds = NULL, reml = FALSE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(formula, "formula"))
     stop("`formula` must be a formula, not ", class(formula)[1], call. = FALSE)
   if (!is.list(design) || !length(design) || is.null(names(design)) ||
@@ -1086,6 +1087,7 @@ ilm_power_design <- function(formula, design, n_unit, family = "gaussian",
                              seed = 1L, progress = NULL, verbose = TRUE,
                              categories = NULL, thresholds = NULL,
                              reml = FALSE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   n_unit <- sort(unique(as.integer(n_unit)))
   if (any(is.na(n_unit)) || any(n_unit < 4L))
     stop("`n_unit` below 4 is not a study", call. = FALSE)

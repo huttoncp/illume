@@ -583,6 +583,7 @@ ilm_ar_report <- function(spec, which = "acf") {
 ilm_check_ar <- function(object, time, group, maxlag = 8L, B = 30L,
                          ncores = 1L, seed = 1L, verbose = TRUE, plot = FALSE,
                          progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   spec <- ilm_ar_envelope(object, time, group, maxlag, B, ncores, seed,
                           progress = progress)
   if (verbose) ilm_ar_report(spec, "acf")
