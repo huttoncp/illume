@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * `ilm_rows_used()` says which rows a model used: the rows it was given, the
   rows it kept, the rows missing values took and the columns they were
   missing in, and any rows with a weight of zero (used, contributing
