@@ -1,6 +1,14 @@
 # illume 0.0.8.9003
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_rows_used()` says which rows a model used: the rows it was given, the
+  rows it kept, the rows missing values took and the columns they were
+  missing in, and any rows with a weight of zero (used, contributing
+  nothing). For an `ilm_dag_model()` it gives one row per adjustment set,
+  since sets adjust for different columns and can lose different rows. The
+  rows themselves are stats' own record, `stats::na.action(fit)`, which works
+  on every fit. `print()` and `summary()` now say how many rows missing
+  values took, and from which columns, where they took any.
 * Three variance hold lines for gaussian responses, each measured against
   the response's SD so that none depends on its units, and each holding a
   term only where the likelihood is flat below it, as before:

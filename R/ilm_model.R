@@ -943,6 +943,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fit$bars      <- bars
   fit$na.action <- attr(mf, "na.action")
   fit$n_dropped <- n_drop
+  ## the counts a table of the rows used is made from: rows in, rows kept,
+  ## and the columns the dropped rows were missing in (ilm_rows_used())
+  fit$rows      <- ilm_rows_record(data, mf, all.vars(form_all), fit$weights)
   fit$ylevels   <- ylevels
   ## map each fixed-effect column back to its formula term, so per-term
   ## hypotheses can be blocked across the category dimension later
