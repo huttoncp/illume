@@ -58,6 +58,7 @@
 #' @export
 ilm_rqr <- function(object, groups = c("fitted", "typical"), seed = 1L,
                     conditional = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   groups <- ilm_groups_arg(groups, c("fitted", "typical"), !missing(groups),
                            "ilm_rqr()", conditional, "conditional",
                            c(`TRUE` = "fitted", `FALSE` = "typical"))
@@ -302,6 +303,7 @@ ilm_calibration.default <- function(object, ...)
 #' @export
 ilm_calibration.ilm_model <- function(object, nbins = 10L, B = 200L, seed = 1L,
                                       ...) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   ## Calibration compares predicted PROBABILITIES against observed frequencies,
   ## so it needs a model that predicts a probability. For gaussian, Poisson and
@@ -449,6 +451,7 @@ ilm_re_mahalanobis <- function(object, term = NULL) {
 #' @export
 ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
                           stat = function(u) mean(u), verbose = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   obs <- stat(ilm_rqr(object, seed = seed))
   ys <- ilm_sim_cond(object, B, seed + 1L)
   ## the same model, every part of it -- see ilm_refit_stub()
@@ -516,7 +519,8 @@ ilm_rqr_test <- function(object, B = 30L, ncores = 1L, seed = 1L,
 #'   [ilm_check_omitted()] for omitted variables.
 #' @export
 ilm_appraise <- function(object, nbins = 10L, B = 200L, seed = 1L, ...) {
-  op <- par(mfrow = c(2, 3), mar = c(4, 4, 3, 1), cex = 0.8); on.exit(par(op))
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
+  op <- par(mfrow = c(2, 3), mar = c(4, 4, 3, 1), cex = 0.8); on.exit(par(op), add = TRUE)
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   mn <- identical(fam, "multinomial")
   u <- ilm_rqr(object, seed = seed); z <- qnorm(pmin(pmax(u, 1e-6), 1 - 1e-6))
@@ -716,6 +720,7 @@ ilm_align_rows <- function(object, x, name = "x") {
 #' @export
 ilm_check_covariate <- function(object, x, name = NULL, nbin = 5L, B = 30L,
                                  ncores = 1L, seed = 1L, verbose = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (is.null(name)) name <- deparse(substitute(x))
   ## the residuals come from the rows the fit kept, so the variable has to as
   ## well -- otherwise tapply() below fails on a length mismatch
@@ -783,6 +788,7 @@ ilm_check_covariate <- function(object, x, name = NULL, nbin = 5L, B = 30L,
 #' @export
 ilm_check_omitted <- function(object, data, vars = NULL, B = 30L, ncores = 1L,
                                seed = 1L, verbose = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
   ## Align once, here, rather than letting each column fail separately: the fit

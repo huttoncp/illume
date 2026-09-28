@@ -41,7 +41,10 @@ enough elsewhere.}
 \code{"auto"}, \code{"satterthwaite"}, \code{"kenward-roger"}, \code{"residual"},
 \code{"asymptotic"}, or a single number. See \code{\link[=ilm_denom_df]{ilm_denom_df()}}. \code{"auto"} gives
 an exact t where nothing was integrated out, Satterthwaite for a gaussian
-mixed model, and a z test otherwise.}
+mixed model, and a z test otherwise. A method named for a fit it does
+not apply to stops with the reason. A slope whose Satterthwaite df
+cannot be formed is tested as z, with a warning, and the printed header
+names it and why.}
 }
 \value{
 A data frame of class \code{"ilm_emm"}, one row per level of \code{specs},

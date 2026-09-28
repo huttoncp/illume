@@ -1,6 +1,14 @@
-# illume 0.0.8.9000
+# illume 0.0.8.9001
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_interpret()` on an `ilm_dag_model()` describes the exposure's effect
+  and nothing else. It used to describe every coefficient of the fit in
+  causal language, so an adjustment covariate was said to "affect" the
+  outcome -- in the documented example a confounder with no arrow into the
+  outcome at all -- which the graph does not license (the "Table 2
+  fallacy"). The covariates are now named as adjusted for, with their
+  coefficients not interpreted, and when several adjustment sets identify
+  the effect the prose says which one it describes.
 * A gaussian sigma or other dispersion at its limit is held also in a fit
   that stopped short of a stationary point, in the covariance TMB reports
   there. It was left unheld -- while the checks said it was held -- and its
@@ -47,6 +55,37 @@
 * The structural tier of a remedy includes a change in how the variances
   are estimated, such as REML in place of maximum likelihood: the model and
   what its fixed effects mean stay the same.
+* A function given a seed puts the user's random-number stream back as it
+  leaves -- as it was, or absent if it was absent. Every function with a
+  `seed` argument set it and left the stream there, `predict()` included
+  (its `seed` defaults to 1), so the user's next random draw came out the
+  same whatever came before it. Seeded results are unchanged; with
+  `seed = NULL` a function draws from the user's stream, as any R code
+  does. The 29 functions: `predict()`, `ilm_appraise()`, `ilm_calibration()`,
+  `ilm_check_ar()`, `ilm_check_covariate()`, `ilm_check_dispersion()`,
+  `ilm_check_omitted()`, `ilm_check_predictive()`,
+  `ilm_check_proportional()`, `ilm_check_variance()`, `ilm_check_zeros()`,
+  `ilm_consistency()`, `ilm_contrast()`, `ilm_draws()`, `ilm_impute()`,
+  `ilm_mediate()`, `ilm_moderation()`, `ilm_pb_lrt()`, `ilm_plot_acf()`,
+  `ilm_plot_survival()`, `ilm_power()`, `ilm_power_design()`, `ilm_rqr()`,
+  `ilm_rqr_test()`, `ilm_scaffold()`, `ilm_scenario()`, `ilm_simulate()`,
+  `ilm_surv()` and `ilm_variogram()`; a test fails if a new seeded function
+  does not do the same.
+* `ilm_refit(fit, data = NULL, y = NULL)` fits the same model again: to a
+  new response for the rows it was fitted to, in the layout
+  `ilm_simulate()` returns -- the parametric bootstrap's refit, censoring
+  carried as the data were -- or to another data set, rebuilt from the
+  formula so levels, smooth bases and a correlation over time's cells come
+  from the new rows. The result is a full fit, with every method a fit from
+  `ilm_model()` has. A correlation over time given as vectors cannot follow
+  the model to new data, and the function says to give it by name,
+  `ilm_ar1(~ time | group)`.
+* `ilm_interpret()` no longer says "The interval includes zero" about a
+  factor with three or more levels, whose sentence shows no interval: the
+  flag came from the difference between the last level and the first, which
+  the sentence never reported. The verdict there is the joint test of every
+  level, as before. The README's worked example uses columns `ilm_sim()`
+  makes, and income on a scale the model fits well. Found by another agent.
 * `ilm_scores()`, `ilm_calibration()` and `ilm_contrast()` are S3 generics,
   so a package whose own objects predict category probabilities, or hold
   estimates with a joint covariance, can give them methods and its users can
@@ -63,6 +102,29 @@
   entry each, under stable keys (`Kenward1997`, `vanBuuren2011`) that
   documents can cite. A test keeps it and the `@references` blocks in step
   both ways.
+* `ilm_contrast()` of an `ilm_trends()` result tests the differences between
+  slopes on the slopes' own df method. With Satterthwaite's or Kenward-Roger's
+  df the slopes were t tests and their differences z tests, so the same
+  analysis used two references; each difference now gets its own df by the
+  same method, matching `emmeans` on an `lmerTest` fit (Satterthwaite) and
+  a `pbkrtest` one (Kenward-Roger). Contrasts gain a `df` column and a
+  header naming the reference; under `adjust = "max_t"` the joint reference
+  is a multivariate t on the smallest of the contrasts' df. Contrasts of
+  `ilm_emmeans()` means are unchanged.
+* A slope or contrast whose Satterthwaite df cannot be formed -- its variance
+  is zero, or the variance components have no usable covariance -- is a z
+  test that says so: a warning names the rows and the reason, and so does
+  the printed header. It used to become a z test silently, and when the
+  first row did, every row did. `ilm_denom_df()` returns `method =
+  "asymptotic"` and a `reason` in those cases, where it once called an
+  infinite df Satterthwaite's. A df method named in `ilm_trends()` for a fit
+  it does not apply to, such as `"satterthwaite"` for a Poisson model, now
+  stops with the reason, as `"kenward-roger"` always has: such a call used
+  to return z tests without saying so, and code that relied on it will now
+  stop.
+* `ilm_interpret()`'s few-groups caveat reads "with 30 groups of `id` a test
+  of an effect that varies between groups can run somewhat liberal", where
+  it read "one for an effect", which was a slip.
 * A random effect's SD that the optimiser left short of zero is held as a
   variance at zero is. A random intercept beside an AR(1), whose correlation
   over time took up each series' level, stopped at an SD of 0.0204: above

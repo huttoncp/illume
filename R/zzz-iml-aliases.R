@@ -346,6 +346,11 @@ iml_rdd <- ilm_rdd
 #' @export
 iml_re_mahalanobis <- ilm_re_mahalanobis
 
+#' @rdname ilm_refit
+#' @usage NULL
+#' @export
+iml_refit <- ilm_refit
+
 #' @rdname ilm_register_insight
 #' @usage NULL
 #' @export

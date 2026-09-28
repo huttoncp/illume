@@ -630,6 +630,7 @@ predict.ilm_model <- function(object, newdata = NULL,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L,
                          marginal = NULL, ...) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   type <- match.arg(type); interval <- match.arg(interval)
   groups <- ilm_groups_arg(groups, c("typical", "population", "fitted"),
                            !missing(groups), "predict()", marginal, "marginal",

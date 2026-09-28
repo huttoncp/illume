@@ -187,6 +187,7 @@ ilm_plot_acf <- function(object, time, group, maxlag = 8L, B = 100L,
                          which = "both", ncores = 1L, seed = 1L,
                          colour = "grey25", fill = "grey85", alpha = NULL,
                          size = 1, main = NULL, verbose = FALSE, ...) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (length(which) != 1L || !which %in% c("both", "acf", "pacf"))
     stop("unknown `which`: ", paste(sQuote(which), collapse = ", "),
          ". Options are 'both', 'acf' and 'pacf'.", call. = FALSE)

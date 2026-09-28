@@ -315,7 +315,9 @@ ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4) {
   mk <- function(i) data.frame(estimate = est[i], se = se[i],
                                lower = est[i] - crit * se[i],
                                upper = est[i] + crit * se[i])
-  pred <- cbind(data.frame(value = rep(as.character(values), each = nc),
+  ## a number stays a number, and a level its label
+  pred <- cbind(data.frame(value = rep(if (is.numeric(x)) values
+                                       else as.character(values), each = nc),
                            category = if (is.null(cats)) NA_character_
                                       else rep(cats, length(values)),
                            stringsAsFactors = FALSE), mk(seq_len(np)))
@@ -442,9 +444,14 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
       body <- sprintf("Setting %s to '%s' rather than '%s' %s %s from %s to %s: by %s%s.",
                       vn, vals[2], vals[1], if (up) "raises" else "lowers", what,
                       fmt(e[1]), fmt(e[2]), mag, ci)
-    else
+    else {
       body <- sprintf("%s is %s.", ilm_cap(what),
                       ilm_and(sprintf("%s for '%s'", fmt(e), vals)))
+      ## three or more levels: no interval is shown, so none may be spoken
+      ## of below -- the verdict there is the joint test of every level, and
+      ## the last-against-first interval was never the statement's to make
+      ci_note <- FALSE
+    }
   } else {
     pr <- ap$pred
     ks <- ap$cats
@@ -668,7 +675,11 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   cats <- if (multi) object$ylevels[seq_len(object$C)] else NA_character_
   xn <- colnames(object$X)
   lines <- character()
+  ## the terms to describe: every one, unless a caller that knows which are
+  ## the question -- ilm_interpret.ilm_dag_model(), the exposure's -- says
+  only <- list(...)[[".terms"]]
   for (v in fixed) {
+    if (!is.null(only) && !v %in% only) next
     k <- ilm_term_cols(object, v)
     if (!length(k)) next
     ## the label keeps its backticks; the model frame knows the plain name
@@ -829,7 +840,7 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     ng <- min(object$nlk[gk])
     if (is.finite(ng) && ng < 100L)
       cav <- c(cav, sprintf(
-        "The tests above use a large-sample reference, and with %d groups of `%s` one for an effect that varies between groups can run somewhat liberal. For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value by simulation%s.",
+        "The tests above use a large-sample reference, and with %d groups of `%s` a test of an effect that varies between groups can run somewhat liberal. For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value by simulation%s.",
         ng, names(object$re)[gk][which.min(object$nlk[gk])],
         if (identical(fam, "gaussian"))
           ", and ilm_denom_df() gives finite degrees of freedom" else ""))
@@ -864,16 +875,37 @@ ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
       family = NULL, causal = FALSE, object_class = "ilm_dag_model"),
       class = "ilm_interpretation"))
   }
-  ## a valid adjustment set is what licenses causal language
+  ## A valid adjustment set licenses causal language for the EXPOSURE, and
+  ## for nothing else: the covariates are in the model to close back-door
+  ## paths, and their coefficients are not their effects on the outcome --
+  ## a confounder with no arrow into the outcome can carry a large one. So
+  ## only the exposure's terms are described, and the covariates are named as
+  ## what they are (the "Table 2 fallacy" is reading them as effects).
   lic <- is.null(causal) || isTRUE(causal)
-  base <- ilm_interpret(object$fits[[1]], causal = lic, ame = ame,
-                        digits = digits)
+  fit1 <- object$fits[[1]]
+  tl <- attr(stats::terms(fit1), "term.labels")
+  tl <- setdiff(tl, grep("\\|", tl, value = TRUE))
+  mine <- vapply(tl, function(v)
+    object$exposure %in% ilm_unbq(strsplit(v, ":", fixed = TRUE)[[1]]), TRUE)
+  base <- ilm_interpret(fit1, causal = lic, ame = ame, digits = digits,
+                        .terms = tl[mine])
   s <- base$sections
   zz <- object$sets[[1]]
+  ns <- length(object$sets)
   s$model <- paste(sprintf(
-    "The effect of %s on %s, identified by adjusting for %s -- a minimal sufficient set under the supplied causal graph.",
+    "The effect of %s on %s, identified by adjusting for %s -- %s under the supplied causal graph%s.",
     object$exposure, object$outcome,
-    if (length(zz)) paste(zz, collapse = ", ") else "nothing"), s$model)
+    if (length(zz)) paste(zz, collapse = ", ") else "nothing",
+    if (ns > 1L) sprintf("the first of %d minimal sufficient sets", ns)
+    else "a minimal sufficient set",
+    if (ns > 1L) ", and the one described below; every set's estimate is under How far to trust it"
+    else ""), s$model)
+  if (length(zz))
+    s$effects <- c(s$effects, sprintf(
+      "Adjusted for %s, to close the back-door paths the graph identifies. %s not %s effect%s on %s and %s not interpreted here.",
+      ilm_and(zz), if (length(zz) == 1L) "Its coefficient is" else "Their coefficients are",
+      if (length(zz) == 1L) "its" else "their", if (length(zz) == 1L) "" else "s",
+      object$outcome, if (length(zz) == 1L) "is" else "are"))
 
   if (!is.null(object$dag_test)) {
     v <- attr(object$dag_test, "verdict")

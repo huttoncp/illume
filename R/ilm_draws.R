@@ -112,6 +112,7 @@
 ilm_draws <- function(object, nsim = 1000L, seed = NULL,
                       given = c("none", "theta", "parameters"), blocks = NULL,
                       natural = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)

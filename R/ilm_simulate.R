@@ -121,6 +121,7 @@ ilm_re_list_of <- function(fit) {
 #' @seealso [ilm_consistency()], [ilm_pb_lrt()], [ilm_appraise()].
 #' @export
 ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!is.null(seed)) set.seed(seed)
   C <- fit$C; J <- fit$J; Tc <- contr.sum(J); X <- fit$X; N <- nrow(X)
   K <- length(fit$re)
@@ -256,6 +257,7 @@ ilm_summarise_fit <- function(fit) {
 #' 605--610. (On why boundary parameters need separate treatment.)
 #' @export
 ilm_consistency <- function(fit, B = 50L, seed = 1L, ncores = 1L, verbose = TRUE) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   t0 <- proc.time()[3]
   ## Simulated up front on the master, so the parallel section is deterministic
   ## given its input: results do not depend on ncores.

@@ -28,7 +28,10 @@ nothing was integrated out, Satterthwaite for a gaussian mixed model, and
 A list with \code{df}, the \code{method} actually used, and for
 Kenward-Roger the adjusted covariance \code{V} and \code{scale}, the factor by which
 the Wald F formed with \code{V} is multiplied before it is referred to
-F(q, df).
+F(q, df). When Satterthwaite's df cannot be formed for \code{L} -- the
+variance components have no usable covariance, or the contrast's
+variance does not depend on them -- \code{method} is \code{"asymptotic"}, \code{df} is
+\code{Inf}, and \code{reason} says why.
 }
 \description{
 Turns a Wald statistic into an F or t test by working out how much the

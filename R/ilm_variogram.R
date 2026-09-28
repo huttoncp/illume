@@ -188,6 +188,7 @@ ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
                           B = 100L, type = "correlation", min_effect = 0.1,
                           ncores = 1L, seed = 1L, max_pairs = 2e5,
                           plot = TRUE, verbose = TRUE, progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)

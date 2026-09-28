@@ -229,6 +229,7 @@ print.ilm_censor <- function(x, ...) {
 #' ilm_surv(t, e)
 #' @export
 ilm_surv <- function(time, event, seed = 1L) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (missing(event))
     stop("`event` is required: without it there is no way to tell a subject ",
          "who had the event from one who was still event-free when follow-up ",
