@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * `ilm_matrices()` builds a prediction's designs for new rows without their
   grouping column or their place in time. A prediction for the typical group,
   or averaged over the population, needs no unit, and asking for one stopped
