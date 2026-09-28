@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * Three variance hold lines for gaussian responses, each measured against
   the response's SD so that none depends on its units, and each holding a
   term only where the likelihood is flat below it, as before:
