@@ -30,7 +30,14 @@
 #' **At a boundary.** When a random term's covariance sits at the edge of its
 #' range, the fit holds the direction the data cannot resolve at its estimate
 #' (see `fit$hessian_held`), and so do the draws: exactly, by conditioning the
-#' joint distribution on those directions. `held` says how many.
+#' joint distribution on those directions. `held` says how many. An AR latent
+#' held with its SD at zero is held whole, its correlation with it, since a
+#' latent with no variance has none to estimate.
+#'
+#' **A fit that did not converge** -- its gradient or optimizer check FAIL --
+#' has no covariance that is the curvature at a maximum, so draws from it are
+#' unreliable whatever is held; they are made, with a warning naming the
+#' restart remedy.
 #'
 #' **`given = "theta"`** holds the variance parameters of the random terms and
 #' of a correlation over time at their estimates, and draws everything else
@@ -112,6 +119,18 @@ ilm_draws <- function(object, nsim = 1000L, seed = NULL,
   nsim <- as.integer(nsim)
   if (length(nsim) != 1L || is.na(nsim) || nsim < 1L)
     stop("`nsim` must be a positive whole number", call. = FALSE)
+  ## A fit that stopped short of a stationary point has no covariance that
+  ## is the curvature at a maximum, so draws from it are unreliable whatever
+  ## is held; said once, with the remedy the checks name
+  ck <- object$checks
+  nc <- if (is.null(ck)) character(0)
+        else ck$check[ck$check %in% c("gradient", "optimizer") & ck$status == "FAIL"]
+  if (length(nc))
+    warning("the fit did not reach a stationary point (", paste(nc, collapse = " and "),
+            " check", if (length(nc) > 1L) "s" else "", " FAIL), so draws from it ",
+            "are not reliable, whatever is held. Restart from the estimates -- ",
+            "ilm_apply_remedy() with the restarts ilm_remedies() lists, or a refit ",
+            "with more `restarts` -- and draw from that fit.", call. = FALSE)
   Q <- ilm_joint_prec(object)
   mu <- ilm_full_par(object)
   rn <- names(mu)
