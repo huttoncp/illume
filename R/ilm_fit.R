@@ -1506,6 +1506,32 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
   out <- list(sdr = sdr, how = "none", held = character(0), flat = 0L)
   if (!length(opt$par)) return(out)
+  ## A dispersion at its limit is held whatever its curvature -- and also
+  ## where the fit stopped short of a stationary point, which the recomputed
+  ## covariance below refuses. There the standard errors are TMB's own, from
+  ## its Hessian at that point; holding the dispersion in THAT covariance
+  ## keeps the draws consistent with them, and keeps "held at its estimate",
+  ## which the checks say, true. The gradient and optimizer checks still say
+  ## the fit did not converge. Unheld, a sigma of 1e-4 x sd(y) with an SE of
+  ## 14 on its log scale drew values to e^42.
+  hold_disp <- function(out) {
+    dd <- cb$blocks[["dispersion"]]
+    if (!"dispersion" %in% cb$flagged || !length(dd) || !isTRUE(sdr$pdHess))
+      return(out)
+    Ht <- tryCatch(solve(sdr$cov.fixed), error = function(e) NULL)
+    if (is.null(Ht) || !all(is.finite(Ht))) return(out)
+    n0 <- nrow(Ht)
+    Hm <- Ht; Hm[dd, ] <- 0; Hm[, dd] <- 0
+    Hm[cbind(dd, dd)] <- 1e12 * max(1, abs(diag(Ht)))
+    s2 <- tryCatch(suppressWarnings(
+      sdreport(obj, par.fixed = opt$par, hessian.fixed = Hm,
+               getJointPrecision = joint)), error = function(e) NULL)
+    if (is.null(s2)) return(out)
+    cf <- s2$cov.fixed; cf[dd, ] <- NA_real_; cf[, dd] <- NA_real_
+    s2$cov.fixed <- cf; s2$pdHess <- FALSE
+    list(sdr = s2, how = "boundary", held = "dispersion", flat = length(dd),
+         H = Hm, dirs = diag(1, n0)[, dd, drop = FALSE])
+  }
   ## Only at a stationary point. A Hessian differenced where the gradient is
   ## not zero is not the curvature at a maximum, and its inverse is not a
   ## covariance: from a fit stopped at a gradient of 1.08 it gave standard
@@ -1517,7 +1543,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
   ## those gradient calls moved the tape; put it back at the optimum
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
   if (is.null(H) || !all(is.finite(H)) || is.null(gs) || !all(is.finite(gs)))
-    return(out)
+    return(hold_disp(out))
   g0 <- abs(gs); n <- nrow(H)
   ## Positive definite on a scale-free test, not merely chol()-able. Finite
   ## differences leave an exactly singular Hessian slightly positive, so an
@@ -1631,7 +1657,7 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
                 flat = length(dd), H = Hm,
                 dirs = diag(1, n)[, dd, drop = FALSE]))
   }
-  out
+  hold_disp(out)
 }
 
 ## Whether the FIXED effects of a fit carry usable standard errors: a positive

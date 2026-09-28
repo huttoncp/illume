@@ -30,7 +30,14 @@
 #' **At a boundary.** When a random term's covariance sits at the edge of its
 #' range, the fit holds the direction the data cannot resolve at its estimate
 #' (see `fit$hessian_held`), and so do the draws: exactly, by conditioning the
-#' joint distribution on those directions. `held` says how many.
+#' joint distribution on those directions. `held` says how many. An AR latent
+#' held with its SD at zero is held whole, its correlation with it, since a
+#' latent with no variance has none to estimate.
+#'
+#' **A fit that did not converge** -- its gradient or optimizer check FAIL --
+#' has no covariance that is the curvature at a maximum, so draws from it are
+#' unreliable whatever is held; they are made, with a warning naming the
+#' restart remedy.
 #'
 #' **`given = "theta"`** holds the variance parameters of the random terms and
 #' of a correlation over time at their estimates, and draws everything else
@@ -113,6 +120,18 @@ ilm_draws <- function(object, nsim = 1000L, seed = NULL,
   nsim <- as.integer(nsim)
   if (length(nsim) != 1L || is.na(nsim) || nsim < 1L)
     stop("`nsim` must be a positive whole number", call. = FALSE)
+  ## A fit that stopped short of a stationary point has no covariance that
+  ## is the curvature at a maximum, so draws from it are unreliable whatever
+  ## is held; said once, with the remedy the checks name
+  ck <- object$checks
+  nc <- if (is.null(ck)) character(0)
+        else ck$check[ck$check %in% c("gradient", "optimizer") & ck$status == "FAIL"]
+  if (length(nc))
+    warning("the fit did not reach a stationary point (", paste(nc, collapse = " and "),
+            " check", if (length(nc) > 1L) "s" else "", " FAIL), so draws from it ",
+            "are not reliable, whatever is held. Restart from the estimates -- ",
+            "ilm_apply_remedy() with the restarts ilm_remedies() lists, or a refit ",
+            "with more `restarts` -- and draw from that fit.", call. = FALSE)
   Q <- ilm_joint_prec(object)
   mu <- ilm_full_par(object)
   rn <- names(mu)
@@ -145,7 +164,20 @@ ilm_draws <- function(object, nsim = 1000L, seed = NULL,
       fp <- setdiff(seq_len(n), object$obj$env$random)
       dirs <- matrix(0, n, ncol(object$hessian_dirs))
       dirs[fp, ] <- object$hessian_dirs
-      n_held <- ncol(dirs)
+      ## An AR latent held because its SD is at zero has no correlation to
+      ## estimate either: both are unidentified, and only one of them may be
+      ## among the directions the Hessian called flat. The other was drawn
+      ## from a variance in the thousands -- log SDs to e^165. Its whole
+      ## block is held, as for a fit made before the directions were stored
+      ## (ilm_held_coords), and a direction left wholly inside it is spent.
+      if (ilm_ar_sd_at_zero(object)) {
+        hold <- hold | rn %in% c("lchol_ar", "rho_raw")
+        inside <- colSums(abs(dirs[!hold, , drop = FALSE])) < 1e-12
+        n_held <- sum(rn %in% c("lchol_ar", "rho_raw"))
+        dirs <- dirs[, !inside, drop = FALSE]
+        if (!ncol(dirs)) dirs <- NULL
+      }
+      n_held <- n_held + if (is.null(dirs)) 0L else ncol(dirs)
     } else {
       hc <- ilm_held_coords(object, rn)
       hold <- hold | hc; n_held <- sum(hc)
@@ -245,6 +277,19 @@ ilm_joint_prec <- function(object) {
          "refitted; with joint = TRUE the precision is kept with the fit.",
          call. = FALSE)
   s2$jointPrecision
+}
+
+## Is the fit's AR latent held with its SD at zero -- below the line at which
+## the AR block is held for a vanishing SD? A block held for a correlation at
+## its edge, with a healthy SD, is not: its SD is identified.
+#' @keywords internal
+#' @noRd
+ilm_ar_sd_at_zero <- function(object) {
+  if (!"ar" %in% object$hessian_held || is.null(object$Sigma[["ar"]])) return(FALSE)
+  Sa <- as.matrix(object$Sigma[["ar"]])
+  if (identical(object$ar$type, "rw1"))
+    return(any(sqrt(pmax(diag(Sa), 0) * stats::median(object$ar$gap)) < 1e-3))
+  any(sqrt(pmax(diag(Sa), 0)) < 1e-3)
 }
 
 ## For a fit made before the held directions were stored: hold the held

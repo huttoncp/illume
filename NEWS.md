@@ -1,4 +1,4 @@
-# illume 0.0.8.9001
+# illume 0.0.8.9002
 
 * illume now requires illumex 0.0.8.9000.
 * A model fitted inside a function that passes its arguments on with `...`
@@ -18,6 +18,30 @@
   fallacy"). The covariates are now named as adjusted for, with their
   coefficients not interpreted, and when several adjustment sets identify
   the effect the prose says which one it describes.
+* A gaussian sigma or other dispersion at its limit is held also in a fit
+  that stopped short of a stationary point, in the covariance TMB reports
+  there. It was left unheld -- while the checks said it was held -- and its
+  draws, from a standard error of 14 on the log scale, reached e^42. The
+  gradient and optimizer checks still say the fit did not converge.
+* `ilm_draws()` warns, once, when the fit's gradient or optimizer check
+  failed: draws from a fit that did not converge are unreliable whatever is
+  held. The warning names the restart remedy.
+* The draws behind `predict()`'s typical and population intervals now hold
+  what the fit holds, as `ilm_draws()` does; they drew from the joint
+  distribution with nothing held, so a held AR latent's parameters ran to
+  +/-100 there. A smooth's band beside such a term measured the same as
+  without it, and a test keeps it so. Because those intervals now draw
+  through `ilm_draws()`, their Monte Carlo digits differ from an earlier
+  run's with the same `seed`; the intervals themselves are the same to
+  within Monte Carlo error.
+* `ilm_draws()` holds the whole of an AR latent held with its SD at zero.
+  With no variance the latent has no correlation to estimate either, and
+  only one of the two could be among the directions the Hessian called
+  flat: the other was drawn from a variance in the thousands, so draws of
+  the latent's SD reached e^165 and forecasts built on them overflowed. A
+  block held for a correlation at its edge, with an identified SD, still
+  has its SD drawn. Found by the verify phase of
+  `studies/scripts/sigma_limit.R`.
 * `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
   its methods return, so another package whose diagnostics name a remedy
   that is a refit of an illume model -- a negative binomial, a dispersion or
