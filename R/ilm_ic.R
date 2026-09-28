@@ -202,6 +202,7 @@ ilm_Bar_hat <- function(object) {
 #' @noRd
 ilm_eta_hat <- function(object, conditional = TRUE) {
   eta <- object$X %*% object$beta
+  if (!is.null(object$offset)) eta <- eta + object$offset
   ## The AR/CAR latent is a random effect like any other and belongs in the
   ## conditional fitted value. Leaving it out put the whole autoregressive
   ## process into the residual, so every residual diagnostic on such a model

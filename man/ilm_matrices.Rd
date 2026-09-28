@@ -33,6 +33,9 @@ they multiply are, in \code{coef(object, full = TRUE)} and in
 \item{\code{ar}}{with a correlation over time, a data frame with a row per
 new row: \code{group}, \code{time}, \code{cell}, \code{prev_cell}, \code{next_cell},
 \code{dt_prev}, \code{dt_next} and \code{new_group}.}
+\item{\code{offset}}{with an offset in the formula, its value at each new
+row, made from \code{newdata}'s own columns; \code{NULL} otherwise. It adds to
+\code{X \%*\% beta} with a coefficient of one.}
 }
 }
 \description{

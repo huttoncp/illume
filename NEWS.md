@@ -1,6 +1,20 @@
 # illume 0.0.8.9003
 
 * illume now requires illumex 0.0.8.9000.
+* Offsets. `offset(log(exposure))` in the formula models a count as a rate,
+  as in `glm()` and glmmTMB: a term of the linear predictor with its
+  coefficient fixed at one. It fitted to a model-matrix error before. It
+  works for the families with one linear predictor -- gaussian, Poisson,
+  negative binomial, binomial (logit), beta and the accelerated failure time
+  families -- and enters the conditional mean, not a zero part or a
+  dispersion model; a multinomial, ordinal or flexible parametric survival
+  model refuses it. Fits match `glm()`, `MASS::glm.nb()`, `lm()` and glmmTMB
+  to their reported precision. Fitted values, simulation, refits, the
+  anova refits and `ilm_matrices()` (which gains `offset`) carry it, and
+  `predict()` on new data predicts at that data's own exposure, saying so by
+  name when the column is missing. The fractional-count error now shows the
+  offset to use. Means, marginal effects and scenarios per unit of exposure
+  come next.
 * `ilm_rows_used()` says which rows a model used: the rows it was given, the
   rows it kept, the rows missing values took and the columns they were
   missing in, and any rows with a weight of zero (used, contributing

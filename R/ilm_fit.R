@@ -1898,6 +1898,13 @@ ilm_print_checks <- function(ck, title) {
 #'   edge of its range is held there) or `"avoid"` (the boundary-avoiding
 #'   penalty of Chung et al. 2013, 2015). See [ilm_model()] for what each
 #'   implies.
+#' @param offset Optional numeric vector, one value per row of `X`, added to
+#'   the linear predictor with its coefficient fixed at one -- log exposure
+#'   for a rate. Through [ilm_model()] it is written in the formula,
+#'   `offset(log(exposure))`, as in [stats::glm()]. Supported for the
+#'   families with one linear predictor; not for multinomial, ordinal or
+#'   flexible parametric survival models. It enters the conditional mean
+#'   only, not a zero part or a dispersion model.
 #'
 #' @return An object of class `"ilm_model"`: a list whose most useful elements are
 #'   `checks` (the diagnostic table), `Sigma` (fitted random-effect
@@ -1961,7 +1968,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                      verbose = TRUE, restarts = 3L, joint = FALSE,
                      censor = NULL, Zd = NULL, disp_mu = FALSE,
                      rp = NULL, Zzi = NULL, zi_type = c("inflated", "hurdle"),
-                     reml = FALSE, boundary = c("hold", "avoid")) {
+                     reml = FALSE, boundary = c("hold", "avoid"),
+                     offset = NULL) {
   zi_type <- match.arg(zi_type)
   boundary <- match.arg(boundary)
   ## A category count with no family is a multinomial call written when that
@@ -2078,6 +2086,25 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## multinomial; every other family uses a single linear predictor.
   if (is.null(J)) J <- 2L
   C <- fam$C_of(J); N <- nrow(X); p <- ncol(X)
+  ## An offset is a term of the linear predictor with its coefficient fixed at
+  ## one -- log exposure for a rate. It shifts the one linear predictor a
+  ## count, binary, continuous or survival model has; a multinomial or
+  ## ordinal model has several, or thresholds, and an offset has no single
+  ## place in them.
+  if (!is.null(offset)) {
+    offset <- as.numeric(offset)
+    if (length(offset) != N || any(!is.finite(offset)))
+      stop("`offset` must be one finite number per row of X: ", length(offset),
+           " given for ", N, " rows", if (any(!is.finite(offset))) ", some not finite" else "",
+           call. = FALSE)
+    if (C > 1L || isTRUE(fam$ordinal) || !is.null(rp))
+      stop("an offset is supported for families with one linear predictor; ",
+           "this ", if (C > 1L) "multinomial" else if (!is.null(rp))
+           "flexible parametric survival" else "ordinal", " model has ",
+           if (!is.null(rp)) "a baseline spline in its" else "more than one",
+           " linear predictor", call. = FALSE)
+    if (all(offset == 0)) offset <- NULL
+  }
   Tc <- if (fam$name == "multinomial") contr.sum(J) else matrix(1, 1, 1)
   re <- ilm_norm_re(re_list, N)
   ## A term the list leaves out gets the default, so a structure can be set
@@ -2196,6 +2223,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                                 if (!identical(ar$type, "rw1")) "ar:rho_raw")
 
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
+             offv = if (is.null(offset)) numeric(N) else offset,
              n_disp = fam$n_disp,
              ## the derivative of the linear predictor with respect to log
              ## time, which a flexible parametric density needs and nothing
@@ -2265,7 +2293,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   fam_linkinv <- fam$linkinv
   f <- function(pars) {
     getAll(pars, dl)
-    nll <- 0; eta <- X %*% beta; sdv <- AD(numeric(0))
+    nll <- 0; eta <- X %*% beta + offv; sdv <- AD(numeric(0))
     for (k in seq_len(K)) {
       d <- dk[k]; nl <- nlk[k]; w <- wk[k]
       blk <- matrix(bvec[b_idx[[k]]], nl * d, w)   # rows: dimension-major
@@ -2471,7 +2499,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     base <- try(suppressWarnings(
       ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
               weights = weights, family = fam, verbose = FALSE,
-              restarts = 1L, censor = censor, boundary = boundary)),
+              restarts = 1L, censor = censor, boundary = boundary,
+              offset = offset)),
       silent = TRUE)
     if (!inherits(base, "try-error")) {
       bp <- base$opt$par; bn <- names(bp)
@@ -2491,7 +2520,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ## A power of the mean is a power of |mu|, which has no useful derivative
     ## where mu passes through zero.
     if (isTRUE(disp_mu)) {
-      mu0 <- fam$linkinv(as.vector(X %*% pars$beta[, 1]))
+      mu0 <- fam$linkinv(as.vector(X %*% pars$beta[, 1]) +
+                           if (is.null(offset)) 0 else offset)
       if (any(mu0 > 0) && any(mu0 < 0))
         warning("`dispformula = ~ mu` makes the spread a power of the fitted ",
                 "mean, and the fitted mean changes sign across these data, so ",
@@ -2533,7 +2563,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
       ilm_fit(X, y, J, re_list, re_struct, ar, ylevels = ylevels,
               weights = weights, family = fam, verbose = FALSE,
               restarts = 1L, censor = censor, Zd = Zd,
-              disp_mu = disp_mu, boundary = boundary)), silent = TRUE)
+              disp_mu = disp_mu, boundary = boundary, offset = offset)),
+    silent = TRUE)
     if (!inherits(bz, "try-error")) {
       bp <- bz$opt$par; bn <- names(bp)
       pars$beta <- matrix(bp[bn == "beta"], p, C)
@@ -2865,6 +2896,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  b_idx = dl$b_idx, nlk = as.integer(nlk), dk = as.integer(dk),
                  wk = as.integer(wk), re = re, X = X, y = y, ar = ar, Lambda = Lams,
                  weights = if (all(weights == 1)) NULL else weights,
+                 offset = offset,
                  pnames = pnames, ylevels = ylevels, family = fam,
                  ## For an exact model the residual SD is reported on the
                  ## unbiased (n - p) scale, so it agrees with lm() and with
@@ -2882,7 +2914,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                      stats::median(ilm_disp_rows(
                        Zd, unname(pe[pn == "gamma"]),
                        if (isTRUE(disp_mu)) unname(pe[pn == "mu_pow"]) else NA_real_,
-                       fam, X, beta_hat)),
+                       fam, X, beta_hat, offset)),
                      fam$disp_names[1])
                  } else NULL,
                  disp_formula = if (has_dm) attr(Zd, "formula") else NULL,
@@ -2941,12 +2973,13 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
 ## one.
 #' @keywords internal
 #' @noRd
-ilm_disp_rows <- function(Zd, gamma, mu_pow, fam, X, beta) {
+ilm_disp_rows <- function(Zd, gamma, mu_pow, fam, X, beta, offset = NULL) {
   ls <- rep(0, nrow(X))
   if (!is.null(Zd) && ncol(Zd) > 0L && length(gamma) == ncol(Zd))
     ls <- ls + as.vector(Zd %*% gamma)
   if (is.finite(mu_pow)) {
-    mu <- fam$linkinv(as.vector(X %*% beta[, 1]))
+    mu <- fam$linkinv(as.vector(X %*% beta[, 1]) +
+                        if (is.null(offset)) 0 else offset)
     ls <- ls + mu_pow * log(abs(mu) + 1e-8)
   }
   exp(ls)
@@ -3002,7 +3035,8 @@ ilm_refit_like <- function(object, X = NULL, y = NULL, keep = NULL,
           rp = rp, Zzi = object$Zzi,
           zi_type = if (is.null(object$zi_type)) "inflated" else object$zi_type,
           reml = isTRUE(object$reml),
-          boundary = if (is.null(object$boundary)) "hold" else object$boundary)
+          boundary = if (is.null(object$boundary)) "hold" else object$boundary,
+          offset = object$offset)
 }
 
 ## Everything ilm_refit_like() reads, as plain R objects and nothing else --
@@ -3023,7 +3057,8 @@ ilm_refit_stub <- function(object)
        weights = object$weights, censor = object$censor, Zd = object$Zd,
        disp_mu = isTRUE(object$disp_mu), rp = object$rp, Zzi = object$Zzi,
        zi_type = object$zi_type, reml = isTRUE(object$reml),
-       boundary = if (is.null(object$boundary)) "hold" else object$boundary)
+       boundary = if (is.null(object$boundary)) "hold" else object$boundary,
+       offset = object$offset)
 
 #' Fitted dispersion, one value per observation
 #'
@@ -3047,5 +3082,5 @@ ilm_disp_vec <- function(object) {
     return(rep(unname(object$dispersion[[1]]), nrow(object$X)))
   ilm_disp_rows(object$Zd, object$disp_gamma,
                 if (is.null(object$disp_mu_pow)) NA_real_ else object$disp_mu_pow,
-                object$family, object$X, object$beta)
+                object$family, object$X, object$beta, object$offset)
 }

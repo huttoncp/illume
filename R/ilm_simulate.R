@@ -135,6 +135,7 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
   nms <- names(fit$re)
   for (s in seq_len(nsim)) {
     eta <- X %*% fit$beta
+    if (!is.null(fit$offset)) eta <- eta + fit$offset
     for (k in seq_len(K)) {
       e <- fit$re[[k]]; nl <- fit$nlk[k]; d <- fit$dk[k]; w <- fit$wk[k]
       isrr <- identical(fit$re_struct[[k]]$type, "rr")

@@ -420,7 +420,8 @@ ilm_check_response <- function(y, family, has_zero_part = FALSE) {
       stop(nm, " family needs non-negative counts", call. = FALSE)
     if (any(abs(y - round(y)) > 1e-8))
       stop(nm, " family needs whole-number counts; the response has fractional ",
-           "values. If these are rates, use an offset instead.", call. = FALSE)
+           "values. If these are rates, model the counts and give the exposure ",
+           "as an offset: count ~ x + offset(log(exposure)).", call. = FALSE)
   }
   if (isTRUE(family$ordinal)) {
     if (!is.numeric(y) || any(y < 1) || any(abs(y - round(y)) > 1e-8))

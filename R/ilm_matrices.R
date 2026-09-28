@@ -51,6 +51,9 @@
 #'     \item{`ar`}{with a correlation over time, a data frame with a row per
 #'       new row: `group`, `time`, `cell`, `prev_cell`, `next_cell`,
 #'       `dt_prev`, `dt_next` and `new_group`.}
+#'     \item{`offset`}{with an offset in the formula, its value at each new
+#'       row, made from `newdata`'s own columns; `NULL` otherwise. It adds to
+#'       `X %*% beta` with a coefficient of one.}
 #'   }
 #' @seealso [ilm_draws()], [ilm_cells()], [ilm_ranef()].
 #' @examples
@@ -73,7 +76,7 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
          "how to build the new rows' designs", call. = FALSE)
   nd <- ilm_newX(object, newdata)
   out <- list(X = nd$X, re = list(), smooth = list(), zi = NULL, disp = NULL,
-              ar = NULL)
+              ar = NULL, offset = nd$offset)
   gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
   env <- environment(object$formula)
   if (is.null(env)) env <- parent.frame()

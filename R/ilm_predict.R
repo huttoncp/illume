@@ -74,6 +74,7 @@ ilm_Bhat_term <- function(object, k, bvec = NULL) {
 #' @keywords internal
 #' @noRd
 ilm_newX <- function(object, newdata) {
+  ilm_offset_need(object, newdata)
   mt <- stats::delete.response(object$terms)
   mf <- stats::model.frame(mt, newdata, xlev = object$xlev)
   X  <- ilm_drop_intercept(
@@ -92,7 +93,9 @@ ilm_newX <- function(object, newdata) {
          ncol(object$X) - nrp,
          if (nrp) paste0(" besides its ", nrp, " baseline spline columns") else "",
          call. = FALSE)
-  list(X = X, smooths = sd_list)
+  ## the offset at these rows, as the fit's was at its own: from the data
+  off <- if (is.null(object$offset)) NULL else as.numeric(stats::model.offset(mf))
+  list(X = X, smooths = sd_list, offset = off)
 }
 
 #' Linear predictor on the sum-to-zero scale
@@ -112,6 +115,7 @@ ilm_newX <- function(object, newdata) {
 ilm_eta <- function(object, nd, beta = NULL, bvec = NULL) {
   if (is.null(beta)) beta <- object$beta
   eta <- nd$X %*% beta
+  if (!is.null(nd$offset)) eta <- eta + nd$offset
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
     if (e$kind != "basis") next                        # populations: left at zero
@@ -653,7 +657,8 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## needed before point() closes over it
   multinom0 <- object$C > 1L
   Tc <- contr.sum(object$J)
-  nd <- if (is.null(newdata)) list(X = object$X, smooths = NULL) else ilm_newX(object, newdata)
+  nd <- if (is.null(newdata)) list(X = object$X, smooths = NULL, offset = object$offset) else
+    ilm_newX(object, newdata)
   if (is.null(newdata) && length(object$smooths))
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
   ## each row's own group and cell, placed before anything is computed, so a

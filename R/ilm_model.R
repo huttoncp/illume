@@ -580,6 +580,11 @@ ilm_model_formula <- function(formula, data, family = "auto",
     }
     rhs <- unique(c(rhs, ilm_bq(ar$vars)))
   }
+  ## An offset() term is not among the term labels, so it has to be added to
+  ## the frame by name: model.matrix() then leaves it out of X, as it should,
+  ## and model.offset() reads it back.
+  off_terms <- ilm_offset_terms(gp$pf)
+  rhs <- unique(c(rhs, off_terms))
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
@@ -885,12 +890,14 @@ ilm_model_formula <- function(formula, data, family = "auto",
     ## null space, so they carry NA and no per-term test picks them up
     asgn <- c(rep(NA_integer_, ncol(Bs)), asgn)
   }
+  ## the offset, for the rows the frame kept: log exposure for a rate
+  off <- if (length(off_terms)) stats::model.offset(mf) else NULL
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
                   ylevels = ylevels, weights = w, family = fam, verbose = verbose,
                   restarts = restarts, joint = joint, reml = reml,
-                  boundary = boundary)
+                  boundary = boundary, offset = off)
 
   ## A covariance that ended at its boundary is said HERE, where the fit was
   ## asked for, and not only in summary(): with verbose = FALSE nothing else

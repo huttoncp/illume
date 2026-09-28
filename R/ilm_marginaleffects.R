@@ -141,7 +141,8 @@ ilm_rebuild_aux <- function(object, tl) {
         unname(pe[tl %in% c("gamma", "mu_pow")]), names(object$disp_coef))
     ## the dispersion is per-row here; the median stands for it, as in the fit
     object$dispersion <- stats::setNames(
-      stats::median(ilm_disp_rows(object$Zd, g, mp, fam, object$X, object$beta)),
+      stats::median(ilm_disp_rows(object$Zd, g, mp, fam, object$X, object$beta,
+                                   object$offset)),
       fam$disp_names[1])
   }
 
