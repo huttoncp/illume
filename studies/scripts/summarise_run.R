@@ -465,12 +465,28 @@ summarise_study <- function(dir, study) {
       p$fails <- p$label %in% fails
       p
     }
+    n_failed <- length(unique(paste(par$cell, par$rep)[!(par$ok %in% TRUE)]))
     par <- prep(par)
+    ## a share over the parameters that have the interval; those without one
+    ## (no joint draws for the fit) are left out, and their number said
     mcse <- function(x) sqrt(mean(x) * (1 - mean(x)) / length(x))
-    pc <- function(x) paste0(num(mean(x), 3), " (", num(mcse(x), 3), ")")
+    pc <- function(x) {
+      miss <- sum(is.na(x)); x <- x[!is.na(x)]
+      if (!length(x)) return("--")
+      paste0(num(mean(x), 3), " (", num(mcse(x), 3), ")",
+             if (miss) paste0(", ", miss, " without") else "")
+    }
+    ## A CRPS is never negative. Draws in the 1e150s and beyond overflow the
+    ## sample formula to -Inf or NaN, so a CRPS that is not finite or is
+    ## negative is an exploded forecast, Inf; means are then Inf, and are
+    ## reported beside the mean over the fits that stayed finite.
+    fx_crps <- function(x) { x[!is.finite(x) | x < 0] <- Inf; x }
+    gnum <- function(x) ifelse(is.na(x), "NA", ifelse(is.infinite(x), "Inf",
+                               formatC(signif(x, 3), format = "g", digits = 3)))
     lines <- c(paste0(
       "Draws of a poorly determined variance. ", length(unique(paste(par$cell, par$rep))),
-      " fits and ", nrow(par), " variance parameters; s is the SE of a parameter's log ",
+      " fits", if (n_failed) paste0(" (", n_failed, " more failed to fit)") else "",
+      " and ", nrow(par), " variance parameters; s is the SE of a parameter's log ",
       "scale from vcov(fit, full = TRUE), d the SD of its 400 joint draws (the other ",
       "package's signal). The label is the profile likelihood's, from outside the flag. ",
       "Parameters the build holds are counted here and left out of every rate below. ",
@@ -559,16 +575,23 @@ summarise_study <- function(dir, study) {
         m <- merge(a, b, by = c("cell", "rep", "h"), suffixes = c("", "_trim"))
         if (nrow(m)) {
           pt <- do.call(rbind, lapply(split(m, m$h), function(z) {
-            dd <- z$crps_mean - z$crps_mean_trim
-            data.frame(h = z$h[1], fits = nrow(z), crps_profile = signif(mean(z$crps_mean), 3),
-                       crps_trimmed = signif(mean(z$crps_mean_trim), 3),
-                       difference = signif(mean(dd), 3),
-                       mc_se = signif(stats::sd(dd) / sqrt(nrow(z)), 3),
-                       beyond_2se = abs(mean(dd)) > 2 * stats::sd(dd) / sqrt(nrow(z)))
+            p <- fx_crps(z$crps_mean); t2 <- fx_crps(z$crps_mean_trim)
+            both <- is.finite(p) & is.finite(t2) & p > 0 & t2 > 0
+            ## a few fits' CRPS run to 1e50 and beyond, and a difference of
+            ## means is theirs alone; the log ratio per fit weighs every fit
+            lr <- log(p[both] / t2[both])
+            se <- stats::sd(lr) / sqrt(length(lr))
+            data.frame(h = z$h[1], fits = nrow(z), exploded = sum(!both),
+                       median_profile = gnum(stats::median(p[both])),
+                       median_trimmed = gnum(stats::median(t2[both])),
+                       mean_log_ratio = gnum(mean(lr)), mc_se = gnum(se),
+                       beyond_2se = abs(mean(lr)) > 2 * se, stringsAsFactors = FALSE)
           }))
           lines <- c(lines, "", paste0("Remedy 2 at ", chosen, " against the same with the ",
-            "lowest grid step left out (profile_trim, exploratory), mean CRPS on the fits it ",
-            "redraws:"), "", md_table(pt),
+            "lowest grid step left out (profile_trim, exploratory), on the fits it redraws: ",
+            "per fit, the log of the ratio of the two mean CRPS, averaged over fits (0 is ",
+            "no difference; exploded counts fits where either forecast overflowed):"), "",
+            md_table(pt),
             "", if (any(pt$beyond_2se)) paste0("The floor MOVES the forecasts beyond Monte ",
               "Carlo error: an input to the remedy's next design (a wider or adaptive lower ",
               "grid).") else paste0("The difference is within Monte Carlo error at every ",
@@ -591,15 +614,17 @@ summarise_study <- function(dir, study) {
       ## per-fit rates, averaged over fits: the SE is over fits, since a
       ## panel's 20 series share one fit
       fsum <- function(x, nm) do.call(rbind, lapply(split(x, x$h), function(z) {
-        w <- z$n_rows
+        w <- z$n_rows; cm <- fx_crps(z$crps_mean); fin <- is.finite(cm)
         data.frame(remedy = nm, h = z$h[1], fits = nrow(z),
           cov80 = paste0(num(stats::weighted.mean(z$cov80, w), 3), " (",
                          num(stats::sd(z$cov80) / sqrt(nrow(z)), 3), ")"),
           cov95 = paste0(num(stats::weighted.mean(z$cov95, w), 3), " (",
                          num(stats::sd(z$cov95) / sqrt(nrow(z)), 3), ")"),
-          crps_mean = signif(stats::weighted.mean(z$crps_mean, w), 3),
-          crps_median = signif(stats::median(z$crps_median), 3),
-          true_crps = signif(stats::weighted.mean(z$ref_mean, w), 3),
+          crps_mean = gnum(stats::weighted.mean(cm, w)),
+          crps_mean_finite = gnum(stats::weighted.mean(cm[fin], w[fin])),
+          fits_exploded = sum(!fin),
+          crps_median = gnum(stats::median(z$crps_median)),
+          true_crps = gnum(stats::weighted.mean(z$ref_mean, w)),
           explosive = num(sum(z$n_explosive) / sum(w), 4), stringsAsFactors = FALSE)
       }))
       for (grp in c("flagged", "not flagged")) {
@@ -636,11 +661,12 @@ summarise_study <- function(dir, study) {
       lines <- c(lines, "", "**The named fixtures** (SDs on their own scale):", "",
                  md_table(ft))
       if (!is.null(fxf)) {
-        h1 <- fxf[fxf$h == 1 & (fxf$remedy != "profile" | fxf$cut %in% chosen), ]
+        h1 <- fxf[fxf$h == 1 & (fxf$remedy %in% c("joint", "given_theta") |
+                                  fxf$cut %in% chosen), ]
         lines <- c(lines, "", "Their forecast CRPS at horizon 1:", "",
           md_table(data.frame(fixture = h1$fixture, remedy = h1$remedy,
-                              crps_mean = signif(h1$crps_mean, 3),
-                              true_crps = signif(h1$ref_mean, 3))))
+                              crps_mean = gnum(fx_crps(h1$crps_mean)),
+                              true_crps = gnum(h1$ref_mean), stringsAsFactors = FALSE)))
       }
     }
     c(lines, "",
@@ -651,7 +677,11 @@ summarise_study <- function(dir, study) {
       "drawn after their generator's 24, from the true AR. The lower-plateau measure",
       "and profile_trim are exploratory, added after the pre-registration; no",
       "registered label, flag or remedy uses them. The main run's time, against the",
-      "design's 17 core-hours, includes the profiles' second start (a smoke-run fix).")
+      "design's 17 core-hours, includes the profiles' second start (a smoke-run fix).",
+      "The summariser's CRPS handling -- an overflowed or negative CRPS read as an",
+      "exploded forecast, Inf -- and its count of parameters without a joint interval",
+      "were corrected after the main run, from its own per-fit numbers; no fit was",
+      "rerun and no per-fit number changed.")
   } else if (study == "messy") {
     ## Every sentence below is computed from the csv, the ones that go against
     ## illume included, so a re-run at a later version says what THAT run
