@@ -563,6 +563,31 @@ ilm_new_checks <- function() data.frame(check=character(), status=character(),
                                     detail=character(), cause=character(),
                                     suggestion=character(), stringsAsFactors=FALSE)
 
+## The warning a thin latent budget used to get from its constructor, which
+## could not know the family: said here, where the family is known, in the
+## words of the obs_per_ar_latent check the fit records -- so the console and
+## fit$checks say the same thing. Only below the constructor's old line of 1.5
+## observations per latent value, never for a gaussian response (the Laplace
+## approximation is exact there), and not when the structure was built with
+## verbose = FALSE.
+#' @keywords internal
+#' @noRd
+ilm_ar_budget_warn <- function(pre, ar, fam) {
+  ## AR(1) and CAR(1), which their constructors warned for; a random walk's
+  ## one latent per observation is the ordinary local-level model, and it
+  ## never was
+  if (is.null(ar) || !isTRUE(ar$warn_budget) || !ar$type %in% c("ar1", "car1") ||
+      identical(fam$name, "gaussian"))
+    return(invisible())
+  row <- pre[pre$check == "obs_per_ar_latent", , drop = FALSE]
+  if (!nrow(row) || row$status == "OK" || !is.finite(ar$obs_per_latent) ||
+      ar$obs_per_latent >= 1.5) return(invisible())
+  warning("obs_per_ar_latent ", row$status, ": ", row$detail, ". ", row$cause,
+          if (nzchar(row$suggestion)) paste0(". Remedy: ", row$suggestion) else "",
+          ".", call. = FALSE)
+  invisible()
+}
+
 #' Build the table of model checks
 #'
 #' Each check records a status, what was measured, why it matters, and what to do
@@ -832,7 +857,13 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
       if (gaus) "OK" else if (r2 < 2 && !prov) "FAIL" else if (r2 < 4) "WARN" else "OK",
       sprintf("%.2f observations per %s latent time point (%d time points)%s",
               r2, lab, as.integer(nlat),
-              if (gaus && r2 < 4) "; expected for continuous time and not a problem for a gaussian response" else ""),
+              if (gaus && r2 < 1.5) paste0("; the Laplace approximation is exact for a gaussian ",
+                                            "response, but with so few observations per latent value ",
+                                            "the residual SD and the latent SD are weakly separable, and ",
+                                            "the hold pass holds whichever the likelihood cannot place ",
+                                            "(see the hessian check)")
+              else if (gaus && r2 < 4) "; expected for continuous time and not a problem for a gaussian response"
+              else ""),
       if (thin) paste0("the latent process carries about ", if (prov) "one" else "one categorical",
                        " observation per latent value; Laplace attenuates the variance components",
                        if (identical(ar$type, "rw1")) "" else " and rho is driven toward the boundary",
@@ -2160,6 +2191,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   if (length(weights) != N) stop("weights must have one entry per row of X")
   if (any(weights < 0)) stop("weights must be non-negative")
   pre <- ilm_precheck(y, J, re, re_struct, ar, weights, fam)
+  ilm_ar_budget_warn(pre, ar, fam)
   if (verbose) ilm_print_checks(pre, "pre-fit data checks")
   if (any(pre$status == "FAIL") && verbose)
     cat("\n>> pre-fit checks FAILED; fitting anyway, but treat the result as unreliable.\n")

@@ -1,6 +1,16 @@
 # illume 0.0.8.9003
 
 * illume now requires illumex 0.0.8.9000.
+* A correlation over time's latent budget is judged where the family is
+  known. `ilm_ar1()` and `ilm_car1()` warned, when built, that below about
+  1.5 observations per latent value "the Laplace approximation frequently
+  fails" -- for a gaussian response too, where it is exact, while the fit's
+  own `obs_per_ar_latent` check said OK. The fit now warns instead, for
+  families other than the gaussian, in the words of that check, so the
+  console and `fit$checks` agree; for a gaussian response the check says
+  what one latent per observation does cost -- the residual SD and the
+  latent SD are weakly separable -- and that the hold pass takes whichever
+  the likelihood cannot place. Found through an external report.
 * Offsets. `offset(log(exposure))` in the formula models a count as a rate,
   as in `glm()` and glmmTMB: a term of the linear predictor with its
   coefficient fixed at one. It fitted to a model-matrix error before. It

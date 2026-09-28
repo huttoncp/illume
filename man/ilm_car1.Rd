@@ -15,7 +15,9 @@ one-sided formula \code{~ time | group} naming two columns of the model's data.}
 \item{group}{Unit identifier, one value per observation. Omitted when
 \code{time} is a formula.}
 
-\item{verbose}{Warn when the latent budget is thin.}
+\item{verbose}{Warn about nearly coincident times. The latent budget is
+judged when the model is fitted, where the family is known -- see the
+\code{obs_per_ar_latent} check -- and \code{FALSE} here quiets that warning too.}
 }
 \value{
 A \code{"ilm_car1"} specification, to pass as \code{ilm_model(ar = )}.
