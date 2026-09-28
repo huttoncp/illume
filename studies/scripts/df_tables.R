@@ -68,6 +68,265 @@
 ## About 24,000 fits and 12,000 fresh, each a few tenths of a second with KR
 ##   the largest part at G = 20, m = 20: about 3 to 5 core-hours in all.
 ##
-## Usage: Rscript df_tables.R <nrep> <ncore> <outdir> [offset]
+## Two things the design leaves to the code, fixed here before any run: the
+##   intercept SD in D2 is set by an ICC of 0.3, as in D4, and the intercept
+##   of every arm is 1. A fit's "held" is `length(f$hessian_held) > 0`.
+##
+## Usage: Rscript df_tables.R <nrep> <ncore> <outdir> [offset] [cells]
+##        Rscript df_tables.R summarise <outdir>
 ## ---------------------------------------------------------------------------
-## (the study's code follows in a later commit; this commit is the design)
+
+args <- commandArgs(trailingOnly = TRUE)
+SUMMARISE <- length(args) >= 1 && identical(args[1], "summarise")
+if (!SUMMARISE) {
+  NREP   <- if (length(args) >= 1) as.integer(args[1]) else 100L
+  NCORE  <- if (length(args) >= 2) as.integer(args[2]) else 1L
+  sp     <- if (length(args) >= 3) args[3] else "."
+  OFFSET <- if (length(args) >= 4) as.integer(args[4]) else 0L
+  ## a subset of cells, for the smoke run only
+  ONLY   <- if (length(args) >= 5) as.integer(strsplit(args[5], ",")[[1]]) else NULL
+} else sp <- if (length(args) >= 2) args[2] else "."
+dir.create(sp, showWarnings = FALSE, recursive = TRUE)
+suppressPackageStartupMessages(library(illume))
+
+## ---- the cells ----------------------------------------------------------------
+g <- function(...) expand.grid(..., stringsAsFactors = FALSE)
+cells <- rbind(
+  data.frame(arm = "D1", g(G = c(6, 10, 20), m = c(5, 20), icc = c(0.05, 0.3))),
+  data.frame(arm = "D2", g(G = c(6, 10, 20), m = c(5, 20)), icc = 0.3),
+  data.frame(arm = "D3", G = c(6, 10, 20), m = 5, icc = 0),
+  data.frame(arm = "D4", G = c(6, 12, 21), m = 5, icc = 0.3))
+cells$cell <- seq_len(nrow(cells))
+stopifnot(nrow(cells) == 24L)
+TRUTH <- 0.5
+LEVEL <- 0.95
+
+## ---- the data -----------------------------------------------------------------
+gen <- function(ce, seed) {
+  set.seed(seed)
+  G <- ce$G; m <- ce$m
+  d <- data.frame(g = factor(rep(seq_len(G), each = m)))
+  sd0 <- sqrt(ce$icc / (1 - ce$icc))
+  b0 <- rnorm(G, 0, sd0)[d$g]
+  if (ce$arm %in% c("D1", "D3")) {
+    ## half the clusters treated, the treatment constant within a cluster
+    d$trt <- rep(rep(0:1, length.out = G)[sample.int(G)], each = m)
+    d$y <- 1 + TRUTH * d$trt + b0 + rnorm(nrow(d))
+  } else if (ce$arm == "D2") {
+    ## a correlated random intercept and slope: slope SD 0.3, correlation 0.3
+    S <- matrix(c(sd0^2, 0.3 * sd0 * 0.3, 0.3 * sd0 * 0.3, 0.3^2), 2)
+    u <- matrix(rnorm(2 * G), G) %*% chol(S)
+    d$x <- rnorm(nrow(d))
+    d$y <- 1 + u[d$g, 1] + (TRUTH + u[d$g, 2]) * d$x + rnorm(nrow(d))
+  } else {
+    ## a 3-level between-cluster factor, G / 3 clusters a level, no effect
+    d$f <- factor(rep(rep(c("a", "b", "c"), length.out = G)[sample.int(G)], each = m))
+    d$y <- 1 + b0 + rnorm(nrow(d))
+  }
+  d
+}
+fml <- list(D1 = y ~ trt + (1 | g), D2 = y ~ x + (1 + x | g),
+            D3 = y ~ trt + (1 | g), D4 = y ~ f + (1 | g))
+coef_of <- c(D1 = "trt", D2 = "x", D3 = "trt")
+
+## ---- one fit ------------------------------------------------------------------
+## Every call is timed and its warnings counted, so a fallback to the normal is
+## seen rather than read as a df.
+timed <- function(expr) {
+  nw <- 0L; msg <- character(0)
+  t0 <- proc.time()[["elapsed"]]
+  v <- tryCatch(withCallingHandlers(suppressMessages(expr), warning = function(w) {
+    nw <<- nw + 1L; msg <<- c(msg, conditionMessage(w)); invokeRestart("muffleWarning")
+  }), error = function(e) structure(list(), err = conditionMessage(e)))
+  list(v = v, t = proc.time()[["elapsed"]] - t0, nw = nw,
+       msg = paste(unique(msg), collapse = " | "), err = attr(v, "err") %||% NA_character_)
+}
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+one <- function(job) {
+  ce <- cells[cells$cell == job$cell, ]
+  seed <- 7919L * ce$cell + job$rep + OFFSET
+  d <- gen(ce, seed)
+  key <- data.frame(cell = ce$cell, arm = ce$arm, G = ce$G, m = ce$m, icc = ce$icc,
+                    rep = job$rep, seed = seed)
+  t0 <- proc.time()[["elapsed"]]
+  f <- tryCatch(suppressMessages(suppressWarnings(ilm_model(fml[[ce$arm]], data = d,
+         family = "gaussian", reml = TRUE, verbose = FALSE))), error = function(e) NULL)
+  t_fit <- proc.time()[["elapsed"]] - t0
+  if (is.null(f)) return(cbind(key, ok = FALSE))
+  ck <- f$checks
+  key$ok <- TRUE
+  key$held <- length(f$hessian_held) > 0L
+  key$nonconv <- any(ck$status[ck$check %in% c("gradient", "optimizer")] == "FAIL")
+  key$t_fit <- t_fit
+  meths <- c(z = "asymptotic", s = "satterthwaite", kr = "kenward-roger")
+  if (ce$arm != "D4") {
+    nm <- coef_of[[ce$arm]]
+    for (k in names(meths)) {
+      r <- timed(ilm_coef_table(f, df = meths[[k]]))
+      ct <- r$v
+      row <- if (is.data.frame(ct) && nm %in% rownames(ct)) ct[nm, ] else NULL
+      est <- if (is.null(row)) NA_real_ else row$Estimate
+      se  <- if (is.null(row)) NA_real_ else row[["Std. Error"]]
+      df  <- if (is.null(row)) NA_real_ else if (k == "z") Inf else row$df
+      fb  <- is.data.frame(ct) && !is.null(attr(ct, "fallback")) &&
+             match(nm, rownames(ct)) %in% attr(ct, "fallback")$rows
+      q <- if (is.finite(df) && df > 0) qt(1 - (1 - LEVEL) / 2, df) else qnorm(1 - (1 - LEVEL) / 2)
+      tv <- (est - TRUTH) / se
+      p <- if (is.finite(df) && df > 0) 2 * pt(-abs(tv), df) else 2 * pnorm(-abs(tv))
+      key[[paste0("est_", k)]] <- est
+      key[[paste0("se_", k)]] <- se
+      key[[paste0("df_", k)]] <- df
+      key[[paste0("cover_", k)]] <- abs(est - TRUTH) <= q * se
+      key[[paste0("p_", k)]] <- p
+      key[[paste0("fallback_", k)]] <- fb
+      key[[paste0("nwarn_", k)]] <- r$nw
+      key[[paste0("warn_", k)]] <- r$msg
+      key[[paste0("err_", k)]] <- r$err
+      key[[paste0("t_", k)]] <- r$t
+    }
+  } else {
+    ## the F test of f, by each df, and the Wald chi-square
+    for (k in c("s", "kr")) {
+      r <- timed(ilm_anova(f, df = meths[[k]]))
+      a <- r$v
+      ok <- is.data.frame(a) && "f" %in% rownames(a)
+      key[[paste0("numdf_", k)]] <- if (ok) a["f", "NumDF"] else NA_real_
+      key[[paste0("dendf_", k)]] <- if (ok) a["f", "DenDF"] else NA_real_
+      key[[paste0("F_", k)]] <- if (ok) a["f", "F value"] else NA_real_
+      key[[paste0("p_", k)]] <- if (ok) a["f", "Pr(>F)"] else NA_real_
+      key[[paste0("nwarn_", k)]] <- r$nw
+      key[[paste0("warn_", k)]] <- r$msg
+      key[[paste0("err_", k)]] <- r$err
+      key[[paste0("t_", k)]] <- r$t
+    }
+    r <- timed(ilm_anova(f, statistic = "Chisq"))
+    a <- r$v
+    ok <- is.data.frame(a) && "f" %in% rownames(a)
+    key$chisq_z <- if (ok) a["f", "Chisq"] else NA_real_
+    key$p_z <- if (ok) a["f", "Pr(>Chisq)"] else NA_real_
+    key$nwarn_z <- r$nw; key$err_z <- r$err; key$t_z <- r$t
+  }
+  key
+}
+
+## ---- summaries ----------------------------------------------------------------
+## Coverage (D1 to D3) and the size of the test (D4) by method, with the Monte
+## Carlo SE and the pre-registered verdict: calibrated when within 2 MC SEs
+## of the target. D3 is also split by whether the fit held a component.
+mcse <- function(p, n) sqrt(p * (1 - p) / n)
+summarise_fits <- function(x) {
+  x <- x[x$ok %in% TRUE, ]
+  rows <- list()
+  add <- function(sub, cell, split) {
+    if (!nrow(sub)) return(NULL)
+    ce <- sub[1, c("cell", "arm", "G", "m", "icc")]
+    for (k in c("z", "s", "kr")) {
+      if (ce$arm != "D4") {
+        v <- sub[[paste0("cover_", k)]]; target <- LEVEL; what <- "coverage"
+      } else {
+        v <- sub[[paste0("p_", k)]] < 0.05; target <- 0.05; what <- "size"
+      }
+      n <- sum(!is.na(v)); est <- mean(v, na.rm = TRUE)
+      dfv <- if (k == "z") rep(Inf, nrow(sub)) else
+        sub[[if (ce$arm == "D4") paste0("dendf_", k) else paste0("df_", k)]]
+      rows[[length(rows) + 1L]] <<- data.frame(ce, split = split, method = k,
+        what = what, n = n, estimate = est, mcse = mcse(target, n),
+        calibrated = abs(est - target) <= 2 * mcse(target, n),
+        gap = abs(est - target),
+        df_median = if (k == "z") Inf else stats::median(dfv, na.rm = TRUE),
+        df_bad = if (k == "z") 0L else sum(!is.finite(dfv) | dfv < 1, na.rm = TRUE) + sum(is.na(dfv)),
+        errors = sum(!is.na(sub[[paste0("err_", k)]])),
+        warned = sum(sub[[paste0("nwarn_", k)]] > 0, na.rm = TRUE),
+        n_held = sum(sub$held), n_nonconv = sum(sub$nonconv),
+        time_mean = mean(sub[[paste0("t_", k)]], na.rm = TRUE))
+    }
+  }
+  for (cl in sort(unique(x$cell))) {
+    sub <- x[x$cell == cl, ]
+    add(sub, cl, "all")
+    if (sub$arm[1] == "D3") {
+      add(sub[sub$held, ], cl, "held")
+      add(sub[!sub$held, ], cl, "unheld")
+    }
+  }
+  do.call(rbind, rows)
+}
+## The pre-registered verdicts, one line each; NA where no fit bears on one
+## (no held fits in D3, say), never a vacuous TRUE.
+verdicts <- function(s) {
+  all <- function(x) if (length(x)) base::all(x) else NA
+  any <- function(x) if (length(x)) base::any(x) else NA
+  a <- s[s$split == "all", ]
+  at <- function(arm, G, meth) a[a$arm %in% arm & a$G %in% G & a$method == meth, ]
+  s_big <- at(c("D1", "D2"), c(10, 20), "s")
+  z6 <- at(c("D1", "D2"), 6, "z"); s6 <- at(c("D1", "D2"), 6, "s")
+  closer <- merge(z6[, c("cell", "gap")], s6[, c("cell", "gap")], by = "cell",
+                  suffixes = c("_z", "_s"))
+  d3 <- s[s$arm == "D3" & s$split != "all", ]
+  data.frame(
+    verdict = c("Satterthwaite calibrated in every D1/D2 cell with G >= 10",
+                "Satterthwaite closer to 0.95 than z in every D1/D2 cell with G = 6",
+                "D3: Satterthwaite calibrated in the held fits",
+                "D3: KR calibrated in the held fits",
+                "D3: any undefined Satterthwaite df (NaN, infinite or below 1)",
+                "D4: Satterthwaite's F size calibrated in every cell",
+                "D4: KR's F size calibrated in every cell",
+                "D4: chi-square size calibrated in every cell"),
+    holds = c(all(s_big$calibrated), all(closer$gap_s < closer$gap_z),
+              all(d3$calibrated[d3$split == "held" & d3$method == "s"]),
+              all(d3$calibrated[d3$split == "held" & d3$method == "kr"]),
+              any(a$df_bad[a$arm == "D3" & a$method == "s"] > 0),
+              all(at("D4", c(6, 12, 21), "s")$calibrated),
+              all(at("D4", c(6, 12, 21), "kr")$calibrated),
+              all(at("D4", c(6, 12, 21), "z")$calibrated)))
+}
+
+if (SUMMARISE) {
+  for (tag in c("main", "fresh")) {
+    fp <- file.path(sp, paste0("df_tables_", tag, ".csv"))
+    if (!file.exists(fp)) next
+    s <- summarise_fits(utils::read.csv(fp))
+    utils::write.csv(s, file.path(sp, paste0("df_tables_", tag, "_summary.csv")), row.names = FALSE)
+    v <- verdicts(s)
+    utils::write.csv(v, file.path(sp, paste0("df_tables_", tag, "_verdicts.csv")), row.names = FALSE)
+    cat("==", tag, "==\n"); print(v, row.names = FALSE)
+  }
+  quit(save = "no")
+}
+
+## ---- run ----------------------------------------------------------------------
+t_all <- Sys.time()
+use <- if (is.null(ONLY)) cells else cells[cells$cell %in% ONLY, ]
+jobs <- merge(use[, "cell", drop = FALSE], data.frame(rep = seq_len(NREP)))
+jl <- split(jobs, seq_len(nrow(jobs)))
+tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
+## CHECKPOINTS (an I/O change, no effect on results): each fit's result is
+## saved as it finishes, and a run started again reads the fits already done
+## instead of refitting them. Every fit sets its own seed from its cell and
+## replicate, so a resumed run gives the same numbers as one uninterrupted.
+ck <- file.path(sp, paste0("checkpoints_", tag))
+dir.create(ck, showWarnings = FALSE, recursive = TRUE)
+one_ck <- function(job) {
+  fp <- file.path(ck, sprintf("cell%02d_rep%04d.rds", job$cell, job$rep))
+  if (file.exists(fp)) return(readRDS(fp))
+  r <- one(job)
+  saveRDS(r, paste0(fp, ".part")); file.rename(paste0(fp, ".part"), fp)
+  r
+}
+res <- if (NCORE > 1L) {
+  cl <- parallel::makeCluster(NCORE)
+  invisible(parallel::clusterEvalQ(cl, suppressPackageStartupMessages(library(illume))))
+  parallel::clusterExport(cl, setdiff(ls(globalenv()), c("cl", "jobs", "jl")), envir = globalenv())
+  ## one job at a time, so a resume's unfinished fits do not all fall to one worker
+  r <- parallel::parLapplyLB(cl, jl, one_ck, chunk.size = 1L)
+  parallel::stopCluster(cl)
+  r
+} else lapply(jl, one_ck)
+## failed fits carry fewer columns; each is filled out with NA
+nm <- unique(unlist(lapply(res, names)))
+out <- do.call(rbind, lapply(res, function(d) { for (n in setdiff(nm, names(d))) d[[n]] <- NA; d[nm] }))
+utils::write.csv(out, file.path(sp, paste0("df_tables_", tag, ".csv")), row.names = FALSE)
+cat("illume", format(utils::packageVersion("illume")), "from", find.package("illume"), "\n")
+cat("fits:", nrow(jobs), " minutes:",
+    round(as.numeric(difftime(Sys.time(), t_all, units = "mins")), 1), "\n")
