@@ -1,5 +1,11 @@
 # illume 0.0.8.9003
 
+* `ilm_dist()`'s `d()`, `p()` and `q()` give NaN for an element whose
+  mean, dispersion or zero-part parameter is NaN or NA, and give back a
+  missing argument as it came, as base R's distribution functions do. A zero
+  part's quantile compared the probability with a missing zero probability:
+  one element came back as 0, and several stopped with "NAs are not allowed
+  in subscripted assignments". Found through an external report.
 * An AR(1) correlation has a floor, as the variances have had. Fitted as
   atanh(rho), it could run past where 1 - rho^2 keeps its digits, to a
   spuriously low objective: one 12-point series ended at rho = -1, graded
