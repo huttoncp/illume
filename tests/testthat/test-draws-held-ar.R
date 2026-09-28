@@ -67,3 +67,66 @@ test_that("an AR block held for its correlation, with an identified SD, keeps it
   expect_gt(stats::sd(dr$draws[dr$map$block == "lchol_ar", ]), 0.01)
   expect_identical(dr$held$n, 1L)
 })
+
+## A panel with no noise, whose fit stopped short of a stationary point
+## (gradient 1.2e-2 on the slope) with sigma at 1e-4 of sd(y): the
+## recomputed covariance is refused off a stationary point, so the flagged
+## dispersion was not held, and its draws, from an SE of 14 on the log scale,
+## reached e^42 -- while the checks said it was held.
+stalled_fit <- function() {
+  set.seed(1293099)
+  G <- 20L
+  d <- expand.grid(t = 1:12, g = factor(seq_len(G)))
+  lat <- unlist(lapply(seq_len(G), function(i)
+    as.numeric(stats::arima.sim(list(ar = 0.7), 12, sd = 0.8 * sqrt(1 - 0.49)))))
+  d$x <- stats::rnorm(nrow(d))
+  d$y <- 1 + 0.3 * d$x + stats::rnorm(G, 0, 0.5)[d$g] + lat + stats::rnorm(nrow(d), 0, 0)
+  suppressMessages(suppressWarnings(
+    ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+              ar = ilm_ar1(~ t | g), verbose = FALSE)))
+}
+
+test_that("a dispersion at its limit is held where the fit did not converge", {
+  f <- stalled_fit()
+  ck <- f$checks
+  expect_identical(ck$status[ck$check == "gradient"], "FAIL")
+  expect_true("dispersion" %in% f$hessian_held)
+  ## what the checks say is true
+  expect_match(ck$detail[ck$check == "dispersion_limit"], "held at its estimate",
+               fixed = TRUE)
+  ## the draws hold it, and say once that the fit did not converge
+  expect_warning(dr <- ilm_draws(f, nsim = 200, seed = 1),
+                 "did not reach a stationary point (optimizer and gradient checks FAIL)",
+                 fixed = TRUE)
+  ld <- dr$draws[dr$map$block == "logdisp", ]
+  expect_equal(diff(range(ld)), 0)
+  expect_true(all(is.finite(dr$draws)))
+})
+
+test_that("a converged fit draws without the warning", {
+  expect_silent(ilm_draws(held_ar_fit(), nsim = 20, seed = 1))
+})
+
+test_that("a smooth's band beside a held AR is the band without it", {
+  ## the joint draws behind a typical or population band now hold what the
+  ## fit holds; the AR block at its zero SD drew from -114 to 135 there
+  set.seed(1095029)
+  d <- data.frame(g = factor("s1"), t = 1:48)
+  d$x <- stats::runif(48, -2, 2)
+  d$y <- 5 + sin(d$x) + as.numeric(stats::arima.sim(list(ar = 0.1), 48, sd = 0.8 * sqrt(1 - 0.01))) +
+    stats::rnorm(48, 0, 0.1)
+  fa <- suppressMessages(suppressWarnings(ilm_model(y ~ s(x), data = d, family = "gaussian",
+          ar = ilm_ar1(~ t | g), verbose = FALSE)))
+  f0 <- suppressMessages(suppressWarnings(ilm_model(y ~ s(x), data = d, family = "gaussian",
+          verbose = FALSE)))
+  expect_true("ar" %in% fa$hessian_held)
+  jd <- illume:::ilm_joint_draws(fa, 500, 2)
+  k <- jd$which %in% c("lchol_ar", "rho_raw")
+  expect_equal(max(apply(jd$draws[k, , drop = FALSE], 1L, function(v) diff(range(v)))), 0)
+  nd <- data.frame(x = seq(-2, 2, length.out = 9), t = 49, g = "s1")
+  w <- function(f) { p <- suppressWarnings(predict(f, newdata = nd, groups = "typical",
+                       interval = "confidence", nsim = 2000, seed = 1))
+                     as.numeric(p$upper - p$lower) }
+  r <- w(fa) / w(f0)
+  expect_true(all(r > 0.9 & r < 1.1))
+})
