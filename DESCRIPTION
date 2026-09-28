@@ -84,7 +84,8 @@ Suggests:
     lmerTest,
     pbkrtest,
     MASS,
-    nnet
+    nnet,
+    cluster
 Remotes: huttoncp/illumex
 VignetteBuilder: knitr
 Config/testthat/edition: 3
