@@ -1,4 +1,4 @@
-# illume 0.0.8.9001
+# illume 0.0.8.9002
 
 * illume now requires illumex 0.0.8.9000.
 * `ilm_interpret()` on an `ilm_dag_model()` describes the exposure's effect
