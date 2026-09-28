@@ -17,29 +17,9 @@
 ## noise, and would break every expect_silent() in the suite.
 ##
 ## The help page for the `progress` argument, ilm_progress_arg, is illumex's;
-## ilm_progress() is a copy of illumex's, compared by
-## tests/testthat/test-shared-helpers.R, so change the two together.
+## ilm_progress() itself is in shared-helpers.R, the same file in both
+## packages. What stays here is illume's own: a bar over parallel workers.
 ## ---------------------------------------------------------------------------
-
-## A bar, or a silent stand-in with the same shape so callers need no branch.
-#' @keywords internal
-#' @noRd
-ilm_progress <- function(n, progress = NULL, label = NULL) {
-  on <- isTRUE(progress) ||
-    (is.null(progress) && interactive() && n > 1L)
-  if (!on || !is.finite(n) || n < 1L)
-    return(list(tick = function(i) invisible(NULL),
-                done = function() invisible(NULL)))
-  if (!is.null(label)) message(label)
-  pb <- utils::txtProgressBar(min = 0, max = n, style = 3)
-  step <- max(1L, as.integer(n) %/% 100L)
-  list(
-    tick = function(i) {
-      if (i %% step == 0L || i == n) utils::setTxtProgressBar(pb, i)
-      invisible(NULL)
-    },
-    done = function() { utils::setTxtProgressBar(pb, n); close(pb); invisible(NULL) })
-}
 
 ## lapply with a bar, over one process or many.
 ##
