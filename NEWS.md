@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * A correlation over time's latent budget is judged where the family is
   known. `ilm_ar1()` and `ilm_car1()` warned, when built, that below about
   1.5 observations per latent value "the Laplace approximation frequently
