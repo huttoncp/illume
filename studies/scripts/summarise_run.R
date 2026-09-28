@@ -636,12 +636,28 @@ summarise_study <- function(dir, study) {
       fp <- prep(fpar)
       fu <- fp[!fp$held & fp$label %in% c("ok", fails) & is.finite(fp$s), ]
       fu$fl <- fu$s > chosen
+      ## the rule itself on the fresh seeds, beside the main run's, with
+      ## Monte Carlo SEs
+      rt <- function(x) if (length(x)) pc(x) else "--"
+      side <- do.call(rbind, lapply(cutsv, function(k) {
+        f1 <- u$s > k; f2 <- fu$s > k
+        data.frame(cut = k, spec_main = rt(!f1[!u$fails]), spec_fresh = rt(!f2[!fu$fails]),
+                   sens_main = rt(f1[u$fails]), sens_fresh = rt(f2[fu$fails]),
+                   stringsAsFactors = FALSE)
+      }))
+      sp2 <- vapply(cutsv, function(k) mean(!(fu$s > k)[!fu$fails]), 0)
+      chosen2 <- if (any(sp2 >= 0.95)) cutsv[which(sp2 >= 0.95)[1L]] else NA_real_
       by <- function(g) do.call(rbind, lapply(split(fu, fu[[g]]), function(x)
         data.frame(group = paste(g, x[[g]][1]), n = nrow(x), failing = sum(x$fails),
-                   specificity = mean(!x$fl[!x$fails]), sensitivity = mean(x$fl[x$fails]))))
+                   specificity = rt(!x$fl[!x$fails]), sensitivity = rt(x$fl[x$fails]),
+                   stringsAsFactors = FALSE)))
       ft <- rbind(by("family"), by("arm"), by("label"))
-      lines <- c(lines, "", paste0("**Fresh seeds at the cut-off ", chosen, "** (",
-        nrow(fu), " unheld parameters):"), "", md_table(ft))
+      lines <- c(lines, "", paste0("**Fresh seeds** (", nrow(fu), " unheld parameters, ",
+        sum(fu$fails), " approx_fails), the rule beside the main run's:"), "",
+        md_table(side), "", paste0("On the fresh seeds the rule picks ",
+          if (is.na(chosen2)) "no cut-off" else chosen2, if (identical(chosen2, chosen))
+            ", the main run's: CONFIRMED." else paste0(", where the main run picked ", chosen, ".")),
+        "", paste0("At ", chosen, ", by family, arm and label:"), "", md_table(ft))
     }
     ## coverage of the true SD
     u$fl <- u$s > chosen
@@ -737,6 +753,25 @@ summarise_study <- function(dir, study) {
         lines <- c(lines, "", paste0("**Forecasts, fits ", grp, " at ", chosen,
           "** (B1 and B2; explosive is the share of rows with CRPS over 100 times the ",
           "true-parameter predictive's):"), "", md_table(tab))
+      }
+      ## the fallback remedy 1 names, by family and horizon, on the flagged
+      g <- merge(sets$given_theta[sets$given_theta$fl, ], cl, by = "cell")
+      if (nrow(g)) {
+        gt <- do.call(rbind, lapply(split(g, list(g$family, g$h), drop = TRUE), function(z) {
+          w <- z$n_rows; n <- nrow(z)
+          data.frame(family = z$family[1], h = z$h[1], fits = n,
+            cov80 = paste0(num(stats::weighted.mean(z$cov80, w), 3), " (",
+                           num(stats::sd(z$cov80) / sqrt(n), 3), ")"),
+            cov95 = paste0(num(stats::weighted.mean(z$cov95, w), 3), " (",
+                           num(stats::sd(z$cov95) / sqrt(n), 3), ")"),
+            crps_mean = gnum(stats::weighted.mean(fx_crps(z$crps_mean), w)),
+            true_crps = gnum(stats::weighted.mean(z$ref_mean, w)),
+            explosive = sum(z$n_explosive), stringsAsFactors = FALSE)
+        }))
+        gt <- gt[order(gt$family, gt$h), ]
+        lines <- c(lines, "", paste0("**Draws given theta on the fits flagged at ", chosen,
+          "**, by family and horizon. A binary outcome's interval spans both values,",
+          " so its coverage is 1 by construction:"), "", md_table(gt))
       }
     }
     ## time
