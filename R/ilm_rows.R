@@ -112,24 +112,37 @@ print.ilm_rows_used <- function(x, ...) {
   invisible(x)
 }
 
+## The line's words, kept in one place: the wording is a ruling (item 164),
+## and "used" may become "analysed" to match a Table 1 and illumex's print.
+#' @keywords internal
+#' @noRd
+ilm_rows_words <- list(
+  used = "used",
+  dropped = "dropped for missing values",
+  several = "a row missing in several columns counts in each",
+  zero = "with weight zero, %s but contributing nothing")
+
 ## One line for print(), summary() and the record: "200 of 250 rows used; 50
-## dropped for missing values (x 30, z 25)". NULL when nothing was dropped
-## and no weight is zero, unless `always`.
+## dropped for missing values (x 30, z 25)". The per-column counts can add up
+## to more than the rows dropped, and the line says why when they do. NULL
+## when nothing was dropped and no weight is zero, unless `always`.
 #' @keywords internal
 #' @noRd
 ilm_rows_line <- function(r, always = TRUE) {
+  w <- ilm_rows_words
   nd <- r$n_dropped; nz <- r$n_zero_weight
   quiet <- (is.na(nd) || nd == 0L) && (is.null(nz) || nz == 0L)
   if (quiet && !always) return(NULL)
-  head <- if (is.na(r$n_input)) sprintf("%d rows used", r$n_used)
-          else sprintf("%d of %d rows used", r$n_used, r$n_input)
+  head <- if (is.na(r$n_input)) sprintf("%d rows %s", r$n_used, w$used)
+          else sprintf("%d of %d rows %s", r$n_used, r$n_input, w$used)
   drop <- if (!is.na(nd) && nd > 0L) {
     by <- r$dropped_by
-    sprintf("; %d dropped for missing values%s", nd,
-            if (length(by)) paste0(" (", paste(names(by), by, collapse = ", "), ")")
-            else "")
+    cols <- if (!length(by)) "" else
+      paste0(" (", paste(names(by), by, collapse = ", "),
+             if (sum(by) > nd) paste0("; ", w$several) else "", ")")
+    sprintf("; %d %s%s", nd, w$dropped, cols)
   } else ""
   zero <- if (!is.null(nz) && nz > 0L)
-    sprintf("; %d with weight zero, used but contributing nothing", nz) else ""
+    sprintf(paste0("; %d ", w$zero), nz, w$used) else ""
   paste0(head, drop, zero)
 }

@@ -39,8 +39,11 @@ test_that("missing values: the counts, the columns, and stats' record agree", {
   expect_identical(sort(as.integer(om)), c(2L, 9L, 20L, 31L, 40L))
   ## the rows used are the others, and they are the rows the model has
   expect_identical(nrow(f$X), length(setdiff(seq_len(r$n_input), as.integer(om))))
-  expect_output(print(f), "55 of 60 rows used; 5 dropped for missing values (y 2, x 3, z 1)",
-                fixed = TRUE)
+  ## the column counts add to 6 against 5 rows dropped, and the line says why
+  out <- gsub("[[:space:]]+", " ", paste(capture.output(print(f)), collapse = " "))
+  expect_match(out, paste0("55 of 60 rows used; 5 dropped for missing values ",
+                           "(y 2, x 3, z 1; a row missing in several columns ",
+                           "counts in each)"), fixed = TRUE)
   expect_output(print(summary(f)), "Rows: 55 of 60 rows used", fixed = TRUE)
 })
 
@@ -50,6 +53,8 @@ test_that("a grouping factor's missing values count, in a mixed model", {
   r <- ilm_rows_used(f)
   expect_identical(c(r$n_used, r$n_dropped), c(58L, 2L))
   expect_identical(r$dropped_by, c(g = 2L))
+  expect_output(print(f), "58 of 60 rows used; 2 dropped for missing values (g 2)",
+                fixed = TRUE)
   expect_identical(sort(as.integer(stats::na.action(f))), c(5L, 6L))
 })
 
