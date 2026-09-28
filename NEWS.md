@@ -1,4 +1,4 @@
-# illume 0.0.8.9000
+# illume 0.0.8.9001
 
 * illume now requires illumex 0.0.8.9000.
 * `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
@@ -23,6 +23,15 @@
 * The structural tier of a remedy includes a change in how the variances
   are estimated, such as REML in place of maximum likelihood: the model and
   what its fixed effects mean stay the same.
+* `ilm_refit(fit, data = NULL, y = NULL)` fits the same model again: to a
+  new response for the rows it was fitted to, in the layout
+  `ilm_simulate()` returns -- the parametric bootstrap's refit, censoring
+  carried as the data were -- or to another data set, rebuilt from the
+  formula so levels, smooth bases and a correlation over time's cells come
+  from the new rows. The result is a full fit, with every method a fit from
+  `ilm_model()` has. A correlation over time given as vectors cannot follow
+  the model to new data, and the function says to give it by name,
+  `ilm_ar1(~ time | group)`.
 * `ilm_interpret()` no longer says "The interval includes zero" about a
   factor with three or more levels, whose sentence shows no interval: the
   flag came from the difference between the last level and the first, which
