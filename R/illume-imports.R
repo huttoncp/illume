@@ -46,6 +46,6 @@ utils::globalVariables(c(
   "has_ord", "zeta_raw", "ord_L", "ord_iu", "ord_il", "ord_mu", "ord_ml",
   "obs_lev", "obs_row",
   "beta", "theta", "bvec", "lchol", "lchol_ar", "rho_raw", "B_ar", "B",
-  "logdisp", "n_disp", "yobs",
+  "logdisp", "n_disp", "yobs", "offv",
   "rl_re"
 ))
