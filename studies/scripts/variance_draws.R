@@ -653,13 +653,27 @@ t_all <- Sys.time()
 use <- if (is.null(ONLY)) cells else cells[cells$cell %in% ONLY, ]
 jobs <- merge(use, data.frame(rep = seq_len(NREP)))
 jl <- split(jobs, seq_len(nrow(jobs)))
+tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
+## CHECKPOINTS (an I/O change, no effect on results): each fit's result is
+## saved as it finishes, and a run started again reads the fits already done
+## instead of refitting them. Every fit sets its own seed from its cell and
+## replicate, so a resumed run gives the same numbers as one uninterrupted.
+ck <- file.path(sp, paste0("checkpoints_", tag))
+dir.create(ck, showWarnings = FALSE, recursive = TRUE)
+one_ck <- function(job) {
+  fp <- file.path(ck, sprintf("cell%02d_rep%03d.rds", job$cell, job$rep))
+  if (file.exists(fp)) return(readRDS(fp))
+  r <- one(job)
+  saveRDS(r, paste0(fp, ".part")); file.rename(paste0(fp, ".part"), fp)
+  r
+}
 res <- if (NCORE > 1L) {
   cl <- parallel::makeCluster(NCORE)
   parallel::clusterExport(cl, setdiff(ls(globalenv()), c("cl", "jobs", "jl")), envir = globalenv())
-  r <- parallel::parLapplyLB(cl, jl, one)
+  r <- parallel::parLapplyLB(cl, jl, one_ck)
   parallel::stopCluster(cl)
   r
-} else lapply(jl, one)
+} else lapply(jl, one_ck)
 ## rows of failed fits carry fewer columns; each is filled out with NA
 bind <- function(x, k) {
   l <- Filter(Negate(is.null), lapply(x, `[[`, k))
@@ -669,7 +683,6 @@ bind <- function(x, k) {
 }
 put <- function(d, nm) if (!is.null(d))
   utils::write.csv(d, file.path(sp, paste0("variance_draws_", nm, ".csv")), row.names = FALSE)
-tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
 for (k in c("par", "fc", "time")) put(bind(res, k), paste(tag, k, sep = "_"))
 if (!OFFSET) {
   fx <- lapply(fixtures(), function(x) one(x$ce, fixture = x))
