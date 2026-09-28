@@ -1,5 +1,20 @@
 # illume 0.0.8.9003
 
+* An AR(1) correlation has a floor, as the variances have had. Fitted as
+  atanh(rho), it could run past where 1 - rho^2 keeps its digits, to a
+  spuriously low objective: one 12-point series ended at rho = -1, graded
+  FAIL with a gradient of 11, where the true minimum is at rho = -0.55. Short
+  of that, the objective flattens towards the edge, and the optimiser could
+  stop there at a worse objective with every check passing. A fit that ends
+  with |rho| above 0.99 is now refitted with atanh(rho) bounded at 8, from
+  where it stopped and from a correlation of 0, and moves only to a better
+  objective (or, past the bound, back inside it). On 1,080 single-series fits
+  from a simulation study, the 866 with |rho| at or below 0.99 are
+  unchanged; all 83 that had gone past the bound now pass their checks (72
+  held at the bound as a correlation at +/-1, 10 at an interior optimum), and
+  2 of the 131 near the edge found a better optimum inside. Gradient
+  failures went from 10 to none. CAR(1) is untouched: its parameter is
+  log(range), which has no such limit.
 * A gaussian mixed model's tables test on finite degrees of freedom, as
   lmerTest does. `summary()` gives each coefficient a df column and t tests
   on Satterthwaite's df; `ilm_anova()` gives F with its numerator and

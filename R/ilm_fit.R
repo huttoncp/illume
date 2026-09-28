@@ -1580,6 +1580,62 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
   o2
 }
 
+## AN AR(1) CORRELATION HAS A FLOOR TOO, AND AN EDGE THAT IS NOT AN OPTIMUM.
+## It is fitted as atanh(rho), which has no end. Past about |atanh(rho)| = 11
+## the stationary terms' 1 - rho^2 loses its digits: the objective falls away,
+## spuriously, and the gradient with it. Measured on a 12-point gaussian
+## series from a simulation study, profiled along atanh(rho) with everything
+## else re-optimised: the objective moves by under 1e-6 between 8 and 10, by
+## 5e-6 at 12, 1e-4 at 14, 3e-3 at 15, and at 19 it is 0.24 against a true
+## minimum of 0.49 at rho = -0.55 -- which is where the fit had gone, graded
+## FAIL with a gradient of 11. Short of that, the objective flattens towards
+## the edge, and there the gradient is small enough for the optimiser to stop
+## at rho = -1 with everything graded well: at 0.666, not 0.490. So a fit that
+## ends near the edge (|rho| above 0.99, where the rho_boundary check fails)
+## is refitted with atanh(rho) bounded at 8 (rho within 2.3e-7 of +/-1),
+## from where it stopped (brought back to the floor if it went past it) and
+## from a correlation of 0; bounded, the optimiser reaches the true minimum
+## from every start tried, 0 and +/-1 to -3 among them. The start from 0 is
+## kept only if it is better. Where the AR SD has gone to zero the
+## correlation is not identified, the objective is the same at every value,
+## and one at exactly 0 has no curvature at all -- the joint draws' solve is
+## then exactly singular -- so on a tie the fit stays where it was, or at the
+## floor. A fit that went past the floor keeps the refit even when its
+## objective is "worse": the one past the floor is not real. Every fit with
+## |rho| at or below 0.99 is exactly what it was. A correlation whose true
+## optimum is at the edge ends there, where the boundary checks and the hold
+## treat it as a correlation at +/-1.
+ilm_rho_floor <- 8
+ilm_rho_edge <- atanh(0.99)
+
+#' @keywords internal
+#' @noRd
+ilm_rho_refit <- function(obj, opt, k, fpos, ffl, ctl, bound = ilm_rho_floor,
+                          edge = ilm_rho_edge) {
+  if (!length(k) || all(abs(opt$par[k]) <= edge)) return(opt)
+  ## the variance floor's bounds are kept, so neither refit undoes the other
+  lo <- rep(-Inf, length(opt$par)); hi <- rep(Inf, length(opt$par))
+  lo[fpos] <- ffl; lo[k] <- -bound; hi[k] <- bound
+  fit_from <- function(st) tryCatch({
+    st <- pmin(pmax(st, lo), hi)
+    o <- nlminb(st, obj$fn, obj$gr, lower = lo, upper = hi, control = ctl)
+    nlminb(o$par, obj$fn, obj$gr, lower = lo, upper = hi, control = ctl)
+  }, error = function(e) NULL)
+  ok <- function(o) !is.null(o) && is.finite(o$objective)
+  past <- any(abs(opt$par[k]) > bound)
+  inc <- if (past) fit_from(opt$par) else opt
+  s0 <- opt$par; s0[k] <- 0
+  o0 <- fit_from(s0)
+  ## TMB remembers the lowest objective it has seen and starts its inner
+  ## optimisations there; the searches above moved it
+  if (exists("value.best", envir = obj$env, inherits = FALSE))
+    assign("value.best", Inf, envir = obj$env)
+  if (!ok(inc) && !ok(o0)) return(opt)
+  if (!ok(inc) || (ok(o0) && o0$objective < inc$objective - 1e-6 * max(1, abs(inc$objective))))
+    return(o0)
+  inc
+}
+
 ## The outcomes: "recomputed" (the accurate Hessian is positive definite and
 ## nothing is at a boundary, so the fit is fully usable), "boundary" (the
 ## terms in `held` have the directions in which their covariance cannot be
@@ -2750,6 +2806,10 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ffl[names(obj$par)[fpos] == "lchol_ar"] <-
       ilm_logsd_floor - 0.5 * log(stats::median(ar$gap))
   opt <- ilm_floor_refit(obj, opt, fpos, ffl, ctl)
+  ## and an AR(1) correlation near its edge or past it (see ilm_rho_floor); CAR(1)'s
+  ## parameter is log(range), whose arithmetic holds far beyond any range
+  if (identical(ar$type, "ar1"))
+    opt <- ilm_rho_refit(obj, opt, which(names(obj$par) == "rho_raw"), fpos, ffl, ctl)
   ## a floor refit moves the optimum, and the restarts' record is of the one before
   if (!identical(opt$objective, obj_before_floor)) rs$same <- NA
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
