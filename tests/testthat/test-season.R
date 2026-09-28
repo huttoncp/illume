@@ -111,7 +111,7 @@ test_that("a model with Fourier terms recovers the cycle and predicts it", {
   expect_equal(unname(b[["ilm_fourier(t, 12)cos1"]]), 0.5, tolerance = 0.35)
   # one term, two degrees of freedom, not two separate terms
   expect_true("ilm_fourier(t, 12)" %in% f$term_labels)
-  expect_equal(ilm_anova(f, test = "Wald")$Df[2], 2L)
+  expect_equal(ilm_anova(f, test = "Wald")$NumDF[2], 2)
   # unlike poly(), it carries no fitted state, so times beyond the data are
   # predicted by the cycle rather than extrapolated wrongly
   nd <- data.frame(x = 0, t = c(3, 15, 27),
@@ -175,7 +175,7 @@ test_that("a cyclic spline fits a seasonal model", {
   f <- ilm_model(y ~ x + ilm_cyclic(t, 12, 5) + (1 | id), data = d,
                  family = "gaussian", verbose = FALSE)
   expect_equal(unname(coef(f)[["x"]]), 0.8, tolerance = 0.12)
-  expect_equal(ilm_anova(f, test = "Wald")$Df[2], 5L)
+  expect_equal(ilm_anova(f, test = "Wald")$NumDF[2], 5)
   # periodic prediction, same as the Fourier basis gives
   nd <- data.frame(x = 0, t = c(4, 16, 28),
                    id = factor(1, levels = levels(d$id)))
@@ -212,7 +212,7 @@ test_that("a term can use a variable local to the calling function", {
   local_period <- 12
   g <- ilm_model(y ~ x + ilm_cyclic(t, local_period, 4) + (1 | id), data = d,
                  family = "gaussian", verbose = FALSE)
-  expect_equal(ilm_anova(g, test = "Wald")$Df[2], 4L)
+  expect_equal(ilm_anova(g, test = "Wald")$NumDF[2], 4)
 
   # and it still predicts, which needs the environment on the stored terms too
   nd <- data.frame(x = 0, t = 5, id = factor(1, levels = levels(d$id)))
@@ -237,5 +237,5 @@ test_that("terms that store fitted state predict on the basis they were fitted o
   }
   f <- ilm_model(y ~ splines::ns(x, df = 3) + (1 | id), data = d,
                  family = "gaussian", verbose = FALSE)
-  expect_equal(ilm_anova(f, test = "Wald")$Df[1], 3L)
+  expect_equal(ilm_anova(f, test = "Wald")$NumDF[1], 3)
 })

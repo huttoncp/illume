@@ -24,8 +24,12 @@
   instead, with its adjusted standard errors, and `df = "asymptotic"` for the
   z and chi-square tests as before. Where the df cannot be had, as when a
   variance is held at its boundary with nothing to derive them from, the
-  table falls back to the asymptotic test and says so. Other families, and
-  linear models, are unchanged. On a small between-cluster design the
+  table falls back to the asymptotic test and says so. The default applies
+  to a linear mixed model -- a grouping term or a correlation over time
+  integrated out, no censored rows, no zero part -- and not to a scaffold,
+  whose variances are assumed; `df = "satterthwaite"` asks for it on any
+  gaussian fit. Other families, linear models, and censored or dispersion
+  models with nothing integrated out are unchanged. On a small between-cluster design the
   z test's p for a between-cluster effect was too small.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.

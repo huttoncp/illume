@@ -609,6 +609,42 @@ ilm_kr_ftest <- function(parts, L) {
   list(df = m, scale = scale, q = q)
 }
 
+## ---- where finite df apply -------------------------------------------------
+##
+## Satterthwaite's df are the DEFAULT for a linear mixed model: gaussian, an
+## identity link, one dimension, something integrated out -- a grouping term
+## or a correlation over time -- and a likelihood gaussian throughout, so no
+## censored rows and no zero part. A censored or dispersion-model fit with
+## nothing integrated out keeps its z test (its exact t path is off for the
+## reasons its own help gives, and there is no variance component to take df
+## from), and so does a model whose only random terms are penalised smooths,
+## whose variance is a smoothing parameter rather than a component of the
+## design. Asked for by name, finite df are formed for any gaussian fit
+## without an exact reference.
+#' @keywords internal
+#' @noRd
+ilm_satt_default <- function(object) {
+  if (!identical(object$family$name, "gaussian") || isTRUE(object$exact_df))
+    return(FALSE)
+  if (!identical(object$family$link, "identity") || !isTRUE(object$C == 1L))
+    return(FALSE)
+  if (!is.null(object$Zzi) || isTRUE(object$n_censored > 0L)) return(FALSE)
+  ## a scaffold's variance components are assumed, not estimated: there is
+  ## nothing uncertain about them for df to account for
+  if (inherits(object, "ilm_scaffold")) return(FALSE)
+  grp <- vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE)
+  any(grp) || !is.null(object$ar)
+}
+
+## Whether a table gets finite df at all, for the `df` it was given.
+#' @keywords internal
+#' @noRd
+ilm_finite_df <- function(object, df) {
+  if (isTRUE(object$exact_df) || identical(df, "asymptotic")) return(FALSE)
+  if (identical(df, "auto")) return(ilm_satt_default(object))
+  identical(object$family$name, "gaussian") && isTRUE(object$C == 1L)
+}
+
 ## ---- the tables' degrees of freedom ------------------------------------------
 ##
 ## One resolver for every table that reports a test of the fixed effects --
@@ -631,7 +667,7 @@ ilm_table_df <- function(object, L, df = "auto", what = "row") {
   meth <- match.arg(as.character(df)[1],
                     c("auto", "satterthwaite", "kenward-roger", "residual",
                       "asymptotic"))
-  gaus_mixed <- identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)
+  gaus_mixed <- ilm_finite_df(object, meth)
   if (identical(meth, "auto"))
     meth <- if (isTRUE(object$exact_df)) "residual"
             else if (gaus_mixed) "satterthwaite" else "asymptotic"
@@ -683,7 +719,7 @@ ilm_table_ddf <- function(object, L, df = "auto", parts = NULL, gr = NULL) {
   meth <- match.arg(as.character(df)[1],
                     c("auto", "satterthwaite", "kenward-roger", "residual",
                       "asymptotic"))
-  gaus_mixed <- identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)
+  gaus_mixed <- ilm_finite_df(object, meth)
   if (identical(meth, "auto"))
     meth <- if (isTRUE(object$exact_df)) "residual"
             else if (gaus_mixed) "satterthwaite" else "asymptotic"

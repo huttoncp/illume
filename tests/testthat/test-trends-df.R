@@ -88,9 +88,8 @@ test_that("the joint max-t reference uses the smallest df and says t", {
   expect_match(out, "t tests on satterthwaite df", fixed = TRUE)
 })
 
-test_that("contrasts of marginal means keep the reference they had", {
-  ## means carry no df method of their own: exact t with nothing integrated
-  ## out, z otherwise -- until the tables get finite df of their own
+test_that("contrasts of marginal means take the reference of their means", {
+  ## exact t with nothing integrated out, Satterthwaite's t otherwise
   d <- slope_data()
   fl <- ilm_model(y ~ arm + week, data = d, family = "gaussian",
                   verbose = FALSE)
@@ -99,8 +98,12 @@ test_that("contrasts of marginal means keep the reference they had", {
   fm <- ilm_model(y ~ arm + week + (1 | id), data = d, family = "gaussian",
                   verbose = FALSE)
   cm <- ilm_contrast(ilm_emmeans(fm, "arm"), adjust = "none")
-  expect_equal(cm$df, rep(Inf, 3))
-  expect_true(any(grepl("z tests", capture.output(print(cm)), fixed = TRUE)))
+  expect_true(all(is.finite(cm$df) & cm$df > 0))
+  expect_identical(attr(cm, "df_method"), "satterthwaite")
+  ## and z on request
+  cz <- ilm_contrast(ilm_emmeans(fm, "arm", df = "asymptotic"), adjust = "none")
+  expect_equal(cz$df, rep(Inf, 3))
+  expect_true(any(grepl("z tests", capture.output(print(cz)), fixed = TRUE)))
 })
 
 test_that("a difference whose df cannot be formed is a z test, and says so", {
