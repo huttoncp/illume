@@ -260,7 +260,11 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
 #'   `contrasts`, the model frame and the smooth objects -- everything needed to
 #'   rebuild a reference grid for [predict.ilm_model()] and for `emmeans` or
-#'   `marginaleffects`.
+#'   `marginaleffects`. Fitted inside a function that passes its arguments on
+#'   with `...`, the `call` records the expressions written at the outer call.
+#'   Where those are a function's own arguments or locals, `update()` on the
+#'   fit cannot find them outside it; [ilm_refit()] does not read them, and
+#'   refits such a fit to other data regardless.
 #'
 #' @references
 #' Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., & Liu, J. (2013). A
@@ -327,7 +331,31 @@ ilm_model <- function(formula, ...) {
   ## where everything happens to sit in the global environment.
   env <- new.env(parent = parent.frame())
   assign(fn_name, fn, envir = env)
-  eval(cl, env)
+  out <- eval(cl, env)
+  ## Called through a wrapper's `...`, the call records ..1, ..2 -- names that
+  ## mean nothing outside the wrapper, so a refit, a remedy or update() that
+  ## evaluates the call again stopped with "..4 used in an incorrect
+  ## context". The fit itself ran on the original arguments; only the
+  ## RECORD is repaired, with the expressions the user wrote.
+  if (inherits(out, "ilm_model") && is.call(out$call))
+    out$call <- ilm_call_undot(out$call, fn,
+      c(list(formula = substitute(formula)), eval(substitute(alist(...)))))
+  out
+}
+
+## A recorded call's ..N arguments replaced by the expressions they stood
+## for, matched to the target function's arguments by position and name
+#' @keywords internal
+#' @noRd
+ilm_call_undot <- function(oc, fn, rec) {
+  dotted <- function(a) is.symbol(a) && grepl("^[.][.][0-9]+$", as.character(a))
+  if (!any(vapply(as.list(oc)[-1L], dotted, TRUE))) return(oc)
+  rc <- tryCatch(match.call(fn, as.call(c(list(oc[[1L]]), rec))),
+                 error = function(e) NULL)
+  if (is.null(rc)) return(oc)
+  for (nm in names(oc)[-1L])
+    if (dotted(oc[[nm]]) && nm %in% names(rc)) oc[nm] <- list(rc[[nm]])
+  oc
 }
 
 #' Formula front end

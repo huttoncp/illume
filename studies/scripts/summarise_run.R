@@ -34,7 +34,8 @@ md_table <- function(df, digits = 3) {
     v <- df[[j]]
     ## a count column rendered as 240.000 is just noise; decide per column, so
     ## a proportion that happens to reach exactly 1 keeps its decimals
-    whole <- all(is.na(v) | v == round(v)) && any(abs(v) >= 2, na.rm = TRUE)
+    whole <- is.integer(v) ||
+      (all(is.na(v) | v == round(v)) && any(abs(v) >= 2, na.rm = TRUE))
     df[[j]] <- if (whole) formatC(v, format = "d") else num(v, digits)
   }
   out <- c(paste0("| ", paste(names(df), collapse = " | "), " |"),
@@ -281,12 +282,115 @@ summarise_study <- function(dir, study) {
         num(max(r, na.rm = TRUE)), " times the refit without the term (median ",
         num(stats::median(r, na.rm = TRUE)), ")."))
     }
+    ## the line relative to sd(y) for a gaussian response (item 83), from the
+    ## stored fits with each sd(y) rebuilt from its seed -- no new fits
+    rel <- read_all(dir, "^re_sd_limit_relative.csv$")
+    if (!is.null(rel)) {
+      rtab <- do.call(rbind, lapply(split(rel, rel$phase), function(x)
+        do.call(rbind, lapply(c("abs 0.1", "0.01", "0.05", "0.1", "0.2", "Inf"), function(ln) {
+          rl <- (if (ln == "abs 0.1") x$sd_hat < 0.1 else x$sd_hat / x$ysd < as.numeric(ln)) &
+            x$push <= 1e-3
+          data.frame(phase = x$phase[1], line = ln, holds = sum(rl),
+                     false_holds = sum(rl & !x$at), missed = sum(!rl & x$at),
+                     stringsAsFactors = FALSE)
+        }))))
+      flat <- rel$push <= 1e-3
+      lines <- c(lines, "", paste0(
+        "**Relative to sd(y), for gaussian responses** (", nrow(rel), " gaussian fits over the ",
+        "two runs, sd(y) ", num(min(rel$ysd), 2), " to ", num(max(rel$ysd), 2),
+        ", each rebuilt from its seed; no new fits). \"abs 0.1\" is the absolute line ",
+        "the rule used, the others SD / sd(y):"), "", md_table(rtab), "", paste0(
+        "The flat SDs reach ", num(max(rel$sd_hat[flat] / rel$ysd[flat]), 3), " of sd(y). ",
+        "In these units, near 1, the two are the same; but the flatness test does not move ",
+        "with the units -- rescaling y shifts the log-likelihood by a constant -- and the ",
+        "absolute line did, so for a response in grams where the study had kilograms it ",
+        "would have missed every hold. Craig ruled the relative line, 0.1 of sd(y), for ",
+        "gaussian responses (0.0.8.9003); other families keep 0.1 on the link scale."))
+    }
     c(lines, "",
       "CAVEAT that must travel with this result: the tolerance of 1e-3 was chosen",
       "after the pre-registered run, which used 5e-3 and showed that no line above",
       "1e-2 avoided new false holds with it; the fresh-seed run is the check on",
       "that choice. The false holds that remain are those the old 1e-3 line",
       "already made, where the refit without the term landed at a worse optimum.")
+
+  } else if (study == "sigma_limit") {
+    ## Where a gaussian sigma, or a gaussian AR(1)'s SD, short of zero is
+    ## held: below a line of sd(y), and flat when its log is pushed 3 lower.
+    ## phase1 ran on main 8700876 with the pre-registered script (7275456);
+    ## verify on fresh seeds on the build of the rules (6725e0d).
+    one <- function(file) {
+      d <- read_all(dir, paste0("^", file, "$")); if (is.null(d)) return(NULL)
+      d <- d[d$ok & !is.na(d$at_sigma) & !is.na(d$push_rule), ]
+      ## the exact-fit designs (a random intercept, no noise: the likelihood
+      ## is unbounded) are set apart; a sigma already below the label's floor
+      ## counts as at the boundary, which the floor label cannot say
+      d <- d[!(d$design == "ri" & d$noise == 0), ]
+      d$at_s <- d$at_sigma | (d$ratio < 1e-4 & d$push_full <= 1e-3)
+      tab_s <- do.call(rbind, lapply(c(1e-3, 1e-2, 0.05, 0.1, 0.2, Inf), function(line) {
+        rl <- d$ratio < line & d$push_rule <= 1e-3
+        data.frame(line = format(line), holds = sum(rl), false_holds = sum(rl & !d$at_s),
+                   missed = sum(!rl & d$at_s), stringsAsFactors = FALSE)
+      }))
+      a <- d[!is.na(d$at_ar) & !is.na(d$push_rule_ar), ]
+      tab_a <- do.call(rbind, lapply(c(1e-3, 1e-2, 0.05, 0.1, 0.2, Inf), function(line) {
+        rl <- a$ratio_ar < line & a$push_rule_ar <= 1e-3
+        data.frame(line = format(line), holds = sum(rl), false_holds = sum(rl & !a$at_ar),
+                   missed = sum(!rl & a$at_ar), stringsAsFactors = FALSE)
+      }))
+      list(d = d, a = a, tab_s = tab_s, tab_a = tab_a)
+    }
+    p1 <- one("sigma_limit_phase1.csv"); v <- one("sigma_limit_verify.csv")
+    if (is.null(p1) && is.null(v)) return(NULL)
+    lines <- c(paste0(
+      "A gaussian sigma, and a gaussian AR(1)'s SD, short of zero. An SD is AT ITS ",
+      "BOUNDARY, by labels from outside the rule, when the fit with it pinned at 1e-4 ",
+      "of sd(y) is as good (log-likelihood within 1e-3) and pushing its log 3 lower, ",
+      "every other fixed parameter re-optimised, raises the objective by at most ",
+      "1e-3. The rule holds an SD below a line of sd(y) when the objective, the ",
+      "others held, moves by at most 1e-3 there. Phase 1 ran on main 8700876 with the ",
+      "pre-registered script (7275456); the fresh-seed run on the build of the rules ",
+      "(6725e0d)."))
+    for (nm in c("phase1", "verify")) {
+      x <- if (nm == "phase1") p1 else v
+      if (is.null(x)) next
+      lab <- if (nm == "phase1") "Placing the lines" else "Fresh seeds"
+      lines <- c(lines, "",
+        paste0("**", lab, ": sigma / sd(y)** (", nrow(x$d), " fits, ", sum(x$d$at_s),
+               " at the boundary):"), "", md_table(x$tab_s), "",
+        paste0("**", lab, ": AR SD / sd(y)** (", nrow(x$a), " AR fits, ", sum(x$a$at_ar),
+               " at the boundary):"), "", md_table(x$tab_a))
+      both <- sum(x$a$class %in% "both")
+      lines <- c(lines, "", paste0(
+        "Both SDs flat by the labels in ", both, " fits; pushed together they were flat in ",
+        sum(x$a$class %in% "both" & x$a$joint_flat %in% TRUE), "."))
+    }
+    rp <- read_all(dir, "^sigma_limit_reported.csv$")
+    if (!is.null(rp))
+      lines <- c(lines, "", "**The reported cases, on the built rules:**", "",
+                 md_table(rp), "", paste0(
+        "The pre-registered criterion that every reported case be held FAILED for ",
+        sum(!nzchar(rp$held) | is.na(rp$held)), " of ", nrow(rp), ": their sigma stops ",
+        "above the flat region's reach, with an SE of 5 to 8 on its log scale -- a ",
+        "poorly determined variance, not one at its boundary, which is item 78's ",
+        "question (studies/scripts/variance_draws.R), not a line's."))
+    c(lines, "",
+      "What the criterion chose, and what was ruled: on both runs no line up to Inf",
+      "held a fit that was not at its boundary, so the pre-registered criterion --",
+      "the widest line with no false hold -- selected the flatness test alone.",
+      "Craig ruled sigma's line at 0.2 of sd(y), a guard for ridge fits (noise and a",
+      "latent trading off) that the study did not cover, and the AR SD's at 0.1,",
+      "since in a time series a trend or a season can dominate sd(y) and a fraction",
+      "of it is looser than it looks. Where both are flat only the one whose push",
+      "moves the objective least is held. In 0.0.8.9003.",
+      "",
+      "CAVEATS that must travel with this result: 145 fits (phase 1) and 142",
+      "(fresh) whose sigma was already below the label's floor, 1e-4 of sd(y), read",
+      "as false holds by the floor label as written; they are counted at the",
+      "boundary above, and the old 1e-3 line held every one. The random-intercept",
+      "design without noise fits exactly and is set apart. The verify run's draws",
+      "criterion exposed a separate defect -- a held AR latent's correlation drawn",
+      "from a variance in the thousands -- fixed in 0.0.8.9002.")
 
   } else if (study == "dispersion_limit") {
     ## Where a negative binomial's k or a beta's phi is at its unbounded
