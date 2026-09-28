@@ -675,7 +675,11 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   cats <- if (multi) object$ylevels[seq_len(object$C)] else NA_character_
   xn <- colnames(object$X)
   lines <- character()
+  ## the terms to describe: every one, unless a caller that knows which are
+  ## the question -- ilm_interpret.ilm_dag_model(), the exposure's -- says
+  only <- list(...)[[".terms"]]
   for (v in fixed) {
+    if (!is.null(only) && !v %in% only) next
     k <- ilm_term_cols(object, v)
     if (!length(k)) next
     ## the label keeps its backticks; the model frame knows the plain name
@@ -871,16 +875,37 @@ ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
       family = NULL, causal = FALSE, object_class = "ilm_dag_model"),
       class = "ilm_interpretation"))
   }
-  ## a valid adjustment set is what licenses causal language
+  ## A valid adjustment set licenses causal language for the EXPOSURE, and
+  ## for nothing else: the covariates are in the model to close back-door
+  ## paths, and their coefficients are not their effects on the outcome --
+  ## a confounder with no arrow into the outcome can carry a large one. So
+  ## only the exposure's terms are described, and the covariates are named as
+  ## what they are (the "Table 2 fallacy" is reading them as effects).
   lic <- is.null(causal) || isTRUE(causal)
-  base <- ilm_interpret(object$fits[[1]], causal = lic, ame = ame,
-                        digits = digits)
+  fit1 <- object$fits[[1]]
+  tl <- attr(stats::terms(fit1), "term.labels")
+  tl <- setdiff(tl, grep("\\|", tl, value = TRUE))
+  mine <- vapply(tl, function(v)
+    object$exposure %in% ilm_unbq(strsplit(v, ":", fixed = TRUE)[[1]]), TRUE)
+  base <- ilm_interpret(fit1, causal = lic, ame = ame, digits = digits,
+                        .terms = tl[mine])
   s <- base$sections
   zz <- object$sets[[1]]
+  ns <- length(object$sets)
   s$model <- paste(sprintf(
-    "The effect of %s on %s, identified by adjusting for %s -- a minimal sufficient set under the supplied causal graph.",
+    "The effect of %s on %s, identified by adjusting for %s -- %s under the supplied causal graph%s.",
     object$exposure, object$outcome,
-    if (length(zz)) paste(zz, collapse = ", ") else "nothing"), s$model)
+    if (length(zz)) paste(zz, collapse = ", ") else "nothing",
+    if (ns > 1L) sprintf("the first of %d minimal sufficient sets", ns)
+    else "a minimal sufficient set",
+    if (ns > 1L) ", and the one described below; every set's estimate is under How far to trust it"
+    else ""), s$model)
+  if (length(zz))
+    s$effects <- c(s$effects, sprintf(
+      "Adjusted for %s, to close the back-door paths the graph identifies. %s not %s effect%s on %s and %s not interpreted here.",
+      ilm_and(zz), if (length(zz) == 1L) "Its coefficient is" else "Their coefficients are",
+      if (length(zz) == 1L) "its" else "their", if (length(zz) == 1L) "" else "s",
+      object$outcome, if (length(zz) == 1L) "is" else "are"))
 
   if (!is.null(object$dag_test)) {
     v <- attr(object$dag_test, "verdict")
