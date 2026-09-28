@@ -2,6 +2,15 @@
 
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
+  pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
+  is a list by term, and "us" is already its default -- and so did the ANOVA
+  vignette. It now names the call that leaves the within-participant
+  covariance free, for the design's own columns and data: a correlated random
+  effect per within cell, `(0 + session | id)`, in place of the one random
+  intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
+  and hurdle models were out of scope, though `ziformula` fits both; it now
+  points there. Found through an external report.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
   restarts from the solution. Restarts that return the same optimum answer a
   "false convergence" code: the fit is finished and the likelihood flat there,

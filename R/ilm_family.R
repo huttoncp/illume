@@ -105,9 +105,12 @@ ilm_aft_family <- function(name) {
 #'     `J - 1` dimensions with sum-to-zero coding.}
 #' }
 #'
-#' Zero-inflation, hurdle models, Tweedie and other specialised families are
-#' deliberately out of scope. `glmmTMB` covers those well and there is nothing to
-#' gain from a weaker reimplementation.
+#' Excess zeros are not a family here but a zero part added to one:
+#' [ilm_model()]'s `ziformula` gives a Poisson or negative binomial model a
+#' zero-inflated or hurdle part (`zi_type`), the remedy [ilm_check_zeros()]
+#' names. Tweedie and other specialised families are out of scope; `glmmTMB`
+#' covers those well and there is nothing to gain from a weaker
+#' reimplementation.
 #'
 #' @section On numerical stability:
 #' The binomial log-likelihood uses `logspace_add()` rather than

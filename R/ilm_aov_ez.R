@@ -99,6 +99,9 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
                        correction = c("auto", "GG", "HF", "none"),
                        verbose = TRUE) {
   engine <- match.arg(engine); correction <- match.arg(correction)
+  ## the data as the caller wrote it, so a call named in the narration runs
+  ## as written
+  data_name <- deparse1(substitute(data))
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)
   id <- as.character(id)[1]; dv <- as.character(dv)[1]
@@ -255,8 +258,13 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
         else paste0("a ", if (correction == "auto") "Greenhouse-Geisser" else
                     correction, " correction"),
         ". A correction adjusts a test whose assumption has failed; the ",
-        "alternative is a model that never made it -- ilm_model(..., ",
-        "re_struct = \"us\") leaves the within-participant covariance free.")
+        "alternative is a model that never made it: ",
+        ilm_aov_free_call(dv, between, within, covariate, id, data_name),
+        " leaves the covariance between the within-participant cells free. ",
+        "Its residual SD cannot be told apart from that covariance's diagonal, ",
+        "so the fit holds that one direction and says so; the fixed effects ",
+        "are usable. With few participants it costs parameters the data may ",
+        "not carry.")
 
   ph <- ilm_aov_posthoc(fit, tab, m, between, within, covariate, posthoc,
                         alpha, say)
@@ -288,6 +296,23 @@ ilm_aov_formula <- function(dv, between, within, covariate, id) {
     rhs <- paste(rhs, "+", paste(ilm_bq(covariate), collapse = " + "))
   rhs <- paste0(rhs, " + (1 | ", ilm_bq(id), ")")
   stats::as.formula(paste(ilm_bq(dv), "~", rhs))
+}
+
+## The call that leaves the within-participant covariance free, for this
+## design's own columns: a random effect per within cell, correlated, in place
+## of the one random intercept -- an unstructured covariance, which is what
+## "never assumed sphericity" means. It is the call the sphericity note names,
+## so a user can run it as written.
+#' @keywords internal
+#' @noRd
+ilm_aov_free_call <- function(dv, between, within, covariate, id, data_name = "data") {
+  fx <- ilm_bq(c(between, within))
+  rhs <- if (length(fx)) paste(fx, collapse = " * ") else "1"
+  if (length(covariate))
+    rhs <- paste(rhs, "+", paste(ilm_bq(covariate), collapse = " + "))
+  cells <- paste(ilm_bq(within), collapse = ":")
+  paste0("ilm_model(", ilm_bq(dv), " ~ ", rhs, " + (0 + ", cells, " | ",
+         ilm_bq(id), "), data = ", data_name, ", family = \"gaussian\")")
 }
 
 #' Pairwise follow-ups for the effects that earned them
