@@ -327,7 +327,31 @@ ilm_model <- function(formula, ...) {
   ## where everything happens to sit in the global environment.
   env <- new.env(parent = parent.frame())
   assign(fn_name, fn, envir = env)
-  eval(cl, env)
+  out <- eval(cl, env)
+  ## Called through a wrapper's `...`, the call records ..1, ..2 -- names that
+  ## mean nothing outside the wrapper, so a refit, a remedy or update() that
+  ## evaluates the call again stopped with "..4 used in an incorrect
+  ## context". The fit itself ran on the original arguments; only the
+  ## RECORD is repaired, with the expressions the user wrote.
+  if (inherits(out, "ilm_model") && is.call(out$call))
+    out$call <- ilm_call_undot(out$call, fn,
+      c(list(formula = substitute(formula)), eval(substitute(alist(...)))))
+  out
+}
+
+## A recorded call's ..N arguments replaced by the expressions they stood
+## for, matched to the target function's arguments by position and name
+#' @keywords internal
+#' @noRd
+ilm_call_undot <- function(oc, fn, rec) {
+  dotted <- function(a) is.symbol(a) && grepl("^[.][.][0-9]+$", as.character(a))
+  if (!any(vapply(as.list(oc)[-1L], dotted, TRUE))) return(oc)
+  rc <- tryCatch(match.call(fn, as.call(c(list(oc[[1L]]), rec))),
+                 error = function(e) NULL)
+  if (is.null(rc)) return(oc)
+  for (nm in names(oc)[-1L])
+    if (dotted(oc[[nm]]) && nm %in% names(rc)) oc[nm] <- list(rc[[nm]])
+  oc
 }
 
 #' Formula front end
