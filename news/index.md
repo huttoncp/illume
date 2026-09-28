@@ -41,6 +41,16 @@
   are estimated, such as REML in place of maximum likelihood: the model
   and what its fixed effects mean stay the same.
 
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  no longer says “The interval includes zero” about a factor with three
+  or more levels, whose sentence shows no interval: the flag came from
+  the difference between the last level and the first, which the
+  sentence never reported. The verdict there is the joint test of every
+  level, as before. The README’s worked example uses columns
+  [`ilm_sim()`](https://huttoncp.github.io/illumex/reference/ilm_sim.html)
+  makes, and income on a scale the model fits well. Found by another
+  agent.
+
 - [`ilm_scores()`](https://huttoncp.github.io/illume/reference/ilm_scores.md),
   [`ilm_calibration()`](https://huttoncp.github.io/illume/reference/ilm_calibration.md)
   and

@@ -70,13 +70,14 @@ compiled dependency is RTMB/TMB, which is on CRAN.
 library(illume)
 
 d <- ilm_sim()                       # a grouped dataset with a known structure
+d$income <- d$income / 1000          # income in thousands
 
 ## what is in it
 ilm_describe_all(d)
-ilm_check_missing(d, downtime ~ income + region)
+ilm_check_missing(d, downtime ~ income + flag)
 
 ## a model: a count outcome, repeated within worker
-fit <- ilm_model(downtime ~ income + region + (1 | id), data = d,
+fit <- ilm_model(downtime ~ income + flag + (1 | id), data = d,
                  family = "poisson")
 
 ## does it hold up, and if not, what is the fix?
@@ -88,7 +89,7 @@ fit <- ilm_apply_remedy(fit, rem, 1) # refit with remedy 1, or your pick
 ## what does it say?
 ilm_anova(fit)
 ilm_effects(fit)                     # incidence rate ratios
-em <- ilm_emmeans(fit, "region")
+em <- ilm_emmeans(fit, "flag")
 ilm_contrast(em)                     # every pair, simultaneously
 
 ## what would happen if we changed something?
