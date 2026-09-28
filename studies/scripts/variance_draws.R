@@ -364,13 +364,33 @@ cap_of <- function(fam, y) {
   log(5 * max(stats::sd(ys), 0.5))
 }
 ## the normalised exp(profile), linearly interpolated on a fine grid below the
-## cap (a spline overshoots wildly beside a steep point)
-sample_profile <- function(pr, n, cap) {
+## cap (a spline overshoots wildly beside a steep point). `trim` leaves out
+## that much above the grid's lower edge: the lower-plateau check only
+sample_profile <- function(pr, n, cap, trim = 0) {
   ok <- is.finite(pr$lp) & pr$psi <= cap
   if (sum(ok) < 3L) return(rep(min(pr$est, cap), n))
   fine <- seq(min(pr$psi[ok]), max(pr$psi[ok]), length.out = 400L)
   l <- stats::approx(pr$psi[ok], pr$lp[ok], xout = fine)$y
-  sample(fine, n, replace = TRUE, prob = exp(l - max(l)))
+  keep <- fine >= min(pr$psi[ok]) + trim
+  if (!any(keep)) keep <- fine >= max(fine)
+  sample(fine[keep], n, replace = TRUE, prob = exp(l[keep] - max(l[keep])))
+}
+## THE LOWER PLATEAU (added after the smoke run, before any main-run data, at
+## the conductor's request; it measures the registered grid, and changes no
+## label, flag or registered remedy). Where the profile is flat at the grid's
+## lower edge, remedy 2 spreads mass down to est - 4, so the edge acts as a
+## floor. Recorded per parameter: whether the deviance changes by less than
+## 0.1 over the lowest grid step, the deviance there, and the share of remedy
+## 2's draws within one grid step of the edge. The forecasts add remedy 2 with
+## that step left out ("profile_trim"), from the same seed as remedy 2,
+## so the difference in CRPS is paired by fit and seed.
+STEP <- diff(PGRID)[1]
+low_edge <- function(pr, cap, draws) {
+  ok <- which(is.finite(pr$lp) & pr$psi <= cap)
+  if (length(ok) < 2L) return(c(low_plateau = NA, low_dev = NA, edge_mass = NA))
+  top <- max(pr$lp[ok]); a <- ok[1L]; b <- ok[2L]
+  c(low_plateau = abs(pr$lp[b] - pr$lp[a]) * 2 < 0.1, low_dev = 2 * (top - pr$lp[a]),
+    edge_mass = mean(draws < pr$psi[a] + STEP))
 }
 ## a pair from the 9 x 9 profile, uniform within the chosen grid cell
 sample_ridge <- function(rp, n, cap) {
@@ -500,14 +520,19 @@ one <- function(ce, fixture = NULL) {
     r <- data.frame(param = nm, held = is_held, est = f$opt$par[[p$id]], truth = p$truth,
                     s = se, d = dsd, label = NA_character_, prof_up = NA_real_,
                     wald_up = NA_real_, cap = cap, base_lo = NA_real_, base_hi = NA_real_,
-                    r2_lo = NA_real_, r2_hi = NA_real_)
+                    r2_lo = NA_real_, r2_hi = NA_real_, low_plateau = NA,
+                    low_dev = NA_real_, edge_mass = NA_real_)
     if (!is_held) {
       tp <- proc.time()[["elapsed"]]
       pr <- profile_one(f, p$id, se); prs[[nm]] <- pr
       t_prof <- t_prof + proc.time()[["elapsed"]] - tp
       r$label <- pr$label; r$prof_up <- pr$prof_up; r$wald_up <- pr$wald_up
       if (!is.null(base)) { qb <- qint(base$draws[p$row, ]); r$base_lo <- qb[1]; r$base_hi <- qb[2] }
-      q2 <- qint(sample_profile(pr, NDRAW, cap)); r$r2_lo <- q2[1]; r$r2_hi <- q2[2]
+      d2 <- sample_profile(pr, NDRAW, cap)
+      q2 <- qint(d2); r$r2_lo <- q2[1]; r$r2_hi <- q2[2]
+      le <- low_edge(pr, cap, d2)
+      r$low_plateau <- as.logical(le[["low_plateau"]]); r$low_dev <- le[["low_dev"]]
+      r$edge_mass <- le[["edge_mass"]]
     }
     prow[[nm]] <- r
   }
@@ -538,23 +563,31 @@ one <- function(ce, fixture = NULL) {
       fc <- rbind(fc, summ_fc(forecast_score(gt$draws, gt$map, ce, s$fut, ref, lr),
                               "given_theta"))
     t2 <- proc.time()[["elapsed"]]
-    for (cu in CUTS) {
+    for (k in seq_along(CUTS)) {
+      cu <- CUTS[k]
       fl <- par$param[!par$held & is.finite(par$s) & par$s > cu & par$param %in% names(prs)]
       if (!length(fl)) next
-      D <- base$draws; done <- character(0)
-      for (rn in names(ridges)) {
-        pp <- ridges[[rn]]$pair
-        if (isTRUE(ridges[[rn]]$rp$ridge) && all(pp %in% fl)) {
-          nw <- sample_ridge(ridges[[rn]]$rp, NDRAW, cap)
-          if (!is.null(nw)) {
-            D <- condition_on(D, c(vp[[pp[1]]]$row, vp[[pp[2]]]$row), nw)
-            done <- c(done, pp)
+      ## remedy 2, and the same with the lowest grid step left out (the
+      ## lower-plateau check), each from the same seed
+      for (tr in c(0, STEP)) {
+        set.seed(seed + 7919L * k)
+        D <- base$draws; done <- character(0)
+        for (rn in names(ridges)) {
+          pp <- ridges[[rn]]$pair
+          if (isTRUE(ridges[[rn]]$rp$ridge) && all(pp %in% fl)) {
+            nw <- sample_ridge(ridges[[rn]]$rp, NDRAW, cap)
+            if (!is.null(nw)) {
+              D <- condition_on(D, c(vp[[pp[1]]]$row, vp[[pp[2]]]$row), nw)
+              done <- c(done, pp)
+            }
           }
         }
+        for (nm in setdiff(fl, done))
+          D <- condition_on(D, vp[[nm]]$row,
+                            rbind(sample_profile(prs[[nm]], NDRAW, cap, trim = tr)))
+        fc <- rbind(fc, summ_fc(forecast_score(D, base$map, ce, s$fut, ref, lr),
+                                if (tr == 0) "profile" else "profile_trim", cu))
       }
-      for (nm in setdiff(fl, done))
-        D <- condition_on(D, vp[[nm]]$row, rbind(sample_profile(prs[[nm]], NDRAW, cap)))
-      fc <- rbind(fc, summ_fc(forecast_score(D, base$map, ce, s$fut, ref, lr), "profile", cu))
     }
     t_r2 <- proc.time()[["elapsed"]] - t2
   }

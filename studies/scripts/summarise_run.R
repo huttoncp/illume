@@ -538,6 +538,41 @@ summarise_study <- function(dir, study) {
     lines <- c(lines, "", paste0("**Coverage of the true SD by the 95% interval** ",
       "(nominal 0.95; calibrated means within 2 Monte Carlo SEs of it; the fallback ",
       "given theta holds the SD at its estimate, so has none):"), "", md_table(cvt))
+    ## the lower plateau: how often remedy 2's grid edge acts as a floor, and
+    ## whether leaving its lowest step out moves the forecasts (paired by fit
+    ## and seed, so the SE is of the per-fit difference)
+    if ("low_plateau" %in% names(u)) {
+      fu <- u[u$fl, ]
+      lines <- c(lines, "", paste0(
+        "**The lower plateau, a property of the registered grid** (estimate - 4 to + 6). ",
+        "Of ", nrow(fu), " flagged parameters, ", sum(fu$low_plateau %in% TRUE),
+        " have a profile flat (deviance change < 0.1) over the grid's lowest step. ",
+        "Remedy 2's draws within one grid step of the lower edge: mean share ",
+        num(mean(fu$edge_mass, na.rm = TRUE), 3), ", over 5% in ",
+        sum(fu$edge_mass > 0.05, na.rm = TRUE), " and over 20% in ",
+        sum(fu$edge_mass > 0.2, na.rm = TRUE), "."))
+      if (!is.null(fc) && any(fc$remedy == "profile_trim")) {
+        a <- fc[fc$remedy == "profile" & fc$cut %in% chosen, ]
+        b <- fc[fc$remedy == "profile_trim" & fc$cut %in% chosen, ]
+        m <- merge(a, b, by = c("cell", "rep", "h"), suffixes = c("", "_trim"))
+        if (nrow(m)) {
+          pt <- do.call(rbind, lapply(split(m, m$h), function(z) {
+            dd <- z$crps_mean - z$crps_mean_trim
+            data.frame(h = z$h[1], fits = nrow(z), crps_profile = signif(mean(z$crps_mean), 3),
+                       crps_trimmed = signif(mean(z$crps_mean_trim), 3),
+                       difference = signif(mean(dd), 3),
+                       mc_se = signif(stats::sd(dd) / sqrt(nrow(z)), 3),
+                       beyond_2se = abs(mean(dd)) > 2 * stats::sd(dd) / sqrt(nrow(z)))
+          }))
+          lines <- c(lines, "", paste0("Remedy 2 at ", chosen, " against the same with the ",
+            "lowest grid step left out, mean CRPS on the fits it redraws:"), "", md_table(pt),
+            "", if (any(pt$beyond_2se)) paste0("The floor MOVES the forecasts beyond Monte ",
+              "Carlo error: an input to the remedy's next design (a wider or adaptive lower ",
+              "grid).") else paste0("The difference is within Monte Carlo error at every ",
+              "horizon: the floor is harmless in practice."))
+        }
+      }
+    }
     ## forecasts, per fit, flagged where any unheld parameter is
     if (!is.null(fc)) {
       ff <- stats::aggregate(fl ~ cell + rep, u, any)
