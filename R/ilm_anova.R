@@ -83,15 +83,46 @@ ilm_refit_drop <- function(object, drop_terms, restarts = 2L) {
 #'   or `NULL` if the refit failed.
 #' @keywords internal
 #' @noRd
-ilm_drop_summary <- function(object, drop_terms, restarts = 2L) {
+ilm_drop_summary <- function(object, drop_terms, restarts = 2L, ddf = NULL) {
   f <- try(ilm_refit_drop(object, drop_terms, restarts), silent = TRUE)
   if (inherits(f, "try-error")) return(NULL)
-  list(ll = -f$opt$objective, conv = f$opt$convergence, pd = isTRUE(f$sdr$pdHess),
+  out <- list(ll = -f$opt$objective, conv = f$opt$convergence, pd = isTRUE(f$sdr$pdHess),
        b = setNames(f$opt$par, f$pnames)[seq_len(ncol(f$X) * f$C)],
        V = tryCatch(f$sdr$cov.fixed[seq_len(ncol(f$X) * f$C),
                                     seq_len(ncol(f$X) * f$C), drop = FALSE],
                     error = function(e) NULL),
        assign = f$assign, p = ncol(f$X), C = f$C)
+  ## An F test of a term in this reduced model needs its denominator df, and
+  ## the fit that gives them stays in the worker, so they are computed here,
+  ## one per remaining term: the Wald F on them (and Kenward-Roger's scaled F
+  ## on its adjusted covariance), keyed by term index.
+  if (!is.null(ddf)) {
+
+    tt <- sort(unique(stats::na.omit(f$assign)))
+    parts <- if (identical(ddf, "kenward-roger")) ilm_kr_parts(f) else NULL
+    gr <- if (!identical(ddf, "kenward-roger")) ilm_vbeta_grad(f, NULL) else NULL
+    out$ftab <- lapply(stats::setNames(tt, tt), function(t) {
+      idx <- which(!is.na(f$assign) & f$assign == t)
+      L <- diag(length(out$b))[idx, , drop = FALSE]
+      ilm_anova_f(f, out$b, L, ddf, parts = parts, gr = gr)
+    })
+  }
+  out
+}
+
+## The Wald F test of the rows of L -- a term's block -- on finite
+## denominator df: F = W / q with W = (Lb)' (L V L')^-1 (Lb), and for
+## Kenward-Roger W on their adjusted covariance, times their scale.
+#' @keywords internal
+#' @noRd
+ilm_anova_f <- function(fit, b, L, df, parts = NULL, gr = NULL) {
+  d <- ilm_table_ddf(fit, L, df, parts = parts, gr = gr)
+  V <- if (!is.null(d$V)) d$V else suppressWarnings(vcov(fit))
+  Lb <- L %*% b; LVL <- L %*% V %*% t(L)
+  W <- tryCatch(as.numeric(t(Lb) %*% solve(LVL, Lb)), error = function(e) NA_real_)
+  q <- nrow(L)
+  list(F = d$scale * W / q, num = q, den = d$df, method = d$method,
+       reason = d$reason)
 }
 
 #' Run several reduced-model refits, optionally in parallel
@@ -102,7 +133,8 @@ ilm_drop_summary <- function(object, drop_terms, restarts = 2L) {
 #' @return A list of [ilm_drop_summary()] results.
 #' @keywords internal
 #' @noRd
-ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L) {
+ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L,
+                            ddf = NULL) {
   ## Everything that makes the reduced fit the SAME model, built by the one
   ## function that knows the list (see ilm_refit_stub()). A field missing here
   ## is a field the refit silently does without: leaving the censoring out
@@ -112,7 +144,7 @@ ilm_refit_drops <- function(object, drop_sets, ncores = 1L, restarts = 2L) {
   stub <- ilm_refit_stub(object)
   cl <- ilm_pool(ncores)
   on.exit(if (!is.null(cl)) try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
-  one <- function(i) ilm_drop_summary(stub, drop_sets[[i]], restarts)
+  one <- function(i) ilm_drop_summary(stub, drop_sets[[i]], restarts, ddf)
   if (!is.null(cl))
     parallel::clusterExport(cl, "stub", envir = environment())
   ilm_lapply(cl, seq_along(drop_sets), one)
@@ -279,11 +311,22 @@ ilm_recode_sum <- function(object, which) {
 #' @param test `"Wald"` or `"LRT"`.
 #' @param ncores Integer. Worker processes for the refits.
 #' @param restarts Integer. Optimiser restarts in refits.
+#' @param df For a gaussian mixed model's Wald tests, the denominator degrees
+#'   of freedom of each F: `"auto"` (Satterthwaite's, as `lmerTest` reports),
+#'   `"satterthwaite"`, `"kenward-roger"` (their df and scaled F, on their
+#'   adjusted covariance; REML fits) or `"asymptotic"`. Other fits are
+#'   unaffected.
+#' @param statistic `"F"` (the default) or `"Chisq"`. For a gaussian mixed
+#'   model's Wald tests, `"F"` gives an F test on the denominator df above and
+#'   `"Chisq"` the large-sample chi-square the table gave before; with few
+#'   groups the chi-square is too liberal. Every other fit keeps its own
+#'   reference: exact F with nothing integrated out, chi-square otherwise.
 #' @return An `"anova"` data frame with one row per fixed-effect term. The
-#'   columns are `Df`, `Chisq` and `Pr(>Chisq)` in general, or `Df`, `F value`
+#'   columns are `Df`, `Chisq` and `Pr(>Chisq)` in general; `Df`, `F value`
 #'   and `Pr(>F)` when the model admits exact inference -- a gaussian model with
 #'   no random or smooth terms, where the residual variance is estimated rather
-#'   than assumed known (see [ilm_model()]). A model with no terms to test, such
+#'   than assumed known (see [ilm_model()]); and `NumDF`, `DenDF`, `F value` and
+#'   `Pr(>F)` for a gaussian mixed model's Wald tests with `statistic = "F"`. A model with no terms to test, such
 #'   as an intercept-only model, returns a table with zero rows rather than an
 #'   error: "there is nothing to test" is an answer, not a failure.
 #' @references
@@ -296,8 +339,9 @@ ilm_recode_sum <- function(object, which) {
 #' @seealso [ilm_pb_lrt()], [ilm_coef_table()].
 #' @export
 ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
-                        ncores = 1L, restarts = 2L, recode = TRUE) {
-  test <- match.arg(test)
+                        ncores = 1L, restarts = 2L, recode = TRUE,
+                        df = "auto", statistic = c("F", "Chisq")) {
+  test <- match.arg(test); statistic <- match.arg(statistic)
   if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
@@ -353,15 +397,52 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
       keyM1[j] <- add_need(rel[[j]])
     }
   }
-  fits <- if (length(need)) ilm_refit_drops(object, need, ncores, restarts) else list()
+  ## a gaussian mixed model's Wald tests as F on finite denominator df (D-DF3);
+  ## the method is resolved once, so the refits and the full fit agree
+  fin <- test == "Wald" && identical(statistic, "F") &&
+    identical(object$family$name, "gaussian") && !isTRUE(object$exact_df) &&
+    object$C == 1L && !identical(df, "asymptotic")
+  dmeth <- if (!fin) NULL else if (identical(df, "auto")) "satterthwaite"
+           else match.arg(as.character(df), c("satterthwaite", "kenward-roger"))
+  if (fin && identical(dmeth, "kenward-roger")) {
+    ok <- ilm_kr_applicable(object)
+    if (!isTRUE(ok))
+      stop("Kenward-Roger is not available for this model: ", ok,
+           ". `df = \"satterthwaite\"` does apply here.", call. = FALSE)
+  }
+  fits <- if (length(need)) ilm_refit_drops(object, need, ncores, restarts,
+                                            ddf = dmeth) else list()
   names(fits) <- names(need)
+  kr_full <- if (fin && identical(dmeth, "kenward-roger")) ilm_kr_parts(object) else NULL
+  gr_full <- if (fin && !identical(dmeth, "kenward-roger")) ilm_vbeta_grad(object, NULL)
+             else NULL
+  fell <- character(0)
 
   ll_full <- -object$opt$objective
   b_full <- coef(object); V_full <- suppressWarnings(vcov(object))
 
   rows <- lapply(seq_len(nt), function(j) {
     ncol_j <- sum(!is.na(object$assign) & object$assign == j)
-    df <- ncol_j * object$C
+    nd <- ncol_j * object$C
+    ## a gaussian mixed model: F on the term's own denominator df, from the
+    ## full fit, or from the reduced fit the term is tested in
+    if (fin) {
+      ft <- if (!nzchar(keyM1[j])) {
+        L <- diag(length(b_full))[ilm_term_idx(object, j), , drop = FALSE]
+        ilm_anova_f(object, b_full, L, dmeth, parts = kr_full, gr = gr_full)
+      } else {
+        f1 <- fits[[keyM1[j]]]
+        if (is.null(f1) || is.null(f1$ftab)) NULL else f1$ftab[[as.character(j)]]
+      }
+      if (is.null(ft) || !is.finite(ft$F))
+        return(data.frame(NumDF = nd, DenDF = NA_real_, `F value` = NA_real_,
+                          `Pr(>F)` = NA_real_, row.names = labs[j], check.names = FALSE))
+      if (!is.finite(ft$den)) fell <<- c(fell, labs[j])
+      return(data.frame(NumDF = ft$num, DenDF = ft$den, `F value` = ft$F,
+                        `Pr(>F)` = stats::pf(ft$F, ft$num, ft$den, lower.tail = FALSE),
+                        row.names = labs[j], check.names = FALSE))
+    }
+    df <- nd
     if (test == "Wald") {
       if (!nzchar(keyM1[j])) {
         stat <- ilm_wald_block(b_full, V_full, ilm_term_idx(object, j))
@@ -397,7 +478,10 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   ## An intercept-only model has no terms to test.  Return an empty table
   ## rather than failing: "there is nothing to test" is a valid answer.
   rows <- rows[!vapply(rows, is.null, TRUE)]
-  out <- if (length(rows)) do.call(rbind, rows) else {
+  out <- if (length(rows)) do.call(rbind, rows) else if (fin) {
+    data.frame(NumDF = integer(0), DenDF = numeric(0), `F value` = numeric(0),
+               `Pr(>F)` = numeric(0), check.names = FALSE)
+  } else {
     e <- data.frame(Df = integer(0), stat = numeric(0), p = numeric(0),
                     check.names = FALSE)
     names(e) <- if (isTRUE(object$exact_df)) c("Df", "F value", "Pr(>F)")
@@ -408,8 +492,16 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
     sprintf("Analysis of Deviance Table (Type %s %s tests)",
             if (type3) "III" else "II",
             if (isTRUE(object$exact_df)) "F"
+            else if (fin) "Wald F"
             else if (test == "Wald") "Wald chi-square"
             else "likelihood-ratio chi-square"),
+    if (fin)
+      sprintf("Denominator df: %s%s", if (identical(dmeth, "kenward-roger"))
+                "Kenward-Roger's, with their scaled F on the adjusted covariance"
+              else "Satterthwaite's (Fai and Cornelius for several columns), as lmerTest",
+              if (length(fell)) sprintf("; %s tested against the chi-square, as the df could not be formed",
+                                         paste(fell, collapse = ", ")) else "")
+    else NULL,
     if (object$C > 1L)
       sprintf("Response: %s   (%d categories, %d contrast dimensions)",
               deparse(object$formula[[2]]), object$J, object$C)
@@ -439,11 +531,16 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
 #'
 #' @param mod A fitted `"ilm_model"` object.
 #' @param type `"II"`, `"III"`, `2` or `3`.
-#' @param test.statistic Ignored; present for compatibility.
+#' @param test.statistic `"Chisq"` (car's default) or `"F"`: for a gaussian
+#'   mixed model, the chi-square or the F test on finite denominator df; see
+#'   `statistic` in [ilm_anova()].
 #' @param ... Passed to [ilm_anova()].
 #' @return An `"anova"` data frame.
 #' @exportS3Method car::Anova
 Anova.ilm_model <- function(mod, type = c("II", "III", 2, 3), test.statistic = "Chisq", ...) {
   type <- as.character(type)[1]
-  ilm_anova(mod, type = if (type %in% c("3", "III")) "3" else "2", ...)
+  ## car's own argument chooses the reference, as it does for lmer fits:
+  ## "Chisq" (car's default) or "F"
+  st <- if (identical(as.character(test.statistic)[1], "F")) "F" else "Chisq"
+  ilm_anova(mod, type = if (type %in% c("3", "III")) "3" else "2", statistic = st, ...)
 }

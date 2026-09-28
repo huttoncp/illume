@@ -685,8 +685,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
 
   ## ---- the effects ---------------------------------------------------------
   ct <- ilm_coef_table(object)
-  crit <- if (isTRUE(object$exact_df)) stats::qt(0.975, object$resid_df)
-          else stats::qnorm(0.975)
+  ## each coefficient's critical value on the table's own reference
+  critv <- ilm_ct_crit(ct, object)
   am <- if (isTRUE(ame)) tryCatch(ilm_ame(object), error = function(e) NULL) else NULL
 
   respname <- deparse(object$formula[[2]])
@@ -725,8 +725,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     for (cc in seq_along(cats)) for (i in k) {
       ii <- if (multi) (cc - 1L) * pX + i else i
       nm <- rownames(ct)[ii]
-      est <- ct[ii, 1]; se <- ct[ii, 2]; p <- ct[ii, 4]
-      lo <- est - crit * se; hi <- est + crit * se
+      est <- ct[ii, 1]; se <- ct[ii, 2]; p <- ilm_ct_p(ct)[ii]
+      lo <- est - critv[ii] * se; hi <- est + critv[ii] * se
       ev <- ilm_evidence(p)
       ## the level this coefficient stands for, when the term is a factor --
       ## read off the DESIGN column, since a multinomial coefficient's own

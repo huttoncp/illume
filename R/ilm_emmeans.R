@@ -194,6 +194,13 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 #'   such as cases per person-year), and a positive number reports them at
 #'   that exposure instead -- `1e5` for a rate per 100,000. The print says
 #'   which. Ignored without an offset.
+#' @param df For a gaussian mixed model, the degrees of freedom of each mean's
+#'   interval: `"auto"` (Satterthwaite's, as emmeans gives on an `lmerTest`
+#'   fit), `"satterthwaite"`, `"kenward-roger"` (their df and adjusted
+#'   standard errors; REML fits), `"asymptotic"` (the normal) or a number. A
+#'   `df` column then gives each row's. Other fits are unaffected: exact t with
+#'   nothing integrated out, the normal otherwise. Contrasts of the means
+#'   ([ilm_contrast()]) use the same method.
 #' @return An object of class `"ilm_emm"`: a data frame of the grid with
 #'   `estimate`, `se`, `lower`, `upper`, plus the contrast machinery it carries.
 #' @seealso [ilm_contrast()] to compare them, [ilm_ame()] for the average
@@ -208,7 +215,7 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 ilm_emmeans <- function(object, specs, at = NULL,
                         weights = c("equal", "proportional", "cells"),
                         type = c("link", "response"), level = 0.95,
-                        exposure = NULL) {
+                        exposure = NULL, df = "auto") {
   weights <- match.arg(weights); type <- match.arg(type)
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
@@ -261,9 +268,21 @@ ilm_emmeans <- function(object, specs, at = NULL,
   est <- as.numeric(L %*% b) + if (is.null(oa)) 0 else oa
   Vem <- L %*% V %*% t(L)
   se <- sqrt(pmax(diag(Vem), 0))
-  crit <- if (isTRUE(object$exact_df))
-            stats::qt(1 - (1 - level) / 2, object$resid_df)
-          else stats::qnorm(1 - (1 - level) / 2)
+  q <- 1 - (1 - level) / 2
+  crit <- if (isTRUE(object$exact_df)) stats::qt(q, object$resid_df)
+          else stats::qnorm(q)
+  ## a gaussian mixed model: each mean's own df, from the tables' resolver,
+  ## and Kenward-Roger's adjusted covariance when that is asked for
+  dd <- NULL
+  if (identical(object$family$name, "gaussian") && !isTRUE(object$exact_df) &&
+      !identical(df, "asymptotic")) {
+    dd <- ilm_table_df(object, L, df, what = "mean")
+    if (!is.null(attr(dd, "V"))) {
+      Vem <- L %*% attr(dd, "V") %*% t(L)
+      se <- sqrt(pmax(diag(Vem), 0))
+    }
+    crit <- ifelse(is.finite(dd), stats::qt(q, dd), stats::qnorm(q))
+  }
 
   out <- if (length(specs))
     as.data.frame(do.call(rbind, strsplit(lv, "\r", fixed = TRUE)),
@@ -271,6 +290,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   else data.frame(.all = "", stringsAsFactors = FALSE)
   names(out) <- if (length(specs)) specs else ".all"
   out$estimate <- est; out$se <- se
+  if (!is.null(dd)) out$df <- as.numeric(dd)
   out$lower <- est - crit * se; out$upper <- est + crit * se
 
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
@@ -283,7 +303,11 @@ ilm_emmeans <- function(object, specs, at = NULL,
   structure(out, class = c("ilm_emm", "data.frame"), L = L, V = Vem,
             specs = specs, weights = weights, type = type, level = level,
             family = fam, object = object,
-            exposure_note = ilm_exposure_note(object, exposure))
+            exposure_note = ilm_exposure_note(object, exposure),
+            df_method = if (is.null(dd)) {
+              if (isTRUE(object$exact_df)) "residual" else "asymptotic"
+            } else attr(dd, "method"),
+            df_arg = df)
 }
 
 ## The multinomial case: a row for every category in every level of `specs`.
@@ -444,6 +468,14 @@ print.ilm_emm <- function(x, ...) {
       sprintf("(%s scale, %s weights)\n\n", attr(x, "type"),
               attr(x, "weights")))
   print(as.data.frame(x), row.names = FALSE, digits = 4)
+  ## the reference of the intervals, when it is a finite df a reader may be
+  ## comparing with another package's
+  if ("df" %in% names(x))
+    cat(sprintf("\n  Intervals are t on %s degrees of freedom.\n",
+                switch(attr(x, "df_method"),
+                       "kenward-roger" = "Kenward-Roger's (with their adjusted standard errors)",
+                       satterthwaite = "Satterthwaite's", supplied = "the supplied",
+                       asymptotic = "infinite (the normal)", attr(x, "df_method"))))
   ## a model with an offset: what the means are per
   if (!is.null(attr(x, "exposure_note"))) {
     cat("\n")

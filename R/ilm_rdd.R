@@ -142,11 +142,11 @@ ilm_rdd_jump <- function(fit) {
   k <- ilm_term_cols(fit, ".above")
   if (!length(k)) return(NULL)
   ct <- ilm_coef_table(fit)
-  crit <- if (isTRUE(fit$exact_df)) stats::qt(0.975, fit$resid_df) else stats::qnorm(0.975)
+  crit <- ilm_ct_crit(ct, fit)[k]
   data.frame(estimate = ct[k, 1], se = ct[k, 2],
              lower = ct[k, 1] - crit * ct[k, 2],
              upper = ct[k, 1] + crit * ct[k, 2],
-             p_value = ct[k, 4], stringsAsFactors = FALSE)
+             p_value = ilm_ct_p(ct)[k], stringsAsFactors = FALSE)
 }
 
 #' Regression discontinuity

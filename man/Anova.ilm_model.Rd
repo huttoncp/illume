@@ -11,7 +11,9 @@
 
 \item{type}{\code{"II"}, \code{"III"}, \code{2} or \code{3}.}
 
-\item{test.statistic}{Ignored; present for compatibility.}
+\item{test.statistic}{\code{"Chisq"} (car's default) or \code{"F"}: for a gaussian
+mixed model, the chi-square or the F test on finite denominator df; see
+\code{statistic} in \code{\link[=ilm_anova]{ilm_anova()}}.}
 
 \item{...}{Passed to \code{\link[=ilm_anova]{ilm_anova()}}.}
 }

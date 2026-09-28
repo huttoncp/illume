@@ -1,5 +1,17 @@
 # illume 0.0.8.9003
 
+* A gaussian mixed model's tables test on finite degrees of freedom, as
+  lmerTest does. `summary()` gives each coefficient a df column and t tests
+  on Satterthwaite's df; `ilm_anova()` gives F with its numerator and
+  denominator df (`statistic = "Chisq"` keeps the Wald chi-square table);
+  `ilm_emmeans()` gives t intervals on Satterthwaite's df, and
+  `ilm_contrast()` follows it. `df = "kenward-roger"` asks for Kenward-Roger
+  instead, with its adjusted standard errors, and `df = "asymptotic"` for the
+  z and chi-square tests as before. Where the df cannot be had, as when a
+  variance is held at its boundary with nothing to derive them from, the
+  table falls back to the asymptotic test and says so. Other families, and
+  linear models, are unchanged. On a small between-cluster design the
+  z test's p for a between-cluster effect was too small.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,

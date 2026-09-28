@@ -357,10 +357,12 @@ ilm_theta_vcov <- function(object) {
 #'   pass for the t test that was asked for.
 #' @keywords internal
 #' @noRd
-ilm_df_satt <- function(object, L, h = 1e-5) {
+ilm_df_satt <- function(object, L, h = 1e-5, gr = NULL) {
   fell <- function(reason)
     list(df = Inf, method = "asymptotic", V = NULL, reason = reason)
-  gr <- ilm_vbeta_grad(object, L, h = h)
+  ## the covariance's gradient does not depend on L, so a table of many rows
+  ## computes it once and passes it in
+  if (is.null(gr)) gr <- ilm_vbeta_grad(object, L, h = h)
   if (is.null(gr))
     return(fell(paste("the fixed effects' covariance could not be",
                       "differentiated along the variance components")))
@@ -605,4 +607,95 @@ ilm_kr_ftest <- function(parts, L) {
   m <- 4 + (q + 2) / (q * rho - 1)
   scale <- if (abs(m - 2) < 1e-2) 1 else m * (1 - A2 / q) / (m - 2)
   list(df = m, scale = scale, q = q)
+}
+
+## ---- the tables' degrees of freedom ------------------------------------------
+##
+## One resolver for every table that reports a test of the fixed effects --
+## summary()'s coefficients, ilm_emmeans(), ilm_contrast(), ilm_trends() --
+## so they cannot disagree about the reference. `df = "auto"` is exact with
+## nothing integrated out, Satterthwaite for a gaussian mixed model, and the
+## normal otherwise, as Craig ruled (D-DF1). The covariance's gradient along
+## the variance components is computed once per table, not once per row: it
+## does not depend on the row. A row whose df cannot be formed falls back to
+## the normal and the caller is told, never silently.
+
+## The df per row of L: the method used, KR's adjusted covariance when KR was
+## asked for, and the rows that fell back with the reason.
+#' @keywords internal
+#' @noRd
+ilm_table_df <- function(object, L, df = "auto", what = "row") {
+  L <- if (is.matrix(L)) L else matrix(L, nrow = 1L)
+  if (is.numeric(df))
+    return(structure(rep(as.numeric(df)[1], nrow(L)), method = "supplied"))
+  meth <- match.arg(as.character(df)[1],
+                    c("auto", "satterthwaite", "kenward-roger", "residual",
+                      "asymptotic"))
+  gaus_mixed <- identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)
+  if (identical(meth, "auto"))
+    meth <- if (isTRUE(object$exact_df)) "residual"
+            else if (gaus_mixed) "satterthwaite" else "asymptotic"
+  if (identical(meth, "residual") || identical(meth, "asymptotic") ||
+      !gaus_mixed) {
+    r <- ilm_denom_df(object, L[1L, , drop = FALSE], method = meth)
+    return(structure(rep(as.numeric(r$df), nrow(L)), method = r$method))
+  }
+  ## Kenward-Roger's adjusted covariance is computed once and serves every
+  ## row, and it comes back with the df because the standard errors need it.
+  ## Asked for where it is not available, it says why instead of quietly
+  ## becoming a z test.
+  if (identical(meth, "kenward-roger")) {
+    ok <- ilm_kr_applicable(object)
+    if (!isTRUE(ok))
+      stop("Kenward-Roger is not available for this model: ", ok,
+           ". `df = \"satterthwaite\"` does apply here.", call. = FALSE)
+    parts <- ilm_kr_parts(object)
+    out <- vapply(seq_len(nrow(L)), function(i)
+      ilm_df_kr(object, L[i, , drop = FALSE], parts = parts)$df, numeric(1))
+    return(structure(out, method = "kenward-roger", V = parts$PhiA))
+  }
+  gr <- ilm_vbeta_grad(object, L)
+  rs <- lapply(seq_len(nrow(L)), function(i)
+    ilm_df_satt(object, L[i, , drop = FALSE], gr = gr))
+  out <- vapply(rs, function(r) as.numeric(r$df), numeric(1))
+  why <- lapply(rs, `[[`, "reason")
+  fb <- which(!vapply(why, is.null, TRUE))
+  used <- if (length(fb) == length(rs)) "asymptotic" else "satterthwaite"
+  if (!length(fb)) return(structure(out, method = used))
+  reason <- paste(unique(unlist(why[fb])), collapse = "; ")
+  warning(sprintf(
+    "Satterthwaite degrees of freedom could not be formed for %s: %s. %s tested against the normal -- a z test -- instead.",
+    if (length(fb) == length(rs)) paste0("any ", what)
+    else sprintf("%s %s", if (length(fb) == 1L) what else paste0(what, "s"),
+                 paste(fb, collapse = ", ")),
+    reason,
+    if (length(fb) == 1L) "It is" else "They are"), call. = FALSE)
+  structure(out, method = used, fallback = list(rows = fb, reason = reason))
+}
+
+## The denominator df of an F test of the rows of L together -- ilm_anova()'s
+## -- and, for Kenward-Roger, the factor its Wald F is scaled by. Satterthwaite's
+## multi-row df is Fai and Cornelius', as lmerTest's; KR's is pbkrtest's.
+#' @keywords internal
+#' @noRd
+ilm_table_ddf <- function(object, L, df = "auto", parts = NULL, gr = NULL) {
+  L <- if (is.matrix(L)) L else matrix(L, nrow = 1L)
+  meth <- match.arg(as.character(df)[1],
+                    c("auto", "satterthwaite", "kenward-roger", "residual",
+                      "asymptotic"))
+  gaus_mixed <- identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)
+  if (identical(meth, "auto"))
+    meth <- if (isTRUE(object$exact_df)) "residual"
+            else if (gaus_mixed) "satterthwaite" else "asymptotic"
+  if (!gaus_mixed || meth %in% c("residual", "asymptotic")) {
+    r <- ilm_denom_df(object, L, method = meth)
+    return(list(df = as.numeric(r$df), scale = 1, method = r$method))
+  }
+  if (identical(meth, "kenward-roger")) {
+    if (is.null(parts)) parts <- ilm_kr_parts(object)
+    k <- ilm_df_kr(object, L, parts = parts)
+    return(list(df = k$df, scale = k$scale, method = "kenward-roger", V = parts$PhiA))
+  }
+  r <- ilm_df_satt(object, L, gr = gr)
+  list(df = as.numeric(r$df), scale = 1, method = r$method, reason = r$reason)
 }

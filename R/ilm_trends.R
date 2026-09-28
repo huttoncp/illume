@@ -268,47 +268,9 @@ ilm_trends_multinom <- function(object, av, specs, V, b, level, weights, var,
 #'   those `rows` and the `reason`.
 #' @keywords internal
 #' @noRd
-ilm_trend_df <- function(object, L, df, what = "slope") {
-  if (is.numeric(df))
-    return(structure(rep(as.numeric(df)[1], nrow(L)), method = "supplied"))
-  meth <- match.arg(as.character(df)[1],
-                    c("auto", "satterthwaite", "kenward-roger", "residual",
-                      "asymptotic"))
-  ## Kenward-Roger's adjusted covariance is computed once and serves every
-  ## row, and it comes back with the df because the standard errors need it.
-  ## Asked for where it is not available, it says why instead of quietly
-  ## becoming a z test.
-  if (identical(meth, "kenward-roger") &&
-      identical(object$family$name, "gaussian") && !isTRUE(object$exact_df)) {
-    ok <- ilm_kr_applicable(object)
-    if (!isTRUE(ok))
-      stop("Kenward-Roger is not available for this model: ", ok,
-           ". `df = \"satterthwaite\"` does apply here.", call. = FALSE)
-    parts <- ilm_kr_parts(object)
-    out <- vapply(seq_len(nrow(L)), function(i)
-      ilm_df_kr(object, L[i, , drop = FALSE], parts = parts)$df, numeric(1))
-    return(structure(out, method = "kenward-roger", V = parts$PhiA))
-  }
-  ## "auto" resolves to a method that applies; a method named for a fit it
-  ## does not apply to stops in ilm_denom_df() with the reason, as above
-  rs <- lapply(seq_len(nrow(L)), function(i)
-    ilm_denom_df(object, L[i, , drop = FALSE], method = meth))
-  out <- vapply(rs, function(r) as.numeric(r$df), numeric(1))
-  why <- lapply(rs, `[[`, "reason")
-  fb <- which(!vapply(why, is.null, TRUE))
-  used <- if (length(fb) == length(rs)) "asymptotic"
-          else rs[[setdiff(seq_along(rs), fb)[1L]]]$method
-  if (!length(fb)) return(structure(out, method = used))
-  reason <- paste(unique(unlist(why[fb])), collapse = "; ")
-  warning(sprintf(
-    "Satterthwaite degrees of freedom could not be formed for %s: %s. %s tested against the normal -- a z test -- instead.",
-    if (length(fb) == length(rs)) paste0("any ", what)
-    else sprintf("%s %s", if (length(fb) == 1L) what else paste0(what, "s"),
-                 paste(fb, collapse = ", ")),
-    reason,
-    if (length(fb) == 1L) "It is" else "They are"), call. = FALSE)
-  structure(out, method = used, fallback = list(rows = fb, reason = reason))
-}
+ilm_trend_df <- function(object, L, df, what = "slope")
+  ilm_table_df(object, L, df, what = what)
+
 
 ## the reference a table's rows were tested against, in words, for a header:
 ## the method, and any rows that fell back to the normal and why

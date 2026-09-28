@@ -12,7 +12,8 @@ ilm_emmeans(
   weights = c("equal", "proportional", "cells"),
   type = c("link", "response"),
   level = 0.95,
-  exposure = NULL
+  exposure = NULL,
+  df = "auto"
 )
 }
 \arguments{
@@ -35,6 +36,14 @@ means are per unit of exposure by default (the offset at zero, a rate
 such as cases per person-year), and a positive number reports them at
 that exposure instead -- \code{1e5} for a rate per 100,000. The print says
 which. Ignored without an offset.}
+
+\item{df}{For a gaussian mixed model, the degrees of freedom of each mean's
+interval: \code{"auto"} (Satterthwaite's, as emmeans gives on an \code{lmerTest}
+fit), \code{"satterthwaite"}, \code{"kenward-roger"} (their df and adjusted
+standard errors; REML fits), \code{"asymptotic"} (the normal) or a number. A
+\code{df} column then gives each row's. Other fits are unaffected: exact t with
+nothing integrated out, the normal otherwise. Contrasts of the means
+(\code{\link[=ilm_contrast]{ilm_contrast()}}) use the same method.}
 }
 \value{
 An object of class \code{"ilm_emm"}: a data frame of the grid with
