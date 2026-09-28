@@ -9,6 +9,14 @@
   fallacy"). The covariates are now named as adjusted for, with their
   coefficients not interpreted, and when several adjustment sets identify
   the effect the prose says which one it describes.
+* `ilm_draws()` holds the whole of an AR latent held with its SD at zero.
+  With no variance the latent has no correlation to estimate either, and
+  only one of the two could be among the directions the Hessian called
+  flat: the other was drawn from a variance in the thousands, so draws of
+  the latent's SD reached e^165 and forecasts built on them overflowed. A
+  block held for a correlation at its edge, with an identified SD, still
+  has its SD drawn. Found by the verify phase of
+  `studies/scripts/sigma_limit.R`.
 * `ilm_remedies()` is a generic, and `ilm_remedy_table()` builds the table
   its methods return, so another package whose diagnostics name a remedy
   that is a refit of an illume model -- a negative binomial, a dispersion or
