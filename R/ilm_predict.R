@@ -432,6 +432,21 @@ ilm_fitted_place <- function(object, newdata) {
     stop("the correlation over time was built from vectors, so new rows ",
          "cannot be placed on its fitted cells. Build it by name, ",
          "ilm_", ar$type, "(~ time | group), or ", alt, ".", call. = FALSE)
+  ## a fitted prediction is for a particular group, so it needs the columns
+  ## that say which -- ilm_matrices() places rows without them in no group,
+  ## which is what a typical or population prediction wants and this does not
+  for (j in seq_along(gk)) {
+    miss <- setdiff(all.vars(object$bars[[j]][[3L]]), names(newdata))
+    if (length(miss))
+      stop("`newdata` does not have the grouping variable of the random term '",
+           names(object$re)[gk[j]], "' (", paste(sQuote(miss), collapse = ", "),
+           "), and a fitted prediction is for a particular group; ", alt, ".",
+           call. = FALSE)
+  }
+  if (!is.null(ar) && length(miss <- setdiff(ar$vars, names(newdata))))
+    stop("`newdata` needs ", paste(sQuote(miss), collapse = " and "), " to place ",
+         "its rows among the correlation over time's fitted cells; ", alt, ".",
+         call. = FALSE)
   M <- ilm_matrices(object, newdata)
   re <- lapply(gk, function(k) {
     m <- M$re[[names(object$re)[k]]]
