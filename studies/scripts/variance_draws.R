@@ -210,6 +210,437 @@
 ## 3. Whether ridge fits need their own treatment, if they behave differently
 ##   from the rest.
 ##
-## Usage: Rscript variance_draws.R <nrep> <ncore> <outdir> [offset]
+## Usage: Rscript variance_draws.R <nrep> <ncore> <outdir> [offset] [cells]
 ## ---------------------------------------------------------------------------
-## (the study's code follows in a later commit; this commit is the design)
+
+args   <- commandArgs(trailingOnly = TRUE)
+NREP   <- if (length(args) >= 1) as.integer(args[1]) else 100L
+NCORE  <- if (length(args) >= 2) as.integer(args[2]) else 1L
+sp     <- if (length(args) >= 3) args[3] else "."
+## a seed offset, so the confirmation runs on data the cut-off was not chosen on
+OFFSET <- if (length(args) >= 4) as.integer(args[4]) else 0L
+## a subset of cells, for the smoke run only
+ONLY   <- if (length(args) >= 5) as.integer(strsplit(args[5], ",")[[1]]) else NULL
+dir.create(sp, showWarnings = FALSE, recursive = TRUE)
+
+## ---- the cells -------------------------------------------------------------------
+g <- function(...) expand.grid(..., stringsAsFactors = FALSE)
+cells <- rbind(
+  data.frame(arm = "B1", g(family = c("gaussian", "poisson", "nbinom"), Tn = c(12, 24, 48),
+                           rho = c(0.3, 0.7), lat_sd = c(0.3, 0.8)), ri_sd = NA, L = NA, m = NA),
+  data.frame(arm = "B2", g(family = c("gaussian", "poisson", "nbinom", "binomial"),
+                           Tn = c(12, 24), ri_sd = c(0.2, 0.5)), rho = 0.7, lat_sd = 0.5,
+             L = NA, m = NA),
+  data.frame(arm = "B3", family = rep(c("gaussian", "poisson", "nbinom", "binomial"), 6),
+             Tn = NA, rho = NA, lat_sd = NA,
+             ri_sd = rep(rep(c(0.1, 0.5), each = 4), 3),
+             L = rep(c(5, 10, 30), each = 8), m = rep(c(10, 5, 2), each = 8)))
+cells$noise <- ifelse(cells$family == "gaussian", 0.5, NA)
+cells$cell <- seq_len(nrow(cells))
+stopifnot(nrow(cells) == 76L)
+H <- 6L; HS <- c(1L, 3L, 6L)             # horizons simulated, and reported
+NB_SIZE <- 2
+MU0 <- c(gaussian = 5, poisson = 1.5, nbinom = 1.5, binomial = 0)
+CUTS <- c(0.5, 0.75, 1, 1.5, 2, 3)       # the flag's candidate cut-offs on s
+NDRAW <- 1000L
+
+## ---- simulation: the data, the truth, and the future ------------------------------
+ar_path <- function(n, rho, sd_marg)
+  as.numeric(stats::arima.sim(list(ar = rho), n, sd = sd_marg * sqrt(1 - rho^2)))
+## the response given its linear predictor; `disp` is sigma or the NB size
+draw_y <- function(fam, eta, disp) switch(fam,
+  gaussian = eta + stats::rnorm(length(eta), 0, disp),
+  poisson  = stats::rpois(length(eta), exp(pmin(eta, 700))),
+  nbinom   = stats::rnbinom(length(eta), mu = exp(pmin(eta, 700)), size = disp),
+  binomial = stats::rbinom(length(eta), 1, stats::plogis(eta)))
+true_disp <- function(ce) switch(ce$family, gaussian = ce$noise, nbinom = NB_SIZE, NULL)
+## each row keeps its latent `a` and the rest of its true linear predictor `m`,
+## so the true-parameter predictive can start from the truth at the last time
+simulate <- function(ce) {
+  mu <- MU0[[ce$family]]
+  if (ce$arm == "B3") {
+    d <- data.frame(g = factor(rep(seq_len(ce$L), each = ce$m)))
+    d$x <- stats::rnorm(nrow(d))
+    d$y <- draw_y(ce$family, mu + 0.3 * d$x + stats::rnorm(ce$L, 0, ce$ri_sd)[d$g],
+                  true_disp(ce))
+    return(list(d = d, fut = NULL, fml = y ~ x + (1 | g), ar = FALSE))
+  }
+  G <- if (ce$arm == "B1") 1L else 20L
+  n <- ce$Tn + H
+  a <- lapply(seq_len(G), function(i) ar_path(n, ce$rho, ce$lat_sd))
+  b <- if (ce$arm == "B2") stats::rnorm(G, 0, ce$ri_sd) else rep(0, G)
+  full <- do.call(rbind, lapply(seq_len(G), function(i)
+    data.frame(g = i, t = seq_len(n), a = a[[i]], m = mu + b[i])))
+  full$g <- factor(full$g)
+  full$y <- draw_y(ce$family, full$m + full$a, true_disp(ce))
+  list(d = full[full$t <= ce$Tn, ], fut = full[full$t > ce$Tn, ],
+       fml = if (ce$arm == "B1") y ~ 1 else y ~ 1 + (1 | g), ar = TRUE)
+}
+
+## ---- the fit's variance parameters, on their log scales ---------------------------
+## `id` indexes the fixed parameters (opt$par, vcov), `row` the draws' full
+## layout: the same parameter, the first of its block
+var_params <- function(f, ce, map) {
+  pn <- names(f$opt$par); out <- list()
+  add <- function(nm, block, truth, held) {
+    out[[nm]] <<- list(id = which(pn == block)[1L],
+                       row = if (is.null(map)) NA_integer_ else map$row[map$block == block][1L],
+                       truth = truth, held = held)
+  }
+  if ("lchol_ar" %in% pn) add("ar_sd", "lchol_ar", log(ce$lat_sd), "ar")
+  if ("theta" %in% pn) add("ri_sd", "theta", log(ce$ri_sd), "g")
+  if ("logdisp" %in% pn && ce$family == "gaussian")
+    add("sigma", "logdisp", log(ce$noise), "dispersion")
+  if ("logdisp" %in% pn && ce$family == "nbinom")
+    add("nb_logk", "logdisp", log(NB_SIZE), "dispersion")
+  out
+}
+## the objective with some parameters pinned, every other fixed parameter
+## re-optimised (the random effects by the Laplace inner step). A log SD the
+## fit left near zero (below -5; a NB log k above 5) has no gradient to leave
+## by, so the re-optimisation also starts once with those at -1 (+1), and the
+## better of the two is kept
+pinned_obj <- function(f, id, value) {
+  p <- f$opt$par; pn <- names(p)
+  fn <- function(q) { pp <- p; pp[-id] <- q; pp[id] <- value; f$obj$fn(pp) }
+  run <- function(st) {
+    o <- tryCatch(suppressWarnings(stats::nlminb(st, fn)), error = function(e) NULL)
+    if (is.null(o) || !is.finite(o$objective)) Inf else o$objective
+  }
+  best <- run(p[-id])
+  st <- p; sd_par <- pn %in% c("logdisp", "lchol_ar", "theta")
+  st[sd_par & p < -5] <- -1; st[pn == "logdisp" & p > 5] <- 1
+  if (any(st[-id] != p[-id])) best <- min(best, run(st[-id]))
+  invisible(tryCatch(f$obj$fn(p), error = function(e) NULL))
+  if (is.finite(best)) best else NA_real_
+}
+## a 25-point profile of one log SD and its 95% interval's upper end, and the
+## label: unbounded, wald_too_wide (Wald's upper end over twice the profile's
+## on the SD scale), ok, or profile_failed where a grid point's re-optimisation
+## failed before the interval's end was reached
+PGRID <- seq(-4, 6, length.out = 25L)
+profile_one <- function(f, id, se) {
+  est <- f$opt$par[[id]]; f0 <- f$obj$fn(f$opt$par)
+  psi <- est + PGRID
+  lp <- -vapply(psi, function(v) pinned_obj(f, id, v), 0)
+  dev <- 2 * ((-f0) - lp)
+  ## walk up from the estimate (deviance 0) to the first point past 3.84
+  up <- c(est, psi[psi > est]); du <- c(0, dev[psi > est])
+  k <- 1L
+  while (k < length(up) && is.finite(du[k + 1L]) && du[k + 1L] <= 3.84) k <- k + 1L
+  prof_up <- NA_real_
+  label <- if (k == length(up)) "unbounded"
+           else if (!is.finite(du[k + 1L])) "profile_failed"
+           else {
+             prof_up <- up[k] + (3.84 - du[k]) / (du[k + 1L] - du[k]) * (up[k + 1L] - up[k])
+             if (is.finite(se) && est + 1.96 * se - prof_up > log(2)) "wald_too_wide" else "ok"
+           }
+  ## the grid with the estimate, the profile's peak, in its place
+  o <- order(c(psi, est))
+  list(psi = c(psi, est)[o], lp = c(lp, -f0)[o], est = est, prof_up = prof_up,
+       wald_up = est + 1.96 * se, label = label)
+}
+## a 9 x 9 joint profile of two log SDs, others re-optimised, taken where both
+## one-parameter profiles fail. RIDGE: the total variance is bounded, taken as
+## the total variance staying within 4 times its value at the estimate over
+## the pair's joint 95% region (deviance <= 5.99)
+R9 <- seq(-4, 6, length.out = 9L)
+ridge_pair <- function(f, id1, id2) {
+  e <- f$opt$par[c(id1, id2)]; f0 <- f$obj$fn(f$opt$par)
+  gr <- expand.grid(a = e[[1]] + R9, b = e[[2]] + R9)
+  lp <- -vapply(seq_len(nrow(gr)), function(i)
+    pinned_obj(f, c(id1, id2), c(gr$a[i], gr$b[i])), 0)
+  dev <- 2 * ((-f0) - lp)
+  V <- exp(2 * gr$a) + exp(2 * gr$b); V0 <- sum(exp(2 * e))
+  inreg <- is.finite(dev) & dev <= 5.99
+  list(grid = gr, lp = lp, ridge = any(inreg) && max(V[inreg]) <= 4 * V0)
+}
+
+## ---- remedy 2: draws from the profile, capped, others conditional ----------------
+## the cap, fixed in the design: a latent SD at most 5 x max(sd(g(y*)), 0.5)
+cap_of <- function(fam, y) {
+  ys <- switch(fam, gaussian = y, poisson = , nbinom = log(y + 0.5),
+               binomial = stats::qlogis((y + 0.5) / 2))
+  log(5 * max(stats::sd(ys), 0.5))
+}
+## the normalised exp(profile), linearly interpolated on a fine grid below the
+## cap (a spline overshoots wildly beside a steep point)
+sample_profile <- function(pr, n, cap) {
+  ok <- is.finite(pr$lp) & pr$psi <= cap
+  if (sum(ok) < 3L) return(rep(min(pr$est, cap), n))
+  fine <- seq(min(pr$psi[ok]), max(pr$psi[ok]), length.out = 400L)
+  l <- stats::approx(pr$psi[ok], pr$lp[ok], xout = fine)$y
+  sample(fine, n, replace = TRUE, prob = exp(l - max(l)))
+}
+## a pair from the 9 x 9 profile, uniform within the chosen grid cell
+sample_ridge <- function(rp, n, cap) {
+  ok <- is.finite(rp$lp) & rp$grid$a <= cap & rp$grid$b <= cap
+  if (!any(ok)) return(NULL)
+  k <- sample(which(ok), n, replace = TRUE, prob = exp(rp$lp[ok] - max(rp$lp[ok])))
+  step <- diff(R9)[1]
+  rbind(rp$grid$a[k] + stats::runif(n, -step / 2, step / 2),
+        rp$grid$b[k] + stats::runif(n, -step / 2, step / 2))
+}
+## rows `rows` of a draw matrix replaced by `new` (rows x draws), every other
+## row moved by its regression on them: the Gaussian conditional, from the
+## joint draws' own covariance
+condition_on <- function(D, rows, new) {
+  S <- stats::cov(t(D)); others <- setdiff(seq_len(nrow(D)), rows)
+  Srr <- S[rows, rows, drop = FALSE]
+  if (any(!is.finite(Srr)) || min(eigen(Srr, TRUE, TRUE)$values) <= 1e-12) {
+    D[rows, ] <- new; return(D)
+  }
+  B <- S[others, rows, drop = FALSE] %*% solve(Srr)
+  D[others, ] <- D[others, ] + B %*% (new - D[rows, , drop = FALSE])
+  D[rows, ] <- new
+  D
+}
+
+## ---- forecasts ------------------------------------------------------------------------
+## each draw carries its series' AR latent forward from its last cell (B_ar is
+## added to the linear predictor as it stands; rho = tanh(rho_raw); lchol_ar is
+## the log marginal SD), and the response is drawn at each horizon: scored
+## against the future simulated with the data, and against the true-parameter
+## predictive
+crps_sample <- function(x, y) {
+  x <- x[is.finite(x)]; if (length(x) < 2L) return(Inf)
+  x <- sort(x); n <- length(x)
+  mean(abs(x - y)) - sum((2 * seq_len(n) - n - 1) * x) / n^2
+}
+last_rows <- function(f, map) {
+  ce <- ilm_cells(f)
+  vapply(levels(droplevels(ce$group)), function(s) {
+    k <- which(ce$group == s); k <- k[which.max(ce$time[k])]
+    map$row[map$block == "B_ar" & map$cell == k][1L]
+  }, 0L)
+}
+forecast_score <- function(D, map, ce, fut, ref, lastrow) {
+  blk <- map$block
+  b0 <- D[blk == "beta", , drop = FALSE][1L, ]
+  sd_a <- exp(D[blk == "lchol_ar", ]); rho <- tanh(D[blk == "rho_raw", ])
+  disp <- if (any(blk == "logdisp")) exp(D[blk == "logdisp", ]) else NULL
+  rows <- list()
+  for (s in names(lastrow)) {
+    a <- D[lastrow[[s]], ]
+    k <- which(blk == "bvec" & map$level == s)
+    re <- if (length(k)) D[k[1L], ] else 0
+    fs <- fut[fut$g == s, ]; fs <- fs[order(fs$t), ]
+    for (h in seq_len(H)) {
+      a <- rho * a + stats::rnorm(length(a), 0, sd_a * sqrt(pmax(1 - rho^2, 0)))
+      x <- draw_y(ce$family, b0 + re + a, disp)
+      if (!(h %in% HS)) next
+      y <- fs$y[h]
+      q <- stats::quantile(x, c(0.025, 0.1, 0.9, 0.975), na.rm = TRUE, names = FALSE)
+      cr <- crps_sample(x, y)
+      rows[[length(rows) + 1L]] <- data.frame(s = s, h = h, in80 = y >= q[2] & y <= q[3],
+        in95 = y >= q[1] & y <= q[4], crps = cr, ref = ref[[paste(s, h)]],
+        explosive = cr > 100 * ref[[paste(s, h)]])
+    }
+  }
+  do.call(rbind, rows)
+}
+## the true-parameter predictive, from the true latent at the last fitted time
+truth_ref <- function(ce, d, fut, n = NDRAW) {
+  out <- list()
+  for (s in levels(droplevels(fut$g))) {
+    ds <- d[d$g == s, ]; ds <- ds[order(ds$t), ]
+    fs <- fut[fut$g == s, ]; fs <- fs[order(fs$t), ]
+    a <- rep(ds$a[nrow(ds)], n)
+    for (h in seq_len(H)) {
+      a <- ce$rho * a + stats::rnorm(n, 0, ce$lat_sd * sqrt(1 - ce$rho^2))
+      out[[paste(s, h)]] <- crps_sample(draw_y(ce$family, fs$m[h] + a, true_disp(ce)), fs$y[h])
+    }
+  }
+  out
+}
+summ_fc <- function(sc, remedy, cut = NA_real_) {
+  if (is.null(sc) || !nrow(sc)) return(NULL)
+  do.call(rbind, lapply(HS, function(h) { z <- sc[sc$h == h, ]
+    data.frame(remedy = remedy, cut = cut, h = h, n_rows = nrow(z), cov80 = mean(z$in80),
+               cov95 = mean(z$in95), crps_mean = mean(z$crps),
+               crps_median = stats::median(z$crps), ref_mean = mean(z$ref),
+               n_explosive = sum(z$explosive)) }))
+}
+qint <- function(x) stats::quantile(x, c(0.025, 0.975), names = FALSE, na.rm = TRUE)
+
+## ---- one fit ----------------------------------------------------------------------------
+one <- function(ce, fixture = NULL) {
+  suppressMessages(library(illume))
+  seed <- if (is.null(fixture)) 9973L * ce$cell + ce$rep + OFFSET else 1L
+  set.seed(seed)
+  s <- if (is.null(fixture)) simulate(ce) else fixture$sim
+  key <- data.frame(cell = ce$cell, rep = ce$rep, seed = seed,
+                    fixture = if (is.null(fixture)) NA_character_ else fixture$name)
+  t0 <- proc.time()[["elapsed"]]
+  f <- tryCatch(suppressMessages(suppressWarnings(ilm_model(s$fml, data = s$d,
+        family = ce$family, ar = if (s$ar) ilm_ar1(~ t | g) else NULL, verbose = FALSE))),
+        error = function(e) NULL)
+  t_fit <- proc.time()[["elapsed"]] - t0
+  if (is.null(f)) return(list(par = cbind(key, ok = FALSE), fc = NULL, time = NULL))
+  held <- f$hessian_held
+  ck <- f$checks
+  nonconv <- any(ck$status[ck$check %in% c("gradient", "optimizer")] == "FAIL")
+  V <- tryCatch(suppressWarnings(vcov(f, full = TRUE)), error = function(e) NULL)
+  ## d: the other package's signal, as its cross-tab computes it
+  dr <- tryCatch(suppressWarnings(ilm_draws(f, nsim = 400L, seed = 1L)),
+                 error = function(e) NULL)
+  ## today's joint draws, the baseline and remedy 1 (a)
+  t1 <- proc.time()[["elapsed"]]
+  base <- tryCatch(suppressWarnings(ilm_draws(f, nsim = NDRAW, seed = 2L, natural = FALSE)),
+                   error = function(e) NULL)
+  t_draws <- proc.time()[["elapsed"]] - t1
+  map <- if (!is.null(base)) base$map else if (!is.null(dr)) dr$map else NULL
+  vp <- var_params(f, ce, map)
+  cap <- cap_of(ce$family, s$d$y)
+  prs <- list(); prow <- list(); t_prof <- 0
+  for (nm in names(vp)) {
+    p <- vp[[nm]]; is_held <- p$held %in% held
+    se <- if (!is.null(V)) sqrt(V[p$id, p$id]) else NA_real_
+    dsd <- if (!is.null(dr)) stats::sd(dr$draws[p$row, ]) else NA_real_
+    r <- data.frame(param = nm, held = is_held, est = f$opt$par[[p$id]], truth = p$truth,
+                    s = se, d = dsd, label = NA_character_, prof_up = NA_real_,
+                    wald_up = NA_real_, cap = cap, base_lo = NA_real_, base_hi = NA_real_,
+                    r2_lo = NA_real_, r2_hi = NA_real_)
+    if (!is_held) {
+      tp <- proc.time()[["elapsed"]]
+      pr <- profile_one(f, p$id, se); prs[[nm]] <- pr
+      t_prof <- t_prof + proc.time()[["elapsed"]] - tp
+      r$label <- pr$label; r$prof_up <- pr$prof_up; r$wald_up <- pr$wald_up
+      if (!is.null(base)) { qb <- qint(base$draws[p$row, ]); r$base_lo <- qb[1]; r$base_hi <- qb[2] }
+      q2 <- qint(sample_profile(pr, NDRAW, cap)); r$r2_lo <- q2[1]; r$r2_hi <- q2[2]
+    }
+    prow[[nm]] <- r
+  }
+  par <- do.call(rbind, prow)
+  if (is.null(par)) par <- data.frame(param = NA_character_)
+  ## ridge pairs, where both one-parameter profiles failed
+  par$ridge <- NA
+  fails <- c("unbounded", "wald_too_wide")
+  ridges <- list(); t_ridge <- 0
+  for (pp in list(c("sigma", "ar_sd"), c("ri_sd", "ar_sd")))
+    if (all(pp %in% names(prs)) && all(par$label[match(pp, par$param)] %in% fails)) {
+      tr <- proc.time()[["elapsed"]]
+      rp <- ridge_pair(f, vp[[pp[1]]]$id, vp[[pp[2]]]$id)
+      t_ridge <- t_ridge + proc.time()[["elapsed"]] - tr
+      par$ridge[match(pp, par$param)] <- rp$ridge
+      ridges[[paste(pp, collapse = "+")]] <- list(pair = pp, rp = rp)
+    }
+  ## forecasts: today's draws, remedy 1 (b) given theta, and remedy 2 at each
+  ## candidate cut-off
+  fc <- NULL; t_r2 <- NA_real_
+  if (s$ar && !is.null(base)) {
+    lr <- last_rows(f, base$map)
+    ref <- truth_ref(ce, s$d, s$fut)
+    fc <- summ_fc(forecast_score(base$draws, base$map, ce, s$fut, ref, lr), "joint")
+    gt <- tryCatch(suppressWarnings(ilm_draws(f, nsim = NDRAW, seed = 2L, given = "theta",
+                                              natural = FALSE)), error = function(e) NULL)
+    if (!is.null(gt))
+      fc <- rbind(fc, summ_fc(forecast_score(gt$draws, gt$map, ce, s$fut, ref, lr),
+                              "given_theta"))
+    t2 <- proc.time()[["elapsed"]]
+    for (cu in CUTS) {
+      fl <- par$param[!par$held & is.finite(par$s) & par$s > cu & par$param %in% names(prs)]
+      if (!length(fl)) next
+      D <- base$draws; done <- character(0)
+      for (rn in names(ridges)) {
+        pp <- ridges[[rn]]$pair
+        if (isTRUE(ridges[[rn]]$rp$ridge) && all(pp %in% fl)) {
+          nw <- sample_ridge(ridges[[rn]]$rp, NDRAW, cap)
+          if (!is.null(nw)) {
+            D <- condition_on(D, c(vp[[pp[1]]]$row, vp[[pp[2]]]$row), nw)
+            done <- c(done, pp)
+          }
+        }
+      }
+      for (nm in setdiff(fl, done))
+        D <- condition_on(D, vp[[nm]]$row, rbind(sample_profile(prs[[nm]], NDRAW, cap)))
+      fc <- rbind(fc, summ_fc(forecast_score(D, base$map, ce, s$fut, ref, lr), "profile", cu))
+    }
+    t_r2 <- proc.time()[["elapsed"]] - t2
+  }
+  list(par = cbind(key, ok = TRUE, nonconv = nonconv, par),
+       fc = if (is.null(fc)) NULL else cbind(key, fc),
+       time = cbind(key, t_fit = t_fit, t_draws = t_draws, t_prof = t_prof,
+                    t_ridge = t_ridge, t_r2 = t_r2))
+}
+
+## ---- the named fixtures, rebuilt by their reporters' own generators ---------------------
+## the forecasting package's simulate_panel() (40 series of T + 7), copied,
+## keeping each row's latent and the rest of its linear predictor
+fx_panel <- function(Tn, family, G = 40L) {
+  n_t <- Tn + 3L + 4L
+  rho <- rep(0.7, G)                                  # its "shared" truth
+  sd_lat <- if (family == "gaussian") rep(0.8, G) else rep(0.5, G)
+  sd_noise <- rep(0.5, G)
+  mu <- if (family == "gaussian") stats::rnorm(G, 5, 1) else stats::rnorm(G, 1.5, 0.5)
+  do.call(rbind, lapply(seq_len(G), function(k) {
+    a <- as.numeric(stats::arima.sim(list(ar = rho[k]), n_t, sd = sd_lat[k] * sqrt(1 - rho[k]^2)))
+    y <- if (family == "gaussian") mu[k] + a + stats::rnorm(n_t, 0, sd_noise[k])
+         else stats::rpois(n_t, exp(mu[k] + a))
+    data.frame(g = sprintf("s%02d", k), t = seq_len(n_t), a = a, m = mu[k], y = y)
+  }))
+}
+fx_single <- function(name, cell, rep, Tn, family, series, lat_sd) {
+  set.seed(5e6 + 1e4 * cell + rep)
+  d <- fx_panel(Tn, family); d <- d[d$g == series, ]; d$g <- factor(d$g)
+  list(name = name,
+       ce = data.frame(arm = "B1", family = family, Tn = Tn, rho = 0.7, lat_sd = lat_sd,
+                       ri_sd = NA, L = NA, m = NA,
+                       noise = if (family == "gaussian") 0.5 else NA, cell = 0L, rep = 0L),
+       sim = list(d = d[d$t <= Tn, ], fut = d[d$t > Tn & d$t <= Tn + H, ], fml = y ~ 1, ar = TRUE))
+}
+## the AR-only panel of its covariate reports, noise-free: set.seed(rep), 20
+## series of 24 with AR 0.8 and marginal SD 1. Its generator stops at 24, so
+## the six future times are drawn after it, from the true AR on from each
+## series' last value, with the random stream carrying on
+fx_covpanel <- function(rep) {
+  set.seed(rep)
+  d <- do.call(rbind, lapply(1:20, function(k)
+    data.frame(g = k, t = 1:24,
+               y = as.numeric(stats::arima.sim(list(ar = 0.8), 24, sd = sqrt(1 - 0.64))))))
+  fut <- do.call(rbind, lapply(1:20, function(k) {
+    a <- d$y[d$g == k & d$t == 24]; y <- numeric(H)
+    for (h in seq_len(H)) { a <- 0.8 * a + stats::rnorm(1, 0, sqrt(1 - 0.64)); y[h] <- a }
+    data.frame(g = k, t = 24 + seq_len(H), y = y)
+  }))
+  d$a <- d$y; fut$a <- fut$y; d$m <- 0; fut$m <- 0
+  d$g <- factor(d$g); fut$g <- factor(fut$g, levels = levels(d$g))
+  list(name = paste0("covpanel_rep", rep),
+       ce = data.frame(arm = "B2", family = "gaussian", Tn = 24, rho = 0.8, lat_sd = 1,
+                       ri_sd = NA, L = NA, m = NA, noise = 0, cell = 0L, rep = rep),
+       sim = list(d = d, fut = fut, fml = y ~ 1, ar = TRUE))
+}
+fixtures <- function() c(
+  list(fx_single("single_s36", 2, 11, 24L, "gaussian", "s36", 0.8)),
+  lapply(c(4L, 11L, 59L), fx_covpanel),
+  list(fx_single("poisson_s14", 7, 1, 12L, "poisson", "s14", 0.5)))
+
+## ---- run ------------------------------------------------------------------------------------
+t_all <- Sys.time()
+use <- if (is.null(ONLY)) cells else cells[cells$cell %in% ONLY, ]
+jobs <- merge(use, data.frame(rep = seq_len(NREP)))
+jl <- split(jobs, seq_len(nrow(jobs)))
+res <- if (NCORE > 1L) {
+  cl <- parallel::makeCluster(NCORE)
+  parallel::clusterExport(cl, setdiff(ls(globalenv()), c("cl", "jobs", "jl")), envir = globalenv())
+  r <- parallel::parLapplyLB(cl, jl, one)
+  parallel::stopCluster(cl)
+  r
+} else lapply(jl, one)
+## rows of failed fits carry fewer columns; each is filled out with NA
+bind <- function(x, k) {
+  l <- Filter(Negate(is.null), lapply(x, `[[`, k))
+  if (!length(l)) return(NULL)
+  nm <- unique(unlist(lapply(l, names)))
+  do.call(rbind, lapply(l, function(d) { for (n in setdiff(nm, names(d))) d[[n]] <- NA; d[nm] }))
+}
+put <- function(d, nm) if (!is.null(d))
+  utils::write.csv(d, file.path(sp, paste0("variance_draws_", nm, ".csv")), row.names = FALSE)
+tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
+for (k in c("par", "fc", "time")) put(bind(res, k), paste(tag, k, sep = "_"))
+if (!OFFSET) {
+  fx <- lapply(fixtures(), function(x) one(x$ce, fixture = x))
+  for (k in c("par", "fc", "time")) put(bind(fx, k), paste("fixtures", k, sep = "_"))
+}
+cat("fits:", nrow(jobs), " minutes:",
+    round(as.numeric(difftime(Sys.time(), t_all, units = "mins")), 1), "\n")
