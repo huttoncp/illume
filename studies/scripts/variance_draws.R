@@ -375,15 +375,15 @@ sample_profile <- function(pr, n, cap, trim = 0) {
   if (!any(keep)) keep <- fine >= max(fine)
   sample(fine[keep], n, replace = TRUE, prob = exp(l[keep] - max(l[keep])))
 }
-## THE LOWER PLATEAU (added after the smoke run, before any main-run data, at
-## the conductor's request; it measures the registered grid, and changes no
-## label, flag or registered remedy). Where the profile is flat at the grid's
-## lower edge, remedy 2 spreads mass down to est - 4, so the edge acts as a
-## floor. Recorded per parameter: whether the deviance changes by less than
-## 0.1 over the lowest grid step, the deviance there, and the share of remedy
-## 2's draws within one grid step of the edge. The forecasts add remedy 2 with
-## that step left out ("profile_trim"), from the same seed as remedy 2,
-## so the difference in CRPS is paired by fit and seed.
+## THE LOWER PLATEAU -- EXPLORATORY, POST-REGISTRATION (added after the smoke
+## run, before any main-run data, at the conductor's request; it measures the
+## registered grid, and changes no label, flag or registered remedy). Where the
+## profile is flat at the grid's lower edge, remedy 2 spreads mass down to
+## est - 4, so the edge acts as a floor. Recorded per parameter: whether the deviance
+## changes by less than 0.1 over the lowest grid step, the deviance there, and
+## the share of remedy 2's draws within one grid step of the edge. The forecasts
+## add remedy 2 with that step left out ("profile_trim"), from the same seed as
+## remedy 2, so the difference in CRPS is paired by fit and seed.
 STEP <- diff(PGRID)[1]
 low_edge <- function(pr, cap, draws) {
   ok <- which(is.finite(pr$lp) & pr$psi <= cap)
