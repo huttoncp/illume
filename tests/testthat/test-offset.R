@@ -195,3 +195,11 @@ test_that("the interpretation says what the effects are per", {
   expect_match(paste(it$sections$caveats, collapse = " "), "per unit of exposure",
                fixed = TRUE)
 })
+
+test_that("the marginaleffects bridge predicts the fit's own rows at their exposure", {
+  skip_if_not_installed("marginaleffects")
+  r <- rate_fit(); f <- r$f
+  ilm_register_marginaleffects()
+  p <- marginaleffects::get_predict(f)
+  expect_equal(p$estimate, as.numeric(predict(f, type = "response")), tolerance = 1e-8)
+})
