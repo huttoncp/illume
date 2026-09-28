@@ -47,6 +47,25 @@ A random effect's SD short of zero. A term is AT ITS BOUNDARY, by labels from ou
 
 On the built rule (line 0.1, tolerance 1e-3): 2317 fits held, 2307 of them at the boundary by the labels; the standard error of the slope runs 0.970 to 1.037 times the refit without the term (median 1.000).
 
+**Relative to sd(y), for gaussian responses** (3400 gaussian fits over the two runs, sd(y) 0.45 to 1.09, each rebuilt from its seed; no new fits). "abs 0.1" is the absolute line the rule used, the others SD / sd(y):
+
+| phase | line | holds | false_holds | missed |
+|---|---|---|---|---|
+| phase1 | abs 0.1 | 656 | 0 | 0 |
+| phase1 | 0.01 | 645 | 0 | 11 |
+| phase1 | 0.05 | 656 | 0 | 0 |
+| phase1 | 0.1 | 656 | 0 | 0 |
+| phase1 | 0.2 | 656 | 0 | 0 |
+| phase1 | Inf | 656 | 0 | 0 |
+| verify | abs 0.1 | 641 | 0 | 0 |
+| verify | 0.01 | 630 | 0 | 11 |
+| verify | 0.05 | 641 | 0 | 0 |
+| verify | 0.1 | 641 | 0 | 0 |
+| verify | 0.2 | 641 | 0 | 0 |
+| verify | Inf | 641 | 0 | 0 |
+
+The flat SDs reach 0.049 of sd(y). In these units, near 1, the two are the same; but the flatness test does not move with the units -- rescaling y shifts the log-likelihood by a constant -- and the absolute line did, so for a response in grams where the study had kilograms it would have missed every hold. Craig ruled the relative line, 0.1 of sd(y), for gaussian responses (0.0.8.9003); other families keep 0.1 on the link scale.
+
 CAVEAT that must travel with this result: the tolerance of 1e-3 was chosen
 after the pre-registered run, which used 5e-3 and showed that no line above
 1e-2 avoided new false holds with it; the fresh-seed run is the check on
