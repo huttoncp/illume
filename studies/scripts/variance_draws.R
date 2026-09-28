@@ -670,7 +670,10 @@ one_ck <- function(job) {
 res <- if (NCORE > 1L) {
   cl <- parallel::makeCluster(NCORE)
   parallel::clusterExport(cl, setdiff(ls(globalenv()), c("cl", "jobs", "jl")), envir = globalenv())
-  r <- parallel::parLapplyLB(cl, jl, one_ck)
+  ## one job at a time: by default the jobs go out in one contiguous chunk
+  ## per worker, and on a resume the unfinished ones -- the last replicates --
+  ## all fall in the last worker's chunk
+  r <- parallel::parLapplyLB(cl, jl, one_ck, chunk.size = 1L)
   parallel::stopCluster(cl)
   r
 } else lapply(jl, one_ck)
