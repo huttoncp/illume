@@ -522,8 +522,15 @@ ilm_contrast_matrix <- function(lab, method, ref = NULL) {
 #' @param ... Arguments for methods. `ilm_contrast()` is a generic, so a
 #'   package whose own objects hold estimates with a joint covariance can give
 #'   them a method.
-#' @return A data frame with `contrast`, `estimate`, `se`, `lower`, `upper`,
-#'   `p_value`, `p_adj` and `adjust`.
+#' @return A data frame with `contrast`, `estimate`, `se`, `df`, `lower`,
+#'   `upper`, `p_value`, `p_adj` and `adjust`. The `df` are those of the
+#'   method the means or slopes were tested with: the contrasts of an
+#'   [ilm_trends()] result tested on Satterthwaite's or Kenward-Roger's df
+#'   get their own df by the same method; means from [ilm_emmeans()] give
+#'   the exact residual df where nothing was integrated out and `Inf` (a z
+#'   test) otherwise. Under `"max_t"` the joint reference is a multivariate t
+#'   on the smallest of the contrasts' df, which keeps the joint coverage for
+#'   every row.
 #' @seealso [ilm_emmeans()], [illumex::ilm_boot_diff()] for the same comparison made
 #'   without a model.
 #' @examples
@@ -548,6 +555,7 @@ ilm_contrast.ilm_emm <- function(object,
                                  ref = NULL,
                                  adjust = c("max_t", "bonferroni", "none"),
                                  level = 0.95, nsim = 20000L, seed = 1L, ...) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   method <- match.arg(method); adjust <- match.arg(adjust)
   sp <- attr(object, "specs")
   ## cell weights average each group over its own covariate mix, so a
@@ -588,7 +596,8 @@ ilm_contrast.ilm_emm <- function(object,
   se <- sqrt(pmax(diag(Vc), 0))
   m <- length(est)
   fit <- attr(object, "object")
-  df <- if (isTRUE(fit$exact_df)) fit$resid_df else Inf
+  ddf <- ilm_contrast_df(object, fit, C)
+  df <- as.numeric(ddf)
   if (m == 1L) adjust <- "none"
 
   tstat <- ifelse(se > 0, est / se, 0)
@@ -610,8 +619,12 @@ ilm_contrast.ilm_emm <- function(object,
     ## exactly where it matters -- a small sample, where a normal reference
     ## gives a critical value that is too small and intervals that are too
     ## narrow.
-    if (is.finite(df) && df > 0)
-      Zs <- Zs / rep(sqrt(stats::rchisq(nsim, df) / df), each = m)
+    ## One multivariate t needs one df. Satterthwaite gives each contrast its
+    ## own, and the smallest is the one whose critical value is largest, so
+    ## the joint coverage holds for every row: conservative, never short
+    df1 <- min(df)
+    if (is.finite(df1) && df1 > 0)
+      Zs <- Zs / rep(sqrt(stats::rchisq(nsim, df1) / df1), each = m)
     mx <- apply(abs(Zs), 2L, max)
     crit <- stats::quantile(mx, level, names = FALSE)
     padj <- vapply(abs(tstat), function(t0) mean(mx >= t0), 1)
@@ -620,21 +633,51 @@ ilm_contrast.ilm_emm <- function(object,
     padj <- pmin(1, m * praw)
   }
 
-  out <- data.frame(contrast = rownames(C), estimate = est, se = se,
+  out <- data.frame(contrast = rownames(C), estimate = est, se = se, df = df,
                     lower = est - crit * se, upper = est + crit * se,
                     p_value = praw, p_adj = padj, adjust = adjust,
                     n_contrasts = m, stringsAsFactors = FALSE)
   rownames(out) <- NULL
   structure(out, class = c("ilm_contrast", "data.frame"),
             level = level, type = attr(object, "type"),
-            family = attr(object, "family"), weights = attr(object, "weights"))
+            family = attr(object, "family"), weights = attr(object, "weights"),
+            df_method = attr(ddf, "method"),
+            df_fallback = attr(ddf, "fallback"))
+}
+
+## The df of each contrast, by the method the means or slopes were tested
+## with. A difference between two slopes tested on Satterthwaite's df is
+## tested on its own Satterthwaite df -- not, as it once was, as a z test
+## beside the t tests of the slopes it compares. Means from ilm_emmeans()
+## carry no method of their own and keep the exact t where nothing was
+## integrated out, the normal otherwise.
+#' @keywords internal
+#' @noRd
+ilm_contrast_df <- function(object, fit, C) {
+  m <- nrow(C)
+  dm <- attr(object, "df_method")
+  ## slopes that all fell back to the normal: their differences are tried
+  ## again, and fall back with the reason stated, not quietly
+  if (!is.null(attr(object, "df_fallback"))) dm <- "satterthwaite"
+  if (is.null(dm) || identical(dm, "asymptotic"))
+    return(if (isTRUE(fit$exact_df))
+      structure(rep(fit$resid_df, m), method = "residual")
+      else structure(rep(Inf, m), method = "asymptotic"))
+  if (identical(dm, "supplied"))
+    return(structure(rep(object$df[1L], m), method = "supplied"))
+  ## the contrasts of the rows, as contrasts of the coefficients
+  ilm_trend_df(fit, C %*% attr(object, "L"), dm, what = "contrast")
 }
 
 #' @export
 print.ilm_contrast <- function(x, ...) {
-  cat("<ilm_contrast>", nrow(x), "comparison(s), adjust =", x$adjust[1], "\n\n")
-  d <- as.data.frame(x)[, c("contrast", "estimate", "se", "lower", "upper",
-                            "p_adj")]
+  cat("<ilm_contrast>", nrow(x), "comparison(s), adjust =", x$adjust[1], "\n")
+  if (!is.null(attr(x, "df_method")))
+    cat(ilm_wrap(ilm_df_words(attr(x, "df_method"), attr(x, "df_fallback"),
+                              what = "contrast"), indent = "  "), "\n", sep = "")
+  cat("\n")
+  d <- as.data.frame(x)[, intersect(c("contrast", "estimate", "se", "df",
+                                      "lower", "upper", "p_adj"), names(x))]
   print(d, row.names = FALSE, digits = 4)
   if (x$adjust[1] == "max_t")
     cat("\n  Intervals hold jointly at",

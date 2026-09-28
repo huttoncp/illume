@@ -251,6 +251,7 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
                        method = c("auto", "fcs", "lowrank", "glrm"),
                        ncp = NULL, single = FALSE, seed = NULL,
                        verbose = TRUE, progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   method <- match.arg(method)
   if (!is.data.frame(data))
     stop("`data` must be a data frame; it is ", class(data)[1], call. = FALSE)

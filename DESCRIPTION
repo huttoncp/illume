@@ -1,7 +1,7 @@
 Package: illume
 Type: Package
 Title: A Unified Engine for Frequentist Inference
-Version: 0.0.8.9000
+Version: 0.0.8.9001
 Authors@R: person(given = "Craig", family = "Hutton",
                   role = c("aut", "cre"),
                   email = "craig.hutton@gmail.com")

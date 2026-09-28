@@ -7,8 +7,14 @@
 
 test_that("the helpers illume shares with illumex are the same code", {
   shared <- c("%||%", "ilm_bq", "ilm_wrap", "ilm_progress",
-              "ilm_pch", "ilm_pch_spec", "ilm_pch_table", "ilm_pch_names")
+              "ilm_pch", "ilm_pch_spec", "ilm_pch_table", "ilm_pch_names",
+              "ilm_rng_restore")
+  ## a helper illumex has not copied yet is compared once it has: the copy
+  ## is illumex's to make (ilm_rng_restore, for its own seeded functions)
+  pending <- c("ilm_rng_restore")
   for (f in shared) {
+    if (f %in% pending &&
+        !exists(f, envir = asNamespace("illumex"), inherits = FALSE)) next
     mine <- get(f, envir = asNamespace("illume"))
     theirs <- get(f, envir = asNamespace("illumex"))
     expect_identical(deparse(mine), deparse(theirs),

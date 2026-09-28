@@ -112,6 +112,7 @@
 ilm_moderation <- function(object, x = NULL, moderators = NULL,
                            adjust = "holm", split = FALSE, data = NULL,
                            n_keep = 3L, seed = 1L, progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   dag <- inherits(object, "ilm_dag_model")
   fit <- if (dag) object$fit else object
   if (!inherits(fit, "ilm_model"))

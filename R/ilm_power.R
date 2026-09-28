@@ -562,6 +562,7 @@ ilm_power_p <- function(fit, nm) {
 #' @export
 ilm_power <- function(object, n = NULL, term = NULL, effect = NULL,
                       sims = 200L, alpha = 0.05, seed = 1L, progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
