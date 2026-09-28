@@ -107,7 +107,14 @@ conditional SDs of
 its range, the fit holds the direction the data cannot resolve at its
 estimate (see `fit$hessian_held`), and so do the draws: exactly, by
 conditioning the joint distribution on those directions. `held` says how
-many.
+many. An AR latent held with its SD at zero is held whole, its
+correlation with it, since a latent with no variance has none to
+estimate.
+
+**A fit that did not converge** – its gradient or optimizer check FAIL –
+has no covariance that is the curvature at a maximum, so draws from it
+are unreliable whatever is held; they are made, with a warning naming
+the restart remedy.
 
 **`given = "theta"`** holds the variance parameters of the random terms
 and of a correlation over time at their estimates, and draws everything

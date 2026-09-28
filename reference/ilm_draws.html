@@ -13,7 +13,7 @@ errors come from."><meta property="og:image" content="https://huttoncp.github.io
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -150,7 +150,13 @@ conditional SDs of <code><a href="ilm_ranef.html">ilm_ranef()</a></code>.</p>
 <p><strong>At a boundary.</strong> When a random term's covariance sits at the edge of its
 range, the fit holds the direction the data cannot resolve at its estimate
 (see <code>fit$hessian_held</code>), and so do the draws: exactly, by conditioning the
-joint distribution on those directions. <code>held</code> says how many.</p>
+joint distribution on those directions. <code>held</code> says how many. An AR latent
+held with its SD at zero is held whole, its correlation with it, since a
+latent with no variance has none to estimate.</p>
+<p><strong>A fit that did not converge</strong> – its gradient or optimizer check FAIL –
+has no covariance that is the curvature at a maximum, so draws from it are
+unreliable whatever is held; they are made, with a warning naming the
+restart remedy.</p>
 <p><strong><code>given = "theta"</code></strong> holds the variance parameters of the random terms and
 of a correlation over time at their estimates, and draws everything else
 from its distribution given them – the approach of the <code>merTools</code>
