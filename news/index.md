@@ -16,6 +16,16 @@
   several adjustment sets identify the effect the prose says which one
   it describes.
 
+- [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md)
+  holds the whole of an AR latent held with its SD at zero. With no
+  variance the latent has no correlation to estimate either, and only
+  one of the two could be among the directions the Hessian called flat:
+  the other was drawn from a variance in the thousands, so draws of the
+  latent’s SD reached e^165 and forecasts built on them overflowed. A
+  block held for a correlation at its edge, with an identified SD, still
+  has its SD drawn. Found by the verify phase of
+  `studies/scripts/sigma_limit.R`.
+
 - [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
   is a generic, and
   [`ilm_remedy_table()`](https://huttoncp.github.io/illume/reference/ilm_remedy_table.md)
