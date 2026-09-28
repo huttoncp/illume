@@ -260,7 +260,11 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
 #'   `contrasts`, the model frame and the smooth objects -- everything needed to
 #'   rebuild a reference grid for [predict.ilm_model()] and for `emmeans` or
-#'   `marginaleffects`.
+#'   `marginaleffects`. Fitted inside a function that passes its arguments on
+#'   with `...`, the `call` records the expressions written at the outer call.
+#'   Where those are a function's own arguments or locals, `update()` on the
+#'   fit cannot find them outside it; [ilm_refit()] does not read them, and
+#'   refits such a fit to other data regardless.
 #'
 #' @references
 #' Chung, Y., Rabe-Hesketh, S., Dorie, V., Gelman, A., & Liu, J. (2013). A
