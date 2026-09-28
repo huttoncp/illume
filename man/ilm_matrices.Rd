@@ -62,8 +62,11 @@ case. An AR(1) term's grid is fixed, so a time that falls between its steps
 is an error rather than rounded to one. The time and the group are read
 from the columns the term was built from, \code{ilm_rw1(~ time | group)} and
 the like; for a term built from vectors, pass them as \code{time} and \code{group}.
-Without them the rows are placed nowhere: every cell and gap is missing
-and every row \code{new_group}.
+For a term built by name, rows without its columns are placed nowhere:
+every cell and gap is missing and every row \code{new_group}. A term built from
+vectors has no columns to fall back on, so there, rows without \code{time} and
+\code{group} are an error -- a forgotten argument would otherwise predict each
+row as a new series.
 }
 \examples{
 set.seed(1)

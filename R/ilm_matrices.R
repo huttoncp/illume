@@ -33,8 +33,11 @@
 #' is an error rather than rounded to one. The time and the group are read
 #' from the columns the term was built from, `ilm_rw1(~ time | group)` and
 #' the like; for a term built from vectors, pass them as `time` and `group`.
-#' Without them the rows are placed nowhere: every cell and gap is missing
-#' and every row `new_group`.
+#' For a term built by name, rows without its columns are placed nowhere:
+#' every cell and gap is missing and every row `new_group`. A term built from
+#' vectors has no columns to fall back on, so there, rows without `time` and
+#' `group` are an error -- a forgotten argument would otherwise predict each
+#' row as a new series.
 #'
 #' @param object A fitted `"ilm_model"`.
 #' @param newdata A data frame of new rows, with the columns the model uses.
@@ -132,12 +135,20 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
   if (!is.null(object$ar)) {
     v <- object$ar$vars
     if (is.null(time) || is.null(group)) {
-      if (!is.null(v) && all(v %in% names(newdata))) {
+      ## a term built from vectors has no columns to read, so rows without
+      ## times and groups are almost always a forgotten argument -- and placed
+      ## nowhere, a prediction for a known series would come out as a new one
+      if (is.null(v))
+        stop("the correlation over time was built from vectors, so the new ",
+             "rows' times and groups have to be given: pass `time` and ",
+             "`group`, or build the term by name, ilm_rw1(~ time | group)",
+             call. = FALSE)
+      if (all(v %in% names(newdata))) {
         time <- newdata[[v[["time"]]]]; group <- newdata[[v[["group"]]]]
       }
     }
-    ## without the time and the group, the rows have no place among the
-    ## cells: a prediction for no particular group, which needs none
+    ## a term built by name, and new rows without its columns: no place among
+    ## the cells -- a prediction for no particular group, which needs none
     out$ar <- if (is.null(time) || is.null(group)) ilm_ar_unplaced(nrow(newdata))
       else {
         if (length(time) != nrow(newdata) || length(group) != nrow(newdata))

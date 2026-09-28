@@ -93,17 +93,14 @@ test_that("an AR(1) grid places on its steps and refuses between them", {
                "between the AR\\(1\\) grid's steps")
 })
 
-test_that("a structure built from vectors is placed by the times and groups given", {
+test_that("a structure built from vectors needs the times and groups given", {
   d <- mat_data()
   f <- ilm_model(y ~ x, data = d, family = "gaussian",
                  ar = ilm_rw1(d$t, d$id), verbose = FALSE)
   nd <- data.frame(x = 0, when = 4, who = "s02")
+  expect_error(ilm_matrices(f, nd), "pass `time` and `group`")
   a <- ilm_matrices(f, nd, time = nd$when, group = nd$who)$ar
   expect_false(is.na(a$cell))
-  ## without them the row is placed nowhere, for a prediction that needs no
-  ## group -- the typical group's or the population's
-  a0 <- ilm_matrices(f, nd)$ar
-  expect_true(is.na(a0$cell) && is.na(a0$group) && a0$new_group)
 })
 
 test_that("rows with no grouping column belong to no group, and predict as typical", {
