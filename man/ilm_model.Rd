@@ -229,7 +229,11 @@ An object of class \code{"ilm_model"}. Beyond the elements listed in
 \code{\link[=ilm_fit]{ilm_fit()}}, a formula fit also stores \code{call}, \code{terms}, \code{xlev},
 \code{contrasts}, the model frame and the smooth objects -- everything needed to
 rebuild a reference grid for \code{\link[=predict.ilm_model]{predict.ilm_model()}} and for \code{emmeans} or
-\code{marginaleffects}.
+\code{marginaleffects}. Fitted inside a function that passes its arguments on
+with \code{...}, the \code{call} records the expressions written at the outer call.
+Where those are a function's own arguments or locals, \code{update()} on the
+fit cannot find them outside it; \code{\link[=ilm_refit]{ilm_refit()}} does not read them, and
+refits such a fit to other data regardless.
 
 An object of class \code{"ilm_model"}.
 }

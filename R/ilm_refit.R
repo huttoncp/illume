@@ -136,6 +136,18 @@ ilm_refit_data <- function(fit, data, dname) {
   new[[1L]] <- as.name("ilm_model_formula")
   new$formula <- fit$formula
   new$data <- quote(.ilm_refit_data)
+  ## the correlation over time from the fit's own record, not from the call,
+  ## whose argument may name something only the function that fitted it could
+  ## see -- a wrapper's own argument, or its `...`
+  if (!is.null(fit$ar)) {
+    v <- fit$ar$vars
+    ctor <- switch(fit$ar$type, car1 = quote(illume::ilm_car1),
+                   rw1 = quote(illume::ilm_rw1), quote(illume::ilm_ar1))
+    tf <- stats::as.formula(paste("~", ilm_bq(v[["time"]]), "|", ilm_bq(v[["group"]])),
+                            env = baseenv())
+    new$ar <- as.call(c(list(ctor, tf),
+                        if (isFALSE(fit$ar$verbose)) list(verbose = FALSE)))
+  }
   env <- new.env(parent = env0)
   assign(".ilm_refit_data", data, envir = env)
   assign("ilm_model_formula", ilm_model_formula, envir = env)
