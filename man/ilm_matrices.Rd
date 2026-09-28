@@ -47,7 +47,11 @@ each row's place among the cells of a correlation over time.
 }
 \details{
 \strong{Groups.} A row's group is matched to the fitted levels by label; a group
-the fit has not seen has no code and is marked \code{new_group}.
+the fit has not seen has no code and is marked \code{new_group}. Without the
+grouping column the rows belong to no group the fit knows -- a prediction
+for the typical group or averaged over the population needs none -- so
+every row is \code{new_group}, with \code{level} and \code{group} missing. Only a
+prediction for a particular group needs its column.
 
 \strong{Over time.} \code{ar} places each row among its group's cells, as numbered by
 \code{\link[=ilm_cells]{ilm_cells()}}: \code{cell} if the row's time is one of them, and the nearest
@@ -58,6 +62,8 @@ case. An AR(1) term's grid is fixed, so a time that falls between its steps
 is an error rather than rounded to one. The time and the group are read
 from the columns the term was built from, \code{ilm_rw1(~ time | group)} and
 the like; for a term built from vectors, pass them as \code{time} and \code{group}.
+Without them the rows are placed nowhere: every cell and gap is missing
+and every row \code{new_group}.
 }
 \examples{
 set.seed(1)

@@ -93,14 +93,39 @@ test_that("an AR(1) grid places on its steps and refuses between them", {
                "between the AR\\(1\\) grid's steps")
 })
 
-test_that("a structure built from vectors needs the times and groups given", {
+test_that("a structure built from vectors is placed by the times and groups given", {
   d <- mat_data()
   f <- ilm_model(y ~ x, data = d, family = "gaussian",
                  ar = ilm_rw1(d$t, d$id), verbose = FALSE)
   nd <- data.frame(x = 0, when = 4, who = "s02")
-  expect_error(ilm_matrices(f, nd), "pass `time` and `group`")
   a <- ilm_matrices(f, nd, time = nd$when, group = nd$who)$ar
   expect_false(is.na(a$cell))
+  ## without them the row is placed nowhere, for a prediction that needs no
+  ## group -- the typical group's or the population's
+  a0 <- ilm_matrices(f, nd)$ar
+  expect_true(is.na(a0$cell) && is.na(a0$group) && a0$new_group)
+})
+
+test_that("rows with no grouping column belong to no group, and predict as typical", {
+  set.seed(8)
+  d <- data.frame(g = factor(rep(1:10, each = 8)), t = rep(1:8, 10), x = rnorm(80))
+  d$y <- rpois(80, exp(0.5 + 0.3 * d$x + rnorm(10, 0, 0.5)[d$g]))
+  f <- suppressWarnings(ilm_model(y ~ x + (1 | g), data = d, family = "poisson",
+                                  ar = ilm_ar1(~ t | g), verbose = FALSE))
+  nd <- data.frame(x = c(-1, 0, 1))
+  m <- ilm_matrices(f, nd)
+  expect_true(all(m$re$g$new_group))
+  expect_true(all(is.na(m$re$g$level)) && all(is.na(m$re$g$group)))
+  expect_true(all(m$ar$new_group) && all(is.na(m$ar$cell)))
+  expect_identical(nrow(m$ar), 3L)
+  ## the typical group's prediction assembled from them is predict()'s
+  expect_equal(as.numeric(exp(m$X %*% f$beta)),
+               as.numeric(predict(f, newdata = nd, groups = "typical")),
+               tolerance = 1e-10)
+  ## and with the column, a known group still has its code
+  m2 <- ilm_matrices(f, data.frame(x = 0, g = "3", t = 4))
+  expect_identical(m2$re$g$group, 3L)
+  expect_false(m2$re$g$new_group)
 })
 
 test_that("the zero part's and the dispersion model's designs come too", {

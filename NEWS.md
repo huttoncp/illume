@@ -1,6 +1,13 @@
 # illume 0.0.8.9003
 
 * illume now requires illumex 0.0.8.9000.
+* `ilm_matrices()` builds a prediction's designs for new rows without their
+  grouping column or their place in time. A prediction for the typical group,
+  or averaged over the population, needs no unit, and asking for one stopped
+  on "`newdata` does not have the grouping variable". Such rows belong to no
+  group the fit knows: every one is `new_group`, with no level or code, and
+  placed at no cell of a correlation over time. Only a prediction for a
+  particular group needs its column. Found through an external report.
 * A correlation over time's latent budget is judged where the family is
   known. `ilm_ar1()` and `ilm_car1()` warned, when built, that below about
   1.5 observations per latent value "the Laplace approximation frequently
