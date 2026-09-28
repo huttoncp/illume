@@ -13,7 +13,10 @@
   what the fit holds, as `ilm_draws()` does; they drew from the joint
   distribution with nothing held, so a held AR latent's parameters ran to
   +/-100 there. A smooth's band beside such a term measured the same as
-  without it, and a test keeps it so.
+  without it, and a test keeps it so. Because those intervals now draw
+  through `ilm_draws()`, their Monte Carlo digits differ from an earlier
+  run's with the same `seed`; the intervals themselves are the same to
+  within Monte Carlo error.
 * `ilm_draws()` holds the whole of an AR latent held with its SD at zero.
   With no variance the latent has no correlation to estimate either, and
   only one of the two could be among the directions the Hessian called
