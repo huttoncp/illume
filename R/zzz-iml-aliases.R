@@ -376,6 +376,11 @@ iml_remedy_table <- ilm_remedy_table
 #' @export
 iml_robust <- ilm_robust
 
+#' @rdname ilm_rows_used
+#' @usage NULL
+#' @export
+iml_rows_used <- ilm_rows_used
+
 #' @rdname ilm_rp_lrt
 #' @usage NULL
 #' @export
