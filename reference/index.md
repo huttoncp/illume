@@ -245,11 +245,14 @@ are illumex’s.
 
 ## Simulation
 
-Draws from a fitted model. Example data with a known structure,
-ilm_sim(), is illumex’s.
+Draws from a fitted model, and the same model refitted to them or to
+other data. Example data with a known structure, ilm_sim(), is
+illumex’s.
 
 - [`ilm_fitted()`](https://huttoncp.github.io/illume/reference/ilm_fitted.md)
   : Fitted values
+- [`ilm_refit()`](https://huttoncp.github.io/illume/reference/ilm_refit.md)
+  : Refit a model to a new response or to other data
 - [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
   : Simulate new outcomes from a fitted model
 - [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)

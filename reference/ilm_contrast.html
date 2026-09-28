@@ -9,7 +9,7 @@ multiplicity adjustment."><meta property="og:image" content="https://huttoncp.gi
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -115,8 +115,15 @@ the levels are ordered and equally spaced.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A data frame with <code>contrast</code>, <code>estimate</code>, <code>se</code>, <code>lower</code>, <code>upper</code>,
-<code>p_value</code>, <code>p_adj</code> and <code>adjust</code>.</p>
+    <p>A data frame with <code>contrast</code>, <code>estimate</code>, <code>se</code>, <code>df</code>, <code>lower</code>,
+<code>upper</code>, <code>p_value</code>, <code>p_adj</code> and <code>adjust</code>. The <code>df</code> are those of the
+method the means or slopes were tested with: the contrasts of an
+<code><a href="ilm_trends.html">ilm_trends()</a></code> result tested on Satterthwaite's or Kenward-Roger's df
+get their own df by the same method; means from <code><a href="ilm_emmeans.html">ilm_emmeans()</a></code> give
+the exact residual df where nothing was integrated out and <code>Inf</code> (a z
+test) otherwise. Under <code>"max_t"</code> the joint reference is a multivariate t
+on the smallest of the contrasts' df, which keeps the joint coverage for
+every row.</p>
     </div>
     <div class="section level2">
     <h2 id="the-adjustment">The adjustment<a class="anchor" aria-label="anchor" href="#the-adjustment"></a></h2>
@@ -148,11 +155,12 @@ without a model.</p></div>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">g</span> <span class="op">+</span> <span class="va">x</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ilm_contrast</span><span class="op">(</span><span class="fu"><a href="ilm_emmeans.html">ilm_emmeans</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"g"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ilm_contrast&gt; 3 comparison(s), adjust = max_t </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   t tests on residual df</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  contrast  estimate     se   lower  upper  p_adj</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     b - a  0.009823 0.1764 -0.4069 0.4265 0.9984</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     c - a -0.226155 0.1780 -0.6467 0.1943 0.4142</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     c - b -0.235978 0.1768 -0.6538 0.1818 0.3800</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  contrast  estimate     se  df   lower  upper  p_adj</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     b - a  0.009823 0.1764 196 -0.4069 0.4265 0.9984</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     c - a -0.226155 0.1780 196 -0.6467 0.1943 0.4142</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     c - b -0.235978 0.1768 196 -0.6538 0.1818 0.3800</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Intervals hold jointly at 95% across all 3 comparisons.</span>
 </code></pre></div>

@@ -255,10 +255,9 @@ ilm_interpret(fit, ame = FALSE)
 #>   predicted recovery from -0.0269 to 1.22: by 1.25. That is 1.25 per unit
 #>   of treatment.
 #> 
-#>   severity: very strong evidence (p < 0.001) that severity affects
-#>   recovery. Moving severity across its middle half, from -0.718 to 0.768,
-#>   lowers predicted recovery from 1.09 to 0.117: by 0.971. That is -0.653
-#>   per unit of severity.
+#>   Adjusted for severity, to close the back-door paths the graph identifies.
+#>   Its coefficient is not its effect on recovery and is not interpreted
+#>   here.
 #> 
 #> What the checks found
 #>   The graph itself was tested against the data on 1 implied conditional
@@ -307,13 +306,13 @@ did <- ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
 #>   treatment starts at time = 5
 #>   4 pre-treatment periods
 #> [2/5] response
-#>   `y`: continuous values from -1.96 to 6.58 -> family "gaussian"
+#>   `y`: continuous values from -2.1 to 6.93 -> family "gaussian"
 #> [3/5] estimate
-#>   ATT = 1.2867  (0.8699, 1.7035)  p = <1e-04
+#>   ATT = 0.6248  (0.1893, 1.0603)  p = 0.00492
 #> [4/5] parallel trends, before treatment
-#>   difference in pre-treatment slope: -0.2166 (se 0.1345), p = 0.115 -- OK
+#>   difference in pre-treatment slope: 0.0025 (se 0.1428), p = 0.986 -- OK
 #> [5/5] event study
-#>   8 periods relative to treatment (reference -1); 0 pre-treatment coefficient(s) exclude zero
+#>   8 periods relative to treatment (reference -1); 1 pre-treatment coefficient(s) exclude zero
 ```
 
 ``` r
@@ -322,10 +321,10 @@ did
 #> <ilm_did> y ~ treatment  | 20 treated, 20 control units
 #>   family: gaussian   random intercept: unit  
 #> 
-#>   ATT    1.2867  ( 0.8699,  1.7035)  p = <1e-04
+#>   ATT    0.6248  ( 0.1893,  1.0603)  p = 0.00492
 #> 
-#>   parallel trends before treatment: OK  (slope difference -0.2166, p = 0.115)
-#>   event study: 8 periods, 0 pre-treatment coefficient(s) excluding zero  (ilm_plot_did)
+#>   parallel trends before treatment: OK  (slope difference 0.0025, p = 0.986)
+#>   event study: 8 periods, 1 pre-treatment coefficient(s) excluding zero  (ilm_plot_did)
 ```
 
 The estimate is an interaction in a mixed model, so the fit is an
@@ -356,7 +355,7 @@ bad$y <- bad$y + 0.35 * bad$treated * bad$time   # already diverging
 did_bad <- ilm_did(bad, "y", "unit", "time", treated = "treated",
                    post = "post", verbose = FALSE)
 did_bad$parallel$status
-#> [1] "OK"
+#> [1] "FAIL"
 ilm_plot_did(did_bad)
 ```
 
@@ -413,37 +412,36 @@ score <- 0.5 * run + 0.8 * (run >= 0) + rnorm(n, 0, 0.5)
 rd <- ilm_rdd(data.frame(run = run, score = score), "score", "run", cutoff = 0)
 #> == regression discontinuity ==
 #> [1/6] design
-#>   2000 rows: 1032 below the cutoff, 968 at or above
+#>   2000 rows: 1000 below the cutoff, 1000 at or above
 #> [2/6] response and bandwidth
-#>   `score`: continuous values from -2.23 to 2.53 -> family "gaussian"
-#>   bandwidth 0.2317 (rule of thumb -- a starting point, not an optimum;
+#>   `score`: continuous values from -1.91 to 2.59 -> family "gaussian"
+#>   bandwidth 0.232 (rule of thumb -- a starting point, not an optimum;
 #>     see $bandwidth, and rdrobust for a chosen one)
 #> [3/6] estimate
-#>   238 below and 219 above within the bandwidth
-#>   jump = 0.8777  (0.6827, 1.0726)  p = <1e-04
+#>   217 below and 239 above within the bandwidth
+#>   jump = 0.9168  (0.6716, 1.1620)  p = <1e-04
 #> [4/6] bandwidth sensitivity
-#>   estimate ranges 0.8777 to 0.9323 across 0.5x to 2x the bandwidth
+#>   estimate ranges 0.7864 to 0.9600 across 0.5x to 2x the bandwidth
 #> [5/6] design checks
-#>   density at the cutoff: 238 below, 219 above, p = 0.972 -- OK
+#>   density at the cutoff: 217 below, 239 above, p = 0.232 -- OK
 #>   covariate balance: no covariates given
 #> [6/6] placebo cutoffs
-#>   1 of 4 placebo cutoffs show a jump
-#>     a jump where nothing happens means the method is finding jumps in noise; treat the estimate at the real cutoff with caution
+#>   0 of 4 placebo cutoffs show a jump
 ```
 
 ``` r
 
 rd
 #> <ilm_rdd> score at run = 0 
-#>   local linear fit, triangular kernel, h = 0.2317 (238 below, 219 above)
+#>   local linear fit, triangular kernel, h = 0.232 (217 below, 239 above)
 #>   family: gaussian 
 #> 
-#>   jump   0.8777  ( 0.6827,  1.0726)  p = <1e-04
-#>   across bandwidths 0.5x-2x: 0.8777 to 0.9323
+#>   jump   0.9168  ( 0.6716,  1.1620)  p = <1e-04
+#>   across bandwidths 0.5x-2x: 0.7864 to 0.9600
 #> 
 #>   design checks
-#>     density at the cutoff: OK (238 below, 219 above)
-#>     placebo cutoffs:      1 of 4 show a jump
+#>     density at the cutoff: OK (217 below, 239 above)
+#>     placebo cutoffs:      0 of 4 show a jump
 #> 
 #>   Interval is the ordinary one for a weighted local fit. For
 #>   bias-corrected robust intervals see the rdrobust package.
@@ -487,9 +485,9 @@ covs <- data.frame(run = run, score = score,
 rd2 <- ilm_rdd(covs, "score", "run", cutoff = 0,
                covariates = c("prior", "leaky"), verbose = FALSE)
 rd2$balance
-#>   covariate   estimate        se     p_value status
-#> 1     prior -0.1943979 0.2197849 3.76900e-01     OK
-#> 2     leaky  1.0435506 0.2415216 1.91281e-05   FAIL
+#>   covariate    estimate        se    p_value status
+#> 1     prior -0.05517478 0.2448559 0.82181998     OK
+#> 2     leaky  0.58853463 0.2343115 0.01236056   FAIL
 ```
 
 `leaky` jumps, which means something other than treatment changes at the
@@ -500,18 +498,24 @@ cutoff and the estimate absorbs it.
 ``` r
 
 rd$placebo
-#>       cutoff     estimate        se    p_value status
-#> 1 -0.6653344  0.131174940 0.1159449 0.25848231     OK
-#> 2 -0.3451210  0.237920996 0.1195685 0.04716733   FAIL
-#> 3  0.3498609 -0.033375176 0.1198842 0.78083925     OK
-#> 4  0.6675436 -0.002142635 0.1049944 0.98372728     OK
+#>       cutoff    estimate        se   p_value status
+#> 1 -0.6803063 -0.02627258 0.1150927 0.8195341     OK
+#> 2 -0.3465971  0.04943109 0.1058439 0.6407075     OK
+#> 3  0.3100920  0.06504446 0.1126019 0.5637648     OK
+#> 4  0.6354777  0.14760115 0.1149553 0.1998115     OK
 rd$bandwidth
-#>   multiplier         h   n  estimate         se     lower    upper      p_value
-#> 1       0.50 0.1158410 221 0.9322912 0.13347507 0.6692176 1.195365 3.442757e-11
-#> 2       0.75 0.1737615 329 0.9045383 0.11318087 0.6818787 1.127198 2.338467e-14
-#> 3       1.00 0.2316820 457 0.8776672 0.09919154 0.6827345 1.072600 2.007199e-17
-#> 4       1.50 0.3475229 668 0.8920172 0.08635114 0.7224630 1.061571 2.678059e-23
-#> 5       2.00 0.4633639 923 0.8968492 0.07656560 0.7465855 1.047113 1.234041e-29
+#>   multiplier         h   n  estimate         se     lower     upper
+#> 1       0.50 0.1160148 216 0.9312715 0.18363232 0.5692923 1.2932506
+#> 2       0.75 0.1740222 318 0.9600167 0.14869908 0.6674442 1.2525892
+#> 3       1.00 0.2320297 456 0.9168076 0.12477562 0.6715952 1.1620199
+#> 4       1.50 0.3480445 714 0.8342240 0.10011119 0.6376747 1.0307734
+#> 5       2.00 0.4640593 934 0.7864443 0.08622507 0.6172260 0.9556625
+#>        p_value
+#> 1 8.602372e-07
+#> 2 4.076278e-10
+#> 3 9.505774e-13
+#> 4 4.068001e-16
+#> 5 4.505331e-19
 ```
 
 An effect that appears only in a narrow window is not an effect.

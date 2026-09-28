@@ -1,8 +1,20 @@
 # Changelog
 
-## illume 0.0.8.9000
+## illume 0.0.8.9001
 
 - illume now requires illumex 0.0.8.9000.
+
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  on an
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
+  describes the exposure’s effect and nothing else. It used to describe
+  every coefficient of the fit in causal language, so an adjustment
+  covariate was said to “affect” the outcome – in the documented example
+  a confounder with no arrow into the outcome at all – which the graph
+  does not license (the “Table 2 fallacy”). The covariates are now named
+  as adjusted for, with their coefficients not interpreted, and when
+  several adjustment sets identify the effect the prose says which one
+  it describes.
 
 - [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
   is a generic, and
@@ -41,6 +53,58 @@
   are estimated, such as REML in place of maximum likelihood: the model
   and what its fixed effects mean stay the same.
 
+- A function given a seed puts the user’s random-number stream back as
+  it leaves – as it was, or absent if it was absent. Every function with
+  a `seed` argument set it and left the stream there,
+  [`predict()`](https://rdrr.io/r/stats/predict.html) included (its
+  `seed` defaults to 1), so the user’s next random draw came out the
+  same whatever came before it. Seeded results are unchanged; with
+  `seed = NULL` a function draws from the user’s stream, as any R code
+  does. The 29 functions:
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md),
+  [`ilm_calibration()`](https://huttoncp.github.io/illume/reference/ilm_calibration.md),
+  [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md),
+  [`ilm_check_covariate()`](https://huttoncp.github.io/illume/reference/ilm_check_covariate.md),
+  [`ilm_check_dispersion()`](https://huttoncp.github.io/illume/reference/ilm_check_dispersion.md),
+  [`ilm_check_omitted()`](https://huttoncp.github.io/illume/reference/ilm_check_omitted.md),
+  [`ilm_check_predictive()`](https://huttoncp.github.io/illume/reference/ilm_check_predictive.md),
+  [`ilm_check_proportional()`](https://huttoncp.github.io/illume/reference/ilm_check_proportional.md),
+  [`ilm_check_variance()`](https://huttoncp.github.io/illume/reference/ilm_check_variance.md),
+  [`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md),
+  [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md),
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md),
+  [`ilm_draws()`](https://huttoncp.github.io/illume/reference/ilm_draws.md),
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md),
+  [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md),
+  [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md),
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md),
+  [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md),
+  [`ilm_plot_survival()`](https://huttoncp.github.io/illume/reference/ilm_plot_survival.md),
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md),
+  [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md),
+  [`ilm_rqr()`](https://huttoncp.github.io/illume/reference/ilm_rqr.md),
+  [`ilm_rqr_test()`](https://huttoncp.github.io/illume/reference/ilm_rqr_test.md),
+  [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md),
+  [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md),
+  [`ilm_surv()`](https://huttoncp.github.io/illume/reference/ilm_surv.md)
+  and
+  [`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md);
+  a test fails if a new seeded function does not do the same.
+
+- `ilm_refit(fit, data = NULL, y = NULL)` fits the same model again: to
+  a new response for the rows it was fitted to, in the layout
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
+  returns – the parametric bootstrap’s refit, censoring carried as the
+  data were – or to another data set, rebuilt from the formula so
+  levels, smooth bases and a correlation over time’s cells come from the
+  new rows. The result is a full fit, with every method a fit from
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  has. A correlation over time given as vectors cannot follow the model
+  to new data, and the function says to give it by name,
+  `ilm_ar1(~ time | group)`.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   no longer says “The interval includes zero” about a factor with three
   or more levels, whose sentence shows no interval: the flag came from
@@ -75,6 +139,40 @@
   entry each, under stable keys (`Kenward1997`, `vanBuuren2011`) that
   documents can cite. A test keeps it and the `@references` blocks in
   step both ways.
+
+- [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
+  of an
+  [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
+  result tests the differences between slopes on the slopes’ own df
+  method. With Satterthwaite’s or Kenward-Roger’s df the slopes were t
+  tests and their differences z tests, so the same analysis used two
+  references; each difference now gets its own df by the same method,
+  matching `emmeans` on an `lmerTest` fit (Satterthwaite) and a
+  `pbkrtest` one (Kenward-Roger). Contrasts gain a `df` column and a
+  header naming the reference; under `adjust = "max_t"` the joint
+  reference is a multivariate t on the smallest of the contrasts’ df.
+  Contrasts of
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+  means are unchanged.
+
+- A slope or contrast whose Satterthwaite df cannot be formed – its
+  variance is zero, or the variance components have no usable covariance
+  – is a z test that says so: a warning names the rows and the reason,
+  and so does the printed header. It used to become a z test silently,
+  and when the first row did, every row did.
+  [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md)
+  returns `method = "asymptotic"` and a `reason` in those cases, where
+  it once called an infinite df Satterthwaite’s. A df method named in
+  [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
+  for a fit it does not apply to, such as `"satterthwaite"` for a
+  Poisson model, now stops with the reason, as `"kenward-roger"` always
+  has: such a call used to return z tests without saying so, and code
+  that relied on it will now stop.
+
+- [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)’s
+  few-groups caveat reads “with 30 groups of `id` a test of an effect
+  that varies between groups can run somewhat liberal”, where it read
+  “one for an effect”, which was a slip.
 
 - A random effect’s SD that the optimiser left short of zero is held as
   a variance at zero is. A random intercept beside an AR(1), whose

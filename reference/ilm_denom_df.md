@@ -41,7 +41,10 @@ ilm_denom_df(
 
 A list with `df`, the `method` actually used, and for Kenward-Roger the
 adjusted covariance `V` and `scale`, the factor by which the Wald F
-formed with `V` is multiplied before it is referred to F(q, df).
+formed with `V` is multiplied before it is referred to F(q, df). When
+Satterthwaite's df cannot be formed for `L` – the variance components
+have no usable covariance, or the contrast's variance does not depend on
+them – `method` is `"asymptotic"`, `df` is `Inf`, and `reason` says why.
 
 ## Which method
 

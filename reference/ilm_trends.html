@@ -11,7 +11,7 @@ interaction between a factor and a covariate apart."><meta property="og:image" c
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -114,7 +114,10 @@ enough elsewhere.</p></dd>
 <code>"auto"</code>, <code>"satterthwaite"</code>, <code>"kenward-roger"</code>, <code>"residual"</code>,
 <code>"asymptotic"</code>, or a single number. See <code><a href="ilm_denom_df.html">ilm_denom_df()</a></code>. <code>"auto"</code> gives
 an exact t where nothing was integrated out, Satterthwaite for a gaussian
-mixed model, and a z test otherwise.</p></dd>
+mixed model, and a z test otherwise. A method named for a fit it does
+not apply to stops with the reason. A slope whose Satterthwaite df
+cannot be formed is tested as z, with a warning, and the printed header
+names it and why.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -178,9 +181,10 @@ apart.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   slopes DIFFER from one another, pass this to ilm_contrast().</span>
 <span class="r-in"><span><span class="fu"><a href="ilm_contrast.html">ilm_contrast</a></span><span class="op">(</span><span class="va">tr</span><span class="op">)</span>        <span class="co"># do the two arms' slopes differ from each other?</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ilm_contrast&gt; 1 comparison(s), adjust = none </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   t tests on residual df</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   contrast estimate      se  lower upper     p_adj</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  trt - ctl   0.5321 0.09437 0.3452 0.719 1.228e-07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   contrast estimate      se  df  lower upper     p_adj</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  trt - ctl   0.5321 0.09437 116 0.3452 0.719 1.228e-07</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

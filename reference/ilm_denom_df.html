@@ -13,7 +13,7 @@ and is anti-conservative when there are few clusters."><meta property="og:image"
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,7 +98,10 @@ nothing was integrated out, Satterthwaite for a gaussian mixed model, and
     <p>A list with <code>df</code>, the <code>method</code> actually used, and for
 Kenward-Roger the adjusted covariance <code>V</code> and <code>scale</code>, the factor by which
 the Wald F formed with <code>V</code> is multiplied before it is referred to
-F(q, df).</p>
+F(q, df). When Satterthwaite's df cannot be formed for <code>L</code> – the
+variance components have no usable covariance, or the contrast's
+variance does not depend on them – <code>method</code> is <code>"asymptotic"</code>, <code>df</code> is
+<code>Inf</code>, and <code>reason</code> says why.</p>
     </div>
     <div class="section level2">
     <h2 id="which-method">Which method<a class="anchor" aria-label="anchor" href="#which-method"></a></h2>

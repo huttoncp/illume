@@ -194,11 +194,12 @@ a
 #> 
 #> -- time --
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
+#>   z tests
 #> 
-#>  contrast estimate     se  lower upper   p_adj
-#>     2 - 1   0.8775 0.2762 0.2310 1.524 0.00385
-#>     3 - 1   2.1202 0.2762 1.4736 2.767 0.00000
-#>     3 - 2   1.2427 0.2762 0.5961 1.889 0.00000
+#>  contrast estimate     se  df  lower upper   p_adj
+#>     2 - 1   0.8775 0.2762 Inf 0.2310 1.524 0.00385
+#>     3 - 1   2.1202 0.2762 Inf 1.4736 2.767 0.00000
+#>     3 - 2   1.2427 0.2762 Inf 0.5961 1.889 0.00000
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 
@@ -206,40 +207,45 @@ a
 #>   ~ grp within each time ~
 #>     [time = 1]
 #> <ilm_contrast> 1 comparison(s), adjust = none 
+#>   z tests
 #> 
-#>   contrast estimate    se lower upper     p_adj
-#>  trt - ctl     2.62 0.504 1.632 3.608 2.022e-07
+#>   contrast estimate    se  df lower upper     p_adj
+#>  trt - ctl     2.62 0.504 Inf 1.632 3.608 2.022e-07
 #> 
 #>     [time = 2]
 #> <ilm_contrast> 1 comparison(s), adjust = none 
+#>   z tests
 #> 
-#>   contrast estimate    se lower upper     p_adj
-#>  trt - ctl    5.133 0.504 4.145 6.121 2.353e-24
+#>   contrast estimate    se  df lower upper     p_adj
+#>  trt - ctl    5.133 0.504 Inf 4.145 6.121 2.353e-24
 #> 
 #>     [time = 3]
 #> <ilm_contrast> 1 comparison(s), adjust = none 
+#>   z tests
 #> 
-#>   contrast estimate    se lower upper     p_adj
-#>  trt - ctl     7.03 0.504 6.042 8.018 3.264e-44
+#>   contrast estimate    se  df lower upper     p_adj
+#>  trt - ctl     7.03 0.504 Inf 6.042 8.018 3.264e-44
 #> 
 #>   ~ time within each grp ~
 #>     [grp = ctl]
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
+#>   z tests
 #> 
-#>  contrast estimate     se   lower  upper  p_adj
-#>     2 - 1 -0.37908 0.3906 -1.2934 0.5353 0.5988
-#>     3 - 1 -0.08503 0.3906 -0.9994 0.8293 0.9748
-#>     3 - 2  0.29406 0.3906 -0.6203 1.2084 0.7349
+#>  contrast estimate     se  df   lower  upper  p_adj
+#>     2 - 1 -0.37908 0.3906 Inf -1.2934 0.5353 0.5988
+#>     3 - 1 -0.08503 0.3906 Inf -0.9994 0.8293 0.9748
+#>     3 - 2  0.29406 0.3906 Inf -0.6203 1.2084 0.7349
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 
 #>     [grp = trt]
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
+#>   z tests
 #> 
-#>  contrast estimate     se lower upper p_adj
-#>     2 - 1    2.134 0.3906 1.220 3.048     0
-#>     3 - 1    4.325 0.3906 3.411 5.240     0
-#>     3 - 2    2.191 0.3906 1.277 3.106     0
+#>  contrast estimate     se  df lower upper p_adj
+#>     2 - 1    2.134 0.3906 Inf 1.220 3.048     0
+#>     3 - 1    4.325 0.3906 Inf 3.411 5.240     0
+#>     3 - 2    2.191 0.3906 Inf 1.277 3.106     0
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 

@@ -66,8 +66,17 @@ ilm_contrast(
 
 ## Value
 
-A data frame with `contrast`, `estimate`, `se`, `lower`, `upper`,
-`p_value`, `p_adj` and `adjust`.
+A data frame with `contrast`, `estimate`, `se`, `df`, `lower`, `upper`,
+`p_value`, `p_adj` and `adjust`. The `df` are those of the method the
+means or slopes were tested with: the contrasts of an
+[`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
+result tested on Satterthwaite's or Kenward-Roger's df get their own df
+by the same method; means from
+[`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
+give the exact residual df where nothing was integrated out and `Inf` (a
+z test) otherwise. Under `"max_t"` the joint reference is a multivariate
+t on the smallest of the contrasts' df, which keeps the joint coverage
+for every row.
 
 ## The adjustment
 
@@ -101,11 +110,12 @@ d$y <- 1 + 0.5 * (d$g == "b") + 0.2 * d$x + rnorm(n)
 fit <- ilm_model(y ~ g + x, data = d, family = "gaussian", verbose = FALSE)
 ilm_contrast(ilm_emmeans(fit, "g"))
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
+#>   t tests on residual df
 #> 
-#>  contrast  estimate     se   lower  upper  p_adj
-#>     b - a  0.009823 0.1764 -0.4069 0.4265 0.9984
-#>     c - a -0.226155 0.1780 -0.6467 0.1943 0.4142
-#>     c - b -0.235978 0.1768 -0.6538 0.1818 0.3800
+#>  contrast  estimate     se  df   lower  upper  p_adj
+#>     b - a  0.009823 0.1764 196 -0.4069 0.4265 0.9984
+#>     c - a -0.226155 0.1780 196 -0.6467 0.1943 0.4142
+#>     c - b -0.235978 0.1768 196 -0.6538 0.1818 0.3800
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 ```

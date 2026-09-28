@@ -63,7 +63,10 @@ ilm_trends(
   `"asymptotic"`, or a single number. See
   [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md).
   `"auto"` gives an exact t where nothing was integrated out,
-  Satterthwaite for a gaussian mixed model, and a z test otherwise.
+  Satterthwaite for a gaussian mixed model, and a z test otherwise. A
+  method named for a fit it does not apply to stops with the reason. A
+  slope whose Satterthwaite df cannot be formed is tested as z, with a
+  warning, and the printed header names it and why.
 
 ## Value
 
@@ -132,7 +135,8 @@ tr                      # is each arm's slope different from zero?
 #>   slopes DIFFER from one another, pass this to ilm_contrast().
 ilm_contrast(tr)        # do the two arms' slopes differ from each other?
 #> <ilm_contrast> 1 comparison(s), adjust = none 
+#>   t tests on residual df
 #> 
-#>   contrast estimate      se  lower upper     p_adj
-#>  trt - ctl   0.5321 0.09437 0.3452 0.719 1.228e-07
+#>   contrast estimate      se  df  lower upper     p_adj
+#>  trt - ctl   0.5321 0.09437 116 0.3452 0.719 1.228e-07
 ```
