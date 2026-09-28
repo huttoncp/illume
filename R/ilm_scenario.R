@@ -172,6 +172,7 @@ ilm_scen_support <- function(mf, scen, vars) {
 ilm_scenario <- function(object, ..., over = c("sample", "reference"),
                          sims = 1000L, level = 0.95, contrast = FALSE,
                          seed = 1L, progress = NULL) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   over <- match.arg(over)
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
