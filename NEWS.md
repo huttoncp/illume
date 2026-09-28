@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * Offsets. `offset(log(exposure))` in the formula models a count as a rate,
   as in `glm()` and glmmTMB: a term of the linear predictor with its
   coefficient fixed at one. It fitted to a model-matrix error before. It
