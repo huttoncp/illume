@@ -820,7 +820,21 @@ summarise_study <- function(dir, study) {
       "The summariser's CRPS handling -- an overflowed or negative CRPS read as an",
       "exploded forecast, Inf -- and its count of parameters without a joint interval",
       "were corrected after the main run, from its own per-fit numbers; no fit was",
-      "rerun and no per-fit number changed.")
+      "rerun and no per-fit number changed.",
+      "",
+      "After the run, an AR(1) correlation floor was added: a fit that ends with",
+      "|rho| above 0.99 is refitted with atanh(rho) bounded at 8, from where it stopped",
+      "and from rho = 0. Refitting every B1 and B2 fit from its seed on the main run's",
+      "build and on the floor's, it changes 253 of 5,200 (242 in B1, 11 in B2), 249",
+      "of them fits whose atanh(rho) had run past 8, and 180 with the AR SD below 0.01;",
+      "no fit with |rho| at or below 0.99 changes. Their whole per-fit pipeline rerun",
+      "on the floor's build: 24 were flagged at 0.75 and 23 are; none of the 25 fits",
+      "whose joint forecast exploded is among them, and the flagged-fit forecast",
+      "table moves by at most 0.001 in coverage, given theta's CRPS by at most 0.01,",
+      "and given theta has no explosion before or after. The recommendation to draw given theta for",
+      "flagged fits does not depend on these fits. The check is",
+      "scripts/variance_draws_floor_check.R; its table,",
+      "variance_draws_floor_check.csv.gz, is filed with this run.")
   } else if (study == "messy") {
     ## Every sentence below is computed from the csv, the ones that go against
     ## illume included, so a re-run at a later version says what THAT run
