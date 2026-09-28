@@ -92,13 +92,19 @@ test_that("anova uses F, and matches car::Anova on the equivalent lm", {
   expect_equal(a[["Pr(>F)"]], ca[rownames(a), "Pr(>F)"], tolerance = 1e-4)
 })
 
-test_that("a mixed model still gets z and chi-square, not t and F", {
-  # the exact reference exists only when nothing is integrated out
+test_that("a mixed model gets t and F on Satterthwaite's df, not the exact ones", {
+  # the exact reference exists only when nothing is integrated out; with
+  # something integrated out the df are Satterthwaite's, and z and the
+  # chi-square are there on request
   dd <- sim_lm(7); dd$g <- factor(sample(20, nrow(dd), TRUE))
   f <- ilm_model(y ~ x + (1 | g), data = dd, family = "gaussian", verbose = FALSE)
   expect_false(isTRUE(f$exact_df))
-  expect_true("z value" %in% names(ilm_coef_table(f)))
-  expect_true("Chisq" %in% names(ilm_anova(f, type = 3)))
+  ct <- ilm_coef_table(f)
+  expect_true(all(c("df", "t value") %in% names(ct)))
+  expect_identical(attr(ct, "df_method"), "satterthwaite")
+  expect_true("DenDF" %in% names(ilm_anova(f, type = 3)))
+  expect_true("z value" %in% names(ilm_coef_table(f, df = "asymptotic")))
+  expect_true("Chisq" %in% names(ilm_anova(f, type = 3, statistic = "Chisq")))
 })
 
 test_that("non-gaussian fixed-effects models do not claim exact inference", {

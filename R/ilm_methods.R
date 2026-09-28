@@ -304,8 +304,7 @@ ilm_coef_table <- function(object, df = "auto") {
   ## With nothing integrated out the reference distribution is exactly t on
   ## n - p degrees of freedom; a multinomial or non-gaussian model has only
   ## the large-sample normal
-  gaus_mixed <- identical(object$family$name, "gaussian") &&
-    !isTRUE(object$exact_df) && object$C == 1L
+  gaus_mixed <- ilm_finite_df(object, df)
   if (isTRUE(object$exact_df)) {
     t <- b / s
     return(structure(data.frame(Estimate = b, `Std. Error` = s, `t value` = t,
