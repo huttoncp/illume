@@ -1,6 +1,7 @@
 # illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
   restarts from the solution. Restarts that return the same optimum answer a
   "false convergence" code: the fit is finished and the likelihood flat there,
