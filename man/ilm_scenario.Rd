@@ -13,7 +13,8 @@ ilm_scenario(
   level = 0.95,
   contrast = FALSE,
   seed = 1L,
-  progress = NULL
+  progress = NULL,
+  exposure = NULL
 )
 }
 \arguments{
@@ -34,6 +35,12 @@ ilm_scenario(
 \item{seed}{Random seed.}
 
 \item{progress}{Show a progress bar; see \link[illumex:ilm_progress_arg]{illumex::ilm_progress_arg}.}
+
+\item{exposure}{For a model with an offset, \code{offset(log(exposure))}: each
+scenario's mean is per unit of exposure by default (the offset at zero for
+every unit), and a positive number puts every unit at that exposure
+instead -- \code{1e5} for a rate per 100,000. The print says which. Ignored
+without an offset.}
 }
 \value{
 An object of class \code{"ilm_scenario"}: a data frame of the grid with

@@ -73,8 +73,14 @@ ilm_Bhat_term <- function(object, k, bvec = NULL) {
 #' @return A list with `X` and the per-smooth designs.
 #' @keywords internal
 #' @noRd
-ilm_newX <- function(object, newdata) {
-  ilm_offset_need(object, newdata)
+ilm_newX <- function(object, newdata, offset_at = NULL) {
+  ## `offset_at`, one value for every row, stands in for the offset the rows
+  ## would give -- a mean per unit of exposure has no exposure column to read
+  ## -- and a column the offset needs is filled in only so the frame builds
+  if (!is.null(object$offset) && !is.null(offset_at)) {
+    ov <- all.vars(parse(text = paste(ilm_offset_terms(object$terms), collapse = " + ")))
+    for (v in setdiff(ov, names(newdata))) newdata[[v]] <- 1
+  } else ilm_offset_need(object, newdata)
   mt <- stats::delete.response(object$terms)
   mf <- stats::model.frame(mt, newdata, xlev = object$xlev)
   X  <- ilm_drop_intercept(
@@ -94,7 +100,9 @@ ilm_newX <- function(object, newdata) {
          if (nrp) paste0(" besides its ", nrp, " baseline spline columns") else "",
          call. = FALSE)
   ## the offset at these rows, as the fit's was at its own: from the data
-  off <- if (is.null(object$offset)) NULL else as.numeric(stats::model.offset(mf))
+  off <- if (is.null(object$offset)) NULL
+         else if (!is.null(offset_at)) rep(offset_at, nrow(X))
+         else as.numeric(stats::model.offset(mf))
   list(X = X, smooths = sd_list, offset = off)
 }
 
@@ -614,6 +622,14 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #' @param seed Integer. Random seed, so results are reproducible.
 #' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
 #'   is `groups = "typical"`.
+#' @param exposure For a model with an offset in its formula,
+#'   `offset(log(exposure))`: `NULL` (the default) predicts at each row's own
+#'   exposure, as [stats::predict.glm()] does -- the fit's rows, or
+#'   `newdata`'s, which must then carry the offset's column; a positive number
+#'   predicts every row at that exposure, a rate per 100,000 with `1e5`; and
+#'   `"unit"` sets the offset to zero, the rate per unit. [ilm_emmeans()],
+#'   [ilm_ame()] and [ilm_scenario()] report per unit unless told otherwise.
+#'   Ignored without an offset.
 #' @param ... Unused.
 #'
 #' @return A matrix of probabilities (or linear predictors), or a factor for
@@ -633,7 +649,7 @@ predict.ilm_model <- function(object, newdata = NULL,
                          se.fit = FALSE,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L,
-                         marginal = NULL, ...) {
+                         marginal = NULL, exposure = NULL, ...) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   type <- match.arg(type); interval <- match.arg(interval)
   groups <- ilm_groups_arg(groups, c("typical", "population", "fitted"),
@@ -657,8 +673,13 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## needed before point() closes over it
   multinom0 <- object$C > 1L
   Tc <- contr.sum(object$J)
-  nd <- if (is.null(newdata)) list(X = object$X, smooths = NULL, offset = object$offset) else
-    ilm_newX(object, newdata)
+  ## each row's own offset unless an exposure is given: then every row is at
+  ## it, "unit" being the offset at zero
+  oa <- if (is.null(exposure)) NULL else ilm_offset_at(object, exposure)
+  nd <- if (is.null(newdata))
+          list(X = object$X, smooths = NULL,
+               offset = if (is.null(oa)) object$offset else rep(oa, nrow(object$X)))
+        else ilm_newX(object, newdata, offset_at = oa)
   if (is.null(newdata) && length(object$smooths))
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
   ## each row's own group and cell, placed before anything is computed, so a

@@ -13,8 +13,11 @@
   anova refits and `ilm_matrices()` (which gains `offset`) carry it, and
   `predict()` on new data predicts at that data's own exposure, saying so by
   name when the column is missing. The fractional-count error now shows the
-  offset to use. Means, marginal effects and scenarios per unit of exposure
-  come next.
+  offset to use. `ilm_emmeans()`, `ilm_ame()`, `ilm_scenario()`, the effect
+  plots and `ilm_interpret()` report per unit of exposure -- the offset at
+  zero, a rate such as cases per person-year -- and say so; `exposure = 1e5`
+  reports per 100,000. `predict()` keeps each row's own exposure, as
+  `glm()` does, and takes `exposure` too (a number, or `"unit"`).
 * `ilm_rows_used()` says which rows a model used: the rows it was given, the
   rows it kept, the rows missing values took and the columns they were
   missing in, and any rows with a weight of zero (used, contributing

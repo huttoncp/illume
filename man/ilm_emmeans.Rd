@@ -11,7 +11,8 @@ ilm_emmeans(
   at = NULL,
   weights = c("equal", "proportional", "cells"),
   type = c("link", "response"),
-  level = 0.95
+  level = 0.95,
+  exposure = NULL
 )
 }
 \arguments{
@@ -28,6 +29,12 @@ averaged over or held at its mean.}
 \item{type}{\code{"link"} or \code{"response"}.}
 
 \item{level}{Confidence level.}
+
+\item{exposure}{For a model with an offset, \code{offset(log(exposure))}: the
+means are per unit of exposure by default (the offset at zero, a rate
+such as cases per person-year), and a positive number reports them at
+that exposure instead -- \code{1e5} for a rate per 100,000. The print says
+which. Ignored without an offset.}
 }
 \value{
 An object of class \code{"ilm_emm"}: a data frame of the grid with

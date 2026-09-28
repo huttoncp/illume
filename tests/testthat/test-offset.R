@@ -128,3 +128,70 @@ test_that("fractional counts are pointed at an offset, which then fits", {
   f <- q(ilm_model(y ~ x + offset(log(e)), data = d, family = "poisson", verbose = FALSE))
   expect_true(f$ok)
 })
+
+## ---- means, effects and scenarios per unit of exposure (item 152) ----------
+
+rate_fit <- function() {
+  set.seed(11); n <- 400
+  d <- data.frame(x = rnorm(n), k = factor(sample(c("a", "b"), n, TRUE)),
+                  e = runif(n, 1, 50))
+  d$y <- rpois(n, d$e * exp(-2 + 0.3 * d$x + 0.5 * (d$k == "b")))
+  list(d = d, f = q(ilm_model(y ~ x + k + offset(log(e)), data = d,
+                              family = "poisson", verbose = FALSE)))
+}
+
+test_that("predict() takes each row's exposure, or one it is given", {
+  r <- rate_fit(); f <- r$f; nd <- r$d[1:5, ]
+  own <- as.numeric(predict(f, newdata = nd, type = "response"))
+  unit <- as.numeric(predict(f, newdata = nd, type = "response", exposure = "unit"))
+  expect_equal(own, unit * nd$e, tolerance = 1e-10)
+  big <- as.numeric(predict(f, newdata = nd, type = "response", exposure = 1e5))
+  expect_equal(big, unit * 1e5, tolerance = 1e-10)
+  ## an exposure needs no exposure column
+  expect_equal(as.numeric(predict(f, newdata = data.frame(x = nd$x, k = nd$k),
+                                  type = "response", exposure = "unit")),
+               unit, tolerance = 1e-10)
+  expect_error(predict(f, newdata = nd, exposure = -1), "positive number")
+})
+
+test_that("marginal means are per unit of exposure, and say so", {
+  r <- rate_fit(); f <- r$f
+  em <- ilm_emmeans(f, "k", type = "response")
+  b <- coef(f)
+  ## per unit: the offset at zero, x at its mean
+  expect_equal(em$estimate[em$k == "a"], exp(b[[1]] + b[[2]] * mean(r$d$x)),
+               tolerance = 1e-8)
+  expect_output(print(em), "per unit of exposure", fixed = TRUE)
+  em5 <- ilm_emmeans(f, "k", type = "response", exposure = 1e5)
+  expect_equal(em5$estimate, em$estimate * 1e5, tolerance = 1e-8)
+  expect_output(print(em5), "at e = 1e+05", fixed = TRUE)
+  ## a contrast on the link scale does not depend on the exposure
+  expect_equal(diff(ilm_emmeans(f, "k")$estimate),
+               diff(ilm_emmeans(f, "k", exposure = 7)$estimate), tolerance = 1e-10)
+})
+
+test_that("average marginal effects are on the mean per unit of exposure", {
+  r <- rate_fit(); f <- r$f
+  a <- ilm_ame(f, "x")
+  b <- coef(f)
+  eta0 <- b[[1]] + b[[2]] * r$d$x + b[[3]] * (r$d$k == "b")
+  expect_equal(a$estimate, mean(b[[2]] * exp(eta0)), tolerance = 1e-4)
+  expect_output(print(a), "per unit of exposure", fixed = TRUE)
+  a10 <- ilm_ame(f, "x", exposure = 10)
+  expect_equal(a10$estimate, 10 * a$estimate, tolerance = 1e-6)
+})
+
+test_that("a scenario's mean is per unit of exposure unless told otherwise", {
+  r <- rate_fit(); f <- r$f
+  s1 <- q(ilm_scenario(f, x = 0, sims = 50))
+  s2 <- q(ilm_scenario(f, x = 0, sims = 50, exposure = 100))
+  expect_equal(s2$estimate, 100 * s1$estimate, tolerance = 1e-8)
+  expect_output(print(s1), "per unit of exposure", fixed = TRUE)
+})
+
+test_that("the interpretation says what the effects are per", {
+  r <- rate_fit()
+  it <- q(ilm_interpret(r$f))
+  expect_match(paste(it$sections$caveats, collapse = " "), "per unit of exposure",
+               fixed = TRUE)
+})

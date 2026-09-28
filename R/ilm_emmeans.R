@@ -189,6 +189,11 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 #' @param weights `"equal"`, `"proportional"` or `"cells"`; see above.
 #' @param type `"link"` or `"response"`.
 #' @param level Confidence level.
+#' @param exposure For a model with an offset, `offset(log(exposure))`: the
+#'   means are per unit of exposure by default (the offset at zero, a rate
+#'   such as cases per person-year), and a positive number reports them at
+#'   that exposure instead -- `1e5` for a rate per 100,000. The print says
+#'   which. Ignored without an offset.
 #' @return An object of class `"ilm_emm"`: a data frame of the grid with
 #'   `estimate`, `se`, `lower`, `upper`, plus the contrast machinery it carries.
 #' @seealso [ilm_contrast()] to compare them, [ilm_ame()] for the average
@@ -202,7 +207,8 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 #' @export
 ilm_emmeans <- function(object, specs, at = NULL,
                         weights = c("equal", "proportional", "cells"),
-                        type = c("link", "response"), level = 0.95) {
+                        type = c("link", "response"), level = 0.95,
+                        exposure = NULL) {
   weights <- match.arg(weights); type <- match.arg(type)
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
@@ -249,7 +255,10 @@ ilm_emmeans <- function(object, specs, at = NULL,
   if (isTRUE(object$ordinal) && identical(type, "response"))
     return(ilm_emm_ordinal(object, g, mmg, av, specs, w, level, weights))
   L <- av$L; lv <- av$lv
-  est <- as.numeric(L %*% b)
+  ## the grid's design has no offset, so these are per unit of exposure; an
+  ## exposure moves every mean by the same amount on the link scale
+  oa <- ilm_offset_at(object, exposure)
+  est <- as.numeric(L %*% b) + if (is.null(oa)) 0 else oa
   Vem <- L %*% V %*% t(L)
   se <- sqrt(pmax(diag(Vem), 0))
   crit <- if (isTRUE(object$exact_df))
@@ -273,7 +282,8 @@ ilm_emmeans <- function(object, specs, at = NULL,
   rownames(out) <- NULL
   structure(out, class = c("ilm_emm", "data.frame"), L = L, V = Vem,
             specs = specs, weights = weights, type = type, level = level,
-            family = fam, object = object)
+            family = fam, object = object,
+            exposure_note = ilm_exposure_note(object, exposure))
 }
 
 ## The multinomial case: a row for every category in every level of `specs`.
@@ -434,6 +444,12 @@ print.ilm_emm <- function(x, ...) {
       sprintf("(%s scale, %s weights)\n\n", attr(x, "type"),
               attr(x, "weights")))
   print(as.data.frame(x), row.names = FALSE, digits = 4)
+  ## a model with an offset: what the means are per
+  if (!is.null(attr(x, "exposure_note"))) {
+    cat("\n")
+    writeLines(strwrap(paste0("Means ", attr(x, "exposure_note"), "."), width = 78,
+                       indent = 2, exdent = 2))
+  }
   ord <- startsWith(attr(x, "family"), "ordinal")
   catg <- identical(attr(x, "family"), "multinomial") || ord
   if (catg && attr(x, "type") == "response") {

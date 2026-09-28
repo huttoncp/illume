@@ -10,7 +10,8 @@ ilm_ame(
   terms = NULL,
   eps = 1e-04,
   groups = c("typical", "population"),
-  marginal = NULL
+  marginal = NULL,
+  exposure = NULL
 )
 }
 \arguments{
@@ -26,6 +27,12 @@ over them. See "Which effect, in a mixed model".}
 
 \item{marginal}{Deprecated. \code{TRUE} is \code{groups = "population"}, and \code{FALSE}
 is \code{groups = "typical"}.}
+
+\item{exposure}{For a model with an offset, \code{offset(log(exposure))}: the
+effects are on the mean per unit of exposure by default (the offset at
+zero for every row), and a positive number puts every row at that
+exposure instead -- \code{1e5} for a rate per 100,000. Such a result prints
+which. Ignored without an offset.}
 }
 \value{
 A data frame with \code{term}, \code{level}, \code{estimate}, \code{se}, \code{lower},
