@@ -274,8 +274,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   ## a gaussian mixed model: each mean's own df, from the tables' resolver,
   ## and Kenward-Roger's adjusted covariance when that is asked for
   dd <- NULL
-  if (identical(object$family$name, "gaussian") && !isTRUE(object$exact_df) &&
-      !identical(df, "asymptotic")) {
+  if (ilm_finite_df(object, df)) {
     dd <- ilm_table_df(object, L, df, what = "mean")
     if (!is.null(attr(dd, "V"))) {
       Vem <- L %*% attr(dd, "V") %*% t(L)

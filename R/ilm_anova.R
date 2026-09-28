@@ -399,9 +399,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   }
   ## a gaussian mixed model's Wald tests as F on finite denominator df (D-DF3);
   ## the method is resolved once, so the refits and the full fit agree
-  fin <- test == "Wald" && identical(statistic, "F") &&
-    identical(object$family$name, "gaussian") && !isTRUE(object$exact_df) &&
-    object$C == 1L && !identical(df, "asymptotic")
+  fin <- test == "Wald" && identical(statistic, "F") && ilm_finite_df(object, df)
   dmeth <- if (!fin) NULL else if (identical(df, "auto")) "satterthwaite"
            else match.arg(as.character(df), c("satterthwaite", "kenward-roger"))
   if (fin && identical(dmeth, "kenward-roger")) {
