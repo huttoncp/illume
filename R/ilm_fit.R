@@ -922,7 +922,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
                       pnames = NULL, gap = NULL, hess = NULL,
                       boundary = character(0), avoided = FALSE,
                       ar_type = NULL, disp = NULL, fam_name = NULL,
-                      ysd = NA_real_) {
+                      ysd = NA_real_, restarts = NULL) {
   how <- if (is.null(hess)) "tmb" else hess$how
   ## The remedy a boundary check names. Under the default the penalised
   ## alternative is named with what it costs; a fit that already used it
@@ -936,6 +936,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   held <- if (is.null(hess)) character(0) else hess$held
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
   ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
+  ## a gradient that is not finite is as far from a stationary point as any
+  if (!is.finite(g)) g <- Inf
   ## nlminb's code 8, "false convergence", means it could not verify a descent
   ## direction from where it stopped -- not that it is far from a solution. The
   ## first-order condition is the gradient, and where that is small the
@@ -945,10 +947,24 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   ## and recovered the same coefficients to within Monte Carlo error: -0.542,
   ## 0.273, 0.699 against -0.539, 0.251, 0.696, for a truth of -0.541, 0.258,
   ## 0.690. Grading those FAIL discards a third of perfectly good fits.
+  ## Restarts from the solution that come back to the same optimum answer the
+  ## code: the fit is finished, and the code says the likelihood is flat
+  ## there. Reported on one data set in two row orders, nlminb gave code 8 in
+  ## one and success in the other at the same optimum -- the code follows the
+  ## path, not the answer.
+  rs_same <- !is.null(restarts) && isTRUE(restarts$same) && g <= 1e-2
   ck <- ilm_add_check(ck, "optimizer",
-    if (opt$convergence == 0) "OK" else if (g <= 1e-2) "WARN" else "FAIL",
-    sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
-    if (opt$convergence != 0)
+    if (opt$convergence == 0 || rs_same) "OK" else if (g <= 1e-2) "WARN" else "FAIL",
+    paste0(sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
+           if (rs_same && opt$convergence != 0)
+             sprintf(paste0("; %d restart%s from the solution reached the same optimum, ",
+                            "so the code reflects a flat likelihood, not an unfinished fit ",
+                            "(see the gradient and latent_budget checks)"),
+                     restarts$n, if (restarts$n == 1L) "" else "s") else "",
+           if (!is.null(restarts) && restarts$failed > 0L)
+             "; a restart from the solution met a non-finite gradient and was set aside"
+           else ""),
+    if (opt$convergence != 0 && !rs_same)
       paste0("optimizer stopped without meeting its tolerance",
              if (g <= 1e-2)
                "; the gradient is small, so this is its stopping rule rather than the fit"
@@ -2655,9 +2671,74 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     stop(sprintf("internal: %d parameter names for %d parameters",
                  n_expected, length(obj$par)))
   ctl <- list(iter.max = 3000, eval.max = 3000)
-  opt <- nlminb(obj$par, obj$fn, obj$gr, control = ctl)
-  for (k in seq_len(restarts))
-    opt <- nlminb(opt$par, obj$fn, obj$gr, control = ctl)
+  ## an optimisation that errors, or stops where the objective or its
+  ## gradient is not finite, has no answer to keep
+  nl <- function(st) {
+    o <- tryCatch(nlminb(st, obj$fn, obj$gr, control = ctl), error = function(e) e)
+    if (inherits(o, "error")) return(o)
+    gr <- tryCatch(obj$gr(o$par), error = function(e) NA_real_)
+    if (!is.finite(o$objective) || any(!is.finite(gr)))
+      return(simpleError("NA/NaN gradient evaluation at the point the optimiser stopped"))
+    o
+  }
+  opt <- nl(obj$par)
+  ## A first optimisation that meets a non-finite gradient is tried again from
+  ## other starts, the variance parameters a little lower and then higher:
+  ## it is their log scale that runs off to where the Laplace arithmetic breaks
+  if (inherits(opt, "error")) {
+    first_err <- conditionMessage(opt)
+    vp <- names(obj$par) %in% c("theta", "lchol_ar", "logdisp")
+    for (shift in c(-1, 1)) {
+      st <- obj$par; st[vp] <- st[vp] + shift
+      opt <- nl(st)
+      if (!inherits(opt, "error")) break
+    }
+    if (inherits(opt, "error"))
+      stop("the optimiser stopped with \"", first_err, "\" from the default start ",
+           "and from two others with the variance parameters moved: the ",
+           "likelihood is not finite across the region it had to search. ",
+           "Simplify the random structure, or check the response's scale.",
+           call. = FALSE)
+  }
+  ## Restarts from the solution refine it. One that meets a non-finite
+  ## gradient is set aside and the answer before it kept -- it used to stop
+  ## the whole fit -- and restarts that return the same optimum are recorded,
+  ## so that a stopping code nlminb reports there is read for what it is.
+  polish <- function(o) {
+    r <- list(n = 0L, same = NA, failed = 0L)
+    for (k in seq_len(restarts)) {
+      o2 <- nl(o$par)
+      if (inherits(o2, "error")) {
+        r$failed <- r$failed + 1L
+        invisible(tryCatch(obj$fn(o$par), error = function(e) NULL))
+        break
+      }
+      r$same <- abs(o2$objective - o$objective) <= 1e-6 * max(1, abs(o$objective)) &&
+        max(abs(o2$par - o$par)) <= 1e-3
+      r$n <- r$n + 1L
+      o <- o2
+    }
+    list(opt = o, rs = r)
+  }
+  grad_of <- function(o) max(abs(tryCatch(obj$gr(o$par), error = function(e) Inf)))
+  pl <- polish(opt)
+  ## Still far from a stationary point after the restarts -- a path that ran
+  ## into a region it could not leave -- so the two other starts get the same
+  ## treatment, and the best objective whose gradient is finite is kept
+  if (!is.finite(grad_of(pl$opt)) || grad_of(pl$opt) > 1e-2) {
+    vp <- names(obj$par) %in% c("theta", "lchol_ar", "logdisp")
+    for (shift in c(-1, 1)) {
+      st <- obj$par; st[vp] <- st[vp] + shift
+      o <- nl(st)
+      if (inherits(o, "error")) next
+      alt <- polish(o)
+      if (is.finite(grad_of(alt$opt)) && alt$opt$objective < pl$opt$objective - 1e-8)
+        pl <- alt
+    }
+    invisible(tryCatch(obj$fn(pl$opt$par), error = function(e) NULL))
+  }
+  opt <- pl$opt; rs <- pl$rs
+  obj_before_floor <- opt$objective
   ## a correlation taken towards +/-1 past where the Laplace arithmetic holds
   ## is brought back to the floor (see ilm_logsd_floor)
   fpos <- ilm_floor_pos(re, ty, toff, C, names(obj$par), ar)
@@ -2669,6 +2750,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ffl[names(obj$par)[fpos] == "lchol_ar"] <-
       ilm_logsd_floor - 0.5 * log(stats::median(ar$gap))
   opt <- ilm_floor_refit(obj, opt, fpos, ffl, ctl)
+  ## a floor refit moves the optimum, and the restarts' record is of the one before
+  if (!identical(opt$objective, obj_before_floor)) rs$same <- NA
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
 
   ## the fitted covariance structures, which depend on the estimates alone
@@ -2802,7 +2885,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                     disp = if ("dispersion" %in% cb$flagged)
                       list(family = fam$name,
                            value = exp(opt$par[pn == "logdisp"]), ysd = ysd),
-                    fam_name = fam$name, ysd = ysd)
+                    fam_name = fam$name, ysd = ysd, restarts = rs)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {
