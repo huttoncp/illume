@@ -299,3 +299,22 @@ test_that("the numbers in the prose carry no padding", {
   expect_match(paste(txt, collapse = " "), "percentage points", fixed = TRUE)
   expect_false(any(grepl("[^ ]  +[0-9-]", txt)))
 })
+
+test_that("the few-groups caveat names the test that can run liberal", {
+  ## both variants: the gaussian one adds finite df, the others do not
+  set.seed(6)
+  d <- data.frame(id = factor(rep(1:30, each = 4)), x = rnorm(120))
+  u <- rnorm(30, 0, 0.6)[d$id]
+  d$y <- 1 + 0.4 * d$x + u + rnorm(120)
+  d$k <- rpois(120, exp(0.3 + 0.3 * d$x + u))
+  for (fam in c("gaussian", "poisson")) {
+    f <- ilm_model(if (fam == "gaussian") y ~ x + (1 | id) else k ~ x + (1 | id),
+                   data = d, family = fam, verbose = FALSE)
+    cav <- paste(ilm_interpret(f)$sections$caveats, collapse = " ")
+    expect_match(cav, paste("with 30 groups of `id` a test of an effect that",
+                            "varies between groups can run somewhat liberal"),
+                 fixed = TRUE)
+    expect_identical(grepl("ilm_denom_df()", cav, fixed = TRUE),
+                     fam == "gaussian")
+  }
+})

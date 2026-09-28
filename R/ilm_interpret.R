@@ -836,7 +836,7 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     ng <- min(object$nlk[gk])
     if (is.finite(ng) && ng < 100L)
       cav <- c(cav, sprintf(
-        "The tests above use a large-sample reference, and with %d groups of `%s` one for an effect that varies between groups can run somewhat liberal. For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value by simulation%s.",
+        "The tests above use a large-sample reference, and with %d groups of `%s` a test of an effect that varies between groups can run somewhat liberal. For a term the conclusions rest on, ilm_pb_lrt() calibrates the p-value by simulation%s.",
         ng, names(object$re)[gk][which.min(object$nlk[gk])],
         if (identical(fam, "gaussian"))
           ", and ilm_denom_df() gives finite degrees of freedom" else ""))
