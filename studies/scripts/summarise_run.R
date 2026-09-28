@@ -545,13 +545,13 @@ summarise_study <- function(dir, study) {
     ## Draws of a poorly determined variance (item 78, Arm B): the flag on the
     ## SE of a log SD, its cut-off by the pre-registered rule, and the two
     ## remedies' coverage, forecast scores and time.
-    par <- read_all(dir, "^variance_draws_main_par.csv$")
+    par <- read_all(dir, "^variance_draws_main_par[.]csv([.]gz)?$")
     if (is.null(par)) return(NULL)
-    fc <- read_all(dir, "^variance_draws_main_fc.csv$")
-    tm <- read_all(dir, "^variance_draws_main_time.csv$")
-    fpar <- read_all(dir, "^variance_draws_fresh_par.csv$")
-    fxp <- read_all(dir, "^variance_draws_fixtures_par.csv$")
-    fxf <- read_all(dir, "^variance_draws_fixtures_fc.csv$")
+    fc <- read_all(dir, "^variance_draws_main_fc[.]csv([.]gz)?$")
+    tm <- read_all(dir, "^variance_draws_main_time[.]csv([.]gz)?$")
+    fpar <- read_all(dir, "^variance_draws_fresh_par[.]csv([.]gz)?$")
+    fxp <- read_all(dir, "^variance_draws_fixtures_par[.]csv([.]gz)?$")
+    fxf <- read_all(dir, "^variance_draws_fixtures_fc[.]csv([.]gz)?$")
     cutsv <- c(0.5, 0.75, 1, 1.5, 2, 3)
     fails <- c("unbounded", "wald_too_wide")
     ## the cells, as the script builds them, for the arm and family of each row
