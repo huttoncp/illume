@@ -1,5 +1,13 @@
 # illume 0.0.8.9003
 
+* `ilm_variogram()`'s spatial advice names the terms that remove the
+  structure, in the data's own variables: a smooth of the coordinates,
+  `t2(easting, northing)`, for points, and for areal units a Markov random
+  field over a neighbour list, `s(area, bs = "mrf", xt = list(nb = nb))`,
+  with `(1 | area)` beside it for the Besag-York-Mollie form. It used to say
+  that illume fits no spatial covariance and name only the smooth.
+  `ilm_model()`'s help gains a section on areal units and the BYM form,
+  including reading each unit's relative risk with `groups = "fitted"`.
 * `ilm_dist()`'s `d()`, `p()` and `q()` give NaN for an element whose
   mean, dispersion or zero-part parameter is NaN or NA, and give back a
   missing argument as it came, as base R's distribution functions do. A zero

@@ -172,7 +172,8 @@ ilm_bin_cor <- function(z, pr, bin, nb, min_pairs = 30L) {
 #' @references
 #' Pinheiro, J. C., & Bates, D. M. (2000). *Mixed-Effects Models in S and
 #' S-PLUS*. Springer. (Chapter 5 covers the residual variogram.)
-#' @seealso [ilm_car1()] for the remedy, [ilm_check_ar()] for evenly spaced
+#' @seealso [ilm_car1()] for the remedy over time and the "Areal units" section
+#'   of [ilm_model()] for the one in space, [ilm_check_ar()] for evenly spaced
 #'   data, [ilm_plot_acf()].
 #' @examples
 #' set.seed(1)
@@ -241,6 +242,12 @@ ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
            "has ", ncol(cm), ".", call. = FALSE)
     if (anyNA(cm))
       stop("`coords` cannot contain missing values", call. = FALSE)
+    ## the names the advice writes its terms in: the coordinates' own, and
+    ## the fit's unit when it has exactly one grouping factor
+    coord_names <- colnames(cm) %||% c("x", "y", "z")[seq_len(ncol(cm))]
+    grp_terms <- names(object$re)[vapply(object$re, function(e)
+      !identical(e$kind, "basis"), TRUE)]
+    unit_name <- if (length(unique(grp_terms)) == 1L) grp_terms[1] else NULL
     if (missing(group) || is.null(group)) group <- rep(1L, N)
   } else {
     ## Still checked, because ilm_align_rows() returns the column untouched
@@ -344,7 +351,9 @@ ilm_variogram <- function(object, time, group, coords = NULL, breaks = 8L,
 
   res <- list(table = tab, null = env$null, n_ok = env$n_ok, B = B,
               type = type, n_pairs_total = pr$n_total, breaks = br,
-              rho = object$rho, spatial = spatial, min_effect = min_effect)
+              rho = object$rho, spatial = spatial, min_effect = min_effect,
+              coord_names = if (spatial) coord_names else NULL,
+              unit = if (spatial) unit_name else NULL)
   if (verbose) ilm_variogram_report(res)
   if (plot) ilm_plot_variogram(res)
   invisible(res)
@@ -413,18 +422,26 @@ ilm_variogram_advice <- function(res) {
                   "add or widen a random effect for the unit before reaching ",
                   "for ilm_car1()"))
   if (dv[1] > 0) {
-    ## The honest spatial answer. illume has no spatial covariance -- no
-    ## Matern, no exponential field -- so the remedy is to put the structure in
-    ## the MEAN, where a tensor-product smooth of the coordinates can absorb
-    ## it, or in a random effect for a spatial grouping. Saying "fit a spatial
-    ## correlation" would name something the package does not have.
-    if (isTRUE(res$spatial))
-      return(paste0("the correlation is strongest between nearby points and ",
-                    "decays with distance. illume fits no spatial covariance, ",
-                    "so put the structure in the mean instead: a smooth of the ",
-                    "coordinates, t2(x, y), absorbs smooth spatial variation, ",
-                    "and a random effect for a spatial grouping absorbs the ",
-                    "coarse kind"))
+    ## The spatial answer names the terms that remove it, written in the
+    ## user's own variables: a smooth of the coordinates for points, and for
+    ## areal units a Markov random field over their neighbours, with the
+    ## unit's random intercept beside it -- the BYM form of disease mapping.
+    ## There is no Matern or exponential covariance to name, and the advice
+    ## does not pretend there is.
+    if (isTRUE(res$spatial)) {
+      cn <- res$coord_names %||% c("x", "y")
+      smooth <- if (length(cn) == 1L) sprintf("s(%s)", cn)
+                else sprintf("t2(%s)", paste(cn, collapse = ", "))
+      u <- res$unit %||% "unit"
+      return(paste0("the correlation is strongest between nearby locations ",
+                    "and decays with distance: spatial structure the model ",
+                    "leaves out. For point locations, a smooth of the ",
+                    "coordinates absorbs it: ", smooth, ". For areal units ",
+                    "with a neighbour list nb (for each ", u, ", the ", u,
+                    "s next to it), a Markov random field does: s(", u,
+                    ", bs = \"mrf\", xt = list(nb = nb)), with (1 | ", u,
+                    ") beside it for the BYM form"))
+    }
     return(paste0("the correlation is strongest at the shortest separations ",
                   "and decays from there, which is what ilm_car1(time, group) ",
                   "fits; ilm_ar1() if the times are evenly spaced"))

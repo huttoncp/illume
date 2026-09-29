@@ -46,6 +46,8 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   y ~ x1 + time + (1 + time | subj)          random intercept and slope
 #'   y ~ x1 + s(xs, k = 10) + (1 | subj)        penalised smooth of xs
 #'   y ~ x1 + t2(lon, lat) + (1 | site)         2-D surface (spatial)
+#'   y ~ x1 + s(area, bs = "mrf", xt = list(nb = nb)) + (1 | area)
+#'                                              areal units (BYM form)
 #' }
 #'
 #' Two rules for smooth terms. Use `t2()` rather than `te()` for tensor
@@ -56,6 +58,24 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'
 #' A categorical outcome may be a factor or a character vector; its levels set
 #' the category labels used throughout the output.
+#'
+#' @section Areal units, and the BYM form:
+#' Counts or measurements for areal units -- districts, counties, postcodes --
+#' are usually correlated with their neighbours'. The term for that is mgcv's
+#' Markov random field smooth, `s(area, bs = "mrf", xt = list(nb = nb))`, where
+#' `nb` is a list with one element per level of `area`, named by the levels,
+#' holding the indices of the units adjacent to it. It is an intrinsic
+#' conditional autoregression over the neighbour graph. Beside it, a random
+#' intercept `(1 | area)` gives each unit an unstructured effect of its own:
+#' the pair is the Besag-York-Mollie (BYM) form of disease mapping, which
+#' splits the between-unit variation into a spatially smooth part and noise.
+#' For a disease map, put the population at risk in the formula as
+#' `offset(log(expected))` and read each unit's relative risk from
+#' `predict(fit, newdata, groups = "fitted")`, which keeps the unit's own
+#' effects; the default, `"typical"`, sets them to zero. For points rather
+#' than areas, a smooth of the coordinates, `t2(x, y)`, plays the same part.
+#' [ilm_variogram()] with `coords` finds spatial structure a model leaves out
+#' and names these terms.
 #'
 #' @section Simple models get exact inference:
 #' A gaussian model with no random or smooth terms is an ordinary linear model.
@@ -277,6 +297,13 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' Weakly informative prior for point estimation of covariance matrices in
 #' hierarchical models. *Journal of Educational and Behavioral Statistics*,
 #' 40(2), 136--157.
+#'
+#' Besag, J., York, J., & Mollié, A. (1991). Bayesian image restoration, with
+#' two applications in spatial statistics. *Annals of the Institute of
+#' Statistical Mathematics*, 43(1), 1--20.
+#'
+#' Wood, S. N. (2017). *Generalized Additive Models: An Introduction with R*
+#' (2nd ed.). Chapman and Hall/CRC.
 #'
 #' @examples
 #' set.seed(1)

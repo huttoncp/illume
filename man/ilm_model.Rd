@@ -260,6 +260,8 @@ can mix them freely:
   y ~ x1 + time + (1 + time | subj)          random intercept and slope
   y ~ x1 + s(xs, k = 10) + (1 | subj)        penalised smooth of xs
   y ~ x1 + t2(lon, lat) + (1 | site)         2-D surface (spatial)
+  y ~ x1 + s(area, bs = "mrf", xt = list(nb = nb)) + (1 | area)
+                                             areal units (BYM form)
 }
 
 Two rules for smooth terms. Use \code{t2()} rather than \code{te()} for tensor
@@ -288,6 +290,26 @@ is what the centring is for. Read the intercept of a model with a smooth as
 a property of the sample, and take conclusions from the slopes and from
 \code{\link[=ilm_plot_model]{ilm_plot_model()}}'s effect curves.
 }
+\section{Areal units, and the BYM form}{
+
+Counts or measurements for areal units -- districts, counties, postcodes --
+are usually correlated with their neighbours'. The term for that is mgcv's
+Markov random field smooth, \code{s(area, bs = "mrf", xt = list(nb = nb))}, where
+\code{nb} is a list with one element per level of \code{area}, named by the levels,
+holding the indices of the units adjacent to it. It is an intrinsic
+conditional autoregression over the neighbour graph. Beside it, a random
+intercept \code{(1 | area)} gives each unit an unstructured effect of its own:
+the pair is the Besag-York-Mollie (BYM) form of disease mapping, which
+splits the between-unit variation into a spatially smooth part and noise.
+For a disease map, put the population at risk in the formula as
+\code{offset(log(expected))} and read each unit's relative risk from
+\code{predict(fit, newdata, groups = "fitted")}, which keeps the unit's own
+effects; the default, \code{"typical"}, sets them to zero. For points rather
+than areas, a smooth of the coordinates, \code{t2(x, y)}, plays the same part.
+\code{\link[=ilm_variogram]{ilm_variogram()}} with \code{coords} finds spatial structure a model leaves out
+and names these terms.
+}
+
 \section{Simple models get exact inference}{
 
 A gaussian model with no random or smooth terms is an ordinary linear model.
@@ -399,6 +421,13 @@ Chung, Y., Gelman, A., Rabe-Hesketh, S., Liu, J., & Dorie, V. (2015).
 Weakly informative prior for point estimation of covariance matrices in
 hierarchical models. \emph{Journal of Educational and Behavioral Statistics},
 40(2), 136--157.
+
+Besag, J., York, J., & Mollié, A. (1991). Bayesian image restoration, with
+two applications in spatial statistics. \emph{Annals of the Institute of
+Statistical Mathematics}, 43(1), 1--20.
+
+Wood, S. N. (2017). \emph{Generalized Additive Models: An Introduction with R}
+(2nd ed.). Chapman and Hall/CRC.
 }
 \seealso{
 \code{\link[=summary.ilm_model]{summary.ilm_model()}}, \code{\link[=ilm_anova]{ilm_anova()}}, \code{\link[=predict.ilm_model]{predict.ilm_model()}},
