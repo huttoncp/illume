@@ -1,5 +1,18 @@
 # illume 0.0.8.9003
 
+* Predictors in any units. The fit rescales each column of the fixed-effect
+  design, the zero part's and the dispersion model's to unit SD, fits there,
+  and converts the estimates, covariance, joint precision and Hessian back to
+  the user's units by an exact linear map (a REML fit's restricted likelihood
+  with its Jacobian). With income in dollars, a zero-inflated negative
+  binomial with a random intercept failed 12 fits of 12 with undefined
+  standard errors; it now fits all 12, and a dollars fit and a thousands fit
+  agree to about 1e-9. Offsets, 0/1 indicators, a flexible baseline's
+  columns, a smooth's penalised part and random slopes' covariates are left
+  alone; for a failed fit with a random slope on a covariate in large units,
+  `ilm_remedies()` names rescaling it by hand first. The separation check's
+  flat catch sizes coefficients in standard units, so it is the same in any
+  units.
 * Separation is caught and said. When the outcome does not vary within a
   level of a categorical predictor -- every count zero in one region, every
   trial a success in one arm -- that level's coefficient has no finite

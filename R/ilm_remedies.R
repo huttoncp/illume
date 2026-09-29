@@ -334,10 +334,10 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     ## so it is offered as a description only
     ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts")),
 
-  optimizer = if (status == "FAIL") list(ilm_rem_restarts(fit)) else list(),
+  optimizer = if (status == "FAIL") c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit))) else list(),
 
-  gradient = list(ilm_rem_restarts(fit),
-    ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term")),
+  gradient = c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit),
+    ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
 
   hessian = if (status == "BOUNDARY") {
     held <- intersect(fit$hessian_held, ilm_rem_groups(fit))
@@ -349,7 +349,7 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     else c(lapply(held[vapply(held, function(h) ilm_rem_at_zero(fit, h), TRUE)],
                   function(h) ilm_rem_drop(fit, h)),
            ilm_rem_avoid(fit))
-  } else c(list(ilm_rem_restarts(fit)), ilm_rem_avoid(fit),
+  } else c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit)), ilm_rem_avoid(fit),
            list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
 
   variance_boundary = {
@@ -1021,4 +1021,31 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
                                 paste(sprintf("%s (%s)", bad$check, bad$status), collapse = ", "))
           else "  every check is OK after the refit")
   fit
+}
+
+## Rescaling, named first when a fit fails. The fit rescales its fixed-effect
+## columns itself (ilm_rescale.R), but not a random slope's covariate, whose
+## scale sits in the random-effect covariance: one far from unit scale (an SD
+## outside 1e-3 to 1e3) is the likeliest cause of a failed optimisation, and
+## the fix is by hand. None when every slope covariate is on a sane scale.
+#' @keywords internal
+#' @noRd
+ilm_rem_rescale <- function(fit) {
+  bars <- fit$bars
+  if (is.null(bars) || !length(bars) || is.null(fit$model)) return(list())
+  vs <- unique(unlist(lapply(bars, function(b)
+    tryCatch(all.vars(b[[2]]), error = function(e) character()))))
+  out <- list()
+  for (v in intersect(vs, names(fit$model))) {
+    x <- fit$model[[v]]
+    if (!is.numeric(x)) next
+    sdv <- stats::sd(x, na.rm = TRUE)
+    if (!is.finite(sdv) || sdv <= 0 || (sdv >= 1e-3 && sdv <= 1e3)) next
+    k <- 10^round(log10(sdv))
+    out[[length(out) + 1L]] <- ilm_rem("numerical", sprintf(
+      "rescale %s by hand -- its SD is %s; %s it by %s so it is near 1. The fit rescales its fixed-effect columns itself, but not the covariate of a random slope, whose scale sits in the random-effect covariance",
+      v, formatC(sdv, format = "g", digits = 3), if (k > 1) "divide" else "multiply",
+      formatC(if (k > 1) k else 1 / k, format = "g", digits = 3)))
+  }
+  out
 }

@@ -96,13 +96,20 @@ ilm_sep_flat <- function(fit, big = 8, step = 5, tol = 1e-3) {
   if (is.null(obj) || is.null(pe)) return(none)
   jb <- which(names(pe) == "beta")
   if (!length(jb)) return(none)
-  cand <- jb[abs(pe[jb]) > big & is.finite(pe[jb])]
+  ## sized in standard units -- the coefficient times its column's SD -- so
+  ## that "beyond 8" means the same for a column in dollars as for one in
+  ## thousands, whether or not the fit ran on rescaled columns
+  sx <- if (!is.null(fit$X)) ilm_col_scales(fit$X)$s else NULL
+  su <- if (!is.null(sx) && length(sx) * max(1L, fit$C %||% 1L) == length(jb))
+          rep(sx, length.out = length(jb)) else rep(1, length(jb))
+  names(su) <- NULL
+  cand <- jb[abs(pe[jb] * su) > big & is.finite(pe[jb])]
   if (!length(cand)) return(none)
   f0 <- tryCatch(obj$fn(pe), error = function(e) NA_real_)
   if (!is.finite(f0)) return(none)
   nms <- ilm_beta_names(fit)
   hit <- vapply(cand, function(j) {
-    p1 <- pe; p1[j] <- p1[j] + step * sign(p1[j])
+    p1 <- pe; p1[j] <- p1[j] + step * sign(p1[j]) / su[j - min(jb) + 1L]
     f1 <- tryCatch(obj$fn(p1), error = function(e) NA_real_)
     is.finite(f1) && abs(f1 - f0) < tol
   }, TRUE)

@@ -77,6 +77,22 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' [ilm_variogram()] with `coords` finds spatial structure a model leaves out
 #' and names these terms.
 #'
+#' @section Predictors in any units:
+#' A predictor in dollars beside one in thousandths makes the fit's
+#' arithmetic badly conditioned, though the model is the same in any units:
+#' fits used to fail with undefined standard errors and advice pointing the
+#' wrong way. So the fit rescales each column of the fixed-effect design --
+#' and of the zero-inflation and dispersion formulas -- to unit standard
+#' deviation, fits there, and converts the estimates, their covariance and
+#' everything built from them back to your units by an exact map: the results
+#' are the ones you would get by rescaling by hand, to within the optimiser's
+#' tolerance. Left as they are: offsets, which enter with a fixed coefficient of
+#' one; 0/1 indicators and constant columns, already well scaled; a smooth's
+#' penalised part (its unpenalised columns are rescaled like any other); and
+#' the covariate of a random slope, whose scale sits in the random-effect
+#' covariance -- if a fit with a random slope on a covariate in large units
+#' fails, [ilm_remedies()] names rescaling that covariate by hand first.
+#'
 #' @section Simple models get exact inference:
 #' A gaussian model with no random or smooth terms is an ordinary linear model.
 #' In that case there is nothing to integrate out, so illume reports **exact**

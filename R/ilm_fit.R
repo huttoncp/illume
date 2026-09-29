@@ -2326,6 +2326,24 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C),
                                 if (!identical(ar$type, "rw1")) "ar:rho_raw")
 
+  ## ---- the fit runs on standardised columns (ilm_rescale.R) ----------------
+  ## Each non-constant column of the fixed design, the zero part's and the
+  ## dispersion model's is divided by its SD (and centred, in that variant),
+  ## and everything is converted back exactly before the fit is returned.
+  ## A flexible baseline's columns are functions of the response and are
+  ## left as they are, with the derivative design that matches them.
+  rs_mode <- getOption("illume.rescale", "scale")
+  sc_x <- sc_zi <- sc_d <- NULL
+  X_user <- X; Zzi_user <- Zzi; Zd_user <- Zd
+  if (!identical(rs_mode, "none")) {
+    cen <- identical(rs_mode, "centre")
+    sc_x <- ilm_col_scales(X, cen, skip = if (!is.null(rp)) rp$cols else integer(0))
+    X <- ilm_apply_scales(X, sc_x)
+    if (!is.null(Zzi)) { sc_zi <- ilm_col_scales(Zzi, cen); Zzi <- ilm_apply_scales(Zzi, sc_zi) }
+    if (!is.null(Zd))  { sc_d  <- ilm_col_scales(Zd, cen);  Zd  <- ilm_apply_scales(Zd, sc_d) }
+  }
+  rescaled <- isTRUE(sc_x$any) || isTRUE(sc_zi$any) || isTRUE(sc_d$any)
+
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
              offv = if (is.null(offset)) numeric(N) else offset,
              n_disp = fam$n_disp,
@@ -3025,6 +3043,71 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## REML fit predicted NA: ilm_ame(), ilm_scenario() and the effects in
   ## ilm_interpret() with it, including every ilm_dag_model(), which fits by
   ## REML.
+  ## ---- back to the user's columns (ilm_rescale.R) ---------------------------
+  ## eta is the same in both coordinates, so only the coefficient blocks move,
+  ## by an exact linear map; the random effects, the variance parameters and
+  ## every reported quantity built from them are untouched. A tape on the
+  ## user's columns replaces the fitting one, so that everything downstream
+  ## evaluates the objective at the parameters it is handed.
+  if (rescaled) {
+    maps <- list()
+    if (isTRUE(sc_x$any))  maps$beta  <- ilm_scale_map(sc_x)
+    if (isTRUE(sc_zi$any)) maps$gzi   <- ilm_scale_map(sc_zi)
+    if (isTRUE(sc_d$any))  maps$gamma <- ilm_scale_map(sc_d)
+    mapv <- function(v) {
+      if (is.null(v) || !length(v)) return(v)
+      M <- ilm_param_map(names(v), maps)
+      stats::setNames(drop(M$A %*% v), names(v))
+    }
+    mapV <- function(V, nms) {
+      if (is.null(V)) return(V)
+      M <- ilm_param_map(nms, maps)
+      out <- M$A %*% V %*% t(M$A); dimnames(out) <- dimnames(V); out
+    }
+    mapP <- function(P, nms) {
+      if (is.null(P)) return(P)
+      M <- ilm_param_map(nms, maps)
+      out <- Matrix::t(M$Ainv) %*% P %*% M$Ainv
+      dimnames(out) <- dimnames(P)
+      if (methods::is(P, "sparseMatrix")) methods::as(out, "CsparseMatrix") else out
+    }
+    ## put the fitting tape at its optimum, and read its parameter list there
+    invisible(tryCatch(obj$fn(if (reml) opt$par[names(opt$par) != "beta"] else opt$par),
+                       error = function(e) NULL))
+    pl <- obj$env$parList()
+    opt$par <- mapv(opt$par)
+    sdr$cov.fixed <- mapV(sdr$cov.fixed, names(opt$par))
+    if (!is.null(sdr$par.fixed)) sdr$par.fixed <- mapv(sdr$par.fixed)
+    if (!is.null(sdr$par.random)) sdr$par.random <- mapv(sdr$par.random)
+    if (!is.null(sdr$jointPrecision))
+      sdr$jointPrecision <- mapP(sdr$jointPrecision, rownames(sdr$jointPrecision))
+    if (!is.null(hess$H)) {
+      hess$H <- mapP(hess$H, pn)
+      if (!is.null(hess$dirs)) hess$dirs <- ilm_param_map(pn, maps)$A %*% hess$dirs
+    }
+    pe <- mapv(stats::setNames(pe, pn))
+    if (reml && !is.null(reml_beta) && !is.null(maps$beta)) {
+      Ab <- maps$beta
+      reml_beta <- as.vector(Ab %*% matrix(reml_beta, p, C))
+      ## the change of variable scaled the restricted likelihood by |det A|
+      opt$objective <- opt$objective + C * sum(log(sc_x$s))
+    }
+    ## the user's columns, and a tape on them at the same optimum
+    for (b in names(maps)) if (!is.null(pl[[b]])) {
+      v <- pl[[b]]
+      pl[[b]] <- if (is.matrix(v)) maps[[b]] %*% v else as.vector(maps[[b]] %*% v)
+    }
+    X <- X_user; Zzi <- Zzi_user; Zd <- Zd_user
+    dl$X <- X_user
+    if (!is.null(Zzi_user)) dl$Zzi <- Zzi_user
+    if (!is.null(Zd_user)) dl$Zdisp <- Zd_user
+    obj <- MakeADFun(f, pl, random = if (length(rnd_fit)) rnd_fit else NULL,
+                     map = map, silent = TRUE)
+    invisible(tryCatch(obj$fn(obj$par), error = function(e) NULL))
+    if (!is.null(obj_ml))
+      obj_ml <- MakeADFun(f, pl, random = if (length(rnd)) rnd else NULL,
+                          map = map, silent = TRUE)
+  }
   beta_hat <- matrix(if (reml) reml_beta else pe[pn == "beta"], p, C)
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  ## how many of those rows were checks of the DESIGN, made
@@ -3038,6 +3121,10 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
+                 ## the column scales the fit ran on (ilm_rescale.R), for the
+                 ## checks that read a coefficient's size in standard units
+                 rescale = if (rescaled) list(x = sc_x, zi = sc_zi, d = sc_d,
+                                              mode = rs_mode) else NULL,
                  ## how the standard errors were obtained: "tmb" (the first
                  ## Hessian was fine), "recomputed" (a more accurate one was),
                  ## "boundary" (the directions in which the covariance of the
