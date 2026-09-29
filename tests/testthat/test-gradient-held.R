@@ -37,7 +37,7 @@ test_that("a fit whose held dispersion carries the largest gradient is judged on
   rw <- unlist(lapply(seq_len(G), function(i) cumsum(rnorm(Tn, 0, 0.1))))
   d$s12 <- sin(2 * pi * d$t / 12); d$c12 <- cos(2 * pi * d$t / 12)
   d$y <- rpois(nrow(d), exp(lvl[d$g] + 0.3 * d$s12 + rw))
-  f <- suppressMessages(suppressWarnings(ilm_model(y ~ s12 + c12 + (1 | g), data = d,
+  f <- suppressMessages(suppressWarnings(ilm_model(reml = FALSE, y ~ s12 + c12 + (1 | g), data = d,
          family = "nbinom", ar = ilm_rw1(~ t | g), verbose = FALSE)))
   expect_true("dispersion" %in% f$hessian_held)
   gr <- as.numeric(f$obj$gr(f$opt$par)); pn <- names(f$opt$par)
@@ -52,7 +52,7 @@ test_that("a fit with nothing held is judged on its whole gradient, as before", 
   set.seed(1)
   d <- data.frame(g = factor(rep(1:20, each = 10)), x = rnorm(200))
   d$y <- 1 + 0.5 * d$x + rnorm(20)[d$g] + rnorm(200)
-  f <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
   r <- f$checks[f$checks$check == "gradient", ]
   expect_identical(r$status, "OK")
   expect_false(grepl("held", r$detail))

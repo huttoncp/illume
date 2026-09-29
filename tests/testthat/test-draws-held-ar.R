@@ -14,7 +14,7 @@ held_ar_fit <- function() {
   d$y <- 5 + as.numeric(stats::arima.sim(list(ar = 0.1), 48, sd = 0.8 * sqrt(1 - 0.01))) +
     stats::rnorm(48, 0, 0.1)
   suppressMessages(suppressWarnings(
-    ilm_model(y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
+    ilm_model(reml = FALSE, y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
               verbose = FALSE)))
 }
 
@@ -54,7 +54,7 @@ test_that("an AR block held for its correlation, with an identified SD, keeps it
   d$y <- unlist(lapply(1:10, function(i) as.numeric(stats::arima.sim(list(ar = 0.6), 30)))) +
     stats::rnorm(300, 0, 0.5)
   f <- suppressMessages(suppressWarnings(
-    ilm_model(y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
+    ilm_model(reml = FALSE, y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
               verbose = FALSE)))
   expect_gt(sqrt(as.matrix(f$Sigma[["ar"]])[1, 1]), 0.1)
   pn <- names(f$opt$par)
@@ -82,7 +82,7 @@ stalled_fit <- function() {
   d$x <- stats::rnorm(nrow(d))
   d$y <- 1 + 0.3 * d$x + stats::rnorm(G, 0, 0.5)[d$g] + lat + stats::rnorm(nrow(d), 0, 0)
   suppressMessages(suppressWarnings(
-    ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+    ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "gaussian",
               ar = ilm_ar1(~ t | g), verbose = FALSE)))
 }
 
@@ -115,9 +115,9 @@ test_that("a smooth's band beside a held AR is the band without it", {
   d$x <- stats::runif(48, -2, 2)
   d$y <- 5 + sin(d$x) + as.numeric(stats::arima.sim(list(ar = 0.1), 48, sd = 0.8 * sqrt(1 - 0.01))) +
     stats::rnorm(48, 0, 0.1)
-  fa <- suppressMessages(suppressWarnings(ilm_model(y ~ s(x), data = d, family = "gaussian",
+  fa <- suppressMessages(suppressWarnings(ilm_model(reml = FALSE, y ~ s(x), data = d, family = "gaussian",
           ar = ilm_ar1(~ t | g), verbose = FALSE)))
-  f0 <- suppressMessages(suppressWarnings(ilm_model(y ~ s(x), data = d, family = "gaussian",
+  f0 <- suppressMessages(suppressWarnings(ilm_model(reml = FALSE, y ~ s(x), data = d, family = "gaussian",
           verbose = FALSE)))
   expect_true("ar" %in% fa$hessian_held)
   jd <- illume:::ilm_joint_draws(fa, 500, 2)

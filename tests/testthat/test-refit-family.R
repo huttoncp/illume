@@ -26,7 +26,7 @@ sim_fam <- function(fam, seed = 1, n = 400, ncl = 25) {
 test_that("the LRT returns finite statistics for every univariate family", {
   for (fam in c("gaussian", "poisson", "binomial")) {
     dd <- sim_fam(fam)
-    f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = fam,
+    f <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = fam,
                    verbose = FALSE)
     a <- suppressWarnings(ilm_anova(f, type = 3, test = "LRT"))
     pc <- intersect(c("Pr(>Chisq)", "Pr(>F)"), names(a))[1]
@@ -41,9 +41,9 @@ test_that("the LRT statistic matches an explicit pair of refits", {
   # the sharpest check: if the reduced model were fitted under the wrong
   # family, its log-likelihood would not be comparable and this would not match
   dd <- sim_fam("poisson", seed = 3)
-  full <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
+  full <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
                     verbose = FALSE)
-  red  <- ilm_model(y ~ grp + (1 | g), data = dd, family = "poisson",
+  red  <- ilm_model(reml = FALSE, y ~ grp + (1 | g), data = dd, family = "poisson",
                     verbose = FALSE)
   manual <- 2 * (as.numeric(logLik(full)) - as.numeric(logLik(red)))
   a <- suppressWarnings(ilm_anova(full, type = 3, test = "LRT"))
@@ -53,9 +53,9 @@ test_that("the LRT statistic matches an explicit pair of refits", {
 test_that("an internal refit inherits weights as well as family", {
   dd <- sim_fam("gaussian", seed = 4)
   dd$w <- rep(c(1, 3), length.out = nrow(dd))
-  full <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
+  full <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
                     weights = w, verbose = FALSE)
-  red  <- ilm_model(y ~ grp + (1 | g), data = dd, family = "gaussian",
+  red  <- ilm_model(reml = FALSE, y ~ grp + (1 | g), data = dd, family = "gaussian",
                     weights = w, verbose = FALSE)
   manual <- 2 * (as.numeric(logLik(full)) - as.numeric(logLik(red)))
   a <- suppressWarnings(ilm_anova(full, type = 3, test = "LRT"))
@@ -64,7 +64,7 @@ test_that("an internal refit inherits weights as well as family", {
 
 test_that("simulation-calibrated residual tests run for a univariate family", {
   dd <- sim_fam("binomial", seed = 5)
-  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "binomial",
+  f <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = "binomial",
                  verbose = FALSE)
   r <- suppressWarnings(ilm_rqr_test(f, B = 5L, seed = 1L, verbose = FALSE))
   expect_true(is.finite(r$obs))
@@ -75,14 +75,14 @@ test_that("simulation-calibrated residual tests run for a univariate family", {
 
 test_that("the null-model log-likelihood is finite for a univariate family", {
   dd <- sim_fam("poisson", seed = 6)
-  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
+  f <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = "poisson",
                  verbose = FALSE)
   expect_true(is.finite(ilm_null_ll(f)))
 })
 
 test_that("the parametric bootstrap runs for a univariate family", {
   dd <- sim_fam("gaussian", seed = 7)
-  f <- ilm_model(y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x1 + grp + (1 | g), data = dd, family = "gaussian",
                  verbose = FALSE)
   pb <- suppressWarnings(ilm_pb_lrt(f, term = "x1", B = 10L, seed = 1L,
                                     verbose = FALSE))
@@ -114,19 +114,19 @@ test_that("a likelihood-ratio test holds its size for every structure", {
       tobit = {
         ys <- eta + stats::rnorm(n); up <- unname(stats::quantile(ys, 0.8))
         d$y <- pmin(ys, up)
-        ilm_model(y ~ x1 + grp, data = d, family = "gaussian",
+        ilm_model(reml = FALSE, y ~ x1 + grp, data = d, family = "gaussian",
                   censor = ilm_censor(d$y, upper = up), verbose = FALSE)
       },
       aft = {
         tt <- exp(eta + 0.7 * log(stats::rexp(n)))
         q <- unname(stats::quantile(tt, 0.65))
         ct <- pmin(q, stats::rexp(n, 1 / (3 * q))); d$y <- pmin(tt, ct)
-        ilm_model(y ~ x1 + grp, data = d, family = "weibull",
+        ilm_model(reml = FALSE, y ~ x1 + grp, data = d, family = "weibull",
                   censor = ilm_surv(d$y, as.integer(tt <= ct)), verbose = FALSE)
       },
       disp = {
         d$y <- eta + stats::rnorm(n, 0, ifelse(d$s == "hi", 2, 0.5))
-        ilm_model(y ~ x1 + grp, data = d, family = "gaussian",
+        ilm_model(reml = FALSE, y ~ x1 + grp, data = d, family = "gaussian",
                   dispformula = ~ s, verbose = FALSE)
       },
       rp = {
@@ -135,7 +135,7 @@ test_that("a likelihood-ratio test holds its size for every structure", {
         tt <- pmax(ifelse(t1 <= 3, t1,
                           3 + (e - 0.45 * exp(lp)) / (0.9 * exp(lp))), 1e-4)
         ct <- stats::rexp(n, 1 / (2 * stats::median(tt))); d$y <- pmin(tt, ct)
-        ilm_model(y ~ x1 + grp, data = d, family = "rp", rp_df = 3,
+        ilm_model(reml = FALSE, y ~ x1 + grp, data = d, family = "rp", rp_df = 3,
                   censor = ilm_surv(d$y, as.integer(tt <= ct)), verbose = FALSE)
       })
   }
@@ -163,7 +163,7 @@ test_that("the reduced fit keeps the censoring it was fitted with", {
   ys <- 0.4 * d$x1 + stats::rnorm(n)
   up <- unname(stats::quantile(ys, 0.75)); d$y <- pmin(ys, up)
   cs <- ilm_censor(d$y, upper = up)
-  f <- ilm_model(y ~ x1, data = d, family = "gaussian", censor = cs,
+  f <- ilm_model(reml = FALSE, y ~ x1, data = d, family = "gaussian", censor = cs,
                  verbose = FALSE)
   keep <- is.na(f$assign) | !(f$assign %in% 1L)
   with_c <- illume:::ilm_refit_like(f, X = f$X[, keep, drop = FALSE],
