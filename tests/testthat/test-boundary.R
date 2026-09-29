@@ -197,16 +197,17 @@ test_that("a correlation taken past the floor is brought back to it", {
 
 test_that("fixed effects that are not identified are not rescued", {
   ## aliased columns: the singular direction is in the fixed effects
-  ## themselves, and no holding of a covariance can make them estimable
+  ## themselves, and no holding of a covariance can make them estimable. The
+  ## aliasing check (test-alias.R) now stops before the fit and names the
+  ## columns, where the fit used to run and grade not ok with a singular
+  ## covariance; either way nothing is rescued
   set.seed(2); n <- 200
   d <- data.frame(x1 = rnorm(n), site = factor(sample(10, n, TRUE)))
   d$x2 <- 2 * d$x1
   d$y <- rpois(n, exp(0.3 + 0.2 * d$x1))
-  f <- suppressWarnings(ilm_model(y ~ x1 + x2 + (1 | site), data = d,
-                                  family = "poisson", verbose = FALSE))
-  expect_false(f$hessian_how %in% c("recomputed", "boundary"))
-  expect_false(f$ok)
-  expect_warning(vcov(f), "not positive definite")
+  expect_error(suppressWarnings(ilm_model(y ~ x1 + x2 + (1 | site), data = d,
+                                          family = "poisson", verbose = FALSE)),
+               "`x2` is a linear combination of `x1`", fixed = TRUE)
 })
 
 test_that("the recomputed Hessian agrees with the exact one where both exist", {
