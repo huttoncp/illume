@@ -112,6 +112,235 @@
 ## 1,100 data sets, four fits each and the jittered refits of R4, about a
 ##   second a fit: about an hour and a half on one core.
 ##
-## Usage: Rscript rescale.R <arm> <nrep> <outdir>
+## ## Amendment A1 (committed before any main-run fit)
+## The smoke run (one replicate a cell) showed E1 as written compared two
+##   different optimisation problems: HAND on the old build rescales two
+##   columns by hand and leaves the rest raw, where the new build
+##   standardises every column, so the two agreed only to the optimiser's
+##   tolerance (gaps of 1e-5 to 1e-4, and more on parameters near zero) and
+##   said nothing about the conversion back. So:
+## (i) a fifth way, HANDNEW -- the hand-rescaled data fitted on the NEW
+##     build, in each variant. Standardising X and standardising X/c give
+##     the same internal columns, so SCALE against HANDNEW (and CENTRE
+##     against HANDNEW under centring) is the same problem, and E1 isolates
+##     the conversion back. E1 keeps 1e-6 and 1e-8.
+## (ii) E1's measure: a coefficient's gap relative to the larger of its size
+##     and its SE, so a parameter near zero does not inflate it; an SE's gap
+##     relative to itself; the objective's gap absolute.
+## (iii) No cell uses REML -- every one is fitted by maximum likelihood --
+##     so the objective, invariant to rescaling the covariates under ML, is
+##     compared as it is. (Under REML the restricted likelihood moves by
+##     log|det A|; the fit puts that Jacobian back itself, and a REML cell
+##     would be compared after it.)
+## (iv) HAND on the old build stays: E2 is unchanged against it, and its gap
+##     to SCALE is reported, not graded. E3 is unchanged.
+## (v) A code error found in the same smoke run is fixed: R4's HAND
+##     conversion applied the dollar factors to data already in hand units.
+##   In the smoke run under A1, every cell met E1 but R5 (the smooth), at
+##   1.07e-6 against 1e-6; the threshold stands as approved and the run
+##   decides.
+##
+## Choices the design leaves to the code, fixed here before any run:
+## - HAND divides income by 1e4 (SD about 0.9) and multiplies the tiny
+##   covariate by 1e4 (SD about 1); its coefficients and SEs are put back on
+##   the user's scale by those factors before any comparison.
+## - Comparisons are over the whole fixed parameter vector -- the fixed
+##   effects, the zero part's coefficients, the variance and dispersion
+##   parameters -- and their SEs from the fit's covariance.
+## - The noise floor re-optimises BEFORE's own objective from a start moved
+##   by N(0, 0.1) on every fixed parameter (seed 1), twice, and takes both
+##   sets of SEs from RTMB's sdreport at the two optima, so reference and
+##   jittered are on the same footing.
+## - R4 uses income in units of 1e4 and the tiny covariate times 1e4.
+## - Seeds: 1e4 * cell + rep.
+##
+## Usage: Rscript rescale.R before|after <nrep> <outdir>
+##        Rscript rescale.R compare <outdir>
 ## ---------------------------------------------------------------------------
-## (the study's code follows in a later commit; this commit is the design)
+
+args <- commandArgs(trailingOnly = TRUE)
+MODE <- args[1]
+if (MODE == "compare") sp <- args[2] else { NREP <- as.integer(args[2]); sp <- args[3] }
+dir.create(sp, showWarnings = FALSE, recursive = TRUE)
+suppressPackageStartupMessages(library(illume))
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+cells <- data.frame(
+  cell = 1:11,
+  arm  = c("R1", "R1", "R2", "R2", "R3", "R3", "R4", "R4", "R4", "R5", "R6"),
+  fam  = c("zinb", "zinb", "poisson", "poisson", "binomial", "binomial",
+           "zinb", "poisson", "binomial", "poisson", "poisson"),
+  n    = c(300, 600, 300, 600, 300, 600, 500, 500, 500, 600, 600),
+  stringsAsFactors = FALSE)
+
+gen <- function(ce, rep) {
+  set.seed(1e4 * ce$cell + rep); n <- ce$n; G <- 25
+  d <- data.frame(g = factor(sample(G, n, TRUE)), income = round(stats::rnorm(n, 33000, 9000)),
+                  tiny = stats::rnorm(n, 0, 1e-4), x = stats::runif(n))
+  u <- stats::rnorm(G, 0, 0.4)[d$g]
+  lin <- 0.00003 * (d$income - 33000) + 2000 * d$tiny
+  if (ce$arm == "R6") lin <- lin + stats::rnorm(G, 0, 0.00001)[d$g] * (d$income - 33000)
+  if (ce$arm == "R5") lin <- lin + sin(3 * d$x)
+  if (ce$fam == "zinb") {
+    pz <- stats::plogis(-1 + 0.00004 * (d$income - 33000))
+    d$y <- ifelse(stats::runif(n) < pz, 0, stats::rnbinom(n, mu = exp(0.4 + lin + u), size = 2))
+  } else if (ce$fam == "poisson") d$y <- stats::rpois(n, exp(0.4 + lin + u))
+  else d$y <- stats::rbinom(n, 1, stats::plogis(-0.3 + lin + u))
+  if (ce$arm == "R4") { d$income <- d$income / 1e4; d$tiny <- d$tiny * 1e4 }
+  d
+}
+spec <- function(ce, hand = FALSE) {
+  inc <- if (hand) "inc_h" else "income"; tin <- if (hand) "tiny_h" else "tiny"
+  rhs <- switch(ce$arm,
+    R1 = c(inc, "(1 | g)"), R2 = c(inc, tin, "(1 | g)"), R3 = c(inc, "(1 | g)"),
+    R4 = c(inc, tin, "(1 | g)"), R5 = c(inc, "s(x)", "(1 | g)"),
+    R6 = c(inc, sprintf("(1 + %s | g)", inc)))
+  list(f = stats::reformulate(rhs, "y"),
+       zi = if (ce$fam == "zinb") stats::reformulate(inc) else NULL,
+       family = if (ce$fam == "zinb") "nbinom" else ce$fam)
+}
+## the factor that puts a HAND coefficient back on the user's scale, per
+## fixed parameter: the income columns by 1e-4, the tiny one by 1e4
+hand_factor <- function(f, ce) {
+  nm <- names(f$opt$par); k <- rep(1, length(nm))
+  if (ce$arm == "R4") return(k)                 # R4's data are in hand units already
+  ib <- which(nm == "beta"); xn <- colnames(f$X)
+  k[ib[xn == "inc_h"]] <- 1e-4; k[ib[xn == "tiny_h"]] <- 1e4
+  if (!is.null(f$Zzi)) { iz <- which(nm == "gzi"); k[iz[colnames(f$Zzi) == "inc_h"]] <- 1e-4 }
+  k
+}
+one_fit <- function(ce, d, hand = FALSE) {
+  if (hand && ce$arm != "R4") { d$inc_h <- d$income / 1e4; d$tiny_h <- d$tiny * 1e4 }
+  else if (hand) { d$inc_h <- d$income; d$tiny_h <- d$tiny }
+  s <- spec(ce, hand)
+  t0 <- proc.time()[["elapsed"]]
+  f <- tryCatch(suppressWarnings(suppressMessages(ilm_model(s$f, data = d, family = s$family,
+         ziformula = s$zi, verbose = FALSE))), error = function(e) conditionMessage(e))
+  tt <- proc.time()[["elapsed"]] - t0
+  if (is.character(f)) return(list(row = data.frame(ok = NA, err = substr(f, 1, 150), time = tt)))
+  kf <- if (hand) hand_factor(f, ce) else rep(1, length(f$opt$par))
+  par <- f$opt$par * kf
+  se <- sqrt(pmax(diag(as.matrix(f$sdr$cov.fixed)), 0)) * kf
+  se[!is.finite(diag(as.matrix(f$sdr$cov.fixed)))] <- NA
+  ck <- f$checks
+  row <- data.frame(ok = isTRUE(f$ok), err = NA_character_, time = tt,
+                    n_nonfinite_se = sum(!is.finite(se)), objective = f$opt$objective,
+                    not_ok = paste(ck$check[ck$status != "OK"], collapse = " "),
+                    rescale_remedy = if (!isTRUE(f$ok)) any(grepl("rescale .* by hand",
+                      tryCatch(ilm_remedies(f)$remedy, error = function(e) ""))) else NA)
+  extra <- list(par = unname(par), se = unname(se))
+  if (ce$arm == "R5") {
+    extra$edf <- unname(unlist(f$edf))
+    extra$pred <- as.numeric(stats::predict(f, newdata = d[1:10, ], type = "link"))
+  }
+  list(row = row, extra = extra, fit = f)
+}
+## the noise floor: BEFORE's own objective re-optimised from a jittered start
+jitter_floor <- function(f) {
+  sdrep <- get("sdreport", asNamespace("RTMB"))
+  obj <- f$obj; p0 <- f$opt$par
+  set.seed(1); st <- p0 + stats::rnorm(length(p0), 0, 0.1)
+  o <- tryCatch({ o1 <- stats::nlminb(st, obj$fn, obj$gr); stats::nlminb(o1$par, obj$fn, obj$gr) },
+                error = function(e) NULL)
+  if (is.null(o)) return(NA_real_)
+  s0 <- tryCatch(sdrep(obj, par.fixed = p0), error = function(e) NULL)
+  s1 <- tryCatch(sdrep(obj, par.fixed = o$par), error = function(e) NULL)
+  invisible(tryCatch(obj$fn(p0), error = function(e) NULL))
+  if (is.null(s0) || is.null(s1)) return(NA_real_)
+  se0 <- sqrt(diag(s0$cov.fixed)); se1 <- sqrt(diag(s1$cov.fixed))
+  max(abs(o$par - p0) / pmax(abs(p0), 1e-8), abs(se1 - se0) / pmax(se0, 1e-12), na.rm = TRUE)
+}
+
+if (MODE %in% c("before", "after")) {
+  ways <- if (MODE == "before") c("before", "hand")
+          else c("scale", "centre", "handnew_scale", "handnew_centre")
+  rows <- list(); extras <- list()
+  for (ci in seq_len(nrow(cells))) for (rep in seq_len(NREP)) {
+    ce <- cells[ci, ]; d <- gen(ce, rep)
+    for (w in ways) {
+      if (w != "before" && w != "hand") options(illume.rescale = sub("^handnew_", "", w))
+      r <- one_fit(ce, d, hand = w %in% c("hand", "handnew_scale", "handnew_centre"))
+      rr <- cbind(data.frame(cell = ce$cell, arm = ce$arm, fam = ce$fam, n = ce$n, rep = rep, way = w), r$row)
+      if (w == "before" && ce$arm == "R4" && !is.null(r$fit)) rr$floor <- jitter_floor(r$fit)
+      rows[[length(rows) + 1L]] <- rr
+      extras[[paste(ce$cell, rep, w)]] <- r$extra
+    }
+  }
+  nm <- unique(unlist(lapply(rows, names)))
+  out <- do.call(rbind, lapply(rows, function(x) { for (k in setdiff(nm, names(x))) x[[k]] <- NA; x[nm] }))
+  utils::write.csv(out, file.path(sp, paste0("rescale_", MODE, ".csv")), row.names = FALSE)
+  saveRDS(extras, file.path(sp, paste0("rescale_", MODE, "_extras.rds")))
+  cat("illume", format(utils::packageVersion("illume")), "from", find.package("illume"), "\n")
+  cat(MODE, "fits:", nrow(out), "\n")
+}
+
+if (MODE == "compare") {
+  rd <- lapply(c("before", "after"), function(m) utils::read.csv(file.path(sp, paste0("rescale_", m, ".csv"))))
+  nm <- unique(unlist(lapply(rd, names)))
+  a <- do.call(rbind, lapply(rd, function(x) { for (k in setdiff(nm, names(x))) x[[k]] <- NA; x[nm] }))
+  ex <- c(readRDS(file.path(sp, "rescale_before_extras.rds")), readRDS(file.path(sp, "rescale_after_extras.rds")))
+  ## a coefficient's gap relative to the larger of its size and its SE, so a
+  ## parameter near zero does not inflate it; an SE's relative to itself
+  gap <- function(x, y) {
+    if (is.null(x) || is.null(y) || length(x$par) != length(y$par)) return(NA_real_)
+    v <- c(abs(x$par - y$par) / pmax(abs(y$par), y$se, 1e-12), abs(x$se - y$se) / pmax(y$se, 1e-12))
+    max(v, na.rm = TRUE)
+  }
+  key <- unique(a[, c("cell", "arm", "rep")])
+  res <- do.call(rbind, lapply(seq_len(nrow(key)), function(i) {
+    k <- key[i, ]; g <- function(w) a[a$cell == k$cell & a$rep == k$rep & a$way == w, ]
+    e <- function(w) ex[[paste(k$cell, k$rep, w)]]
+    h <- g("hand"); b <- g("before"); hs <- g("handnew_scale"); hc <- g("handnew_centre")
+    data.frame(k, ok_before = b$ok, ok_hand = h$ok, ok_scale = g("scale")$ok, ok_centre = g("centre")$ok,
+      floor = b$floor %||% NA,
+      ## E1 (amendment A1): against the same data rescaled by hand on the NEW
+      ## build, the same internal problem, so only the conversion differs
+      gap_scale_hand = if (isTRUE(hs$ok) && isTRUE(g("scale")$ok)) gap(e("scale"), e("handnew_scale")) else NA,
+      gap_centre_hand = if (isTRUE(hc$ok) && isTRUE(g("centre")$ok)) gap(e("centre"), e("handnew_centre")) else NA,
+      dobj_scale_hand = if (isTRUE(hs$ok) && isTRUE(g("scale")$ok)) abs(g("scale")$objective - hs$objective) else NA,
+      dobj_centre_hand = if (isTRUE(hc$ok) && isTRUE(g("centre")$ok)) abs(g("centre")$objective - hc$objective) else NA,
+      ## and against HAND on the old build, reported, not graded
+      gap_scale_oldhand = if (isTRUE(h$ok) && isTRUE(g("scale")$ok)) gap(e("scale"), e("hand")) else NA,
+      gap_scale_before = gap(e("scale"), e("before")), gap_centre_before = gap(e("centre"), e("before")),
+      grade_same_scale = identical(g("scale")$ok, b$ok), grade_same_centre = identical(g("centre")$ok, b$ok),
+      remedy_scale = g("scale")$rescale_remedy, ok_r6_scale = g("scale")$ok,
+      edf_gap_scale = if (!is.null(e("scale")$edf) && !is.null(e("handnew_scale")$edf))
+        max(abs(e("scale")$edf - e("handnew_scale")$edf) / pmax(abs(e("handnew_scale")$edf), 1e-8)) else NA,
+      pred_gap_scale = if (!is.null(e("scale")$pred) && !is.null(e("handnew_scale")$pred))
+        max(abs(e("scale")$pred - e("handnew_scale")$pred)) else NA)
+  }))
+  utils::write.csv(res, file.path(sp, "rescale_per_dataset.csv"), row.names = FALSE)
+  floor <- stats::quantile(res$floor[res$arm == "R4"], 0.99, na.rm = TRUE)
+  by_cell <- do.call(rbind, lapply(split(res, res$cell), function(z) data.frame(
+    cell = z$cell[1], arm = z$arm[1], n = nrow(z),
+    ok_before = sum(z$ok_before, na.rm = TRUE), ok_hand = sum(z$ok_hand, na.rm = TRUE),
+    ok_scale = sum(z$ok_scale, na.rm = TRUE), ok_centre = sum(z$ok_centre, na.rm = TRUE),
+    e1_scale_max = suppressWarnings(max(z$gap_scale_hand, na.rm = TRUE)),
+    e1_centre_max = suppressWarnings(max(z$gap_centre_hand, na.rm = TRUE)),
+    e1_obj_scale_max = suppressWarnings(max(z$dobj_scale_hand, na.rm = TRUE)),
+    e1_obj_centre_max = suppressWarnings(max(z$dobj_centre_hand, na.rm = TRUE)),
+    oldhand_gap_median = suppressWarnings(stats::median(z$gap_scale_oldhand, na.rm = TRUE)),
+    e3_scale_max = if (z$arm[1] == "R4") max(z$gap_scale_before, na.rm = TRUE) else NA,
+    e3_centre_max = if (z$arm[1] == "R4") max(z$gap_centre_before, na.rm = TRUE) else NA,
+    e3_grades_scale = if (z$arm[1] == "R4") all(z$grade_same_scale) else NA,
+    e3_grades_centre = if (z$arm[1] == "R4") all(z$grade_same_centre) else NA,
+    r5_edf_max = suppressWarnings(max(z$edf_gap_scale, na.rm = TRUE)),
+    r5_pred_max = suppressWarnings(max(z$pred_gap_scale, na.rm = TRUE)),
+    r6_not_ok = sum(!z$ok_r6_scale, na.rm = TRUE),
+    r6_remedy_named = sum(z$remedy_scale %in% TRUE))))
+  utils::write.csv(by_cell, file.path(sp, "rescale_by_cell.csv"), row.names = FALSE)
+  e1 <- function(v) all(by_cell[[paste0("e1_", v, "_max")]][is.finite(by_cell[[paste0("e1_", v, "_max")]])] <= 1e-6) &&
+    all(by_cell[[paste0("e1_obj_", v, "_max")]][is.finite(by_cell[[paste0("e1_obj_", v, "_max")]])] <= 1e-8)
+  e2 <- function(v) { z <- by_cell[by_cell$arm %in% c("R1", "R2", "R3"), ]; all(z[[paste0("ok_", v)]] >= z$ok_hand - 2) }
+  e3 <- function(v) { z <- by_cell[by_cell$arm == "R4", ]
+    all(z[[paste0("e3_", v, "_max")]] <= 2 * floor) && all(z[[paste0("e3_grades_", v)]]) }
+  r6 <- by_cell[by_cell$arm == "R6", ]
+  v <- data.frame(verdict = c("E1 scale", "E1 centre", "E2 scale", "E2 centre", "E3 scale", "E3 centre",
+                              "R6 remedy named in every failed fit", "noise floor (99th pct)"),
+                  value = c(e1("scale"), e1("centre"), e2("scale"), e2("centre"), e3("scale"), e3("centre"),
+                            r6$r6_remedy_named == r6$r6_not_ok, signif(floor, 3)))
+  pass_s <- e1("scale") && e2("scale") && e3("scale"); pass_c <- e1("centre") && e2("centre") && e3("centre")
+  default <- if (pass_s) "scale" else if (pass_c) "centre" else "neither: to Craig"
+  utils::write.csv(v, file.path(sp, "rescale_verdicts.csv"), row.names = FALSE)
+  print(by_cell, row.names = FALSE); print(v, row.names = FALSE); cat("default by the rule:", default, "\n")
+}
