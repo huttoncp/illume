@@ -196,6 +196,8 @@ Satterthwaite's df were undefined (NaN, infinite or below 1) in 7 fits of 23999;
 | D4 | 12 | 5 | 0.300 | size | 0.087 | 0.142 | 0.040 | 0.088 | 9.000 | 12.000 |   NA |   NA | 0.033 | 0.081 |
 | D4 | 21 | 5 | 0.300 | size | 0.069 | 0.100 | 0.040 | 0.069 | 18.000 | 21.000 |   NA |   NA | 0.001 | 0.010 |
 
+Where a variance is held at zero the Satterthwaite df are the residual variance's own: in D3, with n = G x m observations and 2 fixed effects, the median df are 30 under ML against 28 under REML (n = 30); 50 under ML against 48 under REML (n = 50); 100 under ML against 98 under REML (n = 100). ML's residual variance divides by n and REML's by n - 2, and the df follow: with a variance held, ML's df exceed REML's by the number of fixed effects.
+
 **Paired, chosen after the ML arm ran (post hoc, not a verdict).** Both arms fitted the same data, so per cell the exact two-sided McNemar test on the replicates both fitted: reml_only counts the replicates whose interval covered (or whose test rejected) under REML only, ml_only under ML only (scripts/df_tables_ml_paired.R):
 
 | arm | G | m | icc | what | s_reml | s_ml | s_reml_only | s_ml_only | s_p | z_reml_only | z_ml_only | z_p |

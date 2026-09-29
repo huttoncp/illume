@@ -200,6 +200,7 @@ summarise_study <- function(dir, study) {
                          s_ml_only = ps$ml_only, s_p = pp(ps$p),
                          z_reml_only = pz$reml_only, z_ml_only = pz$ml_only, z_p = pp(pz$p),
                          stringsAsFactors = FALSE)
+      d3c <- cm[cm$arm == "D3", ]
       cov <- ps[ps$what == "covers", ]
       more <- function(x) x$p < 0.05 & x$reml_only > x$ml_only
       less <- function(x) x$p < 0.05 & x$reml_only < x$ml_only
@@ -224,6 +225,13 @@ summarise_study <- function(dir, study) {
         "", said(sm, "ML arm")[1:3],
         "", "**ML against REML on the same replicates** (pre-registered beside the verdicts, not graded): coverage or size by z and Satterthwaite, the median Satterthwaite df, the mean SE, and the share of fits held:",
         "", md_table(cmp),
+        "", paste0("Where a variance is held at zero the Satterthwaite df are the residual ",
+                   "variance's own: in D3, with n = G x m observations and 2 fixed effects, ",
+                   "the median df are ", paste(sprintf("%s under ML against %s under REML (n = %d)",
+                     num(d3c$df_s_ml, 0), num(d3c$df_s_reml, 0), as.integer(d3c$G * d3c$m)),
+                     collapse = "; "),
+                   ". ML's residual variance divides by n and REML's by n - 2, and the df ",
+                   "follow: with a variance held, ML's df exceed REML's by the number of fixed effects."),
         "", paste0("**Paired, chosen after the ML arm ran (post hoc, not a verdict).** Both ",
                    "arms fitted the same data, so per cell the exact two-sided McNemar test ",
                    "on the replicates both fitted: reml_only counts the replicates whose ",
