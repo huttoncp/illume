@@ -61,7 +61,10 @@ test_that("a fit whose gradient breaks down returns, and its checks say so", {
   ck <- f$checks[f$checks$check == "optimizer", ]
   expect_identical(ck$status, "FAIL")
   expect_match(ck$cause, "arithmetic broke down")
-  expect_match(ck$detail, "gradient was not finite")
+  ## one level of brackets, around nlminb's own words
+  expect_match(ck$detail, paste0("^nlminb code 1: the gradient was not finite at a ",
+                                 "point the optimiser tried \\([^()]+\\), so it stopped ",
+                                 "at the best point where it was finite$"))
   ## the remedy is one the package makes -- listed once for every check it
   ## answers -- and the draws warn
   r <- ilm_remedies(f)

@@ -918,7 +918,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   nonfin <- isTRUE(opt$nonfinite)
   ck <- ilm_add_check(ck, "optimizer",
     if (opt$convergence == 0) "OK" else if (g <= 1e-2 && !nonfin) "WARN" else "FAIL",
-    sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
+    sprintf(if (nonfin) "nlminb code %d: %s" else "nlminb code %d (%s)",
+            opt$convergence, opt$message),
     if (nonfin)
       paste0("the objective's arithmetic broke down where the optimiser went, ",
              "so it stopped short of an optimum")
@@ -1467,7 +1468,8 @@ ilm_nlminb <- function(start, obj, ctl) {
        iterations = NA_integer_,
        evaluations = c("function" = NA_integer_, gradient = NA_integer_),
        message = paste0("the gradient was not finite at a point the optimiser ",
-                        "tried (", why, "); stopped at the best point where it was"),
+                        "tried (", why, "), so it stopped at the best point where ",
+                        "it was finite"),
        nonfinite = TRUE)
 }
 
