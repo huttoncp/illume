@@ -1895,6 +1895,31 @@ ilm_grad_judged <- function(gv, dirs = NULL) {
   list(judged = max(abs(gv)), held = held)
 }
 
+## The coefficients' covariance under REML: the Schur complement of the
+## random effects' block of the joint precision, (Hbb - Hbu Huu^-1 Hub)^-1.
+## Solved on unit-diagonal copies of each matrix -- exact, not a
+## regularisation. With the variances near zero, Huu's diagonal runs to
+## 1 / sigma^2, about 1e20, beside the data's O(1) entries: badly scaled
+## rather than singular, but a dense solve() on it stopped the whole fit
+## ("system is computationally singular", reciprocal condition 1e-17) in 20
+## of 4,000 REML fits of low-count areal models. With D = diag(1 / sqrt(diag
+## Huu)), Huu^-1 Hub = D (D Huu D)^-1 D Hub, and D Huu D has a unit diagonal.
+#' @keywords internal
+#' @noRd
+ilm_schur_vb <- function(Hbb, Hbu = NULL, Huu = NULL) {
+  unit_solve <- function(A, B = NULL) {
+    d <- 1 / sqrt(pmax(diag(A), .Machine$double.xmin))
+    As <- A * outer(d, d)
+    if (is.null(B)) return(solve(As) * outer(d, d))
+    d * solve(As, d * B)
+  }
+  S <- if (is.null(Hbu)) Hbb else Hbb - Hbu %*% unit_solve(Huu, t(Hbu))
+  S <- (S + t(S)) / 2
+  V <- unit_solve(S)
+  dimnames(V) <- dimnames(Hbb)
+  V
+}
+
 ## Whether the FIXED effects of a fit carry usable standard errors: a positive
 ## definite Hessian, or a boundary term held at its estimate.
 #' @keywords internal
@@ -2968,11 +2993,10 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ## marginal covariance of beta: Schur-complement the other random effects
     ## out of the joint precision
     Hbb <- as.matrix(jp[ibx, ibx, drop = FALSE])
-    reml_Vb <- if (length(iux)) {
-      Hbu <- as.matrix(jp[ibx, iux, drop = FALSE])
-      Huu <- as.matrix(jp[iux, iux, drop = FALSE])
-      solve(Hbb - Hbu %*% solve(Huu, t(Hbu)))
-    } else solve(Hbb)
+    reml_Vb <- if (length(iux))
+      ilm_schur_vb(Hbb, as.matrix(jp[ibx, iux, drop = FALSE]),
+                   as.matrix(jp[iux, iux, drop = FALSE]))
+    else ilm_schur_vb(Hbb)
     srr <- summary(sdr, "random")
     reml_beta <- srr[rownames(srr) == "beta", 1]
     ## An ML-SHAPED objective, built once and never optimised. V_beta(theta) is

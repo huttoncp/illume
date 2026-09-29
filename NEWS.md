@@ -2,6 +2,15 @@
 
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* **A correction: under `reml = TRUE`, fits whose variances approach zero
+  could fail with a singular-system error.** They now fit. The coefficients'
+  covariance under REML is solved from the random effects' block of the
+  joint precision, whose entries run to about 1e20 as a variance nears zero,
+  beside the data's entries of about 1. A dense solve read that as singular
+  ("system is computationally singular") and stopped the whole fit: 20 of
+  4,000 REML fits of low-count areal models. The block is now solved on a
+  rescaled copy, which is exact. Well-conditioned fits' covariances are
+  unchanged, to 1e-10 relative.
 * **A correction: under `reml = TRUE` the `parameter_aliasing` check read OK
   without examining the coefficients.** REML integrates the fixed effects
   out, so the covariance the check read held only the variance parameters.
