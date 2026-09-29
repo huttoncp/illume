@@ -264,6 +264,10 @@ if (NCORE > 1L) {
   r <- parallel::parLapplyLB(cl, jl, one_ck, chunk.size = 1L)
   parallel::stopCluster(cl)
 } else r <- lapply(jl, one_ck)
-res <- do.call(rbind, r)
+## a replicate whose fit failed outright has fewer columns: bind with every
+## column, NA where a replicate has none (reporting fix after the main run,
+## which stopped here with every fit checkpointed; no fit changes)
+cols <- unique(unlist(lapply(r, names)))
+res <- do.call(rbind, lapply(r, function(x) { x[setdiff(cols, names(x))] <- NA; x[cols] }))
 utils::write.csv(res, file.path(sp, paste0("reml_hold_", tag, ".csv")), row.names = FALSE)
 cat("fits:", nrow(res), " minutes:", round(as.numeric(difftime(Sys.time(), t_all, units = "mins"))), "\n")
