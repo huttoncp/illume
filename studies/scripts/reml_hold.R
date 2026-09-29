@@ -65,6 +65,15 @@
 ##   after the runs. About 30,000 fits and 15,000 fresh, a few tenths of a
 ##   second each: about 4 to 6 core-hours in all.
 ##
+## ## Addendum A1 (2026-09-29, before any main run): the build
+## A smoke run (3 replicates a cell) found every table's df infinite: the
+##   branch at the pre-registration (f5fb8e1) did not yet carry the
+##   Satterthwaite tables, which are on the df-tables branch. The default path
+##   Craig ruled on is REML with those tables, so df-tables is merged into this
+##   branch (0d792a7) and the pinned library is built from the commit that
+##   records this addendum. Nothing else changes; the smoke run's numbers are
+##   not results.
+##
 ## Usage: Rscript reml_hold.R <nrep> <ncore> <outdir> [offset] [cells|all]
 ##        Rscript reml_hold.R summarise <outdir>
 ## ---------------------------------------------------------------------------
