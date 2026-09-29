@@ -32,7 +32,8 @@ ilm_rem_known <- c("category_counts", "weights_type", "re_levels",
                    "obs_per_level", "latent_budget", "obs_per_ar_latent",
                    "optimizer", "gradient", "hessian", "variance_boundary",
                    "smooth_shrinkage", "sigma_rank", "sigma_within",
-                   "rho_boundary", "dispersion_limit", "parameter_aliasing")
+                   "rho_boundary", "dispersion_limit", "parameter_aliasing",
+                   "separation")
 
 ## one remedy: its tier, what it does in words, and the ilm_model() arguments
 ## that make it -- NULL when it has to be done by hand
@@ -427,6 +428,19 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     ilm_rem("structural", "coarsen the time grid given to the AR term, so that neighbouring observations share a latent value"),
     ilm_rem("estimand", "drop the AR term: the correlation over time is then not modelled, and the standard errors stop accounting for it",
             list(ar = NULL))),
+
+  separation = {
+    sp <- fit$separation
+    lv <- if (!is.null(sp) && nrow(sp$levels)) sp$levels[1, ] else NULL
+    list(
+      ilm_rem("estimand", if (!is.null(lv))
+        sprintf("merge '%s' with a neighbouring level of %s, or drop its rows: the level whose outcome does not vary then has a coefficient that can be estimated, or none",
+                lv$level, lv$term)
+        else "merge the level whose outcome does not vary with a neighbouring one, or drop its rows"),
+      ilm_rem("structural", if (!is.null(lv))
+        sprintf("remove %s from the model, if its effect is not the question", lv$term)
+        else "remove the term whose coefficient runs off, if its effect is not the question"))
+  },
 
   parameter_aliasing = {
     ## from the FIRST parenthesis: a parameter name can hold its own,

@@ -1,5 +1,19 @@
 # illume 0.0.8.9003
 
+* Separation is caught and said. When the outcome does not vary within a
+  level of a categorical predictor -- every count zero in one region, every
+  trial a success in one arm -- that level's coefficient has no finite
+  estimate, and the fit used to stop out towards infinity with every check
+  passing: three all-zero rows in one level of a Poisson fit gave a
+  predicted count of 0.00000005. A new `separation` check names the level
+  (or the cell of two factors) from the data before the fit, and catches a
+  coefficient whose likelihood is flat where it stopped after the fit, which
+  also finds separation by a numeric predictor. It FAILs, the fit says so as
+  it returns, `ilm_interpret()` calls the term's effect not estimable for
+  that level (and says whether the other levels' comparisons stand), and
+  `ilm_remedies()` names merging or dropping the level. A factor level no
+  row uses, which the fit drops, is now announced rather than dropped
+  without a word, and recorded in `fit$empty_levels`.
 * `ilm_variogram()`'s spatial advice names the terms that remove the
   structure, in the data's own variables: a smooth of the coordinates,
   `t2(easting, northing)`, for points, and for areal units a Markov random

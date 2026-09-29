@@ -618,6 +618,18 @@ ilm_model_formula <- function(formula, data, family = "auto",
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
+  ## A level no row uses is dropped from the frame: it gets no coefficient and
+  ## cannot be predicted for. That used to happen without a word.
+  empty_lv <- tryCatch(ilm_empty_levels(data, mf, all.vars(gp$pf)),
+                       error = function(e) list())
+  if (length(empty_lv))
+    message("ilm_model(): ", ilm_and(sprintf("`%s` has %s with no rows (%s)",
+              names(empty_lv), ifelse(lengths(empty_lv) == 1L, "a level", "levels"),
+              vapply(empty_lv, function(e) paste(utils::head(e, 5), collapse = ", "), ""))),
+            ", dropped from the fit: no coefficient is estimated for ",
+            if (sum(lengths(empty_lv)) == 1L) "it" else "them",
+            ", and a prediction for one stops. Drop the level with droplevels() to ",
+            "say so, or check the data if a row should be there.")
   ## The variables the terms are built from, for the rows the frame kept. The
   ## frame holds a transformed term as its own column -- "log(x)", a Fourier
   ## basis -- and not the variable underneath, so everything that builds new
@@ -921,6 +933,15 @@ ilm_model_formula <- function(formula, data, family = "auto",
   }
   ## the offset, for the rows the frame kept: log exposure for a rate
   off <- if (length(off_terms)) stats::model.offset(mf) else NULL
+  ## Separation, from the data alone and before the fit: a level (or a cell
+  ## of two factors) whose outcome takes no second value has no finite
+  ## coefficient (see ilm_separation.R). Its flat-likelihood partner is read
+  ## after the fit, and both go into one check.
+  ## A family where no level can be separated (gaussian, survival) has no check.
+  sep_rule <- ilm_sep_rule(fam, !is.null(Zzi))
+  sep_lv <- if (is.null(sep_rule)) NULL else
+    tryCatch(ilm_sep_levels(mf, yi, w, sep_rule, attr(mt, "term.labels"), J),
+             error = function(e) NULL)
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
@@ -987,6 +1008,18 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## hypotheses can be blocked across the category dimension later
   fit$assign      <- asgn
   fit$term_labels <- attr(mt, "term.labels")
+  fit$empty_levels <- empty_lv
+  ## separation: the levels found before the fit, and the coefficients whose
+  ## likelihood is flat where they stopped, in one check
+  if (!is.null(sep_lv)) {
+    sep_fl <- tryCatch(ilm_sep_flat(fit), error = function(e) NULL)
+    if (is.null(sep_fl)) sep_fl <- ilm_sep_flat_none()
+    fit <- ilm_sep_check(fit, sep_lv, sep_fl)
+    if (!isTRUE(fit$checks$status[fit$checks$check == "separation"] == "OK"))
+      message("ilm_model(): ", ilm_sep_words(fit$separation), " Estimates, ",
+              "standard errors and predictions that rest on it mean nothing; the ",
+              "separation check says what to do.")
+  }
   fit
 }
 

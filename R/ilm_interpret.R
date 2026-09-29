@@ -712,6 +712,23 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     xv <- if (!is.null(object$model) && vn %in% names(object$model))
             object$model[[vn]] else NULL
     is_fac <- !is.null(xv) && !is.numeric(xv)
+    ## a separated level has no finite coefficient, so the term's effect is
+    ## not estimable and nothing is said of its size (ilm_separation.R)
+    sl <- object$separation$levels
+    if (!is.null(sl) && nrow(sl) && v %in% sl$term) {
+      s1 <- sl[sl$term == v, ]
+      ## against a separated REFERENCE level every comparison runs off with it
+      ref <- if (!is.null(xv) && !is.numeric(xv)) levels(factor(xv))[1] else NA_character_
+      rest <- if (!is.na(ref) && ref %in% s1$level)
+        sprintf("'%s' is the level every other is compared against, so none of the comparisons is estimable", ref)
+      else "the other levels' coefficients are estimated as usual"
+      lines <- c(lines, sprintf("%s: not estimable for %s. %s, so %s no finite estimate and neither size nor interval means anything; %s (see the separation check).",
+                                vn, ilm_and(sprintf("'%s'", s1$level)),
+                                ilm_and(sprintf("'%s' has %s", s1$level, s1$outcome)),
+                                if (nrow(s1) == 1L) "that level's coefficient has" else "those levels' coefficients have",
+                                rest))
+      next
+    }
     ## a plain variable is said in the response's units, over a change a
     ## reader can picture; anything else -- an interaction, a spline basis --
     ## by its coefficients, below
