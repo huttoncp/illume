@@ -116,6 +116,12 @@ summarise_study <- function(dir, study) {
     v <- read_all(dir, "^df_tables_main_verdicts.csv$")
     sf <- read_all(dir, "^df_tables_fresh_summary.csv$")
     vf <- read_all(dir, "^df_tables_fresh_verdicts.csv$")
+    ## addendum A1: the ML arm, its verdicts, ML against REML on the same
+    ## replicates, and the paired reading made after it ran
+    sm <- read_all(dir, "^df_tables_ml_summary.csv$")
+    vm <- read_all(dir, "^df_tables_ml_verdicts.csv$")
+    cm <- read_all(dir, "^df_tables_ml_vs_reml.csv$")
+    pm <- read_all(dir, "^df_tables_ml_vs_reml_paired.csv$")
     mk <- function(x) ifelse(x$calibrated, num(x$estimate), paste0("**", num(x$estimate), "**"))
     wide <- function(s, arm, split = "all") {
       x <- s[s$arm %in% arm & s$split == split, ]
@@ -177,6 +183,64 @@ summarise_study <- function(dir, study) {
                  tg$G, num(tg$estimate_s), num(tg$estimate_kr)), collapse = "; ")
                else "no cell", "."))
     }
+    ## the ML arm's part: its cells, its verdicts beside the main run's, the
+    ## literal reading of its criterion, the comparison it pre-registered, and
+    ## the paired reading, marked post hoc
+    ml_part <- function() {
+      w <- function(h) ifelse(is.na(h), "NA", ifelse(h, "holds", "does not hold"))
+      crit <- vm$holds[1:2]
+      cells <- wide(sm, c("D1", "D2", "D3", "D4"))
+      cells <- cells[, c("arm", "G", "m", "icc", "fits", "held", "z", "satterthwaite", "df_s")]
+      cmp <- cm[, c("arm", "G", "m", "icc", "what", "z_reml", "z_ml", "s_reml", "s_ml",
+                    "df_s_reml", "df_s_ml", "se_reml", "se_ml", "held_reml", "held_ml")]
+      pp <- function(p) trimws(formatC(p, format = "g", digits = 2))
+      ps <- pm[pm$method == "s", ]; pz <- pm[pm$method == "z", ]
+      pair <- data.frame(arm = ps$arm, G = ps$G, m = ps$m, icc = ps$icc, what = ps$what,
+                         s_reml = ps$reml, s_ml = ps$ml, s_reml_only = ps$reml_only,
+                         s_ml_only = ps$ml_only, s_p = pp(ps$p),
+                         z_reml_only = pz$reml_only, z_ml_only = pz$ml_only, z_p = pp(pz$p),
+                         stringsAsFactors = FALSE)
+      cov <- ps[ps$what == "covers", ]
+      more <- function(x) x$p < 0.05 & x$reml_only > x$ml_only
+      less <- function(x) x$p < 0.05 & x$reml_only < x$ml_only
+      nd <- cov[!more(cov) & !less(cov), ]
+      rej <- ps[ps$what == "rejects", ]
+      c("", paste0("**The ML arm** (addendum A1, pre-registered at 098929e before any of its ",
+                   "fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, ",
+                   "fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. ",
+                   fits_of(sm), " fits (", 24000 - fits_of(sm), " of 24,000 failed to fit). ",
+                   "Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. ",
+                   "Bold, df_s and held as above:"),
+        "", md_table(cells),
+        "", "**The ML arm's verdicts**, beside the main run's (REML):",
+        "", md_table(data.frame(verdict = vm$verdict, ML = w(vm$holds), REML_main = w(v$holds),
+                                stringsAsFactors = FALSE)),
+        "", paste0("**Literal verdict, as pre-registered:** the ML path's default is supported ",
+                   "if the first two verdicts hold under ML. They ",
+                   if (all(crit %in% TRUE)) "both hold, so it is supported."
+                   else paste0("do not both hold: the first ", w(crit[1]), " and the second ",
+                               w(crit[2]), ", so it is not supported, and the addendum ",
+                               "sends that to Craig with a proposal.")),
+        "", said(sm, "ML arm")[1:3],
+        "", "**ML against REML on the same replicates** (pre-registered beside the verdicts, not graded): coverage or size by z and Satterthwaite, the median Satterthwaite df, the mean SE, and the share of fits held:",
+        "", md_table(cmp),
+        "", paste0("**Paired, chosen after the ML arm ran (post hoc, not a verdict).** Both ",
+                   "arms fitted the same data, so per cell the exact two-sided McNemar test ",
+                   "on the replicates both fitted: reml_only counts the replicates whose ",
+                   "interval covered (or whose test rejected) under REML only, ml_only under ",
+                   "ML only (scripts/df_tables_ml_paired.R):"),
+        "", md_table(pair),
+        "", paste0("Satterthwaite under REML covered more often than under ML, at p < 0.05, in ",
+                   sum(more(cov)), " of ", nrow(cov), " D1 to D3 cells; less often in ",
+                   sum(less(cov)), "; not shown different in ", nrow(nd),
+                   if (nrow(nd)) paste0(" (", paste(sprintf("%s G = %d, m = %d: %d against %d, p = %s",
+                     nd$arm, nd$G, nd$m, nd$reml_only, nd$ml_only, pp(nd$p)), collapse = "; "), ")")
+                   else "", ". ",
+                   "In D4, Satterthwaite's F under ML rejected more often than under REML in ",
+                   sum(rej$p < 0.05 & rej$ml_only > rej$reml_only), " of ", nrow(rej),
+                   " cells (sizes ", paste(num(rej$ml), collapse = ", "), " against ",
+                   paste(num(rej$reml), collapse = ", "), ")."))
+    }
     c(paste0("Finite degrees of freedom in a gaussian mixed model's tables. ", fits_of(s),
              " REML fits in the main run (", 24000 - fits_of(s), " of 24,000 failed to fit)",
              if (!is.null(sf)) paste0(" and ", fits_of(sf), " on fresh seeds (",
@@ -203,10 +267,16 @@ summarise_study <- function(dir, study) {
       "", md_table(tv(v, vf)),
       "", said(s, "Main run"),
       if (!is.null(sf)) c("", said(sf, "Fresh seeds")),
+      if (!is.null(sm)) ml_part(),
       "",
-      "CAVEATS that must travel with this result: REML throughout, as Kenward-Roger",
-      "requires; the z and Satterthwaite figures under ML would differ. D2's",
-      "intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the",
+      if (is.null(sm)) c(
+        "CAVEATS that must travel with this result: REML throughout, as Kenward-Roger",
+        "requires; the z and Satterthwaite figures under ML would differ.")
+      else c(
+        "CAVEATS that must travel with this result: the main and fresh runs are REML,",
+        "as Kenward-Roger requires; the ML arm measures ilm_model()'s default, and its",
+        "paired reading was chosen after it ran."),
+      "D2's intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the",
       "script's header before any run. The default's scope was narrowed to linear",
       "mixed models (acf93c2) before the runs; every cell here is one.")
   } else if (study == "power") {

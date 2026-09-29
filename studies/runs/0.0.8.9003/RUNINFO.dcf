@@ -33,3 +33,14 @@ Note: The df tables study (D-DF1 to D-DF5), pre-registered in
  checkpointed (its script was edited while it ran); run again, it read all
  12,000 from the checkpoints and refitted none. Per-cell summaries and the
  verdicts are filed here; the per-fit tables stay on local disk.
+Note: The df tables study's ML arm (addendum A1), pre-registered in
+ studies/scripts/df_tables.R at 098929e before any of its fits: the 24
+ cells on the main run's seeds, 1,000 replicates per cell, reml = FALSE,
+ 24,000 fits (1 failed) in 78 minutes on 1 worker, 2026-09-29, from a copy
+ of the script byte-identical to 098929e's, in the main run's pinned
+ library (illume acf93c2), whose manifest was the same after the run. It
+ started early, when a waiter read an older check log; every fit is seeded
+ and checkpointed, so no number depends on when it ran. Its per-cell
+ summary, verdicts and the pre-registered ML-against-REML table are filed
+ here, with a paired McNemar reading chosen after it ran
+ (scripts/df_tables_ml_paired.R); the per-fit tables stay on local disk.
