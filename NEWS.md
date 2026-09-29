@@ -2,6 +2,27 @@
 
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* **A correction: REML fits of a count or yes/no outcome whose every variance
+  was at zero were graded usable when they should not have been.** Under
+  `reml = TRUE` the fixed effects are integrated out, so for a non-gaussian
+  family the variances are the only parameters the optimiser estimates.
+  When every one of them reached its boundary, there was nothing left to
+  hold them around, and the fit fell through unheld:
+  - a single `(1 | area)` of a binomial at zero was graded clean, in 4 fits
+    of 4 in a probe;
+  - a BYM fit with both terms at zero was graded usable, and its region
+    intervals covered a third of the regions;
+  - a third fit of the same kind had no intervals at all.
+  Such a fit is now held whole and reported as the plain model: its fixed
+  effects and standard errors are the GLM's (equal to `glm()` to 1e-6).
+  Its hessian line is a WARN, never a clean pass, and group-level
+  predictions from it warn that their intervals are conditional on the
+  variances being zero. Gaussian REML fits, and every fit by maximum
+  likelihood, hold as before.
+  **For an existing `reml = TRUE` fit of a non-gaussian family:** check
+  whether every variance's SD is below 1e-3 (`ilm_varcorr()`). If it is, the
+  fixed effects stand, but do not read its group-level intervals as group
+  estimates. Refit with this version, or with `reml = FALSE`.
 * The `gradient` check reports the gradient along a held direction but does
   not judge it. A term held at its boundary estimate -- a negative binomial's
   k run off to its limit, a variance at zero -- sits where the likelihood is

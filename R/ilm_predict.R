@@ -861,6 +861,14 @@ predict.ilm_model <- function(object, newdata = NULL,
       return(est)
     }
     jd <- list(draws = dr$draws, which = rownames(dr$draws))
+    ## every variance held at its boundary: the fit is the plain model, and a
+    ## group's interval is conditional on no variation between groups
+    if (identical(object$hessian_how, "reduced"))
+      warning("every variance parameter of this fit is at its boundary, so ",
+              "these group-level intervals are conditional on those variances ",
+              "being zero and leave out their uncertainty; they are not intervals ",
+              "for the groups' own effects (see the hessian line of fit$checks)",
+              call. = FALSE)
   } else if (!is.null(object$jointPrecision))
     jd <- ilm_joint_draws(object, nsim, seed + 1L)
   if (is.null(jd)) {

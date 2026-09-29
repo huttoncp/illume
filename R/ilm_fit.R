@@ -998,7 +998,23 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   anyNaN <- any(!is.finite(cfd[judged])) || any(cfd[judged] <= 0)
   lb <- pre$status[pre$check == "latent_budget"]
   held_cov <- setdiff(held, "dispersion")
-  if (identical(how, "boundary") && !anyNaN && !length(held_cov)) {
+  if (identical(how, "reduced")) {
+    ## every outer parameter held at its boundary (see ilm_hess_recover()):
+    ## never a clean pass, since group-level results assume no variation
+    hq <- paste(sQuote(held, FALSE), collapse = ", ")
+    ck <- ilm_add_check(ck, "hessian", "WARN",
+      sprintf("every variance parameter is at its boundary (%s): all are held, and the fit reduces to the plain model without its random terms", hq),
+      paste0("the model's variances are the only parameters the optimiser ",
+             "estimates here -- under REML the fixed effects are integrated out -- ",
+             "and every one of them is at zero or its limit, so the data show no ",
+             "variation between groups beyond the fixed effects"),
+      paste0("the fixed effects and their standard errors are the plain ",
+             "model's and are usable. Group-level predictions and their intervals ",
+             "are conditional on those variances being zero and leave out their ",
+             "uncertainty, so do not read them as group estimates; ",
+             "ilm_remedies() lists what keeps a variance off zero. Refitting with ",
+             "reml = FALSE holds the terms the usual way"))
+  } else if (identical(how, "boundary") && !anyNaN && !length(held_cov)) {
     ## only the dispersion is held; its own check below says why
     ck <- ilm_add_check(ck, "hessian", "BOUNDARY",
       "flat along the dispersion, which is at its limit; that direction is held at its estimate",
@@ -1652,6 +1668,32 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
   out <- list(sdr = sdr, how = "none", held = character(0), flat = 0L)
   if (!length(opt$par)) return(out)
+  ## EVERY OUTER PARAMETER AT ITS BOUNDARY. Under REML the fixed effects are
+  ## integrated out, so a count or yes/no model's only outer parameters are
+  ## its variances. With every one of them flagged at its boundary, the routes
+  ## below have nothing left to hold them around -- both need a kept
+  ## parameter -- and the fit fell through unheld. Measured: a BYM fit whose
+  ## Hessian then failed (no intervals at all); another whose Hessian TMB
+  ## called positive definite, graded usable, with region intervals covering
+  ## a third of the regions; and a binomial with a single (1 | area) at zero,
+  ## graded clean in 4 fits of 4. The fit is the plain model without its
+  ## random terms. So all of them are held, whatever their curvature, and the
+  ## coefficients' covariance is the inner Hessian's, given them.
+  allb <- flagged && all(seq_along(opt$par) %in%
+                           unlist(cb$blocks[cb$flagged], use.names = FALSE))
+  if (allb) {
+    n <- length(opt$par)
+    Hm <- diag(1e12, n)
+    s2 <- tryCatch(suppressWarnings(
+      sdreport(obj, par.fixed = opt$par, hessian.fixed = Hm,
+               getJointPrecision = joint)), error = function(e) NULL)
+    if (!is.null(s2)) {
+      cf <- s2$cov.fixed; cf[] <- NA_real_
+      s2$cov.fixed <- cf; s2$pdHess <- FALSE
+      return(list(sdr = s2, how = "reduced", held = cb$flagged, flat = n,
+                  H = Hm, dirs = diag(1, n)))
+    }
+  }
   ## A dispersion at its limit is held whatever its curvature -- and also
   ## where the fit stopped short of a stationary point, which the recomputed
   ## covariance below refuses. There the standard errors are TMB's own, from
