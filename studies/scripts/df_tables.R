@@ -72,8 +72,34 @@
 ##   intercept SD in D2 is set by an ICC of 0.3, as in D4, and the intercept
 ##   of every arm is 1. A fit's "held" is `length(f$hessian_held) > 0`.
 ##
-## Usage: Rscript df_tables.R <nrep> <ncore> <outdir> [offset] [cells]
-##        Rscript df_tables.R summarise <outdir>
+## ## Addendum A1 (2026-09-29, committed before any of its fits): the ML arm
+## Every fit above was REML, as KR requires, and the study validated
+##   Satterthwaite on REML fits. But ilm_model()'s default is maximum
+##   likelihood, and a default gaussian mixed fit gets Satterthwaite df too,
+##   computed at the ML variance estimates, which are smaller with few
+##   clusters. Measured before this addendum: 6 clusters of 8, a
+##   between-cluster slope, df 6.0 and SE 0.359 by ML against 4.0 and 0.440 by
+##   REML. No study covered that path. So:
+## - Arm ML: the same 24 cells, the MAIN seeds (offset 0), 1,000 replicates
+##   per cell, reml = FALSE; everything else as above. Kenward-Roger is
+##   derived for REML and refuses an ML fit, so its columns are NA, and the
+##   refusal is recorded.
+## - The same bands and the same verdict lines, applied to the ML fits. The
+##   ML path's default is supported if the first two hold there: Satterthwaite
+##   calibrated in every D1 and D2 cell with G >= 10, and closer to 0.95 than z
+##   in every cell with G = 6. If they do not hold, that goes to Craig with a
+##   proposal (REML by default for gaussian mixed models, item 249 option c;
+##   or df from REML variance estimates for an ML fit). Until this arm
+##   reports, the NEWS says the validated path is REML.
+## - Beside the verdicts, not graded: per cell, ML against REML on the same
+##   replicates (the same data, since the seeds are the main run's): the
+##   coverage (and D4's size) by z and Satterthwaite, the median
+##   Satterthwaite df, the mean SE, and the share of fits held.
+## - The build: the main run's pinned library (lib-dfs), unchanged.
+## - Size: 24,000 fits without KR, about 2 to 3 core-hours on one core.
+##
+## Usage: Rscript df_tables.R <nrep> <ncore> <outdir> [offset] [cells|all] [reml|ml]
+##        Rscript df_tables.R summarise <outdir> [REML main csv, for the ML comparison]
 ## ---------------------------------------------------------------------------
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -83,8 +109,11 @@ if (!SUMMARISE) {
   NCORE  <- if (length(args) >= 2) as.integer(args[2]) else 1L
   sp     <- if (length(args) >= 3) args[3] else "."
   OFFSET <- if (length(args) >= 4) as.integer(args[4]) else 0L
-  ## a subset of cells, for the smoke run only
-  ONLY   <- if (length(args) >= 5) as.integer(strsplit(args[5], ",")[[1]]) else NULL
+  ## a subset of cells, for the smoke run only ("all" for every cell)
+  ONLY   <- if (length(args) >= 5 && !identical(args[5], "all"))
+    as.integer(strsplit(args[5], ",")[[1]]) else NULL
+  ## Addendum A1: the estimation method, REML unless "ml"
+  REML   <- !(length(args) >= 6 && identical(args[6], "ml"))
 } else sp <- if (length(args) >= 2) args[2] else "."
 dir.create(sp, showWarnings = FALSE, recursive = TRUE)
 suppressPackageStartupMessages(library(illume))
@@ -151,7 +180,7 @@ one <- function(job) {
                     rep = job$rep, seed = seed)
   t0 <- proc.time()[["elapsed"]]
   f <- tryCatch(suppressMessages(suppressWarnings(ilm_model(fml[[ce$arm]], data = d,
-         family = "gaussian", reml = TRUE, verbose = FALSE))), error = function(e) NULL)
+         family = "gaussian", reml = REML, verbose = FALSE))), error = function(e) NULL)
   t_fit <- proc.time()[["elapsed"]] - t0
   if (is.null(f)) return(cbind(key, ok = FALSE))
   ck <- f$checks
@@ -282,8 +311,28 @@ verdicts <- function(s) {
               all(at("D4", c(6, 12, 21), "z")$calibrated)))
 }
 
+## Addendum A1: ML against REML on the same replicates, per cell
+ml_vs_reml <- function(ml, reml) {
+  ml <- ml[ml$ok %in% TRUE, ]; reml <- reml[reml$ok %in% TRUE, ]
+  m <- merge(reml, ml, by = c("cell", "rep"), suffixes = c("_reml", "_ml"))
+  do.call(rbind, lapply(sort(unique(m$cell)), function(cl) {
+    z <- m[m$cell == cl, ]; arm <- z$arm_reml[1]
+    cov <- function(k, sfx) if (arm == "D4") mean(z[[paste0("p_", k, "_", sfx)]] < 0.05, na.rm = TRUE)
+                            else mean(z[[paste0("cover_", k, "_", sfx)]], na.rm = TRUE)
+    dfs <- function(sfx) stats::median(z[[paste0(if (arm == "D4") "dendf_s_" else "df_s_", sfx)]], na.rm = TRUE)
+    se <- function(sfx) if (arm == "D4") NA_real_ else mean(z[[paste0("se_s_", sfx)]], na.rm = TRUE)
+    data.frame(cell = cl, arm = arm, G = z$G_reml[1], m = z$m_reml[1], icc = z$icc_reml[1],
+               pairs = nrow(z), what = if (arm == "D4") "size" else "coverage",
+               z_reml = cov("z", "reml"), z_ml = cov("z", "ml"),
+               s_reml = cov("s", "reml"), s_ml = cov("s", "ml"),
+               df_s_reml = dfs("reml"), df_s_ml = dfs("ml"),
+               se_reml = se("reml"), se_ml = se("ml"),
+               held_reml = mean(z$held_reml), held_ml = mean(z$held_ml))
+  }))
+}
+
 if (SUMMARISE) {
-  for (tag in c("main", "fresh")) {
+  for (tag in c("main", "fresh", "ml")) {
     fp <- file.path(sp, paste0("df_tables_", tag, ".csv"))
     if (!file.exists(fp)) next
     s <- summarise_fits(utils::read.csv(fp))
@@ -291,6 +340,13 @@ if (SUMMARISE) {
     v <- verdicts(s)
     utils::write.csv(v, file.path(sp, paste0("df_tables_", tag, "_verdicts.csv")), row.names = FALSE)
     cat("==", tag, "==\n"); print(v, row.names = FALSE)
+  }
+  fm <- file.path(sp, "df_tables_ml.csv")
+  fr <- if (length(args) >= 3) args[3] else file.path(sp, "df_tables_main.csv")
+  if (file.exists(fm) && file.exists(fr)) {
+    cmp <- ml_vs_reml(utils::read.csv(fm), utils::read.csv(fr))
+    utils::write.csv(cmp, file.path(sp, "df_tables_ml_vs_reml.csv"), row.names = FALSE)
+    cat("== ML against REML, same replicates ==\n"); print(cmp, row.names = FALSE, digits = 3)
   }
   quit(save = "no")
 }
@@ -301,6 +357,7 @@ use <- if (is.null(ONLY)) cells else cells[cells$cell %in% ONLY, ]
 jobs <- merge(use[, "cell", drop = FALSE], data.frame(rep = seq_len(NREP)))
 jl <- split(jobs, seq_len(nrow(jobs)))
 tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
+if (!REML) tag <- paste0("ml", if (identical(tag, "main")) "" else paste0("_", tag))
 ## CHECKPOINTS (an I/O change, no effect on results): each fit's result is
 ## saved as it finishes, and a run started again reads the fits already done
 ## instead of refitting them. Every fit sets its own seed from its cell and

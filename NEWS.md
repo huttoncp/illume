@@ -16,6 +16,13 @@
   gaussian fit. Other families, linear models, and censored or dispersion
   models with nothing integrated out are unchanged. On a small between-cluster design the
   z test's p for a between-cluster effect was too small.
+  **The validated path is REML.** The study behind the default
+  (`studies/findings/df_tables.md`) fitted every model with `reml = TRUE`.
+  A default fit is by maximum likelihood, and its Satterthwaite df come from
+  the ML variance estimates, which are smaller with few clusters. On 6
+  clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
+  4.0 and 0.44 by REML. That path is being studied now. Until it reports,
+  fit with `reml = TRUE` for the tables the study supports.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
