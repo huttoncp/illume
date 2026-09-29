@@ -1,5 +1,15 @@
 # illume 0.0.8.9003
 
+* A model whose fixed-effect columns are not all separable stops before the
+  fit and says why. The whole fixed design is checked for rank, a smooth's
+  unpenalised columns with it: `s(x, by = z) + s(w, by = z)`, whose
+  unpenalised parts both hold z; `poly(z, 2) + s(x, by = z)`; `x + s(x)`;
+  two covariates one a multiple of the other; an interaction with an empty
+  cell. Each used to fit and come back with a failed Hessian and standard
+  errors of NaN, or a FAIL after the fit, with the advice pointing
+  elsewhere. The message names the columns, the terms and the fix -- for an
+  empty cell, which cells. A numeric `by` beside its own main effect keeps
+  its own message.
 * Predictors in any units. The fit rescales each column of the fixed-effect
   design, the zero part's and the dispersion model's to unit SD, fits there,
   and converts the estimates, covariance, joint precision and Hessian back to

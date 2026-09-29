@@ -845,6 +845,12 @@ ilm_model_formula <- function(formula, data, family = "auto",
     }
   }
 
+  ## ---- the whole fixed design, smooths' null spaces included, must have
+  ## full rank (ilm_alias.R): a dependence is named before the fit, not left
+  ## to come back as a failed Hessian and standard errors of NaN
+  alias <- ilm_alias_find(X, asgn, attr(mt, "term.labels"))
+  if (!is.null(alias)) stop(ilm_alias_message(alias, mf), call. = FALSE)
+
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
     ## the grouping side as model.frame() names a column: a lone name bare,
