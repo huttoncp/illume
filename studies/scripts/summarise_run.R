@@ -105,6 +105,110 @@ summarise_study <- function(dir, study) {
       "failed fits are excluded, so if failure correlates with extreme estimates",
       "the surviving coverage is optimistic.")
 
+  } else if (study == "df_tables") {
+    ## Finite df in a gaussian mixed model's tables (Craig's D-DF1 to D-DF5):
+    ## coverage of the effect's 95% interval (D1 to D3) and the size of the F
+    ## test (D4) under z, Satterthwaite and Kenward-Roger, per cell, with the
+    ## pre-registered verdicts from the main run and again on fresh seeds.
+    ## Every sentence is computed from the per-cell summaries, the ones that
+    ## go against the default included.
+    s <- read_all(dir, "^df_tables_main_summary.csv$"); if (is.null(s)) return(NULL)
+    v <- read_all(dir, "^df_tables_main_verdicts.csv$")
+    sf <- read_all(dir, "^df_tables_fresh_summary.csv$")
+    vf <- read_all(dir, "^df_tables_fresh_verdicts.csv$")
+    mk <- function(x) ifelse(x$calibrated, num(x$estimate), paste0("**", num(x$estimate), "**"))
+    wide <- function(s, arm, split = "all") {
+      x <- s[s$arm %in% arm & s$split == split, ]
+      do.call(rbind, lapply(unique(x$cell), function(k) {
+        z <- x[x$cell == k, ]; g <- function(m) z[z$method == m, ]
+        data.frame(arm = z$arm[1], G = z$G[1], m = z$m[1], icc = z$icc[1],
+                   fits = g("s")$n, held = g("s")$n_held,
+                   z = mk(g("z")), satterthwaite = mk(g("s")), kenward_roger = mk(g("kr")),
+                   df_s = num(g("s")$df_median, 1), df_kr = num(g("kr")$df_median, 1),
+                   stringsAsFactors = FALSE)
+      }))
+    }
+    d3 <- function(s) rbind(transform(wide(s, "D3"), fits_in = "all"),
+                            transform(wide(s, "D3", "held"), fits_in = "held"),
+                            transform(wide(s, "D3", "unheld"), fits_in = "unheld"))
+    tv <- function(v, vf) {
+      w <- function(h) ifelse(is.na(h), "NA", ifelse(h, "holds", "does not hold"))
+      out <- data.frame(verdict = v$verdict, main = w(v$holds), stringsAsFactors = FALSE)
+      if (!is.null(vf)) {
+        out$fresh <- w(vf$holds)
+        out$agree <- ifelse(out$main == out$fresh, "yes", "NO")
+      }
+      out
+    }
+    fits_of <- function(s) sum(s$n[s$split == "all" & s$method == "s"])
+    ## the sentences, for one run
+    said <- function(s, run) {
+      a <- s[s$split == "all", ]
+      miss <- function(G, meth) {
+        x <- a[a$arm %in% c("D1", "D2") & a$G %in% G & a$method == meth & !a$calibrated, ]
+        if (!nrow(x)) return("none")
+        paste(sprintf("%s G = %d, m = %d, ICC %s: %s", x$arm, x$G, x$m, x$icc,
+                      num(x$estimate)), collapse = "; ")
+      }
+      six <- merge(a[a$arm %in% c("D1", "D2") & a$G == 6 & a$method == "z", c("cell", "arm", "m", "icc", "estimate")],
+                   a[a$arm %in% c("D1", "D2") & a$G == 6 & a$method == "s", c("cell", "estimate")],
+                   by = "cell", suffixes = c("_z", "_s"))
+      zc <- six[abs(six$estimate_z - 0.95) <= abs(six$estimate_s - 0.95), ]
+      h <- s[s$arm == "D3" & s$split == "held", ]
+      hh <- merge(h[h$method == "s", c("G", "calibrated", "estimate")],
+                  h[h$method == "kr", c("G", "calibrated", "estimate")],
+                  by = "G", suffixes = c("_s", "_kr"))
+      tg <- hh[!hh$calibrated_s & hh$calibrated_kr, ]
+      c(paste0("**", run, ".** Satterthwaite missed calibration in the D1 and D2 cells ",
+               "with G >= 10 at: ", miss(c(10, 20), "s"), "; z at: ", miss(c(10, 20), "z"), "."),
+        paste0("At G = 6, z was as close to 0.95 as Satterthwaite or closer in ",
+               nrow(zc), " of ", nrow(six), " D1 and D2 cells",
+               if (nrow(zc)) paste0(" (", paste(sprintf("%s m = %d, ICC %s: z %s, Satterthwaite %s",
+                 zc$arm, zc$m, zc$icc, num(zc$estimate_z), num(zc$estimate_s)),
+                 collapse = "; "), ")") else "", "."),
+        paste0("Satterthwaite's df were undefined (NaN, infinite or below 1) in ",
+               sum(a$df_bad[a$method == "s"]), " fits of ", fits_of(s),
+               "; a table warned of a fallback to z in ", sum(a$warned[a$method == "s"]),
+               "; ", sum(a$errors[a$method == "s"]), " stopped with an error."),
+        paste0("The pre-registered trigger for a proposal before the default ships ",
+               "for held fits -- Satterthwaite uncalibrated in D3's held fits where ",
+               "Kenward-Roger is calibrated -- is met at: ",
+               if (nrow(tg)) paste(sprintf("G = %d (Satterthwaite %s, Kenward-Roger %s)",
+                 tg$G, num(tg$estimate_s), num(tg$estimate_kr)), collapse = "; ")
+               else "no cell", "."))
+    }
+    c(paste0("Finite degrees of freedom in a gaussian mixed model's tables. ", fits_of(s),
+             " REML fits in the main run (", 24000 - fits_of(s), " of 24,000 failed to fit)",
+             if (!is.null(sf)) paste0(" and ", fits_of(sf), " on fresh seeds (",
+                                      12000 - fits_of(sf), " of 12,000 failed)") else "",
+             ", each tested by z, Satterthwaite and Kenward-Roger at the same optimum. ",
+             "Coverage of the effect's 95% interval (nominal 0.95) or the F test's size ",
+             "(nominal 0.05); calibrated is within 2 Monte Carlo SEs of the target (0.936 to ",
+             "0.964 at 1,000 replicates, 0.931 to 0.970 at 500), and a figure in bold is not. ",
+             "held counts fits with a variance direction held at its boundary; df_s and ",
+             "df_kr are median df."),
+      "", "**D1, a between-cluster effect** (y ~ trt + (1 | g), half the clusters treated):",
+      "", md_table(wide(s, "D1")),
+      "", "**D2, a within-cluster slope** (y ~ x + (1 + x | g), slope SD 0.3, correlation 0.3):",
+      "", md_table(wide(s, "D2")),
+      "", "**D3, a variance held at its boundary** (y ~ trt + (1 | g), intercept SD 0 in truth), all fits and then by whether the fit held it:",
+      "", md_table(d3(s)),
+      "", "**D4, the F test of a 3-level between-cluster factor with no effect** (size; z is the Wald chi-square):",
+      "", md_table(wide(s, "D4")),
+      if (!is.null(sf))
+        c("", "**Fresh seeds**, every cell, and D3 by whether the fit held it:",
+          "", md_table(rbind(transform(wide(sf, c("D1", "D2", "D4")), fits_in = "all"),
+                             d3(sf)))),
+      "", "**The pre-registered verdicts**, main run and fresh seeds:",
+      "", md_table(tv(v, vf)),
+      "", said(s, "Main run"),
+      if (!is.null(sf)) c("", said(sf, "Fresh seeds")),
+      "",
+      "CAVEATS that must travel with this result: REML throughout, as Kenward-Roger",
+      "requires; the z and Satterthwaite figures under ML would differ. D2's",
+      "intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the",
+      "script's header before any run. The default's scope was narrowed to linear",
+      "mixed models (acf93c2) before the runs; every cell here is one.")
   } else if (study == "power") {
     d <- read_all(dir, "^power_summary.csv$"); if (is.null(d)) return(NULL)
     nul <- d[d$delta == 0, c("cell", "n_wald", "rej_wald", "rej_lrt")]

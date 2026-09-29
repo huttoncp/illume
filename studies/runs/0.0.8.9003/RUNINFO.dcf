@@ -1,7 +1,8 @@
 Version: 0.0.8.9003
 Date: 2026-09-28
 R: 4.4.3
-Studies: variance_draws
+Studies: variance_draws, df_tables
+Date.df_tables: 2026-09-28
 Date.variance_draws: 2026-09-28
 Note: Arm B of item 78, pre-registered in studies/scripts/variance_draws.R
  (header ce21f68). The main run (100 replicates per cell, 7,600 fits) and
@@ -22,3 +23,13 @@ Note: Changes after the pre-registration, before any main-run data: the
  summariser only (01d5b66): no fit was rerun and no per-fit number changed.
 Note: One fit of 7,600 failed (cell 28, rep 9: a 12-point gaussian AR(1)
  series, nlminb stopping on an NA/NaN gradient); none of the fresh run's.
+Note: The df tables study (D-DF1 to D-DF5), pre-registered in
+ studies/scripts/df_tables.R (6eeeec7; code c0f3db5, the verdict relabelled
+ for reading after the main run, no number changed). The main run (1,000
+ replicates per cell, 24,000 fits) and the fresh-seed run (500 per cell,
+ 12,000 fits, seeds offset by 1,000,000) ran on illume acf93c2 in a pinned
+ library (17 packages) whose manifest did not change over either run, on 2
+ workers. The fresh run's final bind failed after every fit was
+ checkpointed (its script was edited while it ran); run again, it read all
+ 12,000 from the checkpoints and refitted none. Per-cell summaries and the
+ verdicts are filed here; the per-fit tables stay on local disk.
