@@ -2,6 +2,18 @@
 
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* **A correction: under `reml = TRUE` the `parameter_aliasing` check read OK
+  without examining the coefficients.** REML integrates the fixed effects
+  out, so the covariance the check read held only the variance parameters.
+  Two coefficients that the data could not separate were never compared,
+  and a fit with one variance reported "0.000 (theta <-> theta)", a
+  parameter against itself. The check now puts the coefficients' covariance
+  (from the joint precision) beside the variances'. A near-aliased pair is
+  caught under REML as under maximum likelihood, and a fit with a single
+  parameter says there is nothing to correlate. Where every correlation is
+  zero, the pair named is a real pair, never a parameter against itself;
+  that affected maximum likelihood fits too. Exact aliasing was already
+  refused before the fit, REML or not.
 * **A correction: REML fits of a count or yes/no outcome whose every variance
   was at zero were graded usable when they should not have been.** Under
   `reml = TRUE` the fixed effects are integrated out, so for a non-gaussian

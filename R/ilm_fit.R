@@ -922,7 +922,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
                       pnames = NULL, gap = NULL, hess = NULL,
                       boundary = character(0), avoided = FALSE,
                       ar_type = NULL, disp = NULL, fam_name = NULL,
-                      ysd = NA_real_, restarts = NULL) {
+                      ysd = NA_real_, restarts = NULL, Vb = NULL) {
   how <- if (is.null(hess)) "tmb" else hess$how
   ## The remedy a boundary check names. Under the default the penalised
   ## alternative is named with what it costs; a fit that already used it
@@ -1188,14 +1188,40 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   cf <- sdr$cov.fixed
   pnm <- if (!is.null(pnames) && !is.null(cf) && length(pnames) == ncol(cf)) pnames
          else make.unique(names(obj$par))
+  ## Under REML the coefficients are integrated out, so cov.fixed holds only
+  ## the variance parameters, and this check read OK without ever looking at
+  ## the coefficients -- "0.000 (theta <-> theta)" on a fit with one variance.
+  ## Their covariance `Vb` (from the joint precision) is put beside the
+  ## variances', the two blocks taken as uncorrelated: under REML the
+  ## coefficients are estimated given the variances.
+  if (!is.null(Vb) && !is.null(cf)) {
+    nb <- nrow(Vb)
+    ok_names <- !is.null(pnames) && length(pnames) == nb + ncol(cf)
+    pnm <- if (ok_names) pnames[-seq_len(nb)] else make.unique(names(obj$par))
+    bnm <- if (ok_names) pnames[seq_len(nb)] else paste0("beta", seq_len(nb))
+  }
   ## a term held at its boundary has no covariance to correlate; judge the rest
   if (!is.null(cf) && length(held)) {
     ok <- is.finite(diag(cf))
     cf <- cf[ok, ok, drop = FALSE]; pnm <- pnm[ok]
   }
-  if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
+  if (!is.null(Vb) && !is.null(cf)) {
+    k1 <- nb; k2 <- ncol(cf)
+    cc <- matrix(0, k1 + k2, k1 + k2)
+    cc[seq_len(k1), seq_len(k1)] <- as.matrix(Vb)
+    if (k2) cc[k1 + seq_len(k2), k1 + seq_len(k2)] <- cf
+    cf <- cc; pnm <- c(bnm, pnm)
+  }
+  if (!is.null(cf) && ncol(cf) == 1L && all(is.finite(cf)) && all(diag(cf) > 0)) {
+    ck <- ilm_add_check(ck, "parameter_aliasing", "OK",
+      sprintf("one parameter only (%s): nothing to correlate", pnm[1]), "", "")
+  } else if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
     cm <- cov2cor(cf); cm[!upper.tri(cm)] <- 0
-    mx <- max(abs(cm)); ij <- which(abs(cm) == mx, arr.ind = TRUE)[1, ]
+    ## the pair from the upper triangle only: where every correlation is 0 (two
+    ## uncorrelated blocks), matching the zeroed diagonal named a parameter
+    ## against itself
+    mx <- max(abs(cm[upper.tri(cm)]))
+    ij <- which(upper.tri(cm) & abs(cm) == mx, arr.ind = TRUE)[1, ]
     pair <- sprintf("%s <-> %s", pnm[ij[1]], pnm[ij[2]])
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
@@ -2962,7 +2988,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                     disp = if ("dispersion" %in% cb$flagged)
                       list(family = fam$name,
                            value = exp(opt$par[pn == "logdisp"]), ysd = ysd),
-                    fam_name = fam$name, ysd = ysd, restarts = rs)
+                    fam_name = fam$name, ysd = ysd, restarts = rs,
+                    Vb = if (reml) reml_Vb else NULL)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {
