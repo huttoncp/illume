@@ -3079,12 +3079,16 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
       if (is.null(P)) return(P)
       I <- blk(nms); if (!length(I)) return(P)
       B <- ilm_param_map(nms, maps)$Ainv[I, I, drop = FALSE]
-      sp <- methods::is(P, "sparseMatrix")
+      sp <- inherits(P, "sparseMatrix")
       out <- as.matrix(P)
       out[I, ] <- t(B) %*% out[I, , drop = FALSE]
       out[, I] <- out[, I, drop = FALSE] %*% B
       dimnames(out) <- dimnames(P)
-      if (sp) methods::as(Matrix::Matrix(out, sparse = TRUE), "CsparseMatrix") else out
+      if (!sp) return(out)
+      ## back to a general sparse matrix, without the methods package
+      nz <- which(out != 0, arr.ind = TRUE)
+      Matrix::sparseMatrix(i = nz[, 1], j = nz[, 2], x = out[nz], dims = dim(out),
+                           dimnames = dimnames(out))
     }
     ## put the fitting tape at its optimum, and read its parameter list there
     invisible(tryCatch(obj$fn(if (reml) opt$par[names(opt$par) != "beta"] else opt$par),

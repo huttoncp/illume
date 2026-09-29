@@ -87,6 +87,38 @@ test_that("a beta's phi is held at its limit, and not at a curved optimum", {
   expect_false("dispersion" %in% f2$hessian_held)
 })
 
+test_that("the hold reads the same whatever the covariate's units, at both edges", {
+  ## The rule reads logdisp and the variance parameters, which rescaling never
+  ## touches, on the tape the fit ran on. x in large units is rescaled inside
+  ## the fit; x / sd(x) by hand is inside the band and left alone. At the
+  ## limit (k run off, the push of 3 moving the objective by about 1e-7) both
+  ## are held; with a finite k neither is flagged, and both land where the
+  ## fit on x as given does. (A beta near the flatness tolerance is not used
+  ## here: there the push sits at the objective's own noise, and columns
+  ## equal to 4e-16 already stop the optimiser in different places.)
+  push <- function(f) {
+    p <- f$opt$par; i <- names(p) == "logdisp"; p2 <- p; p2[i] <- p2[i] + 3
+    v <- f$obj$fn(p2) - f$obj$fn(p); invisible(f$obj$fn(p)); v
+  }
+  for (case in list(list(5, TRUE), list(2, FALSE))) {
+    d <- dl_counts(case[[1]])
+    dh <- d; dh$x <- d$x / stats::sd(d$x)
+    db <- d; db$x <- d$x * 1e4
+    f0 <- suppressMessages(dl_fit(d))
+    fh <- suppressMessages(dl_fit(dh))
+    fb <- suppressMessages(dl_fit(db))
+    expect_null(fh$rescale)
+    expect_true(fb$rescale$x$any)
+    for (f in list(f0, fh, fb)) {
+      expect_identical("dispersion" %in% f$hessian_held, case[[2]])
+      expect_identical("dispersion_limit" %in% f$checks$check, case[[2]])
+      expect_equal(f$opt$objective, f0$opt$objective, tolerance = 1e-8)
+    }
+    if (case[[2]]) expect_true(all(abs(c(push(fh), push(fb))) < 1e-5))
+    else expect_equal(push(fb), push(fh), tolerance = 1e-6)
+  }
+})
+
 ## The gaussian study's AR(1) design at one observation per cell: the latent
 ## process can take up all the noise (studies/scripts/dispersion_limit_gaussian.R)
 dl_gauss <- function(seed, noise = 0.5) {

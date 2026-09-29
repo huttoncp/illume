@@ -315,12 +315,16 @@ and names these terms.
 A predictor in dollars beside one in thousandths makes the fit's
 arithmetic badly conditioned, though the model is the same in any units:
 fits used to fail with undefined standard errors and advice pointing the
-wrong way. So the fit rescales each column of the fixed-effect design --
-and of the zero-inflation and dispersion formulas -- to unit standard
-deviation, fits there, and converts the estimates, their covariance and
-everything built from them back to your units by an exact map: the results
-are the ones you would get by rescaling by hand, to within the optimiser's
-tolerance. Left as they are: offsets, which enter with a fixed coefficient of
+wrong way. So the fit rescales a column of the fixed-effect design -- or
+of the zero-inflation and dispersion formulas -- whose standard deviation is
+below 0.01 or above 100, to unit standard deviation, fits there, and
+converts the estimates, their covariance and everything built from them
+back to your units by an exact map: the results are the ones you would get
+by rescaling by hand, to within the optimiser's tolerance. A column whose
+standard deviation is between 0.01 and 100 is already where the optimiser
+works well and is left exactly as it is, so a model whose columns all are
+is fitted exactly as it would be without rescaling. Left as they are too:
+offsets, which enter with a fixed coefficient of
 one; 0/1 indicators and constant columns, already well scaled; a smooth's
 penalised part (its unpenalised columns are rescaled like any other); and
 the covariate of a random slope, whose scale sits in the random-effect

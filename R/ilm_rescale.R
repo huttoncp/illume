@@ -6,8 +6,9 @@
 ## zero-inflated negative binomial with income in dollars failed 12 fits of
 ## 12 (the Hessian not positive definite, three standard errors NaN) where
 ## income in thousands gave 11 of 12 clean. So ilm_fit() divides each
-## non-constant column of the fixed design, the zero part's and the
-## dispersion model's by its SD, fits there, and converts back EXACTLY:
+## column of the fixed design, the zero part's and the dispersion model's
+## whose SD is outside ilm_rescale_band by that SD, fits there, and converts
+## back EXACTLY:
 ## eta = X beta = X_s beta_s, so the random effects, the variance parameters
 ## and everything reported from them are identical in both coordinates, and
 ## only the coefficients move, by a linear map:
@@ -24,8 +25,19 @@
 ## any other), and random-slope covariates, whose scale sits in the
 ## random-effect covariance.
 
+## ONLY COLUMNS IN EXTREME UNITS. Rescaling exists to fix columns like income
+## in dollars (SD 9,000) or a rate of SD 1e-4, not to move fits whose
+## columns are already well scaled. Dividing every column by its SD moved
+## those too, by factors like 0.97: the optimiser took another path and
+## stopped elsewhere within its tolerance -- enough to fail tests pinned
+## near it, and on a beta whose precision ran towards 1e12, to land in a
+## basin 3.4 log-likelihood units worse. A column whose SD is inside the band
+## is left exactly as it is, so a fit whose columns all are runs the
+## unrescaled path bit for bit. The band is where nlminb is comfortable.
+ilm_rescale_band <- c(1e-2, 1e2)
+
 ## Which columns to scale and by what. `centre` only where the matrix has an
-## intercept to take up the shift.
+## intercept to take up the shift, and only on the columns rescaled.
 #' @keywords internal
 #' @noRd
 ilm_col_scales <- function(M, centre = FALSE, skip = integer(0)) {
@@ -42,6 +54,7 @@ ilm_col_scales <- function(M, centre = FALSE, skip = integer(0)) {
     if (all(v %in% c(0, 1))) next                 # an indicator: already fine
     sj <- stats::sd(v)
     if (!is.finite(sj) || sj <= 0) next
+    if (sj >= ilm_rescale_band[1] && sj <= ilm_rescale_band[2]) next
     s[j] <- sj
     if (centre && !is.na(int)) m[j] <- mean(v)
   }
