@@ -3054,22 +3054,37 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     if (isTRUE(sc_x$any))  maps$beta  <- ilm_scale_map(sc_x)
     if (isTRUE(sc_zi$any)) maps$gzi   <- ilm_scale_map(sc_zi)
     if (isTRUE(sc_d$any))  maps$gamma <- ilm_scale_map(sc_d)
+    ## Each map touches only the rows and columns of the coefficient blocks.
+    ## A covariance with a term held at its boundary carries NA in that
+    ## term's rows, and a whole-matrix product spreads it everywhere (0 * NA
+    ## is NA): the variance components' covariance came back all NA, and
+    ## Satterthwaite fell back to z.
+    blk <- function(nms) which(nms %in% names(maps))
     mapv <- function(v) {
       if (is.null(v) || !length(v)) return(v)
+      I <- blk(names(v)); if (!length(I)) return(v)
       M <- ilm_param_map(names(v), maps)
-      stats::setNames(drop(M$A %*% v), names(v))
+      v[I] <- drop(M$A[I, I, drop = FALSE] %*% v[I]); v
     }
     mapV <- function(V, nms) {
       if (is.null(V)) return(V)
-      M <- ilm_param_map(nms, maps)
-      out <- M$A %*% V %*% t(M$A); dimnames(out) <- dimnames(V); out
+      I <- blk(nms); if (!length(I)) return(V)
+      A <- ilm_param_map(nms, maps)$A[I, I, drop = FALSE]
+      out <- as.matrix(V)
+      out[I, ] <- A %*% out[I, , drop = FALSE]
+      out[, I] <- out[, I, drop = FALSE] %*% t(A)
+      dimnames(out) <- dimnames(V); out
     }
     mapP <- function(P, nms) {
       if (is.null(P)) return(P)
-      M <- ilm_param_map(nms, maps)
-      out <- Matrix::t(M$Ainv) %*% P %*% M$Ainv
+      I <- blk(nms); if (!length(I)) return(P)
+      B <- ilm_param_map(nms, maps)$Ainv[I, I, drop = FALSE]
+      sp <- methods::is(P, "sparseMatrix")
+      out <- as.matrix(P)
+      out[I, ] <- t(B) %*% out[I, , drop = FALSE]
+      out[, I] <- out[, I, drop = FALSE] %*% B
       dimnames(out) <- dimnames(P)
-      if (methods::is(P, "sparseMatrix")) methods::as(out, "CsparseMatrix") else out
+      if (sp) methods::as(Matrix::Matrix(out, sparse = TRUE), "CsparseMatrix") else out
     }
     ## put the fitting tape at its optimum, and read its parameter list there
     invisible(tryCatch(obj$fn(if (reml) opt$par[names(opt$par) != "beta"] else opt$par),
@@ -3083,7 +3098,11 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
       sdr$jointPrecision <- mapP(sdr$jointPrecision, rownames(sdr$jointPrecision))
     if (!is.null(hess$H)) {
       hess$H <- mapP(hess$H, pn)
-      if (!is.null(hess$dirs)) hess$dirs <- ilm_param_map(pn, maps)$A %*% hess$dirs
+      if (!is.null(hess$dirs)) {
+        I <- blk(pn)
+        if (length(I)) hess$dirs[I, ] <- ilm_param_map(pn, maps)$A[I, I, drop = FALSE] %*%
+          hess$dirs[I, , drop = FALSE]
+      }
     }
     pe <- mapv(stats::setNames(pe, pn))
     if (reml && !is.null(reml_beta) && !is.null(maps$beta)) {
