@@ -144,9 +144,11 @@
 ## - A fit's variance flag: any unheld variance parameter -- the MRF term's,
 ##   the region intercept's, and S2's residual SD -- with an SE on its log
 ##   scale above 0.75.
-## - S3 is coded with the variogram change it tests, in a later commit.
+## - S3's verdict on a fit is the variogram's own: flagged when any bin is
+##   WARN or FAIL (what its report counts). Its coordinates are the regions'
+##   lattice centroids; B = 39 refits and seed 1 for every variogram.
 ##
-## Usage: Rscript spatial_bym.R <arm S1|S2> <nrep> <ncore> <outdir> [offset] [cells]
+## Usage: Rscript spatial_bym.R <arm S1|S2|S3> <nrep> <ncore> <outdir> [offset] [cells]
 ##        Rscript spatial_bym.R summarise <outdir>
 ## ---------------------------------------------------------------------------
 
@@ -159,7 +161,7 @@ if (!SUMMARISE) {
   sp     <- args[4]
   OFFSET <- if (length(args) >= 5) as.integer(args[5]) else 0L
   ONLY   <- if (length(args) >= 6) as.integer(strsplit(args[6], ",")[[1]]) else NULL
-  stopifnot(ARM %in% c("S1", "S2"))
+  stopifnot(ARM %in% c("S1", "S2", "S3"))
 } else sp <- args[2]
 dir.create(sp, showWarnings = FALSE, recursive = TRUE)
 suppressPackageStartupMessages(library(illume))
@@ -169,10 +171,11 @@ suppressPackageStartupMessages(library(illume))
 g <- function(...) expand.grid(..., stringsAsFactors = FALSE)
 cells <- rbind(
   data.frame(arm = "S1", g(R = c(36, 100), Ebar = c(5, 50), tot = c(0.3, 0.6), rho = c(0.2, 0.8)), m = NA),
-  data.frame(arm = "S2", g(R = c(36, 100), m = c(3, 10), rho = c(0.2, 0.8)), Ebar = NA, tot = 0.6))
+  data.frame(arm = "S2", g(R = c(36, 100), m = c(3, 10), rho = c(0.2, 0.8)), Ebar = NA, tot = 0.6),
+  data.frame(arm = "S3", g(R = c(36, 100), tot = c(0.3, 0.6)), Ebar = 50, rho = 0.8, m = NA))
 cells <- cells[, c("arm", "R", "Ebar", "m", "tot", "rho")]
 cells$cell <- seq_len(nrow(cells))
-stopifnot(nrow(cells) == 24L)
+stopifnot(nrow(cells) == 28L)
 SLOPE <- 0.3; B0 <- c(S1 = -0.2, S2 = 1); NREF <- 100L
 
 ## ---- the maps ------------------------------------------------------------------
@@ -200,7 +203,7 @@ gen <- function(ce, seed) {
     sqrt(ce$rho) * ce$tot
   theta <- stats::rnorm(R, 0, sqrt(1 - ce$rho) * ce$tot)
   reg <- factor(mp$lev, levels = mp$lev)
-  if (ce$arm == "S1") {
+  if (ce$arm %in% c("S1", "S3")) {
     x <- stats::rnorm(R); E <- stats::rgamma(R, shape = 2, rate = 2 / ce$Ebar)
     eta <- B0[["S1"]] + SLOPE * x + phi + theta
     d <- data.frame(region = reg, x = x, E = E, y = stats::rpois(R, E * exp(eta)))
@@ -213,7 +216,7 @@ gen <- function(ce, seed) {
     nd <- data.frame(region = reg, x = 0)
     truth <- B0[["S2"]] + phi + theta
   }
-  list(d = d, nd = nd, truth = truth, nb = mp$nb)
+  list(d = d, nd = nd, truth = truth, nb = mp$nb, xy = mp$xy)
 }
 fml <- list(
   S1 = y ~ x + offset(log(E)) + s(region, bs = "mrf", xt = list(nb = nb)) + (1 | region),
@@ -317,6 +320,63 @@ one <- function(job) {
   key
 }
 
+## ---- S3: the variogram on a model without the term, and with it ---------------
+one_s3 <- function(job) {
+  ce <- cells[cells$cell == job$cell, ]
+  seed <- 7919L * ce$cell + job$rep + OFFSET
+  sim <- gen(ce, seed); nb <- sim$nb
+  key <- data.frame(cell = ce$cell, arm = ce$arm, R = ce$R, tot = ce$tot, rep = job$rep, seed = seed)
+  xy <- sim$xy[as.integer(sim$d$region), , drop = FALSE]
+  colnames(xy) <- c("cx", "cy"); xy <- as.data.frame(xy)
+  vg <- function(f) tryCatch(suppressMessages(suppressWarnings(ilm_variogram(f, coords = xy,
+          B = 39L, seed = 1L, plot = FALSE, verbose = FALSE, progress = FALSE))),
+          error = function(e) conditionMessage(e))
+  said <- function(v, pre) {
+    if (is.character(v)) { key[[paste0(pre, "_err")]] <<- substr(v, 1, 200); return(invisible()) }
+    st <- v$table$status
+    key[[paste0(pre, "_flag")]] <<- any(st %in% c("WARN", "FAIL"))
+    key[[paste0(pre, "_bins")]] <<- sum(st %in% c("WARN", "FAIL"))
+    a <- illume:::ilm_variogram_advice(v)
+    key[[paste0(pre, "_mrf")]] <<- grepl("bs = \"mrf\"", a, fixed = TRUE)
+    key[[paste0(pre, "_advice")]] <<- substr(a, 1, 300)
+  }
+  fo0 <- y ~ x + offset(log(E)) + (1 | region); environment(fo0) <- environment()
+  t0 <- proc.time()[["elapsed"]]
+  f0 <- tryCatch(suppressMessages(suppressWarnings(ilm_model(fo0, data = sim$d, family = "poisson",
+          verbose = FALSE))), error = function(e) conditionMessage(e))
+  if (is.character(f0)) key$m0_err <- substr(f0, 1, 200) else said(vg(f0), "m0")
+  key$t_m0 <- proc.time()[["elapsed"]] - t0
+  ## the BYM model's variogram, at R = 36 only (each of its 39 refits takes
+  ## about 5 s at R = 100)
+  if (ce$R == 36) {
+    fo1 <- fml$S1; environment(fo1) <- environment()
+    t1 <- proc.time()[["elapsed"]]
+    f1 <- tryCatch(suppressMessages(suppressWarnings(ilm_model(fo1, data = sim$d, family = "poisson",
+            verbose = FALSE))), error = function(e) conditionMessage(e))
+    if (is.character(f1)) key$m1_err <- substr(f1, 1, 200) else said(vg(f1), "m1")
+    key$t_m1 <- proc.time()[["elapsed"]] - t1
+  }
+  key
+}
+summarise_s3 <- function(x) {
+  do.call(rbind, lapply(sort(unique(x$cell)), function(cl) {
+    z <- x[x$cell == cl, ]; r <- function(v) mean(v, na.rm = TRUE)
+    data.frame(z[1, c("cell", "R", "tot")], fits = nrow(z),
+               flag_without = r(z$m0_flag), mrf_named_when_flagged = r(z$m0_mrf[z$m0_flag %in% TRUE]),
+               flag_with_bym = if (!is.null(z$m1_flag)) r(z$m1_flag) else NA,
+               errors = sum(!is.na(z$m0_err %||% NA)) + sum(!is.na(z$m1_err %||% NA)),
+               time_without = stats::median(z$t_m0), time_with = if (!is.null(z$t_m1)) stats::median(z$t_m1, na.rm = TRUE) else NA)
+  }))
+}
+verdicts_s3 <- function(s) {
+  all <- function(v) { v <- v[!is.na(v)]; if (length(v)) base::all(v) else NA }
+  data.frame(verdict = c("V5 flags the model without the spatial term in at least 80% of fits at total SD 0.6",
+                         "V6 flags the BYM model in at most 10% of fits",
+                         "V7 every flagged fit's advice names the Markov random field term"),
+             holds = c(all(s$flag_without[s$tot == 0.6] >= 0.8), all(s$flag_with_bym <= 0.10),
+                       all(s$mrf_named_when_flagged == 1)))
+}
+
 ## ---- summaries -----------------------------------------------------------------
 ## Coverage within 2 Monte Carlo SEs of 0.95: the slope's MC SE is binomial,
 ## the region coverage's the SD of the per-fit shares over sqrt(n).
@@ -401,6 +461,15 @@ if (SUMMARISE) {
     utils::write.csv(v, file.path(sp, paste0("spatial_bym_", tag, "_verdicts.csv")), row.names = FALSE)
     cat("==", tag, "==\n"); print(v, row.names = FALSE)
   }
+  fs3 <- list.files(sp, pattern = "^spatial_bym_S3_main[.]csv$", full.names = TRUE)
+  if (length(fs3)) {
+    s3 <- summarise_s3(utils::read.csv(fs3, stringsAsFactors = FALSE))
+    utils::write.csv(s3, file.path(sp, "spatial_bym_S3_summary.csv"), row.names = FALSE)
+    v3 <- verdicts_s3(s3)
+    utils::write.csv(v3, file.path(sp, "spatial_bym_S3_verdicts.csv"), row.names = FALSE)
+    cat("== S3 ==
+"); print(s3, row.names = FALSE); print(v3, row.names = FALSE)
+  }
   quit(save = "no")
 }
 
@@ -421,7 +490,7 @@ dir.create(ck, showWarnings = FALSE, recursive = TRUE)
 one_ck <- function(job) {
   fp <- file.path(ck, sprintf("cell%02d_rep%04d.rds", job$cell, job$rep))
   if (file.exists(fp)) return(readRDS(fp))
-  r <- one(job)
+  r <- if (ARM == "S3") one_s3(job) else one(job)
   saveRDS(r, paste0(fp, ".part")); file.rename(paste0(fp, ".part"), fp)
   r
 }
