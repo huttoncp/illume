@@ -31,7 +31,7 @@ test_that("new data reproduces the fitted design exactly", {
 test_that("predictions at new data have the right shape", {
   fit <- fit_basic()
   grid <- data.frame(x1 = c(-1, 0, 1), grp = factor("a", levels = levels(fit$model$grp)))
-  P <- predict(fit, newdata = grid)
+  P <- predict(fit, newdata = grid, groups = "typical")
   expect_equal(dim(P), c(3L, fit$J))
   expect_true(all(abs(rowSums(P) - 1) < 1e-9))
 })
@@ -71,5 +71,5 @@ test_that("a population average is refused on the link scale", {
 test_that("fitted probabilities agree with predict", {
   fit <- fit_basic()
   expect_equal(unname(ilm_fitted(fit, groups = "typical")),
-               unname(predict(fit, type = "response")))
+               unname(predict(fit, type = "response", groups = "typical")))
 })

@@ -26,7 +26,7 @@ test_that("the designs are the fit's, and groups are matched by label", {
   expect_identical(m$re$id$factor, "id")
   ## the typical group's prediction is X beta, as predict() gives it
   expect_equal(as.numeric(m$X %*% f$beta),
-               unname(predict(f, newdata = nd, type = "link")[, 1]),
+               unname(predict(f, newdata = nd, type = "link", groups = "typical")[, 1]),
                tolerance = 1e-12)
   ## and a fitted group's is X beta + Z b, with b its modes from ilm_ranef()
   r <- ilm_ranef(f)
@@ -47,7 +47,7 @@ test_that("a smooth's basis rebuilds predict()'s prediction exactly", {
   r <- ilm_ranef(f)
   bs <- r$mode[r$type == "smooth"]
   eta <- as.numeric(m$X %*% f$beta + m$smooth[[1]] %*% bs)
-  expect_equal(eta, unname(predict(f, newdata = nd, type = "link")[, 1]),
+  expect_equal(eta, unname(predict(f, newdata = nd, type = "link", groups = "typical")[, 1]),
                tolerance = 1e-10)
 })
 

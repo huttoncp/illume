@@ -169,7 +169,7 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   ## category it was, and ilm_interpret() then quoted that one number beside
   ## every category's coefficient.
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   ## with groups = "population" a single linear predictor is averaged by
   ## quadrature and a multinomial one by draws with a fixed seed, so every
@@ -289,12 +289,14 @@ ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4,
   mf <- ilm_data(object)
   x <- mf[[var]]
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   fn <- function(obj) {
     mu <- function(dd) {
+      ## a typical group's, as the sentences say (Craig's item 213 made each
+      ## row's own group predict()'s default)
       p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response",
-                                           exposure = ex))
+                                           groups = "typical", exposure = ex))
       if (!is.null(cats)) as.matrix(p)
       else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
     }

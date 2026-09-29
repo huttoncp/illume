@@ -8,7 +8,7 @@
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  groups = c("typical", "population", "fitted"),
+  groups = c("fitted", "typical", "population"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
@@ -29,9 +29,9 @@ used to fit the model.}
 \item{type}{\code{"response"} for probabilities (the default), \code{"link"} for linear
 predictors, or \code{"class"} for the most likely category.}
 
-\item{groups}{\code{"typical"} (the default) for a group with every random
-effect at zero, \code{"population"} for the average over the groups, or
-\code{"fitted"} for each row's own group's estimated effects. See "Which
+\item{groups}{\code{"fitted"} (the default) for each row's own group's
+estimated effects, \code{"typical"} for a group with every random effect at
+zero, or \code{"population"} for the average over the groups. See "Which
 groups".}
 
 \item{se.fit}{Logical. Return standard errors.}
@@ -75,16 +75,18 @@ with standard errors and intervals.
 \section{Which groups}{
 
 In a model with random effects every prediction is for some group, and this
-is the choice that matters most. There is no safe default that suits
-everyone. \code{groups} says which:
+is the choice that matters most. \code{groups} says which:
 \itemize{
-\item \code{"typical"} (the default) sets every random effect to zero, giving the
-prediction for a \strong{typical group}: one exactly at the average.
+\item \code{"fitted"} (the default, since 0.0.8.9003) gives each row \strong{its own
+group's} estimated effects, the conditional modes \code{\link[=ilm_ranef]{ilm_ranef()}} reports,
+as lme4's \code{predict()} does by default. A row whose group the fit has not
+seen, or \code{newdata} without the grouping columns, is an error that names
+the two choices below. See "A fitted group's own prediction".
+\item \code{"typical"} sets every random effect to zero, giving the prediction for a
+\strong{typical group}: one exactly at the average. It was the default before
+0.0.8.9003.
 \item \code{"population"} averages the prediction over the distribution of random
 effects, giving it for the \strong{population of groups as a whole}.
-\item \code{"fitted"} gives each row \strong{its own group's} estimated effects, the
-conditional modes \code{\link[=ilm_ranef]{ilm_ranef()}} reports, as lme4's \code{predict()} does by
-default. See "A fitted group's own prediction".
 }
 
 The first two differ, sometimes substantially, because averaging and a
