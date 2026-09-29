@@ -9,7 +9,9 @@
   since sets adjust for different columns and can lose different rows. The
   rows themselves are stats' own record, `stats::na.action(fit)`, which works
   on every fit. `print()` and `summary()` now say how many rows missing
-  values took, and from which columns, where they took any.
+  values took, and from which columns, where they took any, in one line:
+  "Rows: 55 of 60 analysed; 5 dropped for missing values (y 2, x 3, z 1; a
+  row missing in several columns counts in each)".
 * Three variance hold lines for gaussian responses, each measured against
   the response's SD so that none depends on its units, and each holding a
   term only where the likelihood is flat below it, as before:
