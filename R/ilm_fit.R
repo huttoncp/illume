@@ -935,7 +935,18 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     "little further from zero")
   held <- if (is.null(hess)) character(0) else hess$held
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
-  ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
+  ck <- ilm_new_checks()
+  ## The gradient along a held direction is reported, not judged. A term held
+  ## at its boundary estimate sits where the likelihood is flat, or running off
+  ## to a limit -- a negative binomial's k chasing infinity has a gradient that
+  ## decays without reaching zero -- and its estimate is not interpreted: in a
+  ## 38,400-row fit whose k was held at 3.7e8, the largest gradient (1.4e-2)
+  ## was along k alone. So the held directions (hess$dirs, in the
+  ## coordinates of opt$par, orthonormal) are projected out, and the rest of
+  ## the gradient says whether the fit is at a stationary point.
+  gs <- ilm_grad_judged(tryCatch(as.numeric(obj$gr(opt$par)), error = function(e) NA_real_),
+                        if (length(held)) hess$dirs else NULL)
+  g <- gs$judged; g_held <- gs$held
   ## a gradient that is not finite is as far from a stationary point as any
   if (!is.finite(g)) g <- Inf
   ## nlminb's code 8, "false convergence", means it could not verify a descent
@@ -974,7 +985,10 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
              else "") else "", "")
   ck <- ilm_add_check(ck, "gradient",
     if (g > 1e-2) "FAIL" else if (g > 1e-3) "WARN" else "OK",
-    sprintf("max |gradient| = %.2e", g),
+    paste0(sprintf("max |gradient| = %.2e", g),
+           if (is.finite(g_held))
+             sprintf("; along the held %s: %.2e, not judged (held at its estimate)",
+                     paste(held, collapse = ", "), g_held) else ""),
     if (g > 1e-3) "not at a stationary point" else "",
     if (g > 1e-3) "restart from the current estimates, or simplify the random structure" else "")
   pd <- isTRUE(sdr$pdHess)
@@ -1790,6 +1804,22 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
                 dirs = diag(1, n)[, dd, drop = FALSE]))
   }
   hold_disp(out)
+}
+
+## The gradient split into the part the gradient check judges and the part
+## along held directions, which it reports: `dirs` holds the held directions
+## as orthonormal columns in the coordinates of the parameter vector (NULL
+## when nothing is held). Returns the largest absolute component of each; the
+## held part is NA when nothing is held or the gradient is not finite.
+#' @keywords internal
+#' @noRd
+ilm_grad_judged <- function(gv, dirs = NULL) {
+  held <- NA_real_
+  if (!is.null(dirs) && length(gv) == nrow(dirs) && all(is.finite(gv))) {
+    ph <- drop(dirs %*% crossprod(dirs, gv))
+    held <- max(abs(ph)); gv <- gv - ph
+  }
+  list(judged = max(abs(gv)), held = held)
 }
 
 ## Whether the FIXED effects of a fit carry usable standard errors: a positive

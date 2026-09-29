@@ -2,6 +2,15 @@
 
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* The `gradient` check reports the gradient along a held direction but does
+  not judge it. A term held at its boundary estimate -- a negative binomial's
+  k run off to its limit, a variance at zero -- sits where the likelihood is
+  flat or still falling slowly, and its estimate is not interpreted; the
+  check judged it anyway. In a 38,400-row fit whose k was held at 3.7e8, the
+  largest gradient (1.4e-2) was along k alone, and the fit failed the check
+  for it. The held directions are now projected out, the check is graded on
+  the rest, and the line gives the held part beside it ("along the held
+  dispersion: 1.41e-02, not judged"). Found through an external report.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
   restarts, which begin at the solution. Restarted from its own solution, an
   optimiser that stays there answers a "false convergence" code: the fit is
