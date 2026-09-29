@@ -149,6 +149,41 @@
 ##   to z. 944383a maps only the coefficient blocks' rows and columns. The
 ##   change library (lib-rsa) is rebuilt from it; nothing else changes.
 ##
+## ## Amendment A3 (committed before the rerun): the gate
+## The full check of 944383a failed 7 tests, all from one cause: dividing
+##   every column by its SD moved fits whose columns were already well
+##   scaled (factors like 0.97), so the optimiser stopped elsewhere within
+##   its tolerance, and a pathological beta landed in a worse basin. Settled
+##   within the intent of Craig's ruling on item 6 (the conductor,
+##   2026-09-29): the build under test is now c0377f3, which rescales a
+##   column only when its SD is outside [1e-2, 1e2]. So:
+## (i) The AFTER arm is rerun on a new pinned library (lib-rsc, from c0377f3,
+##     with its manifest), same seeds, same cells. BEFORE and HAND are the
+##     old build's and are not rerun: their rows from the first run are used
+##     as they are (the same code, library and seeds).
+## (ii) HANDNEW changes so that it is still the same internal problem as the
+##     variant it is compared with. Under the gate, income / 1e4 (SD 0.9) is
+##     inside the band and left alone, while the fit on dollars runs on
+##     income / sd(income). So HANDNEW_SCALE divides each rescaled column by
+##     its own SD (income, and R2's tiny covariate), and HANDNEW_CENTRE
+##     centres it too; both are inside the band, so the new build leaves them
+##     exactly as given. Their estimates are put back on the user's scale by
+##     the same linear map the fit uses -- beta_x = beta_h / s, and under
+##     centring the intercept's beta_0 = beta_h0 - beta_h m / s -- with the SEs
+##     from the mapped covariance of each coefficient block (the zero part's
+##     likewise).
+## (iii) E1 and E2 are regraded on the columns actually rescaled: every cell
+##     of R1 to R3, R5 and R6 has a column outside the band (income, SD
+##     9,000; R2's tiny, SD 1e-4); R4 has none, so there SCALE and CENTRE
+##     are the old code path and E3 must hold with a gap of exactly 0 and
+##     the same grade in every fit. R5's smooth: its null-space column (x,
+##     SD 0.29) is inside the band, so only income moves. Thresholds as
+##     registered: E1 1e-6 and 1e-8, E2 at most 2 fits fewer than HAND.
+## (iv) The default rule stands: scale only if it passes E1 to E3; otherwise
+##     the numbers go to Craig. The flatness test's fragility found while
+##     diagnosing the failures (the beta hold flipping with the path) is
+##     reported beside the results, not graded here.
+
 ## Choices the design leaves to the code, fixed here before any run:
 ## - HAND divides income by 1e4 (SD about 0.9) and multiplies the tiny
 ##   covariate by 1e4 (SD about 1); its coefficients and SEs are put back on
@@ -218,19 +253,60 @@ hand_factor <- function(f, ce) {
   if (!is.null(f$Zzi)) { iz <- which(nm == "gzi"); k[iz[colnames(f$Zzi) == "inc_h"]] <- 1e-4 }
   k
 }
-one_fit <- function(ce, d, hand = FALSE) {
-  if (hand && ce$arm != "R4") { d$inc_h <- d$income / 1e4; d$tiny_h <- d$tiny * 1e4 }
-  else if (hand) { d$inc_h <- d$income; d$tiny_h <- d$tiny }
+## Amendment A3: the hand columns h = (x - m) / s, and the map back to the
+## user's scale over the fixed parameters: beta_x = beta_h / s and, when
+## centred, beta_0 = beta_h0 - beta_h m / s, in the fixed and zero parts.
+## `tr` holds m and s for inc_h and tiny_h.
+hand_cols <- function(ce, d, how) {
+  tr <- list(inc_h = c(m = 0, s = 1), tiny_h = c(m = 0, s = 1))
+  if (ce$arm != "R4" && how == "old") tr <- list(inc_h = c(m = 0, s = 1e4), tiny_h = c(m = 0, s = 1e-4))
+  if (ce$arm != "R4" && how %in% c("sd", "sdc")) {
+    tr$inc_h <- c(m = if (how == "sdc") mean(d$income) else 0, s = stats::sd(d$income))
+    tr$tiny_h <- c(m = if (how == "sdc") mean(d$tiny) else 0, s = stats::sd(d$tiny))
+  }
+  d$inc_h <- (d$income - tr$inc_h[["m"]]) / tr$inc_h[["s"]]
+  d$tiny_h <- (d$tiny - tr$tiny_h[["m"]]) / tr$tiny_h[["s"]]
+  list(d = d, tr = tr)
+}
+hand_map <- function(f, tr) {
+  nm <- names(f$opt$par); A <- diag(length(nm))
+  blk <- function(pname, cn) {
+    ib <- which(nm == pname); if (!length(ib) || is.null(cn)) return(invisible())
+    i0 <- ib[cn == "(Intercept)"]
+    for (h in names(tr)) {
+      j <- ib[cn == h]; if (!length(j)) next
+      A[j, j] <<- 1 / tr[[h]][["s"]]
+      if (length(i0) && tr[[h]][["m"]] != 0) A[i0, j] <<- -tr[[h]][["m"]] / tr[[h]][["s"]]
+    }
+  }
+  blk("beta", colnames(f$X)); blk("gzi", colnames(f$Zzi))
+  A
+}
+one_fit <- function(ce, d, hand = FALSE, how = "old") {
+  tr <- NULL
+  if (hand) { hc <- hand_cols(ce, d, how); d <- hc$d; tr <- hc$tr }
   s <- spec(ce, hand)
   t0 <- proc.time()[["elapsed"]]
   f <- tryCatch(suppressWarnings(suppressMessages(ilm_model(s$f, data = d, family = s$family,
          ziformula = s$zi, verbose = FALSE))), error = function(e) conditionMessage(e))
   tt <- proc.time()[["elapsed"]] - t0
   if (is.character(f)) return(list(row = data.frame(ok = NA, err = substr(f, 1, 150), time = tt)))
-  kf <- if (hand) hand_factor(f, ce) else rep(1, length(f$opt$par))
-  par <- f$opt$par * kf
-  se <- sqrt(pmax(diag(as.matrix(f$sdr$cov.fixed)), 0)) * kf
-  se[!is.finite(diag(as.matrix(f$sdr$cov.fixed)))] <- NA
+  V <- as.matrix(f$sdr$cov.fixed)
+  if (hand && how != "old") {
+    ## Amendment A3: the linear map, with each coefficient block's covariance
+    ## mapped on its own rows and columns (a held term's NA stays put)
+    A <- hand_map(f, tr); par <- drop(A %*% f$opt$par)
+    se <- sqrt(pmax(diag(V), 0)); se[!is.finite(diag(V))] <- NA
+    I <- which(rowSums(A != diag(nrow(A))) > 0 | colSums(A != diag(nrow(A))) > 0)
+    I <- sort(unique(c(I, which(names(f$opt$par) %in% c("beta", "gzi")))))
+    Vb <- V[I, I, drop = FALSE]
+    if (all(is.finite(Vb))) se[I] <- sqrt(pmax(diag(A[I, I, drop = FALSE] %*% Vb %*% t(A[I, I, drop = FALSE])), 0))
+  } else {
+    kf <- if (hand) hand_factor(f, ce) else rep(1, length(f$opt$par))
+    par <- f$opt$par * kf
+    se <- sqrt(pmax(diag(V), 0)) * kf
+    se[!is.finite(diag(V))] <- NA
+  }
   ck <- f$checks
   row <- data.frame(ok = isTRUE(f$ok), err = NA_character_, time = tt,
                     n_nonfinite_se = sum(!is.finite(se)), objective = f$opt$objective,
@@ -268,7 +344,8 @@ if (MODE %in% c("before", "after")) {
     ce <- cells[ci, ]; d <- gen(ce, rep)
     for (w in ways) {
       if (w != "before" && w != "hand") options(illume.rescale = sub("^handnew_", "", w))
-      r <- one_fit(ce, d, hand = w %in% c("hand", "handnew_scale", "handnew_centre"))
+      r <- one_fit(ce, d, hand = w %in% c("hand", "handnew_scale", "handnew_centre"),
+                   how = switch(w, handnew_scale = "sd", handnew_centre = "sdc", "old"))
       rr <- cbind(data.frame(cell = ce$cell, arm = ce$arm, fam = ce$fam, n = ce$n, rep = rep, way = w), r$row)
       if (w == "before" && ce$arm == "R4" && !is.null(r$fit)) rr$floor <- jitter_floor(r$fit)
       rows[[length(rows) + 1L]] <- rr
