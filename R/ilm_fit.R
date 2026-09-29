@@ -960,8 +960,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
            if (rs_same && opt$convergence != 0)
              sprintf(paste0("; restarted %d time%s from its own solution, the optimiser ",
                             "stayed there, so the code reflects a flat likelihood, not an ",
-                            "unfinished fit. The restarts begin at the solution: they confirm ",
-                            "where the fit stopped, and do not search for other optima ",
+                            "unfinished fit. These restarts confirm where the fit stopped; ",
+                            "they do not search for other optima ",
                             "(see the gradient and latent_budget checks)"),
                      restarts$n, if (restarts$n == 1L) "" else "s") else "",
            if (!is.null(restarts) && restarts$failed > 0L)

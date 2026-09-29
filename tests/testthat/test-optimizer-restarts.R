@@ -30,7 +30,8 @@ test_that("restarts that reach the same optimum answer a false-convergence code"
                  fixed = TRUE)
   ## and it says what the restarts are not
   if (f$opt$convergence != 0L)
-    expect_match(r$detail, "do not search for other optima", fixed = TRUE)
+    expect_match(r$detail, "These restarts confirm where the fit stopped; they do not search for other optima",
+                 fixed = TRUE)
 })
 
 test_that("a restart that meets a non-finite gradient does not stop the fit", {
