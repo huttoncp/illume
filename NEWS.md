@@ -10,10 +10,14 @@
   parameter against itself. The check now puts the coefficients' covariance
   (from the joint precision) beside the variances'. A near-aliased pair is
   caught under REML as under maximum likelihood, and a fit with a single
-  parameter says there is nothing to correlate. Where every correlation is
-  zero, the pair named is a real pair, never a parameter against itself;
-  that affected maximum likelihood fits too. Exact aliasing was already
-  refused before the fit, REML or not.
+  parameter says there is nothing to correlate. Correlations BETWEEN a
+  coefficient and a variance parameter are still not assessed under REML,
+  and the line says so. Exact aliasing was already refused before the fit,
+  REML or not.
+* The `parameter_aliasing` line could name a parameter against itself
+  ("theta <-> theta", "(Intercept) <-> (Intercept)") when every correlation
+  was zero, under maximum likelihood as well as REML. The pair it names now
+  always comes from two different parameters.
 * **A correction: REML fits of a count or yes/no outcome whose every variance
   was at zero were graded usable when they should not have been.** Under
   `reml = TRUE` the fixed effects are integrated out, so for a non-gaussian

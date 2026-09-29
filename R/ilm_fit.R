@@ -1212,9 +1212,14 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (k2) cc[k1 + seq_len(k2), k1 + seq_len(k2)] <- cf
     cf <- cc; pnm <- c(bnm, pnm)
   }
+  ## the blocks are set apart by construction under REML, so the line says
+  ## what it does not see: a coefficient nearly confounded with a variance
+  ## (a between-group covariate with few groups) shows under ML only
+  not_seen <- if (!is.null(Vb)) paste0("; under REML, correlations between ",
+    "coefficients and variance parameters are not assessed") else ""
   if (!is.null(cf) && ncol(cf) == 1L && all(is.finite(cf)) && all(diag(cf) > 0)) {
     ck <- ilm_add_check(ck, "parameter_aliasing", "OK",
-      sprintf("one parameter only (%s): nothing to correlate", pnm[1]), "", "")
+      paste0(sprintf("one parameter only (%s): nothing to correlate", pnm[1]), not_seen), "", "")
   } else if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
     cm <- cov2cor(cf); cm[!upper.tri(cm)] <- 0
     ## the pair from the upper triangle only: where every correlation is 0 (two
@@ -1225,7 +1230,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     pair <- sprintf("%s <-> %s", pnm[ij[1]], pnm[ij[2]])
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
-      sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair),
+      paste0(sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair), not_seen),
       if (mx > 0.95) sprintf("these data cannot separate %s from %s", pnm[ij[1]], pnm[ij[2]]) else "",
       if (mx > 0.95) "remove one of the two competing terms from the model" else "")
   } else {

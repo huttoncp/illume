@@ -38,10 +38,15 @@ test_that("an ordinary REML fit's check reads its coefficients", {
   ## the pair named is a real pair of parameters, among the coefficients or
   ## the variance
   expect_match(a$detail, "[(](\\(Intercept\\)|x|z|area:L\\[1,1\\]) <-> ")
-  ## maximum likelihood, unchanged: the joint covariance of everything
+  ## the line says what REML leaves out
+  expect_match(a$detail, "under REML, correlations between coefficients and variance parameters are not assessed",
+               fixed = TRUE)
+  ## maximum likelihood, unchanged: the joint covariance of everything, and
+  ## no such caveat
   f0 <- q(ilm_model(y ~ x + z + (1 | area), data = d, family = "binomial", verbose = FALSE))
   expect_identical(al(f0)$status, "OK")
   expect_match(al(f0)$detail, "largest |parameter correlation|", fixed = TRUE)
+  expect_false(grepl("under REML", al(f0)$detail, fixed = TRUE))
 })
 
 test_that("a fit with one parameter to correlate says so", {
@@ -60,5 +65,6 @@ test_that("a fit with one parameter to correlate says so", {
   set.seed(4)
   d <- data.frame(area = factor(sample(A, n, TRUE))); d$y <- rbinom(n, 1, 0.4)
   f <- q(ilm_model(y ~ 1 + (1 | area), data = d, family = "binomial", reml = TRUE, verbose = FALSE))
-  expect_identical(al(f)$detail, "largest |parameter correlation| = 0.000 ((Intercept) <-> area:L[1,1])")
+  expect_match(al(f)$detail, "largest |parameter correlation| = 0.000 ((Intercept) <-> area:L[1,1])",
+               fixed = TRUE)
 })

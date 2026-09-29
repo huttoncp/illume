@@ -85,6 +85,14 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' and `fit$checks` holds the full table with a reason and a suggested remedy
 #' for anything that is not `"OK"`.
 #'
+#' The `parameter_aliasing` line reports the largest correlation between two
+#' estimated parameters. Under `reml = TRUE` the fixed effects are integrated
+#' out, so the coefficients' correlations and the variance parameters' are
+#' assessed separately, and a correlation BETWEEN a coefficient and a variance
+#' parameter is not assessed. For example, a between-group covariate with few
+#' groups, nearly confounded with the group variance, shows under maximum
+#' likelihood only. The line says so on a REML fit.
+#'
 #' @param formula A formula with random-effect bars and optional smooth terms.
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
