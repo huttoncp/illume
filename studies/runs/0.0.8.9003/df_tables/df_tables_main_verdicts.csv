@@ -1,0 +1,9 @@
+"verdict","holds"
+"Satterthwaite calibrated in every D1/D2 cell with G >= 10",FALSE
+"Satterthwaite closer to 0.95 than z in every D1/D2 cell with G = 6",FALSE
+"D3: Satterthwaite calibrated in the held fits",FALSE
+"D3: KR calibrated in the held fits",FALSE
+"D3: every Satterthwaite df defined (finite and at least 1)",TRUE
+"D4: Satterthwaite's F size calibrated in every cell",FALSE
+"D4: KR's F size calibrated in every cell",FALSE
+"D4: chi-square size calibrated in every cell",FALSE
