@@ -105,7 +105,9 @@ predictor contrast and is not affected by this argument.}
 
 \item{verbose}{Logical. Print checks while fitting.}
 
-\item{restarts}{Integer. Optimiser restarts.}
+\item{restarts}{Integer. Optimiser restarts from the fit's own solution.
+They refine it and confirm where it stopped (the \code{optimizer} check reads
+them), but begin nowhere else, so they do not search for other optima.}
 
 \item{joint}{Logical or \code{NULL}. Compute the joint precision over fixed and
 random parameters. \code{NULL} (the default) switches it on when the model

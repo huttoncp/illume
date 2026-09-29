@@ -3,11 +3,13 @@
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
-  restarts from the solution. Restarts that return the same optimum answer a
-  "false convergence" code: the fit is finished and the likelihood flat there,
-  so the line is OK and says so, where it warned before -- on one data set
-  in two row orders the code was 8 in one and 0 in the other at the same
-  optimum. Found through an external report.
+  restarts, which begin at the solution. Restarted from its own solution, an
+  optimiser that stays there answers a "false convergence" code: the fit is
+  finished and the likelihood flat there, so the line is OK and says so,
+  where it warned before -- on one data set in two row orders the code was 8
+  in one and 0 in the other at the same optimum. Found through an external
+  report. The restarts confirm where the fit stopped; they do not search for
+  other optima, and the line and the `restarts` help say so.
 * A restart that meets a non-finite gradient is set aside and the answer
   before it kept, and a first optimisation that stops where the gradient is
   not finite is tried again from two other starts; either used to stop the

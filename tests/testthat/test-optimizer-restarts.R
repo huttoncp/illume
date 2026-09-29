@@ -26,8 +26,11 @@ test_that("restarts that reach the same optimum answer a false-convergence code"
   r <- f$checks[f$checks$check == "optimizer", ]
   expect_identical(r$status, "OK")
   if (f$opt$convergence != 0L)
-    expect_match(r$detail, "restarts from the solution reached the same optimum",
+    expect_match(r$detail, "from its own solution, the optimiser stayed there",
                  fixed = TRUE)
+  ## and it says what the restarts are not
+  if (f$opt$convergence != 0L)
+    expect_match(r$detail, "do not search for other optima", fixed = TRUE)
 })
 
 test_that("a restart that meets a non-finite gradient does not stop the fit", {

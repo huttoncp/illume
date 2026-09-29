@@ -179,7 +179,9 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   multinomial fit uses across its outcome CATEGORIES, which is not a
 #'   predictor contrast and is not affected by this argument.
 #' @param verbose Logical. Print checks while fitting.
-#' @param restarts Integer. Optimiser restarts.
+#' @param restarts Integer. Optimiser restarts from the fit's own solution.
+#'   They refine it and confirm where it stopped (the `optimizer` check reads
+#'   them), but begin nowhere else, so they do not search for other optima.
 #' @param joint Logical or `NULL`. Compute the joint precision over fixed and
 #'   random parameters. `NULL` (the default) switches it on when the model
 #'   contains smooths, which is when [predict.ilm_model()] needs it.

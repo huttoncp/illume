@@ -949,7 +949,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   ## 0.690. Grading those FAIL discards a third of perfectly good fits.
   ## Restarts from the solution that come back to the same optimum answer the
   ## code: the fit is finished, and the code says the likelihood is flat
-  ## there. Reported on one data set in two row orders, nlminb gave code 8 in
+  ## there. They begin at the solution, so they say nothing about optima
+  ## elsewhere, and the line says so. Reported on one data set in two row orders, nlminb gave code 8 in
   ## one and success in the other at the same optimum -- the code follows the
   ## path, not the answer.
   rs_same <- !is.null(restarts) && isTRUE(restarts$same) && g <= 1e-2
@@ -957,8 +958,10 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (opt$convergence == 0 || rs_same) "OK" else if (g <= 1e-2) "WARN" else "FAIL",
     paste0(sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
            if (rs_same && opt$convergence != 0)
-             sprintf(paste0("; %d restart%s from the solution reached the same optimum, ",
-                            "so the code reflects a flat likelihood, not an unfinished fit ",
+             sprintf(paste0("; restarted %d time%s from its own solution, the optimiser ",
+                            "stayed there, so the code reflects a flat likelihood, not an ",
+                            "unfinished fit. The restarts begin at the solution: they confirm ",
+                            "where the fit stopped, and do not search for other optima ",
                             "(see the gradient and latent_budget checks)"),
                      restarts$n, if (restarts$n == 1L) "" else "s") else "",
            if (!is.null(restarts) && restarts$failed > 0L)
@@ -1925,8 +1928,10 @@ ilm_print_checks <- function(ck, title) {
 #'   zero comes from the zero process and the positives come from a count that
 #'   cannot be zero. Ignored when `Zzi` is `NULL`.
 #' @param verbose Logical. Print the checks while fitting.
-#' @param restarts Integer. Number of optimiser restarts from the previous
-#'   solution, which helps on difficult surfaces.
+#' @param restarts Integer. Number of optimiser restarts from the fit's own
+#'   solution. They refine it and confirm where it stopped (the `optimizer`
+#'   check reads them), but begin nowhere else, so they do not search for
+#'   other optima.
 #' @param joint Logical. Also compute the joint precision over fixed and random
 #'   parameters. Needed by [predict.ilm_model()] to propagate uncertainty in penalised
 #'   smooth coefficients; [ilm_model()] switches it on automatically when the model
