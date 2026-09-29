@@ -140,6 +140,15 @@
 ##   1.07e-6 against 1e-6; the threshold stands as approved and the run
 ##   decides.
 ##
+## ## Amendment A2 (committed before any main-run fit)
+## The build under test is 944383a, not 7d77e10 as the design and A1 name
+##   it. The full test suite found, before any main-run fit, that 7d77e10's
+##   conversion back spread a held term's NA through the whole covariance (a
+##   whole-matrix product, where 0 * NA is NA), so a held fit's variance
+##   components had no usable covariance and its Satterthwaite df fell back
+##   to z. 944383a maps only the coefficient blocks' rows and columns. The
+##   change library (lib-rsa) is rebuilt from it; nothing else changes.
+##
 ## Choices the design leaves to the code, fixed here before any run:
 ## - HAND divides income by 1e4 (SD about 0.9) and multiplies the tiny
 ##   covariate by 1e4 (SD about 1); its coefficients and SEs are put back on
