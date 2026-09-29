@@ -202,3 +202,27 @@ test_that("the specification is checked before anything is computed", {
   expect_error(ilm_aov_ez("id", "ycat", d, within = "time", verbose = FALSE),
                "numeric outcome")
 })
+
+test_that("a failed sphericity test names a call that runs as written", {
+  ## the note used to name ilm_model(..., re_struct = "us"), which stops:
+  ## re_struct is a list by term, and "us" is its default anyway
+  set.seed(3)
+  n <- 40
+  S <- matrix(c(1, 0.8, 0.2, 0.8, 1, 0.5, 0.2, 0.5, 2), 3)
+  U <- matrix(rnorm(n * 3), n) %*% chol(S)
+  sph_d <- data.frame(id = factor(rep(seq_len(n), each = 3)),
+                      w = factor(rep(c("a", "b", "c"), n)))
+  sph_d$y <- c(t(U)) + c(0, 0.3, 0.6)[sph_d$w]
+  a <- suppressMessages(ilm_aov_ez("id", "y", sph_d, within = "w", verbose = FALSE))
+  expect_lt(a$sphericity$w$p_mauchly, 0.05)
+  note <- grep("sphericity rejected", a$notes, value = TRUE)
+  expect_length(note, 1L)
+  expect_no_match(note, "re_struct", fixed = TRUE)
+  call_txt <- regmatches(note, regexpr("ilm_model[(].*family = \"gaussian\"[)]", note))
+  expect_identical(call_txt,
+    "ilm_model(y ~ w + (0 + w | id), data = sph_d, family = \"gaussian\")")
+  f <- suppressMessages(suppressWarnings(eval(parse(text = call_txt))))
+  expect_s3_class(f, "ilm_model")
+  ## it fits better than the random intercept that assumed sphericity
+  expect_lt(AIC(f), AIC(a$fit))
+})

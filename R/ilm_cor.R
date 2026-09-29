@@ -234,6 +234,14 @@ ilm_ar1 <- function(time, group, verbose = TRUE) {
 #' and the spacing need not be regular. This is the structure `nlme`'s
 #' `corCAR1()` fits, and the AR(1) special case when every gap is one.
 #'
+#' **Not a spatial CAR.** "CAR" here is continuous-time autoregression, over
+#' time within a unit. In disease mapping "CAR" means the conditional
+#' autoregressive model over neighbouring areas (Besag's ICAR, and BYM with an
+#' unstructured part beside it), which this is not. For correlation between
+#' neighbouring areas, use a Markov random field smooth over the area factor,
+#' `s(region, bs = "mrf", xt = list(nb = nb))` with `nb` the neighbour list, and
+#' add `(1 | region)` for the BYM form's unstructured part.
+#'
 #' @details
 #' Written as a Markov chain the transition from one observation to the next is
 #' `phi_k = rho ^ d_k` with innovation variance `1 - phi_k^2`, which is exact

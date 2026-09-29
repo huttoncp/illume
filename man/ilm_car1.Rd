@@ -29,6 +29,14 @@ and the spacing need not be regular. This is the structure \code{nlme}'s
 \code{corCAR1()} fits, and the AR(1) special case when every gap is one.
 }
 \details{
+\strong{Not a spatial CAR.} "CAR" here is continuous-time autoregression, over
+time within a unit. In disease mapping "CAR" means the conditional
+autoregressive model over neighbouring areas (Besag's ICAR, and BYM with an
+unstructured part beside it), which this is not. For correlation between
+neighbouring areas, use a Markov random field smooth over the area factor,
+\code{s(region, bs = "mrf", xt = list(nb = nb))} with \code{nb} the neighbour list, and
+add \code{(1 | region)} for the BYM form's unstructured part.
+
 Written as a Markov chain the transition from one observation to the next is
 \code{phi_k = rho ^ d_k} with innovation variance \code{1 - phi_k^2}, which is exact
 for the Ornstein-Uhlenbeck process rather than an approximation to it.

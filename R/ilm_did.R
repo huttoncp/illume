@@ -255,11 +255,11 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
                    verbose = FALSE, ...)
   k <- ilm_term_cols(fit, ".treat")
   ct <- ilm_coef_table(fit)
-  crit <- if (isTRUE(fit$exact_df)) stats::qt(0.975, fit$resid_df) else stats::qnorm(0.975)
+  crit <- ilm_ct_crit(ct, fit)[k]
   att <- data.frame(term = "ATT", estimate = ct[k, 1], se = ct[k, 2],
                     lower = ct[k, 1] - crit * ct[k, 2],
                     upper = ct[k, 1] + crit * ct[k, 2],
-                    p_value = ct[k, 4], stringsAsFactors = FALSE)
+                    p_value = ilm_ct_p(ct)[k], stringsAsFactors = FALSE)
   rownames(att) <- NULL
   say(sprintf("  ATT = %.4f  (%.4f, %.4f)  p = %s", att$estimate, att$lower,
               att$upper, format.pval(att$p_value, digits = 3, eps = 1e-4)))
@@ -338,8 +338,7 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
       kk <- grep("\\.treated:\\.relf", rownames(ect))
       if (length(kk)) {
         lv <- sub(".*\\.relf", "", rownames(ect)[kk])
-        ecrit <- if (isTRUE(efit$exact_df)) stats::qt(0.975, efit$resid_df)
-                 else stats::qnorm(0.975)
+        ecrit <- ilm_ct_crit(ect, efit)[kk]
         ev <- data.frame(rel_time = as.numeric(lv),
                          estimate = ect[kk, 1], se = ect[kk, 2],
                          lower = ect[kk, 1] - ecrit * ect[kk, 2],

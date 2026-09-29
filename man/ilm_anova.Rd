@@ -11,7 +11,9 @@ ilm_anova(
   test = c("Wald", "LRT"),
   ncores = 1L,
   restarts = 2L,
-  recode = TRUE
+  recode = TRUE,
+  df = "auto",
+  statistic = c("F", "Chisq")
 )
 }
 \arguments{
@@ -33,13 +35,26 @@ way that makes its main-effect row something other than a Type III test,
 refit with \code{\link[stats:contrast]{stats::contr.sum()}} for those factors and say so. \code{FALSE}
 tests the model exactly as coded and warns instead. The fit passed in is
 never modified either way.}
+
+\item{df}{For a gaussian mixed model's Wald tests, the denominator degrees
+of freedom of each F: \code{"auto"} (Satterthwaite's, as \code{lmerTest} reports),
+\code{"satterthwaite"}, \code{"kenward-roger"} (their df and scaled F, on their
+adjusted covariance; REML fits) or \code{"asymptotic"}. Other fits are
+unaffected.}
+
+\item{statistic}{\code{"F"} (the default) or \code{"Chisq"}. For a gaussian mixed
+model's Wald tests, \code{"F"} gives an F test on the denominator df above and
+\code{"Chisq"} the large-sample chi-square the table gave before; with few
+groups the chi-square is too liberal. Every other fit keeps its own
+reference: exact F with nothing integrated out, chi-square otherwise.}
 }
 \value{
 An \code{"anova"} data frame with one row per fixed-effect term. The
-columns are \code{Df}, \code{Chisq} and \verb{Pr(>Chisq)} in general, or \code{Df}, \verb{F value}
+columns are \code{Df}, \code{Chisq} and \verb{Pr(>Chisq)} in general; \code{Df}, \verb{F value}
 and \verb{Pr(>F)} when the model admits exact inference -- a gaussian model with
 no random or smooth terms, where the residual variance is estimated rather
-than assumed known (see \code{\link[=ilm_model]{ilm_model()}}). A model with no terms to test, such
+than assumed known (see \code{\link[=ilm_model]{ilm_model()}}); and \code{NumDF}, \code{DenDF}, \verb{F value} and
+\verb{Pr(>F)} for a gaussian mixed model's Wald tests with \code{statistic = "F"}. A model with no terms to test, such
 as an intercept-only model, returns a table with zero rows rather than an
 error: "there is nothing to test" is an answer, not a failure.
 }

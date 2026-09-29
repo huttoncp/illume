@@ -105,6 +105,188 @@ summarise_study <- function(dir, study) {
       "failed fits are excluded, so if failure correlates with extreme estimates",
       "the surviving coverage is optimistic.")
 
+  } else if (study == "df_tables") {
+    ## Finite df in a gaussian mixed model's tables (Craig's D-DF1 to D-DF5):
+    ## coverage of the effect's 95% interval (D1 to D3) and the size of the F
+    ## test (D4) under z, Satterthwaite and Kenward-Roger, per cell, with the
+    ## pre-registered verdicts from the main run and again on fresh seeds.
+    ## Every sentence is computed from the per-cell summaries, the ones that
+    ## go against the default included.
+    s <- read_all(dir, "^df_tables_main_summary.csv$"); if (is.null(s)) return(NULL)
+    v <- read_all(dir, "^df_tables_main_verdicts.csv$")
+    sf <- read_all(dir, "^df_tables_fresh_summary.csv$")
+    vf <- read_all(dir, "^df_tables_fresh_verdicts.csv$")
+    ## addendum A1: the ML arm, its verdicts, ML against REML on the same
+    ## replicates, and the paired reading made after it ran
+    sm <- read_all(dir, "^df_tables_ml_summary.csv$")
+    vm <- read_all(dir, "^df_tables_ml_verdicts.csv$")
+    cm <- read_all(dir, "^df_tables_ml_vs_reml.csv$")
+    pm <- read_all(dir, "^df_tables_ml_vs_reml_paired.csv$")
+    mk <- function(x) ifelse(x$calibrated, num(x$estimate), paste0("**", num(x$estimate), "**"))
+    wide <- function(s, arm, split = "all") {
+      x <- s[s$arm %in% arm & s$split == split, ]
+      do.call(rbind, lapply(unique(x$cell), function(k) {
+        z <- x[x$cell == k, ]; g <- function(m) z[z$method == m, ]
+        data.frame(arm = z$arm[1], G = z$G[1], m = z$m[1], icc = z$icc[1],
+                   fits = g("s")$n, held = g("s")$n_held,
+                   z = mk(g("z")), satterthwaite = mk(g("s")), kenward_roger = mk(g("kr")),
+                   df_s = num(g("s")$df_median, 1), df_kr = num(g("kr")$df_median, 1),
+                   stringsAsFactors = FALSE)
+      }))
+    }
+    d3 <- function(s) rbind(transform(wide(s, "D3"), fits_in = "all"),
+                            transform(wide(s, "D3", "held"), fits_in = "held"),
+                            transform(wide(s, "D3", "unheld"), fits_in = "unheld"))
+    tv <- function(v, vf) {
+      w <- function(h) ifelse(is.na(h), "NA", ifelse(h, "holds", "does not hold"))
+      out <- data.frame(verdict = v$verdict, main = w(v$holds), stringsAsFactors = FALSE)
+      if (!is.null(vf)) {
+        out$fresh <- w(vf$holds)
+        out$agree <- ifelse(out$main == out$fresh, "yes", "NO")
+      }
+      out
+    }
+    fits_of <- function(s) sum(s$n[s$split == "all" & s$method == "s"])
+    ## the sentences, for one run
+    said <- function(s, run) {
+      a <- s[s$split == "all", ]
+      miss <- function(G, meth) {
+        x <- a[a$arm %in% c("D1", "D2") & a$G %in% G & a$method == meth & !a$calibrated, ]
+        if (!nrow(x)) return("none")
+        paste(sprintf("%s G = %d, m = %d, ICC %s: %s", x$arm, x$G, x$m, x$icc,
+                      num(x$estimate)), collapse = "; ")
+      }
+      six <- merge(a[a$arm %in% c("D1", "D2") & a$G == 6 & a$method == "z", c("cell", "arm", "m", "icc", "estimate")],
+                   a[a$arm %in% c("D1", "D2") & a$G == 6 & a$method == "s", c("cell", "estimate")],
+                   by = "cell", suffixes = c("_z", "_s"))
+      zc <- six[abs(six$estimate_z - 0.95) <= abs(six$estimate_s - 0.95), ]
+      h <- s[s$arm == "D3" & s$split == "held", ]
+      hh <- merge(h[h$method == "s", c("G", "calibrated", "estimate")],
+                  h[h$method == "kr", c("G", "calibrated", "estimate")],
+                  by = "G", suffixes = c("_s", "_kr"))
+      tg <- hh[!hh$calibrated_s & hh$calibrated_kr, ]
+      c(paste0("**", run, ".** Satterthwaite missed calibration in the D1 and D2 cells ",
+               "with G >= 10 at: ", miss(c(10, 20), "s"), "; z at: ", miss(c(10, 20), "z"), "."),
+        paste0("At G = 6, z was as close to 0.95 as Satterthwaite or closer in ",
+               nrow(zc), " of ", nrow(six), " D1 and D2 cells",
+               if (nrow(zc)) paste0(" (", paste(sprintf("%s m = %d, ICC %s: z %s, Satterthwaite %s",
+                 zc$arm, zc$m, zc$icc, num(zc$estimate_z), num(zc$estimate_s)),
+                 collapse = "; "), ")") else "", "."),
+        paste0("Satterthwaite's df were undefined (NaN, infinite or below 1) in ",
+               sum(a$df_bad[a$method == "s"]), " fits of ", fits_of(s),
+               "; a table warned of a fallback to z in ", sum(a$warned[a$method == "s"]),
+               "; ", sum(a$errors[a$method == "s"]), " stopped with an error."),
+        paste0("The pre-registered trigger for a proposal before the default ships ",
+               "for held fits -- Satterthwaite uncalibrated in D3's held fits where ",
+               "Kenward-Roger is calibrated -- is met at: ",
+               if (nrow(tg)) paste(sprintf("G = %d (Satterthwaite %s, Kenward-Roger %s)",
+                 tg$G, num(tg$estimate_s), num(tg$estimate_kr)), collapse = "; ")
+               else "no cell", "."))
+    }
+    ## the ML arm's part: its cells, its verdicts beside the main run's, the
+    ## literal reading of its criterion, the comparison it pre-registered, and
+    ## the paired reading, marked post hoc
+    ml_part <- function() {
+      w <- function(h) ifelse(is.na(h), "NA", ifelse(h, "holds", "does not hold"))
+      crit <- vm$holds[1:2]
+      cells <- wide(sm, c("D1", "D2", "D3", "D4"))
+      cells <- cells[, c("arm", "G", "m", "icc", "fits", "held", "z", "satterthwaite", "df_s")]
+      cmp <- cm[, c("arm", "G", "m", "icc", "what", "z_reml", "z_ml", "s_reml", "s_ml",
+                    "df_s_reml", "df_s_ml", "se_reml", "se_ml", "held_reml", "held_ml")]
+      pp <- function(p) trimws(formatC(p, format = "g", digits = 2))
+      ps <- pm[pm$method == "s", ]; pz <- pm[pm$method == "z", ]
+      pair <- data.frame(arm = ps$arm, G = ps$G, m = ps$m, icc = ps$icc, what = ps$what,
+                         s_reml = ps$reml, s_ml = ps$ml, s_reml_only = ps$reml_only,
+                         s_ml_only = ps$ml_only, s_p = pp(ps$p),
+                         z_reml_only = pz$reml_only, z_ml_only = pz$ml_only, z_p = pp(pz$p),
+                         stringsAsFactors = FALSE)
+      d3c <- cm[cm$arm == "D3", ]
+      cov <- ps[ps$what == "covers", ]
+      more <- function(x) x$p < 0.05 & x$reml_only > x$ml_only
+      less <- function(x) x$p < 0.05 & x$reml_only < x$ml_only
+      nd <- cov[!more(cov) & !less(cov), ]
+      rej <- ps[ps$what == "rejects", ]
+      c("", paste0("**The ML arm** (addendum A1, pre-registered at 098929e before any of its ",
+                   "fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, ",
+                   "fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. ",
+                   fits_of(sm), " fits (", 24000 - fits_of(sm), " of 24,000 failed to fit). ",
+                   "Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. ",
+                   "Bold, df_s and held as above:"),
+        "", md_table(cells),
+        "", "**The ML arm's verdicts**, beside the main run's (REML):",
+        "", md_table(data.frame(verdict = vm$verdict, ML = w(vm$holds), REML_main = w(v$holds),
+                                stringsAsFactors = FALSE)),
+        "", paste0("**Literal verdict, as pre-registered:** the ML path's default is supported ",
+                   "if the first two verdicts hold under ML. They ",
+                   if (all(crit %in% TRUE)) "both hold, so it is supported."
+                   else paste0("do not both hold: the first ", w(crit[1]), " and the second ",
+                               w(crit[2]), ", so it is not supported, and the addendum ",
+                               "sends that to Craig with a proposal.")),
+        "", said(sm, "ML arm")[1:3],
+        "", "**ML against REML on the same replicates** (pre-registered beside the verdicts, not graded): coverage or size by z and Satterthwaite, the median Satterthwaite df, the mean SE, and the share of fits held:",
+        "", md_table(cmp),
+        "", paste0("Where a variance is held at zero the Satterthwaite df are the residual ",
+                   "variance's own: in D3, with n = G x m observations and 2 fixed effects, ",
+                   "the median df are ", paste(sprintf("%s under ML against %s under REML (n = %d)",
+                     num(d3c$df_s_ml, 0), num(d3c$df_s_reml, 0), as.integer(d3c$G * d3c$m)),
+                     collapse = "; "),
+                   ". ML's residual variance divides by n and REML's by n - 2, and the df ",
+                   "follow: with a variance held, ML's df exceed REML's by the number of fixed effects."),
+        "", paste0("**Paired, chosen after the ML arm ran (post hoc, not a verdict).** Both ",
+                   "arms fitted the same data, so per cell the exact two-sided McNemar test ",
+                   "on the replicates both fitted: reml_only counts the replicates whose ",
+                   "interval covered (or whose test rejected) under REML only, ml_only under ",
+                   "ML only (scripts/df_tables_ml_paired.R):"),
+        "", md_table(pair),
+        "", paste0("Satterthwaite under REML covered more often than under ML, at p < 0.05, in ",
+                   sum(more(cov)), " of ", nrow(cov), " D1 to D3 cells; less often in ",
+                   sum(less(cov)), "; not shown different in ", nrow(nd),
+                   if (nrow(nd)) paste0(" (", paste(sprintf("%s G = %d, m = %d: %d against %d, p = %s",
+                     nd$arm, nd$G, nd$m, nd$reml_only, nd$ml_only, pp(nd$p)), collapse = "; "), ")")
+                   else "", ". ",
+                   "In D4, Satterthwaite's F under ML rejected more often than under REML in ",
+                   sum(rej$p < 0.05 & rej$ml_only > rej$reml_only), " of ", nrow(rej),
+                   " cells (sizes ", paste(num(rej$ml), collapse = ", "), " against ",
+                   paste(num(rej$reml), collapse = ", "), ")."))
+    }
+    c(paste0("Finite degrees of freedom in a gaussian mixed model's tables. ", fits_of(s),
+             " REML fits in the main run (", 24000 - fits_of(s), " of 24,000 failed to fit)",
+             if (!is.null(sf)) paste0(" and ", fits_of(sf), " on fresh seeds (",
+                                      12000 - fits_of(sf), " of 12,000 failed)") else "",
+             ", each tested by z, Satterthwaite and Kenward-Roger at the same optimum. ",
+             "Coverage of the effect's 95% interval (nominal 0.95) or the F test's size ",
+             "(nominal 0.05); calibrated is within 2 Monte Carlo SEs of the target (0.936 to ",
+             "0.964 at 1,000 replicates, 0.931 to 0.970 at 500), and a figure in bold is not. ",
+             "held counts fits with a variance direction held at its boundary; df_s and ",
+             "df_kr are median df."),
+      "", "**D1, a between-cluster effect** (y ~ trt + (1 | g), half the clusters treated):",
+      "", md_table(wide(s, "D1")),
+      "", "**D2, a within-cluster slope** (y ~ x + (1 + x | g), slope SD 0.3, correlation 0.3):",
+      "", md_table(wide(s, "D2")),
+      "", "**D3, a variance held at its boundary** (y ~ trt + (1 | g), intercept SD 0 in truth), all fits and then by whether the fit held it:",
+      "", md_table(d3(s)),
+      "", "**D4, the F test of a 3-level between-cluster factor with no effect** (size; z is the Wald chi-square):",
+      "", md_table(wide(s, "D4")),
+      if (!is.null(sf))
+        c("", "**Fresh seeds**, every cell, and D3 by whether the fit held it:",
+          "", md_table(rbind(transform(wide(sf, c("D1", "D2", "D4")), fits_in = "all"),
+                             d3(sf)))),
+      "", "**The pre-registered verdicts**, main run and fresh seeds:",
+      "", md_table(tv(v, vf)),
+      "", said(s, "Main run"),
+      if (!is.null(sf)) c("", said(sf, "Fresh seeds")),
+      if (!is.null(sm)) ml_part(),
+      "",
+      if (is.null(sm)) c(
+        "CAVEATS that must travel with this result: REML throughout, as Kenward-Roger",
+        "requires; the z and Satterthwaite figures under ML would differ.")
+      else c(
+        "CAVEATS that must travel with this result: the main and fresh runs are REML,",
+        "as Kenward-Roger requires; the ML arm measures ilm_model()'s default, and its",
+        "paired reading was chosen after it ran."),
+      "D2's intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the",
+      "script's header before any run. The default's scope was narrowed to linear",
+      "mixed models (acf93c2) before the runs; every cell here is one.")
   } else if (study == "power") {
     d <- read_all(dir, "^power_summary.csv$"); if (is.null(d)) return(NULL)
     nul <- d[d$delta == 0, c("cell", "n_wald", "rej_wald", "rej_lrt")]
@@ -541,6 +723,300 @@ summarise_study <- function(dir, study) {
       "error -- in `combined` it is the rare category's bias. AR(1) and CAR(1)",
       "terms are held the same way but are not part of this study.")
 
+  } else if (study == "variance_draws") {
+    ## Draws of a poorly determined variance (item 78, Arm B): the flag on the
+    ## SE of a log SD, its cut-off by the pre-registered rule, and the two
+    ## remedies' coverage, forecast scores and time.
+    par <- read_all(dir, "^variance_draws_main_par[.]csv([.]gz)?$")
+    if (is.null(par)) return(NULL)
+    fc <- read_all(dir, "^variance_draws_main_fc[.]csv([.]gz)?$")
+    tm <- read_all(dir, "^variance_draws_main_time[.]csv([.]gz)?$")
+    fpar <- read_all(dir, "^variance_draws_fresh_par[.]csv([.]gz)?$")
+    fxp <- read_all(dir, "^variance_draws_fixtures_par[.]csv([.]gz)?$")
+    fxf <- read_all(dir, "^variance_draws_fixtures_fc[.]csv([.]gz)?$")
+    cutsv <- c(0.5, 0.75, 1, 1.5, 2, 3)
+    fails <- c("unbounded", "wald_too_wide")
+    ## the cells, as the script builds them, for the arm and family of each row
+    cl <- rbind(
+      data.frame(arm = "B1", expand.grid(family = c("gaussian", "poisson", "nbinom"),
+                 Tn = c(12, 24, 48), rho = c(0.3, 0.7), lat_sd = c(0.3, 0.8),
+                 stringsAsFactors = FALSE)[, "family", drop = FALSE]),
+      data.frame(arm = "B2", expand.grid(family = c("gaussian", "poisson", "nbinom", "binomial"),
+                 Tn = c(12, 24), ri_sd = c(0.2, 0.5),
+                 stringsAsFactors = FALSE)[, "family", drop = FALSE]),
+      data.frame(arm = "B3", family = rep(c("gaussian", "poisson", "nbinom", "binomial"), 6)))
+    cl$cell <- seq_len(nrow(cl))
+    prep <- function(p) {
+      p <- merge(p[p$ok %in% TRUE & !is.na(p$param), ], cl, by = "cell")
+      p$fails <- p$label %in% fails
+      p
+    }
+    n_failed <- length(unique(paste(par$cell, par$rep)[!(par$ok %in% TRUE)]))
+    par <- prep(par)
+    ## a share over the parameters that have the interval; those without one
+    ## (no joint draws for the fit) are left out, and their number said
+    mcse <- function(x) sqrt(mean(x) * (1 - mean(x)) / length(x))
+    pc <- function(x) {
+      miss <- sum(is.na(x)); x <- x[!is.na(x)]
+      if (!length(x)) return("--")
+      paste0(num(mean(x), 3), " (", num(mcse(x), 3), ")",
+             if (miss) paste0(", ", miss, " without") else "")
+    }
+    ## A CRPS is never negative. Draws in the 1e150s and beyond overflow the
+    ## sample formula to -Inf or NaN, so a CRPS that is not finite or is
+    ## negative is an exploded forecast, Inf; means are then Inf, and are
+    ## reported beside the mean over the fits that stayed finite.
+    fx_crps <- function(x) { x[!is.finite(x) | x < 0] <- Inf; x }
+    gnum <- function(x) ifelse(is.na(x), "NA", ifelse(is.infinite(x), "Inf",
+                               formatC(signif(x, 3), format = "g", digits = 3)))
+    lines <- c(paste0(
+      "Draws of a poorly determined variance. ", length(unique(paste(par$cell, par$rep))),
+      " fits", if (n_failed) paste0(" (", n_failed, " more failed to fit)") else "",
+      " and ", nrow(par), " variance parameters; s is the SE of a parameter's log ",
+      "scale from vcov(fit, full = TRUE), d the SD of its 400 joint draws (the other ",
+      "package's signal). The label is the profile likelihood's, from outside the flag. ",
+      "Parameters the build holds are counted here and left out of every rate below. ",
+      "Monte Carlo SEs in brackets."))
+    ## held, and the labels, per arm and family
+    lt <- do.call(rbind, lapply(split(par, list(par$arm, par$family, par$param), drop = TRUE),
+      function(x) data.frame(arm = x$arm[1], family = x$family[1], param = x$param[1],
+        n = nrow(x), held = sum(x$held), ok = sum(x$label %in% "ok"),
+        wald_too_wide = sum(x$label %in% "wald_too_wide"),
+        unbounded = sum(x$label %in% "unbounded"),
+        profile_failed = sum(x$label %in% "profile_failed"),
+        ridge = sum(x$ridge %in% TRUE), stringsAsFactors = FALSE)))
+    lt <- lt[order(lt$arm, lt$family, lt$param), ]
+    lines <- c(lines, "", "**Holds and labels** (parameters):", "", md_table(lt))
+    u <- par[!par$held & par$label %in% c("ok", fails) & is.finite(par$s), ]
+    ## s against d
+    okd <- is.finite(u$d) & u$d > 0 & u$s > 0
+    lines <- c(lines, "", paste0(
+      "**s against d.** Spearman correlation ", num(stats::cor(u$s[okd], u$d[okd],
+      method = "spearman"), 3), " over ", sum(okd), " unheld parameters."))
+    ## the cut-off, by the rule: the smallest candidate flagging at most 5% of
+    ## the parameters not labelled approx_fails
+    ct <- do.call(rbind, lapply(cutsv, function(k) {
+      fl <- u$s > k
+      data.frame(cut = k, specificity = mean(!fl[!u$fails]), sensitivity = mean(fl[u$fails]),
+                 sens_unbounded = mean(fl[u$label == "unbounded"]),
+                 sens_wald_too_wide = mean(fl[u$label == "wald_too_wide"]),
+                 agree_d = mean(fl == (u$d > k), na.rm = TRUE))
+    }))
+    pick <- ct$cut[ct$specificity >= 0.95]
+    chosen <- if (length(pick)) min(pick) else NA_real_
+    lines <- c(lines, "", paste0("**The cut-off** (", nrow(u), " unheld parameters, ",
+      sum(u$fails), " approx_fails; agree_d is the share where d gives the same flag):"),
+      "", md_table(ct), "",
+      if (is.na(chosen)) paste0("No candidate reaches specificity 0.95: by the rule the ",
+                               "flag is NOT VIABLE, and remedy 1 fails with it.")
+      else paste0("By the rule the cut-off is **", chosen, "**.",
+        if (chosen == min(cutsv)) paste0(" It is the lowest candidate, so a lower cut-off ",
+          "might do better; the study does not search below it.") else ""))
+    if (is.na(chosen)) chosen <- max(cutsv)
+    ## fresh seeds at the chosen cut-off
+    if (!is.null(fpar)) {
+      fp <- prep(fpar)
+      fu <- fp[!fp$held & fp$label %in% c("ok", fails) & is.finite(fp$s), ]
+      fu$fl <- fu$s > chosen
+      ## the rule itself on the fresh seeds, beside the main run's, with
+      ## Monte Carlo SEs
+      rt <- function(x) if (length(x)) pc(x) else "--"
+      side <- do.call(rbind, lapply(cutsv, function(k) {
+        f1 <- u$s > k; f2 <- fu$s > k
+        data.frame(cut = k, spec_main = rt(!f1[!u$fails]), spec_fresh = rt(!f2[!fu$fails]),
+                   sens_main = rt(f1[u$fails]), sens_fresh = rt(f2[fu$fails]),
+                   stringsAsFactors = FALSE)
+      }))
+      sp2 <- vapply(cutsv, function(k) mean(!(fu$s > k)[!fu$fails]), 0)
+      chosen2 <- if (any(sp2 >= 0.95)) cutsv[which(sp2 >= 0.95)[1L]] else NA_real_
+      by <- function(g) do.call(rbind, lapply(split(fu, fu[[g]]), function(x)
+        data.frame(group = paste(g, x[[g]][1]), n = nrow(x), failing = sum(x$fails),
+                   specificity = rt(!x$fl[!x$fails]), sensitivity = rt(x$fl[x$fails]),
+                   stringsAsFactors = FALSE)))
+      ft <- rbind(by("family"), by("arm"), by("label"))
+      lines <- c(lines, "", paste0("**Fresh seeds** (", nrow(fu), " unheld parameters, ",
+        sum(fu$fails), " approx_fails), the rule beside the main run's:"), "",
+        md_table(side), "", paste0("On the fresh seeds the rule picks ",
+          if (is.na(chosen2)) "no cut-off" else chosen2, if (identical(chosen2, chosen))
+            ", the main run's: CONFIRMED." else paste0(", where the main run picked ", chosen, ".")),
+        "", paste0("At ", chosen, ", by family, arm and label:"), "", md_table(ft))
+    }
+    ## coverage of the true SD
+    u$fl <- u$s > chosen
+    u$cb <- u$truth >= u$base_lo & u$truth <= u$base_hi
+    ## remedy 2 redraws only the flagged; the others keep their joint draws
+    u$c2 <- ifelse(u$fl, u$truth >= u$r2_lo & u$truth <= u$r2_hi, u$cb)
+    cv <- function(x, nm) data.frame(group = nm, n = nrow(x), joint_draws = pc(x$cb),
+                                     profile_draws = pc(x$c2), stringsAsFactors = FALSE)
+    cvt <- rbind(cv(u[!u$fl, ], "not flagged"), cv(u[u$fl, ], "flagged"),
+                 cv(u[u$fl & u$label == "unbounded", ], "flagged, unbounded"),
+                 cv(u[u$fl & u$label == "wald_too_wide", ], "flagged, wald_too_wide"),
+                 cv(u[u$fl & u$label == "ok", ], "flagged, ok"),
+                 cv(u[u$fl & u$ridge %in% TRUE, ], "flagged, ridge"))
+    lines <- c(lines, "", paste0("**Coverage of the true SD by the 95% interval** ",
+      "(nominal 0.95; calibrated means within 2 Monte Carlo SEs of it; the fallback ",
+      "given theta holds the SD at its estimate, so has none):"), "", md_table(cvt))
+    ## the lower plateau: how often remedy 2's grid edge acts as a floor, and
+    ## whether leaving its lowest step out moves the forecasts (paired by fit
+    ## and seed, so the SE is of the per-fit difference)
+    if ("low_plateau" %in% names(u)) {
+      fu <- u[u$fl, ]
+      lines <- c(lines, "", paste0(
+        "**The lower plateau, a property of the registered grid** (estimate - 4 to + 6). ",
+        "EXPLORATORY, added after the pre-registration and before any main-run data; no ",
+        "registered label, flag or remedy uses it. ",
+        "Of ", nrow(fu), " flagged parameters, ", sum(fu$low_plateau %in% TRUE),
+        " have a profile flat (deviance change < 0.1) over the grid's lowest step. ",
+        "Remedy 2's draws within one grid step of the lower edge: mean share ",
+        num(mean(fu$edge_mass, na.rm = TRUE), 3), ", over 5% in ",
+        sum(fu$edge_mass > 0.05, na.rm = TRUE), " and over 20% in ",
+        sum(fu$edge_mass > 0.2, na.rm = TRUE), "."))
+      if (!is.null(fc) && any(fc$remedy == "profile_trim")) {
+        a <- fc[fc$remedy == "profile" & fc$cut %in% chosen, ]
+        b <- fc[fc$remedy == "profile_trim" & fc$cut %in% chosen, ]
+        m <- merge(a, b, by = c("cell", "rep", "h"), suffixes = c("", "_trim"))
+        if (nrow(m)) {
+          pt <- do.call(rbind, lapply(split(m, m$h), function(z) {
+            p <- fx_crps(z$crps_mean); t2 <- fx_crps(z$crps_mean_trim)
+            both <- is.finite(p) & is.finite(t2) & p > 0 & t2 > 0
+            ## a few fits' CRPS run to 1e50 and beyond, and a difference of
+            ## means is theirs alone; the log ratio per fit weighs every fit
+            lr <- log(p[both] / t2[both])
+            se <- stats::sd(lr) / sqrt(length(lr))
+            data.frame(h = z$h[1], fits = nrow(z), exploded = sum(!both),
+                       median_profile = gnum(stats::median(p[both])),
+                       median_trimmed = gnum(stats::median(t2[both])),
+                       mean_log_ratio = gnum(mean(lr)), mc_se = gnum(se),
+                       beyond_2se = abs(mean(lr)) > 2 * se, stringsAsFactors = FALSE)
+          }))
+          lines <- c(lines, "", paste0("Remedy 2 at ", chosen, " against the same with the ",
+            "lowest grid step left out (profile_trim, exploratory), on the fits it redraws: ",
+            "per fit, the log of the ratio of the two mean CRPS, averaged over fits (0 is ",
+            "no difference; exploded counts fits where either forecast overflowed):"), "",
+            md_table(pt),
+            "", if (any(pt$beyond_2se)) paste0("The floor MOVES the forecasts beyond Monte ",
+              "Carlo error: an input to the remedy's next design (a wider or adaptive lower ",
+              "grid).") else paste0("The difference is within Monte Carlo error at every ",
+              "horizon: the floor is harmless in practice."))
+        }
+      }
+    }
+    ## forecasts, per fit, flagged where any unheld parameter is
+    if (!is.null(fc)) {
+      ff <- stats::aggregate(fl ~ cell + rep, u, any)
+      fc <- merge(fc, ff, by = c("cell", "rep"), all.x = TRUE)
+      fc$fl[is.na(fc$fl)] <- FALSE
+      ## remedy 2 at the chosen cut-off; its fits not flagged there keep the
+      ## joint draws, which is what remedy 2 would do to them
+      pr <- fc[fc$remedy == "profile" & fc$cut %in% chosen, ]
+      jn <- fc[fc$remedy == "joint", ]
+      r2 <- rbind(pr, transform(jn[!paste(jn$cell, jn$rep) %in% paste(pr$cell, pr$rep), ],
+                                remedy = "profile"))
+      sets <- list(joint = jn, given_theta = fc[fc$remedy == "given_theta", ], profile = r2)
+      ## per-fit rates, averaged over fits: the SE is over fits, since a
+      ## panel's 20 series share one fit
+      fsum <- function(x, nm) do.call(rbind, lapply(split(x, x$h), function(z) {
+        w <- z$n_rows; cm <- fx_crps(z$crps_mean); fin <- is.finite(cm)
+        data.frame(remedy = nm, h = z$h[1], fits = nrow(z),
+          cov80 = paste0(num(stats::weighted.mean(z$cov80, w), 3), " (",
+                         num(stats::sd(z$cov80) / sqrt(nrow(z)), 3), ")"),
+          cov95 = paste0(num(stats::weighted.mean(z$cov95, w), 3), " (",
+                         num(stats::sd(z$cov95) / sqrt(nrow(z)), 3), ")"),
+          crps_mean = gnum(stats::weighted.mean(cm, w)),
+          crps_mean_finite = gnum(stats::weighted.mean(cm[fin], w[fin])),
+          fits_exploded = sum(!fin),
+          crps_median = gnum(stats::median(z$crps_median)),
+          true_crps = gnum(stats::weighted.mean(z$ref_mean, w)),
+          explosive = num(sum(z$n_explosive) / sum(w), 4), stringsAsFactors = FALSE)
+      }))
+      for (grp in c("flagged", "not flagged")) {
+        tab <- do.call(rbind, lapply(names(sets), function(nm) {
+          x <- sets[[nm]]; fsum(x[x$fl == (grp == "flagged"), ], nm) }))
+        lines <- c(lines, "", paste0("**Forecasts, fits ", grp, " at ", chosen,
+          "** (B1 and B2; explosive is the share of rows with CRPS over 100 times the ",
+          "true-parameter predictive's):"), "", md_table(tab))
+      }
+      ## the fallback remedy 1 names, by family and horizon, on the flagged
+      g <- merge(sets$given_theta[sets$given_theta$fl, ], cl, by = "cell")
+      if (nrow(g)) {
+        gt <- do.call(rbind, lapply(split(g, list(g$family, g$h), drop = TRUE), function(z) {
+          w <- z$n_rows; n <- nrow(z)
+          data.frame(family = z$family[1], h = z$h[1], fits = n,
+            cov80 = paste0(num(stats::weighted.mean(z$cov80, w), 3), " (",
+                           num(stats::sd(z$cov80) / sqrt(n), 3), ")"),
+            cov95 = paste0(num(stats::weighted.mean(z$cov95, w), 3), " (",
+                           num(stats::sd(z$cov95) / sqrt(n), 3), ")"),
+            crps_mean = gnum(stats::weighted.mean(fx_crps(z$crps_mean), w)),
+            true_crps = gnum(stats::weighted.mean(z$ref_mean, w)),
+            explosive = sum(z$n_explosive), stringsAsFactors = FALSE)
+        }))
+        gt <- gt[order(gt$family, gt$h), ]
+        lines <- c(lines, "", paste0("**Draws given theta on the fits flagged at ", chosen,
+          "**, by family and horizon. A binary outcome's interval spans both values,",
+          " so its coverage is 1 by construction:"), "", md_table(gt))
+      }
+    }
+    ## time
+    if (!is.null(tm)) {
+      tm$remedy2 <- tm$t_prof + tm$t_ridge + ifelse(is.na(tm$t_r2), 0, tm$t_r2)
+      q <- function(x) paste0(num(stats::median(x, na.rm = TRUE), 2), " / ",
+                              num(stats::quantile(x, 0.9, na.rm = TRUE, names = FALSE), 2))
+      tm <- merge(tm, cl, by = "cell")
+      tt <- do.call(rbind, lapply(split(tm, tm$arm), function(x)
+        data.frame(arm = x$arm[1], fits = nrow(x), fit = q(x$t_fit), draws = q(x$t_draws),
+                   profiles = q(x$t_prof), ridge = q(x$t_ridge), remedy2_all = q(x$remedy2))))
+      lines <- c(lines, "", paste0("**Time**, seconds per fit on one core, median / 90th ",
+        "percentile (remedy2_all is the profiles, the ridge profiles and the profile ",
+        "draws at all six candidate cut-offs, so an upper bound for one):"), "", md_table(tt))
+    }
+    ## the named fixtures
+    if (!is.null(fxp)) {
+      fxp$flag <- ifelse(fxp$held, "held", ifelse(fxp$s > chosen, "flagged", "-"))
+      sd_i <- function(lo, hi) ifelse(is.na(lo), "", paste0(signif(exp(lo), 3), " to ",
+                                                            signif(exp(hi), 3)))
+      ft <- data.frame(fixture = fxp$fixture, param = fxp$param, s = signif(fxp$s, 3),
+        d = signif(fxp$d, 3), label = fxp$label, flag = fxp$flag,
+        sd_true = signif(exp(fxp$truth), 3), sd_est = signif(exp(fxp$est), 3),
+        joint_95 = sd_i(fxp$base_lo, fxp$base_hi), profile_95 = sd_i(fxp$r2_lo, fxp$r2_hi),
+        stringsAsFactors = FALSE)
+      lines <- c(lines, "", "**The named fixtures** (SDs on their own scale):", "",
+                 md_table(ft))
+      if (!is.null(fxf)) {
+        h1 <- fxf[fxf$h == 1 & (fxf$remedy %in% c("joint", "given_theta") |
+                                  fxf$cut %in% chosen), ]
+        lines <- c(lines, "", "Their forecast CRPS at horizon 1:", "",
+          md_table(data.frame(fixture = h1$fixture, remedy = h1$remedy,
+                              crps_mean = gnum(fx_crps(h1$crps_mean)),
+                              true_crps = gnum(h1$ref_mean), stringsAsFactors = FALSE)))
+      }
+    }
+    c(lines, "",
+      "CAVEATS that must travel with this result: remedy 2 assumes a flat prior on",
+      "the log SD and a Gaussian for the other parameters given it, from the draws'",
+      "covariance at the estimate. Its cap, 5 x max(sd(g(y*)), 0.5) on the link scale,",
+      "was fixed before the run. The covariate panel fixtures' six future times were",
+      "drawn after their generator's 24, from the true AR. The lower-plateau measure",
+      "and profile_trim are exploratory, added after the pre-registration; no",
+      "registered label, flag or remedy uses them. The main run's time, against the",
+      "design's 17 core-hours, includes the profiles' second start (a smoke-run fix).",
+      "The summariser's CRPS handling -- an overflowed or negative CRPS read as an",
+      "exploded forecast, Inf -- and its count of parameters without a joint interval",
+      "were corrected after the main run, from its own per-fit numbers; no fit was",
+      "rerun and no per-fit number changed.",
+      "",
+      "After the run, an AR(1) correlation floor was added: a fit that ends with",
+      "|rho| above 0.99 is refitted with atanh(rho) bounded at 8, from where it stopped",
+      "and from rho = 0. Refitting every B1 and B2 fit from its seed on the main run's",
+      "build and on the floor's, it changes 253 of 5,200 (242 in B1, 11 in B2), 249",
+      "of them fits whose atanh(rho) had run past 8, and 180 with the AR SD below 0.01;",
+      "no fit with |rho| at or below 0.99 changes. Their whole per-fit pipeline rerun",
+      "on the floor's build: 24 were flagged at 0.75 and 23 are; none of the 25 fits",
+      "whose joint forecast exploded is among them, and the flagged-fit forecast",
+      "table moves by at most 0.001 in coverage, given theta's CRPS by at most 0.01,",
+      "and given theta has no explosion before or after. The recommendation to draw given theta for",
+      "flagged fits does not depend on these fits. The check is",
+      "scripts/variance_draws_floor_check.R; its table,",
+      "variance_draws_floor_check.csv.gz, is filed with this run.")
   } else if (study == "messy") {
     ## Every sentence below is computed from the csv, the ones that go against
     ## illume included, so a re-run at a later version says what THAT run

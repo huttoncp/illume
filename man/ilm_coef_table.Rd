@@ -5,20 +5,37 @@
 \alias{iml_coef_table}
 \title{Coefficient table with Wald tests}
 \usage{
-ilm_coef_table(object)
+ilm_coef_table(object, df = "auto")
 }
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
+
+\item{df}{The degrees of freedom for a gaussian mixed model: \code{"auto"}
+(Satterthwaite), \code{"satterthwaite"}, \code{"kenward-roger"}, \code{"asymptotic"}
+(the normal), or a number. Ignored for other fits.}
 }
 \value{
-A data frame with columns \code{Estimate}, \verb{Std. Error}, \verb{z value} and
-\verb{Pr(>|z|)}.
+A data frame with columns \code{Estimate}, \verb{Std. Error}, and either \verb{z value} and \verb{Pr(>|z|)} or, with finite degrees of freedom, \verb{t value} and
+\verb{Pr(>|t|)} -- and for a gaussian mixed model a \code{df} column before them.
+The attribute \code{"df_method"} names the reference.
 }
 \description{
-Estimates, standard errors, z statistics and two-sided p-values, in the layout
-\code{summary()} prints.
+Estimates, standard errors, test statistics and two-sided p-values, in the
+layout \code{summary()} prints.
 }
 \details{
+\strong{The reference distribution.} With nothing integrated out -- a linear
+model -- the test is exactly t on the residual degrees of freedom. For a
+gaussian MIXED model the default is t on Satterthwaite's degrees of
+freedom, one per coefficient, as \code{lmerTest} reports: with few groups the
+normal reference is too liberal. \code{df = "kenward-roger"} gives Kenward and
+Roger's df and their adjusted standard errors instead (REML fits); a
+number fixes the df; \code{"asymptotic"} gives the normal, as before. Where a
+coefficient's Satterthwaite df cannot be formed it is tested against the
+normal and the table says which. Every other family is tested against the
+normal: neither approximation is derived for it, and \code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}}
+simulates the reference instead.
+
 These are Wald tests, which are fast but have a known weakness: for very
 strong effects, or when a category is nearly perfectly predicted, the Wald
 statistic can \emph{shrink} rather than grow. This is the Hauck-Donner effect. If a
@@ -29,4 +46,7 @@ term matters to your conclusions, confirm it with a likelihood-ratio test via
 Hauck, W. W., & Donner, A. (1977). Wald's test as applied to hypotheses in
 logit analysis. \emph{Journal of the American Statistical Association}, 72(360),
 851--853.
+
+Satterthwaite, F. E. (1946). An approximate distribution of estimates of
+variance components. \emph{Biometrics Bulletin}, 2(6), 110--114.
 }

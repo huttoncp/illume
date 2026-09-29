@@ -1,0 +1,46 @@
+Version: 0.0.8.9003
+Date: 2026-09-28
+R: 4.4.3
+Studies: variance_draws, df_tables
+Date.df_tables: 2026-09-28
+Date.variance_draws: 2026-09-28
+Note: Arm B of item 78, pre-registered in studies/scripts/variance_draws.R
+ (header ce21f68). The main run (100 replicates per cell, 7,600 fits) and
+ the fresh-seed run (50 per cell, 3,800 fits, seeds offset by 1,000,000)
+ ran from the script at 8867741 (main) and 8867741 then c32ca22 (fresh; a
+ scheduling change, jobs handed out one at a time), on illume built from
+ hold-pass 89b4b52 (tree 486e3e97838c905304588c90155573dd9b853a9d), in a
+ pinned library whose manifest did not change over either run. Both were
+ checkpointed per fit and resumed several times on more or fewer workers;
+ every fit sets its own seed, and a resumed run was shown to give the same
+ numbers as an uninterrupted one. The main run took 41 core-hours against
+ the design's 17 (B2's profiles, and the profiles' second start added in
+ the smoke run).
+Note: Changes after the pre-registration, before any main-run data: the
+ profiles' second start, linear interpolation of the profile, the estimate
+ added to the draws' grid (bcf726d), and the exploratory lower-plateau
+ measure (eeae392, ba644fd). After the runs, reporting fixes to the
+ summariser only (01d5b66): no fit was rerun and no per-fit number changed.
+Note: One fit of 7,600 failed (cell 28, rep 9: a 12-point gaussian AR(1)
+ series, nlminb stopping on an NA/NaN gradient); none of the fresh run's.
+Note: The df tables study (D-DF1 to D-DF5), pre-registered in
+ studies/scripts/df_tables.R (6eeeec7; code c0f3db5, the verdict relabelled
+ for reading after the main run, no number changed). The main run (1,000
+ replicates per cell, 24,000 fits) and the fresh-seed run (500 per cell,
+ 12,000 fits, seeds offset by 1,000,000) ran on illume acf93c2 in a pinned
+ library (17 packages) whose manifest did not change over either run, on 2
+ workers. The fresh run's final bind failed after every fit was
+ checkpointed (its script was edited while it ran); run again, it read all
+ 12,000 from the checkpoints and refitted none. Per-cell summaries and the
+ verdicts are filed here; the per-fit tables stay on local disk.
+Note: The df tables study's ML arm (addendum A1), pre-registered in
+ studies/scripts/df_tables.R at 098929e before any of its fits: the 24
+ cells on the main run's seeds, 1,000 replicates per cell, reml = FALSE,
+ 24,000 fits (1 failed) in 78 minutes on 1 worker, 2026-09-29, from a copy
+ of the script byte-identical to 098929e's, in the main run's pinned
+ library (illume acf93c2), whose manifest was the same after the run. It
+ started early, when a waiter read an older check log; every fit is seeded
+ and checkpointed, so no number depends on when it ran. Its per-cell
+ summary, verdicts and the pre-registered ML-against-REML table are filed
+ here, with a paired McNemar reading chosen after it ran
+ (scripts/df_tables_ml_paired.R); the per-fit tables stay on local disk.

@@ -1,5 +1,28 @@
 # illume 0.0.8.9003
 
+* A gaussian mixed model's tables test on finite degrees of freedom, as
+  lmerTest does. `summary()` gives each coefficient a df column and t tests
+  on Satterthwaite's df; `ilm_anova()` gives F with its numerator and
+  denominator df (`statistic = "Chisq"` keeps the Wald chi-square table);
+  `ilm_emmeans()` gives t intervals on Satterthwaite's df, and
+  `ilm_contrast()` follows it. `df = "kenward-roger"` asks for Kenward-Roger
+  instead, with its adjusted standard errors, and `df = "asymptotic"` for the
+  z and chi-square tests as before. Where the df cannot be had, as when a
+  variance is held at its boundary with nothing to derive them from, the
+  table falls back to the asymptotic test and says so. The default applies
+  to a linear mixed model -- a grouping term or a correlation over time
+  integrated out, no censored rows, no zero part -- and not to a scaffold,
+  whose variances are assumed; `df = "satterthwaite"` asks for it on any
+  gaussian fit. Other families, linear models, and censored or dispersion
+  models with nothing integrated out are unchanged. On a small between-cluster design the
+  z test's p for a between-cluster effect was too small.
+  **The validated path is REML.** The study behind the default
+  (`studies/findings/df_tables.md`) fitted every model with `reml = TRUE`.
+  A default fit is by maximum likelihood, and its Satterthwaite df come from
+  the ML variance estimates, which are smaller with few clusters. On 6
+  clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
+  4.0 and 0.44 by REML. That path is being studied now. Until it reports,
+  fit with `reml = TRUE` for the tables the study supports.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * **A correction: under `reml = TRUE`, fits whose variances approach zero
@@ -57,6 +80,15 @@
   for it. The held directions are now projected out, the check is graded on
   the rest, and the line gives the held part beside it ("along the held
   dispersion: 1.41e-02, not judged"). Found through an external report.
+* Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
+  pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
+  is a list by term, and "us" is already its default -- and so did the ANOVA
+  vignette. It now names the call that leaves the within-participant
+  covariance free, for the design's own columns and data: a correlated random
+  effect per within cell, `(0 + session | id)`, in place of the one random
+  intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
+  and hurdle models were out of scope, though `ziformula` fits both; it now
+  points there. Found through an external report.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
   restarts, which begin at the solution. Restarted from its own solution, an
   optimiser that stays there answers a "false convergence" code: the fit is
