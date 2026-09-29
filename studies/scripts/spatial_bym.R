@@ -129,6 +129,312 @@
 ##   so about 10 core-hours with the predictions; 2,400 mgcv fits, about 3;
 ##   fresh seeds about 5; S3 about 3. Some 21 core-hours in all.
 ##
-## Usage: Rscript spatial_bym.R <arm> <nrep> <ncore> <outdir> [offset]
+## Choices the design leaves to the code, fixed here before any run:
+## - phi is the intrinsic CAR draw on the non-null space of D - W, scaled by
+##   the field's typical marginal SD (the root mean diagonal of the
+##   generalised inverse of D - W), so its SD varies from map to map as a
+##   field's would, around the target; theta ~ N(0, target).
+## - E ~ Gamma(shape 2, mean Ebar), a coefficient of variation of 0.71.
+## - S2's x is per observation; its region "risk" is the region mean at x = 0,
+##   1 + phi + theta.
+## - The region intervals are predict(groups = "fitted", interval =
+##   "confidence", nsim = 500, seed = 1) -- each region's own effects, not
+##   the typical region's -- at x (S1: each region's own x, exposure 1; S2: x = 0), on the
+##   response scale.
+## - A fit's variance flag: any unheld variance parameter -- the MRF term's,
+##   the region intercept's, and S2's residual SD -- with an SE on its log
+##   scale above 0.75.
+## - S3 is coded with the variogram change it tests, in a later commit.
+##
+## Usage: Rscript spatial_bym.R <arm S1|S2> <nrep> <ncore> <outdir> [offset] [cells]
+##        Rscript spatial_bym.R summarise <outdir>
 ## ---------------------------------------------------------------------------
-## (the study's code follows in a later commit; this commit is the design)
+
+args <- commandArgs(trailingOnly = TRUE)
+SUMMARISE <- length(args) >= 1 && identical(args[1], "summarise")
+if (!SUMMARISE) {
+  ARM    <- args[1]
+  NREP   <- as.integer(args[2])
+  NCORE  <- as.integer(args[3])
+  sp     <- args[4]
+  OFFSET <- if (length(args) >= 5) as.integer(args[5]) else 0L
+  ONLY   <- if (length(args) >= 6) as.integer(strsplit(args[6], ",")[[1]]) else NULL
+  stopifnot(ARM %in% c("S1", "S2"))
+} else sp <- args[2]
+dir.create(sp, showWarnings = FALSE, recursive = TRUE)
+suppressPackageStartupMessages(library(illume))
+`%||%` <- function(a, b) if (is.null(a) || !length(a)) b else a
+
+## ---- the cells ----------------------------------------------------------------
+g <- function(...) expand.grid(..., stringsAsFactors = FALSE)
+cells <- rbind(
+  data.frame(arm = "S1", g(R = c(36, 100), Ebar = c(5, 50), tot = c(0.3, 0.6), rho = c(0.2, 0.8)), m = NA),
+  data.frame(arm = "S2", g(R = c(36, 100), m = c(3, 10), rho = c(0.2, 0.8)), Ebar = NA, tot = 0.6))
+cells <- cells[, c("arm", "R", "Ebar", "m", "tot", "rho")]
+cells$cell <- seq_len(nrow(cells))
+stopifnot(nrow(cells) == 24L)
+SLOPE <- 0.3; B0 <- c(S1 = -0.2, S2 = 1); NREF <- 100L
+
+## ---- the maps ------------------------------------------------------------------
+make_map <- function(R) {
+  k <- as.integer(round(sqrt(R))); stopifnot(k * k == R)
+  xy <- expand.grid(i = seq_len(k), j = seq_len(k))
+  lev <- sprintf("r%03d", seq_len(R))
+  nb <- lapply(seq_len(R), function(r) which(abs(xy$i - xy$i[r]) + abs(xy$j - xy$j[r]) == 1))
+  names(nb) <- lev
+  W <- matrix(0, R, R); for (r in seq_len(R)) W[r, nb[[r]]] <- 1
+  e <- eigen(diag(rowSums(W)) - W, symmetric = TRUE)
+  pos <- e$values > 1e-8
+  ## the generalised inverse's diagonal: the field's marginal variances
+  mv <- rowSums(sweep(e$vectors[, pos]^2, 2, e$values[pos], "/"))
+  list(R = R, lev = lev, nb = nb, xy = as.matrix(xy), U = e$vectors[, pos],
+       lam = e$values[pos], scale = sqrt(mean(mv)))
+}
+MAPS <- list(`36` = make_map(36), `100` = make_map(100))
+
+## ---- the data ------------------------------------------------------------------
+gen <- function(ce, seed) {
+  set.seed(seed)
+  mp <- MAPS[[as.character(ce$R)]]; R <- ce$R
+  phi <- drop(mp$U %*% (stats::rnorm(length(mp$lam)) / sqrt(mp$lam))) / mp$scale *
+    sqrt(ce$rho) * ce$tot
+  theta <- stats::rnorm(R, 0, sqrt(1 - ce$rho) * ce$tot)
+  reg <- factor(mp$lev, levels = mp$lev)
+  if (ce$arm == "S1") {
+    x <- stats::rnorm(R); E <- stats::rgamma(R, shape = 2, rate = 2 / ce$Ebar)
+    eta <- B0[["S1"]] + SLOPE * x + phi + theta
+    d <- data.frame(region = reg, x = x, E = E, y = stats::rpois(R, E * exp(eta)))
+    nd <- data.frame(region = reg, x = x, E = 1)
+    truth <- exp(eta)
+  } else {
+    d <- data.frame(region = rep(reg, each = ce$m))
+    d$x <- stats::rnorm(nrow(d))
+    d$y <- B0[["S2"]] + SLOPE * d$x + (phi + theta)[as.integer(d$region)] + stats::rnorm(nrow(d))
+    nd <- data.frame(region = reg, x = 0)
+    truth <- B0[["S2"]] + phi + theta
+  }
+  list(d = d, nd = nd, truth = truth, nb = mp$nb)
+}
+fml <- list(
+  S1 = y ~ x + offset(log(E)) + s(region, bs = "mrf", xt = list(nb = nb)) + (1 | region),
+  S2 = y ~ x + s(region, bs = "mrf", xt = list(nb = nb)) + (1 | region))
+ref_fml <- list(
+  S1 = y ~ x + s(region, bs = "mrf", xt = list(nb = nb)) + s(region, bs = "re"),
+  S2 = y ~ x + s(region, bs = "mrf", xt = list(nb = nb)) + s(region, bs = "re"))
+
+## ---- one fit -------------------------------------------------------------------
+status_of <- function(ck, prefix) {
+  s <- ck$status[startsWith(ck$check, prefix)]
+  if (!length(s)) NA_character_ else paste(unique(s), collapse = "/")
+}
+one <- function(job) {
+  ce <- cells[cells$cell == job$cell, ]
+  seed <- 7919L * ce$cell + job$rep + OFFSET
+  sim <- gen(ce, seed)
+  nb <- sim$nb
+  key <- data.frame(cell = ce$cell, arm = ce$arm, R = ce$R, Ebar = ce$Ebar, m = ce$m,
+                    tot = ce$tot, rho = ce$rho, rep = job$rep, seed = seed)
+  fam <- if (ce$arm == "S1") "poisson" else "gaussian"
+  ## the formulas look up the neighbour list here, in this fit's own
+  ## environment (as.formula() leaves a formula's environment as it was)
+  fo <- fml[[ce$arm]]; environment(fo) <- environment()
+  fo_ref <- ref_fml[[ce$arm]]; environment(fo_ref) <- environment()
+  t0 <- proc.time()[["elapsed"]]
+  f <- tryCatch(suppressMessages(suppressWarnings(ilm_model(
+         fo, data = sim$d, family = fam,
+         reml = ce$arm == "S2", verbose = FALSE))), error = function(e) conditionMessage(e))
+  key$t_fit <- proc.time()[["elapsed"]] - t0
+  if (is.character(f)) { key$ok <- NA; key$err <- substr(f, 1, 200); return(key) }
+  key$err <- NA_character_
+  ck <- f$checks
+  key$ok <- isTRUE(f$ok)
+  key$held <- paste(f$hessian_held, collapse = "/")
+  for (nm in c("obs_per_level", "latent_budget", "hessian", "variance_boundary",
+               "optimizer", "gradient"))
+    key[[paste0("ck_", nm)]] <- status_of(ck, nm)
+  ## the slope
+  ct <- tryCatch(suppressWarnings(ilm_coef_table(f)), error = function(e) NULL)
+  if (!is.null(ct) && "x" %in% rownames(ct)) {
+    key$est <- ct["x", "Estimate"]; key$se <- ct["x", "Std. Error"]
+    key$df <- if ("df" %in% names(ct)) ct["x", "df"] else Inf
+    q <- if (is.finite(key$df)) stats::qt(0.975, key$df) else stats::qnorm(0.975)
+    key$cover <- abs(key$est - SLOPE) <= q * key$se
+  }
+  ## the variance parameters: SDs, and the SE of each unheld one's log scale
+  pe <- f$opt$par; th <- pe[names(pe) == "theta"]
+  key$lsd_mrf <- th[1]; key$lsd_region <- th[2]
+  if (ce$arm == "S2") key$lsd_resid <- pe[["logdisp"]]
+  V <- tryCatch(suppressWarnings(vcov(f, full = TRUE)), error = function(e) NULL)
+  vr <- c(mrf = "s(region):L[1,1]", region = "region:L[1,1]")
+  hl <- c(mrf = "s(region)", region = "region")
+  sev <- c()
+  if (!is.null(V)) {
+    for (k in names(vr)) {
+      se_k <- if (vr[[k]] %in% rownames(V)) sqrt(V[vr[[k]], vr[[k]]]) else NA_real_
+      if (hl[[k]] %in% f$hessian_held) se_k <- NA_real_
+      key[[paste0("s_", k)]] <- se_k; sev <- c(sev, se_k)
+    }
+    if (ce$arm == "S2") {
+      rd <- setdiff(rownames(V)[grepl("sigma|disp", rownames(V))], character(0))[1]
+      se_r <- if (!is.na(rd)) sqrt(V[rd, rd]) else NA_real_
+      if ("dispersion" %in% f$hessian_held) se_r <- NA_real_
+      key$s_resid <- se_r; sev <- c(sev, se_r)
+    }
+  }
+  key$vflag <- any(sev > 0.75, na.rm = TRUE)
+  ## the region relative risks (S1) or means (S2)
+  t1 <- proc.time()[["elapsed"]]
+  p <- tryCatch(suppressWarnings(stats::predict(f, newdata = sim$nd, groups = "fitted", interval = "confidence",
+                                                nsim = 500, seed = 1)),
+                error = function(e) conditionMessage(e))
+  key$t_pred <- proc.time()[["elapsed"]] - t1
+  if (is.list(p)) {
+    lo <- as.numeric(p$lower); hi <- as.numeric(p$upper)
+    key$region_cover <- mean(lo <= sim$truth & sim$truth <= hi)
+    key$region_width <- stats::median(hi - lo)
+    key$region_finite <- mean(is.finite(lo) & is.finite(hi))
+  } else key$pred_err <- substr(p, 1, 200)
+  ## the reference, on the first NREF replicates
+  if (job$rep <= NREF && OFFSET == 0L) {
+    t2 <- proc.time()[["elapsed"]]
+    gm <- tryCatch(suppressWarnings(mgcv::gam(fo_ref,
+            data = sim$d, family = if (ce$arm == "S1") stats::poisson() else stats::gaussian(),
+            offset = if (ce$arm == "S1") log(sim$d$E) else NULL, method = "REML")),
+            error = function(e) NULL)
+    key$t_ref <- proc.time()[["elapsed"]] - t2
+    if (!is.null(gm)) {
+      key$ref_est <- stats::coef(gm)[["x"]]
+      key$ref_se <- sqrt(stats::vcov(gm)["x", "x"])
+      vc <- tryCatch({ utils::capture.output(v0 <- suppressWarnings(mgcv::gam.vcomp(gm, rescale = FALSE))); v0 },
+                     error = function(e) NULL)
+      if (is.matrix(vc)) {
+        key$ref_lsd_mrf <- log(vc[1, 1]); key$ref_lsd_region <- log(vc[2, 1])
+      } else if (is.list(vc) && !is.null(vc$vc)) {
+        key$ref_lsd_mrf <- log(vc$vc[1]); key$ref_lsd_region <- log(vc$vc[2])
+      }
+    }
+  }
+  key
+}
+
+## ---- summaries -----------------------------------------------------------------
+## Coverage within 2 Monte Carlo SEs of 0.95: the slope's MC SE is binomial,
+## the region coverage's the SD of the per-fit shares over sqrt(n).
+summarise_fits <- function(x) {
+  x <- x[!is.na(x$ok), ]
+  ## columns a run did not produce (no prediction error, no reference on
+  ## fresh seeds) are NA throughout
+  for (n in c("pred_err", "ref_est", "ref_se", "ref_lsd_mrf", "ref_lsd_region"))
+    if (is.null(x[[n]])) x[[n]] <- NA
+  band <- function(v, share = FALSE) {
+    v <- v[!is.na(v)]; n <- length(v)
+    if (!n) return(c(n = 0, est = NA, mcse = NA, cal = NA))
+    est <- mean(v); se <- if (share) stats::sd(v) / sqrt(n) else sqrt(0.95 * 0.05 / n)
+    c(n = n, est = est, mcse = se, cal = abs(est - 0.95) <= 2 * se)
+  }
+  rows <- list()
+  for (cl in sort(unique(x$cell))) {
+    z <- x[x$cell == cl, ]
+    for (grp in c("all", "ok", "not_ok", "held", "unheld", "flagged", "unflagged")) {
+      w <- switch(grp, all = rep(TRUE, nrow(z)), ok = z$ok, not_ok = !z$ok,
+                  held = nzchar(z$held), unheld = !nzchar(z$held),
+                  flagged = z$vflag, unflagged = !z$vflag)
+      w <- w %in% TRUE
+      sl <- band(z$cover[w]); rg <- band(z$region_cover[w], share = TRUE)
+      rows[[length(rows) + 1L]] <- data.frame(z[1, c("cell", "arm", "R", "Ebar", "m", "tot", "rho")],
+        group = grp, fits = sum(w),
+        slope_n = sl[["n"]], slope_cover = sl[["est"]], slope_mcse = sl[["mcse"]], slope_cal = as.logical(sl[["cal"]]),
+        region_n = rg[["n"]], region_cover = rg[["est"]], region_mcse = rg[["mcse"]], region_cal = as.logical(rg[["cal"]]),
+        region_width = stats::median(z$region_width[w], na.rm = TRUE),
+        region_nonfinite = sum(z$region_finite[w] < 1, na.rm = TRUE),
+        pred_errors = sum(!is.na(z$pred_err[w])),
+        ref_n = sum(!is.na(z$ref_est[w])),
+        ref_dslope = stats::median(abs(z$est[w] - z$ref_est[w]) / z$ref_se[w], na.rm = TRUE),
+        ref_seratio = stats::median(z$se[w] / z$ref_se[w], na.rm = TRUE),
+        ref_dslope_max = suppressWarnings(max(abs(z$est[w] - z$ref_est[w]), na.rm = TRUE)),
+        ref_dlsd_mrf = stats::median(abs(z$lsd_mrf[w] - z$ref_lsd_mrf[w]), na.rm = TRUE),
+        ref_dlsd_region = stats::median(abs(z$lsd_region[w] - z$ref_lsd_region[w]), na.rm = TRUE),
+        time_fit = stats::median(z$t_fit[w]), time_pred = stats::median(z$t_pred[w], na.rm = TRUE),
+        stringsAsFactors = FALSE)
+    }
+  }
+  do.call(rbind, rows)
+}
+## the pre-registered verdicts; NA where no fit bears on one
+verdicts <- function(s, fresh = FALSE) {
+  all <- function(v) if (length(v)) base::all(v) else NA
+  a <- s[s$group == "all", ]
+  s1 <- a[a$arm == "S1", ]; s2 <- a[a$arm == "S2", ]
+  q4 <- vapply(unique(s1$cell), function(cl) {
+    ok <- s[s$cell == cl & s$group == "ok", ]; no <- s[s$cell == cl & s$group == "not_ok", ]
+    if (ok$fits >= 50 && no$fits >= 50) {
+      d1 <- abs(ok$slope_cover - no$slope_cover) < 2 * sqrt(ok$slope_mcse^2 + no$slope_mcse^2)
+      d2 <- abs(ok$region_cover - no$region_cover) < 2 * sqrt(ok$region_mcse^2 + no$region_mcse^2)
+      d1 && d2
+    } else isTRUE(no$slope_cal) && isTRUE(no$region_cal)
+  }, TRUE)
+  v <- data.frame(
+    verdict = c("V1 slope calibrated in every S1 cell with Ebar = 50 and every S2 cell",
+                "V2 slope calibrated in every S1 cell with Ebar = 5",
+                "V3 region relative risks calibrated in every S1 and S2 cell",
+                "V4 agreement with mgcv in every cell (slope within 0.1 SE, SE ratio 0.9 to 1.1; gaussian slope to 1e-3)",
+                "Q4 the fits graded not ok cover as well as the ok ones, in every S1 cell"),
+    holds = c(all(c(s1$slope_cal[s1$Ebar %in% 50], s2$slope_cal)),
+              all(s1$slope_cal[s1$Ebar %in% 5]),
+              all(a$region_cal),
+              if (fresh) NA else all(c(a$ref_dslope <= 0.1, a$ref_seratio >= 0.9 & a$ref_seratio <= 1.1,
+                                       s2$ref_dslope_max <= 1e-3)),
+              all(q4)))
+  v
+}
+
+if (SUMMARISE) {
+  for (tag in c("main", "fresh")) {
+    fs <- list.files(sp, pattern = paste0("^spatial_bym_S[12]_", tag, "[.]csv$"), full.names = TRUE)
+    if (!length(fs)) next
+    x <- lapply(fs, utils::read.csv, stringsAsFactors = FALSE)
+    nm <- unique(unlist(lapply(x, names)))
+    x <- do.call(rbind, lapply(x, function(d) { for (n in setdiff(nm, names(d))) d[[n]] <- NA; d[nm] }))
+    s <- summarise_fits(x)
+    utils::write.csv(s, file.path(sp, paste0("spatial_bym_", tag, "_summary.csv")), row.names = FALSE)
+    v <- verdicts(s, fresh = tag == "fresh")
+    utils::write.csv(v, file.path(sp, paste0("spatial_bym_", tag, "_verdicts.csv")), row.names = FALSE)
+    cat("==", tag, "==\n"); print(v, row.names = FALSE)
+  }
+  quit(save = "no")
+}
+
+## ---- run -----------------------------------------------------------------------
+t_all <- Sys.time()
+use <- cells[cells$arm == ARM, ]
+if (!is.null(ONLY)) use <- use[use$cell %in% ONLY, ]
+jobs <- merge(use[, "cell", drop = FALSE], data.frame(rep = seq_len(NREP)))
+## the largest maps first, so the long fits do not all end the run
+jobs <- jobs[order(-cells$R[match(jobs$cell, cells$cell)], jobs$cell, jobs$rep), ]
+jl <- split(jobs, seq_len(nrow(jobs)))
+tag <- if (OFFSET) "fresh" else if (!is.null(ONLY)) "smoke" else "main"
+## CHECKPOINTS (an I/O change, no effect on results): each fit's result is
+## saved as it finishes, and a run started again reads the fits already done.
+## Every fit sets its own seed from its cell and replicate.
+ck <- file.path(sp, paste0("checkpoints_", ARM, "_", tag))
+dir.create(ck, showWarnings = FALSE, recursive = TRUE)
+one_ck <- function(job) {
+  fp <- file.path(ck, sprintf("cell%02d_rep%04d.rds", job$cell, job$rep))
+  if (file.exists(fp)) return(readRDS(fp))
+  r <- one(job)
+  saveRDS(r, paste0(fp, ".part")); file.rename(paste0(fp, ".part"), fp)
+  r
+}
+res <- if (NCORE > 1L) {
+  cl <- parallel::makeCluster(NCORE)
+  invisible(parallel::clusterEvalQ(cl, suppressPackageStartupMessages(library(illume))))
+  parallel::clusterExport(cl, setdiff(ls(globalenv()), c("cl", "jobs", "jl")), envir = globalenv())
+  r <- parallel::parLapplyLB(cl, jl, one_ck, chunk.size = 1L)
+  parallel::stopCluster(cl)
+  r
+} else lapply(jl, one_ck)
+nm <- unique(unlist(lapply(res, names)))
+out <- do.call(rbind, lapply(res, function(d) { for (n in setdiff(nm, names(d))) d[[n]] <- NA; d[nm] }))
+utils::write.csv(out, file.path(sp, paste0("spatial_bym_", ARM, "_", tag, ".csv")), row.names = FALSE)
+cat("illume", format(utils::packageVersion("illume")), "from", find.package("illume"), "\n")
+cat("fits:", nrow(jobs), " minutes:", round(as.numeric(difftime(Sys.time(), t_all, units = "mins")), 1), "\n")
