@@ -33,6 +33,9 @@ they multiply are, in \code{coef(object, full = TRUE)} and in
 \item{\code{ar}}{with a correlation over time, a data frame with a row per
 new row: \code{group}, \code{time}, \code{cell}, \code{prev_cell}, \code{next_cell},
 \code{dt_prev}, \code{dt_next} and \code{new_group}.}
+\item{\code{offset}}{with an offset in the formula, its value at each new
+row, made from \code{newdata}'s own columns; \code{NULL} otherwise. It adds to
+\code{X \%*\% beta} with a coefficient of one.}
 }
 }
 \description{
@@ -44,7 +47,11 @@ each row's place among the cells of a correlation over time.
 }
 \details{
 \strong{Groups.} A row's group is matched to the fitted levels by label; a group
-the fit has not seen has no code and is marked \code{new_group}.
+the fit has not seen has no code and is marked \code{new_group}. Without the
+grouping column the rows belong to no group the fit knows -- a prediction
+for the typical group or averaged over the population needs none -- so
+every row is \code{new_group}, with \code{level} and \code{group} missing. Only a
+prediction for a particular group needs its column.
 
 \strong{Over time.} \code{ar} places each row among its group's cells, as numbered by
 \code{\link[=ilm_cells]{ilm_cells()}}: \code{cell} if the row's time is one of them, and the nearest
@@ -55,6 +62,11 @@ case. An AR(1) term's grid is fixed, so a time that falls between its steps
 is an error rather than rounded to one. The time and the group are read
 from the columns the term was built from, \code{ilm_rw1(~ time | group)} and
 the like; for a term built from vectors, pass them as \code{time} and \code{group}.
+For a term built by name, rows without its columns are placed nowhere:
+every cell and gap is missing and every row \code{new_group}. A term built from
+vectors has no columns to fall back on, so there, rows without \code{time} and
+\code{group} are an error -- a forgotten argument would otherwise predict each
+row as a new series.
 }
 \examples{
 set.seed(1)

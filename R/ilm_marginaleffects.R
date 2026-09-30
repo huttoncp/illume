@@ -141,7 +141,8 @@ ilm_rebuild_aux <- function(object, tl) {
         unname(pe[tl %in% c("gamma", "mu_pow")]), names(object$disp_coef))
     ## the dispersion is per-row here; the median stands for it, as in the fit
     object$dispersion <- stats::setNames(
-      stats::median(ilm_disp_rows(object$Zd, g, mp, fam, object$X, object$beta)),
+      stats::median(ilm_disp_rows(object$Zd, g, mp, fam, object$X, object$beta,
+                                   object$offset)),
       fam$disp_names[1])
   }
 
@@ -356,7 +357,9 @@ get_predict.ilm_model <- function(model, newdata = NULL, type = "response",
                            !is.null(groups), "get_predict()", marginal,
                            "marginal",
                            c(`TRUE` = "population", `FALSE` = "typical"))
-  if (is.null(newdata)) newdata <- model$model
+  ## the fit's own rows with the variables its terms are built from -- the
+  ## model frame holds offset(log(e)) but not e, which predict() rebuilds from
+  if (is.null(newdata)) newdata <- ilm_data(model)
   P <- predict(model, newdata = newdata, type = "response", groups = groups,
                ndraw = ndraw)
   n <- nrow(P)
@@ -374,6 +377,13 @@ get_predict.ilm_model <- function(model, newdata = NULL, type = "response",
 #' classes against a fixed list and rejects anything unfamiliar *before* dispatch
 #' happens, so the methods would never be reached. This also adds `"ilm_model"` to
 #' that list through the option the package provides for the purpose.
+#'
+#' **A model with an offset.** `marginaleffects` builds its own grids from the
+#' data, so its predictions and effects are at each row's own exposure -- the
+#' counts, not the rates that [ilm_emmeans()], [ilm_ame()] and
+#' [ilm_scenario()] report per unit of exposure. For rates, give the exposure
+#' column the value 1 in the grid (`newdata = datagrid(e = 1)`, for an offset
+#' `offset(log(e))`), or use illume's own functions.
 #'
 #' @return `TRUE` if `marginaleffects` is installed, `FALSE` otherwise,
 #'   invisibly.

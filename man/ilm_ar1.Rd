@@ -15,7 +15,10 @@ on a common step such as \code{c(0, 5, 10, 15)}. Or a one-sided formula
 \item{group}{Unit identifier, one value per observation. Omitted when
 \code{time} is a formula.}
 
-\item{verbose}{Warn when the latent budget is thin.}
+\item{verbose}{Warn about the time grid (most of its steps unobserved). The
+latent budget is judged when the model is fitted, where the family is
+known -- see the \code{obs_per_ar_latent} check -- and \code{FALSE} here quiets that
+warning too.}
 }
 \value{
 A \code{"ilm_ar1"} specification, to pass as \code{ilm_model(ar = )}.

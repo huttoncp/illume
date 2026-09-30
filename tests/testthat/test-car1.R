@@ -153,10 +153,10 @@ test_that("irregular times through ilm_ar1 are named and redirected", {
   withCallingHandlers(ilm_ar1(d2$t, d2$id),
     warning = function(cnd) { w <<- c(w, conditionMessage(cnd))
                               invokeRestart("muffleWarning") })
-  # the empty-grid warning is the actionable one; the thin-budget warning is
-  # its consequence and both are worth saying
+  # the empty-grid warning is the actionable one, and the constructor's to
+  # give; the thin budget that follows from it is the fit's to judge
   expect_true(any(grepl("steps are ever observed", w)))
-  expect_true(any(grepl("per latent", w)))
+  expect_false(any(grepl("per latent", w)))
 })
 
 test_that("misspecified correlation structures are named", {
@@ -183,11 +183,17 @@ test_that("misspecified correlation structures are named", {
                "must come from ilm_ar1")
 })
 
-test_that("a thin latent budget is warned about by the constructor", {
+test_that("a thin latent budget is judged by the fit, which knows the family", {
   d <- panel_irreg(1, ng = 20, nt = 5, tmax = 50)
-  expect_warning(ilm_car1(d$t, d$id), "per latent")
-  expect_warning(ilm_car1(d$t, d$id), "coarser grid")
-  # and not warned about when observations genuinely share latent values
+  # the constructor cannot know the family, so it does not warn
+  expect_silent(ilm_car1(d$t, d$id))
+  # a count model at one observation per latent value is warned at the fit,
+  # in the words of the check it records
+  d$k <- rpois(nrow(d), 3)
+  expect_warning(ilm_model(k ~ 1, data = d, family = "poisson",
+                           ar = ilm_car1(~ t | id), verbose = FALSE),
+                 "obs_per_ar_latent WARN.*coarsen the time")
+  # and not when observations genuinely share latent values
   d2 <- data.frame(id = rep(1:4, each = 6), t = rep(rep(1:3, each = 2), 4))
   expect_silent(ilm_car1(d2$t, d2$id))
 })
@@ -197,7 +203,7 @@ test_that("printing a structure says what it is and how thin it is", {
   out <- capture.output(print(suppressWarnings(ilm_car1(d$t, d$id))))
   expect_true(any(grepl("CAR(1), continuous time", out, fixed = TRUE)))
   expect_true(any(grepl("gaps: min", out)))
-  expect_true(any(grepl("latent budget is thin", out)))
+  expect_true(any(grepl("whether that is thin depends on the family", out)))
   out2 <- capture.output(print(suppressWarnings(ilm_ar1(d$t, d$id))))
   expect_true(any(grepl("AR(1), evenly spaced", out2, fixed = TRUE)))
   expect_true(any(grepl("step:", out2)))

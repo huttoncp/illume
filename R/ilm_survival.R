@@ -61,22 +61,46 @@ ilm_km_at <- function(km, grid) {
 #'
 #' @details
 #' All three accelerated failure time families have a closed-form survivor
-#' function in `z = (log t - eta) / scale`, so the curve and its interval come
-#' straight from the fitted linear predictor. Intervals are computed on the
-#' complementary log-log scale, `log(-log S)`, which is linear in `eta` and so
-#' keeps the interval inside `(0, 1)` without truncation.
+#' function in `z = (log t - eta) / scale`, and a flexible (Royston-Parmar)
+#' model one in its baseline spline plus `eta`, so the curve comes straight
+#' from the linear predictor.
 #'
-#' Uncertainty in the scale parameter is not included: the interval reflects
-#' uncertainty in the coefficients only. It is therefore slightly narrow, most
-#' noticeably in the tail beyond the last observed event.
+#' @section Which groups:
+#' In a model with random effects a curve is for some group, and `groups` says
+#' which, as it does for [predict.ilm_model()]:
+#' * `"fitted"` (the default) draws each row at **its own group's** estimated
+#'   effects. A row whose group the fit has not seen, or `newdata` without the
+#'   grouping columns, is an error naming the two choices below.
+#' * `"typical"` draws each row with every random effect at zero: the curve of
+#'   a **typical group**. With no `newdata` the curve is at a typical covariate
+#'   pattern, which belongs to no group, and this is what it gives.
+#' * `"population"` averages the **survival curve itself** over the
+#'   distribution of random effects, by quadrature at each time: the curve for
+#'   the population of groups as a whole. It is flatter than the typical
+#'   group's curve, not the curve at zero, since survival is not linear in the
+#'   linear predictor.
 #'
-#' @param object A fitted `"ilm_model"` with an accelerated failure time family.
+#' Intervals for a typical group are computed on the complementary log-log
+#' scale for the accelerated failure time families, which is linear in `eta`,
+#' and on the linear predictor for a flexible model. For `"fitted"` and
+#' `"population"` they are percentile intervals from `nsim` joint draws of the
+#' coefficients -- and, for `"fitted"`, of the groups' own effects, as
+#' [predict.ilm_model()] draws them. Uncertainty in an accelerated failure time
+#' family's scale parameter is not included, so its intervals are slightly
+#' narrow, most in the tail beyond the last observed event.
+#'
+#' @param object A fitted `"ilm_model"` with a time-to-event family.
 #' @param newdata Covariate patterns, one row each. With none, the curve is
 #'   drawn at the median of each numeric predictor and the commonest level of
-#'   each factor.
+#'   each factor, for a typical group.
 #' @param times Times at which to evaluate. With none, a grid spanning the
 #'   observed follow-up.
 #' @param conf Confidence level.
+#' @param groups `"fitted"` (the default), `"typical"` or `"population"`; see
+#'   "Which groups". Only a model with random effects or a correlation over
+#'   time has a choice to make.
+#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`.
+#' @param seed Random seed for those draws.
 #' @return A data frame with `row`, `time`, `surv`, `lower` and `upper`.
 #' @seealso [ilm_plot_survival()], which draws it against the Kaplan-Meier
 #'   estimate, [ilm_surv()].
@@ -90,7 +114,10 @@ ilm_km_at <- function(km, grid) {
 #'                censor = ilm_surv(d$time, d$event), verbose = FALSE)
 #' head(ilm_survival(f, newdata = data.frame(x = c(-1, 1))))
 #' @export
-ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
+ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95,
+                         groups = c("fitted", "typical", "population"),
+                         nsim = 200L, seed = 1L) {
+  ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
          call. = FALSE)
@@ -99,10 +126,39 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
          object$family$name, "; use family = \"weibull\", \"lognormal\", ",
          "\"loglogistic\", or \"rp\" for a flexible baseline.",
          call. = FALSE)
+  given <- !missing(groups)
+  groups <- ilm_groups_arg(groups, c("fitted", "typical", "population"), given,
+                           "ilm_survival()")
+  if (is.null(newdata)) {
+    ## a typical covariate pattern belongs to no group
+    if (given && identical(groups, "fitted"))
+      stop("with no `newdata` the curve is at a typical covariate pattern, which ",
+           "belongs to no group. Give `newdata` with each row's group, or use ",
+           "groups = \"typical\" or groups = \"population\".", call. = FALSE)
+    if (!given) groups <- "typical"
+    newdata <- ilm_typical_row(object)
+  }
+  if (is.null(times)) {
+    y <- as.numeric(object$y)
+    times <- seq(min(y[y > 0]), max(y), length.out = 100L)
+  }
+  times <- sort(unique(times[times > 0]))
+  gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
+  ## with nothing of a group's own, every choice is the typical group's curve
+  if (!length(gk) && is.null(object$ar)) groups <- "typical"
+  if (identical(groups, "typical")) {
+    if (!is.null(object$rp)) return(ilm_rp_survival(object, newdata, times, conf))
+    return(ilm_aft_survival(object, newdata, times, conf))
+  }
+  ilm_survival_groups(object, newdata, times, conf, groups, gk, nsim, seed)
+}
 
-  if (is.null(newdata)) newdata <- ilm_typical_row(object)
-  if (!is.null(object$rp)) return(ilm_rp_survival(object, newdata, times, conf))
-  pr <- stats::predict(object, newdata = newdata, se.fit = TRUE)
+## A typical group's curve for an accelerated failure time family, with its
+## interval on the complementary log-log scale.
+#' @keywords internal
+#' @noRd
+ilm_aft_survival <- function(object, newdata, times, conf) {
+  pr <- stats::predict(object, newdata = newdata, se.fit = TRUE, groups = "typical")
   eta <- log(as.matrix(if (is.list(pr)) pr$fit else pr)[, 1])
   se_eta <- if (is.list(pr) && !is.null(pr$se.fit)) {
     ## predict() returns the standard error on the response scale, and the
@@ -110,21 +166,10 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
     as.matrix(pr$se.fit)[, 1] / as.matrix(if (is.list(pr)) pr$fit else pr)[, 1]
   } else rep(0, length(eta))
   sc <- unname(object$dispersion[[1]])
-
-  if (is.null(times)) {
-    y <- as.numeric(object$y)
-    times <- seq(min(y[y > 0]), max(y), length.out = 100L)
-  }
-  times <- sort(unique(times[times > 0]))
   crit <- stats::qnorm(1 - (1 - conf) / 2)
   nm <- object$family$name
-
   out <- lapply(seq_along(eta), function(i) {
-    z <- (log(times) - eta[i]) / sc
-    S <- switch(nm,
-      lognormal   = stats::pnorm(-z),
-      loglogistic = 1 / (1 + exp(z)),
-      weibull     = exp(-exp(z)))
+    S <- ilm_aft_surv(nm, (log(times) - eta[i]) / sc)
     ## on the complementary log-log scale the curve is linear in eta, with
     ## slope -1/scale, so the delta method is exact there
     cll <- log(-log(pmin(pmax(S, 1e-12), 1 - 1e-12)))
@@ -134,6 +179,88 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95) {
                upper = exp(-exp(cll - half)))
   })
   do.call(rbind, out)
+}
+
+## an accelerated failure time family's survivor function in z
+#' @keywords internal
+#' @noRd
+ilm_aft_surv <- function(nm, z)
+  switch(nm, lognormal = stats::pnorm(-z), loglogistic = 1 / (1 + exp(z)),
+         weibull = exp(-exp(z)))
+
+## A curve at each row's own group, or averaged over the groups (item 213).
+## The survival at time t for a linear predictor e is S(t | e): for an
+## accelerated failure time family f((log t - e) / scale), for a flexible model
+## Sfun(B(t) gamma + e). "fitted" adds each row's own group's effects to e;
+## "population" averages S(t | e + b) over b ~ N(0, the row's latent
+## variance) by quadrature -- the average of the curve, never the curve of an
+## averaged mean. Intervals: percentiles over joint draws.
+#' @keywords internal
+#' @noRd
+ilm_survival_groups <- function(object, newdata, times, conf, groups, gk, nsim, seed) {
+  rp <- object$rp
+  nd <- ilm_newX(object, newdata)
+  Xn <- nd$X; n <- nrow(Xn)
+  off <- if (is.null(nd$offset)) 0 else as.numeric(nd$offset)
+  keep <- if (is.null(rp)) seq_len(ncol(object$X))
+          else setdiff(seq_len(ncol(object$X)), rp$cols)
+  if (ncol(Xn) != length(keep))
+    stop("the new data give ", ncol(Xn), " covariate columns where the fit ",
+         "has ", length(keep), call. = FALSE)
+  Bs <- if (!is.null(rp)) ilm_rcs(log(times), rp$knots)
+  sc <- if (is.null(rp)) unname(object$dispersion[[1]])
+  nm <- object$family$name
+  ## S(t | e) at every time, one column per linear predictor
+  surv_at <- function(beta, e) {
+    if (is.null(rp))
+      vapply(e, function(ei) ilm_aft_surv(nm, (log(times) - ei) / sc),
+             numeric(length(times)))
+    else {
+      base <- as.vector(Bs %*% beta[rp$cols])
+      vapply(e, function(ei) object$family$surv(base + ei), numeric(length(times)))
+    }
+  }
+  pl <- if (identical(groups, "fitted")) ilm_fitted_place(object, newdata)
+  sdrow <- NULL
+  if (identical(groups, "population")) {
+    has_ar <- !is.null(object$ar) && !is.null(object$Sigma[["ar"]])
+    ar_el <- if (has_ar && identical(object$ar$type, "rw1")) ilm_rw_elapsed(object, newdata)
+    tms <- ilm_latent_terms(object, gk, newdata)
+    sdrow <- sqrt(ilm_latent_var(object, tms, has_ar, ar_el, n))
+  }
+  ## the curves, one column per row, for one set of parameters
+  curves <- function(beta, bvec = NULL, bar = NULL) {
+    e <- as.vector(Xn %*% beta[keep]) + off
+    if (!is.null(pl)) e <- e + ilm_fitted_shift(object, pl, n, bvec, bar)[, 1L]
+    if (is.null(sdrow)) return(surv_at(beta, e))
+    ## the average of the curve over each row's latent normal, time by time
+    vapply(seq_len(n), function(i)
+      vapply(seq_along(times), function(k)
+        ilm_normal_expect(function(x) surv_at(beta, x)[k, ], e[i], sdrow[i]), 0),
+      numeric(length(times)))
+  }
+  est <- curves(as.vector(object$beta[, 1L]))
+  ## joint draws: the coefficients, and for "fitted" the groups' own effects
+  blk <- intersect(c("beta", if (!is.null(pl)) c("bvec", "B_ar")),
+                   names(object$obj$env$par))
+  dr <- tryCatch(ilm_draws(object, nsim = nsim, seed = seed, blocks = blk, natural = FALSE),
+                 error = function(e) e)
+  lo <- hi <- matrix(NA_real_, nrow(est), ncol(est))
+  if (inherits(dr, "error")) {
+    warning("no intervals: ", conditionMessage(dr), call. = FALSE)
+  } else {
+    w <- rownames(dr$draws)
+    acc <- array(NA_real_, c(nrow(est), ncol(est), nsim))
+    for (s in seq_len(nsim))
+      acc[, , s] <- curves(dr$draws[w == "beta", s],
+                           if (any(w == "bvec")) dr$draws[w == "bvec", s],
+                           if (any(w == "B_ar")) dr$draws[w == "B_ar", s])
+    a <- (1 - conf) / 2
+    lo <- apply(acc, 1:2, stats::quantile, probs = a, names = FALSE, na.rm = TRUE)
+    hi <- apply(acc, 1:2, stats::quantile, probs = 1 - a, names = FALSE, na.rm = TRUE)
+  }
+  do.call(rbind, lapply(seq_len(n), function(i)
+    data.frame(row = i, time = times, surv = est[, i], lower = lo[, i], upper = hi[, i])))
 }
 
 ## The covariate pattern an effect plot would use: median for a number, the
@@ -257,7 +384,7 @@ ilm_plot_survival <- function(object, time, event, by = NULL, B = 60L,
         r[[cn]] <- mf[[cn]][s][1]
       r
     }
-    ilm_survival(object, newdata = nd, times = grid)$surv
+    ilm_survival(object, newdata = nd, times = grid, groups = "typical")$surv
   }, numeric(length(grid)))
   fitc <- matrix(fitc, nrow = length(grid))
 

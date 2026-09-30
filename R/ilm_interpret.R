@@ -113,6 +113,12 @@ ilm_fmt_pct <- function(p)
 #'   over them. See "Which effect, in a mixed model".
 #' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
 #'   is `groups = "typical"`.
+#' @param per For a model with an offset, `offset(log(exposure))`: the
+#'   exposure the effects on the mean are per. `per` rescales the offset --
+#'   the exposure -- to the value given, for every row. By default the effects
+#'   are per unit of exposure (the offset at zero); a positive number puts
+#'   every row at that exposure instead -- `per = 1e5` for a rate per
+#'   100,000. Such a result prints which. Ignored without an offset.
 #' @return A data frame with `term`, `level`, `estimate`, `se`, `lower`,
 #'   `upper`, and `kind` (`"slope"` or `"contrast"`). For an outcome with
 #'   categories -- multinomial or ordinal -- there is also a `category` column
@@ -128,7 +134,8 @@ ilm_fmt_pct <- function(p)
 #' ilm_ame(fit)
 #' @export
 ilm_ame <- function(object, terms = NULL, eps = 1e-4,
-                    groups = c("typical", "population"), marginal = NULL) {
+                    groups = c("typical", "population"), marginal = NULL,
+                    per = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
@@ -159,15 +166,18 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   ## category it was, and ilm_interpret() then quoted that one number beside
   ## every category's coefficient.
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   ## with groups = "population" a single linear predictor is averaged by
   ## quadrature and a multinomial one by draws with a fixed seed, so every
   ## call -- at each parameter perturbation and each side of each difference
   ## -- integrates over the same thing and the differences are not noise
+  ## with an offset, every row at the same exposure: per unit unless given
+  ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   mu <- function(dd) {
     p <- suppressWarnings(stats::predict(object, newdata = dd,
-                                         type = "response", groups = groups))
+                                         type = "response", groups = groups,
+                                         per = ex))
     if (!is.null(cats)) as.matrix(p)
     else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
   }
@@ -242,7 +252,20 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   if (!is.null(cats))
     out <- cbind(out[1:2], category = base$category, out[-(1:2)],
                  stringsAsFactors = FALSE)
+  ## a rate model's effects are per some exposure, and the print says which
+  if (!is.null(object$offset))
+    out <- structure(out, class = c("ilm_ame", "data.frame"),
+                     per_note = ilm_per_note(object, per))
   out
+}
+
+#' @export
+print.ilm_ame <- function(x, ...) {
+  print(as.data.frame(x), ...)
+  if (!is.null(attr(x, "per_note")))
+    writeLines(strwrap(paste0("Effects on the mean ", attr(x, "per_note"), "."),
+                       width = 78, indent = 2, exdent = 2))
+  invisible(x)
 }
 
 ## ---- predictions at chosen values ----------------------------------------
@@ -257,15 +280,20 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
 ## expensive part.
 #' @keywords internal
 #' @noRd
-ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4) {
+ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4,
+                         per = NULL) {
+  ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   mf <- ilm_data(object)
   x <- mf[[var]]
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   fn <- function(obj) {
     mu <- function(dd) {
-      p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response"))
+      ## a typical group's, as the sentences say (Craig's item 213 made each
+      ## row's own group predict()'s default)
+      p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response",
+                                           groups = "typical", per = ex))
       if (!is.null(cats)) as.matrix(p)
       else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
     }
@@ -833,6 +861,10 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
         if (identical(fam, "gaussian"))
           ", and ilm_denom_df() gives finite degrees of freedom" else ""))
   }
+  ## a rate model: the effects quoted are on a mean per some exposure
+  if (!is.null(object$offset))
+    cav <- c(cav, paste0("The model has an offset, so the effects on the mean are ",
+                         ilm_per_note(object), "."))
   sec$caveats <- cav
 
   structure(list(sections = sec, family = fam, causal = is_causal,

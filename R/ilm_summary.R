@@ -158,6 +158,10 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   cat(sprintf("\n     AIC      BIC   logLik deviance df.resid\n%8.1f %8.1f %8.1f %8.1f %8d\n",
               suppressWarnings(AIC(o)), suppressWarnings(BIC(o)),
               as.numeric(ll), dev, as.integer(nn - attr(ll, "df"))))
+  ## the rows the fit used, when missing values took some: a model fitted to
+  ## 61% of the data should say so beside its fit statistics
+  rl <- ilm_rows_line(ilm_rows_used(o), always = FALSE)
+  if (!is.null(rl)) writeLines(strwrap(rl, width = 78, exdent = 6))
 
   if (length(o$re)) cat("\nRandom effects:\n")
   for (k in seq_along(o$re)) {
@@ -435,6 +439,7 @@ print.ilm_model <- function(x, ...) {
                 if (length(x$zeta) == 1L) "" else "s", flag))
     cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective,
                 suppressWarnings(AIC(x))))
+    ilm_rows_print(x)
     return(invisible(x))
   }
   fam <- if (is.null(x$family)) "multinomial" else x$family$name
@@ -454,5 +459,14 @@ print.ilm_model <- function(x, ...) {
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               flag))
   cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
+  ilm_rows_print(x)
   invisible(x)
+}
+
+## the one-line print's note of rows lost to missing values, if any
+#' @keywords internal
+#' @noRd
+ilm_rows_print <- function(x) {
+  rl <- ilm_rows_line(ilm_rows_used(x), always = FALSE)
+  if (!is.null(rl)) writeLines(strwrap(rl, width = 78, indent = 2, exdent = 4))
 }

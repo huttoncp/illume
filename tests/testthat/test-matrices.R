@@ -26,7 +26,7 @@ test_that("the designs are the fit's, and groups are matched by label", {
   expect_identical(m$re$id$factor, "id")
   ## the typical group's prediction is X beta, as predict() gives it
   expect_equal(as.numeric(m$X %*% f$beta),
-               unname(predict(f, newdata = nd, type = "link")[, 1]),
+               unname(predict(f, newdata = nd, type = "link", groups = "typical")[, 1]),
                tolerance = 1e-12)
   ## and a fitted group's is X beta + Z b, with b its modes from ilm_ranef()
   r <- ilm_ranef(f)
@@ -47,7 +47,7 @@ test_that("a smooth's basis rebuilds predict()'s prediction exactly", {
   r <- ilm_ranef(f)
   bs <- r$mode[r$type == "smooth"]
   eta <- as.numeric(m$X %*% f$beta + m$smooth[[1]] %*% bs)
-  expect_equal(eta, unname(predict(f, newdata = nd, type = "link")[, 1]),
+  expect_equal(eta, unname(predict(f, newdata = nd, type = "link", groups = "typical")[, 1]),
                tolerance = 1e-10)
 })
 
@@ -101,6 +101,28 @@ test_that("a structure built from vectors needs the times and groups given", {
   expect_error(ilm_matrices(f, nd), "pass `time` and `group`")
   a <- ilm_matrices(f, nd, time = nd$when, group = nd$who)$ar
   expect_false(is.na(a$cell))
+})
+
+test_that("rows with no grouping column belong to no group, and predict as typical", {
+  set.seed(8)
+  d <- data.frame(g = factor(rep(1:10, each = 8)), t = rep(1:8, 10), x = rnorm(80))
+  d$y <- rpois(80, exp(0.5 + 0.3 * d$x + rnorm(10, 0, 0.5)[d$g]))
+  f <- suppressWarnings(ilm_model(y ~ x + (1 | g), data = d, family = "poisson",
+                                  ar = ilm_ar1(~ t | g), verbose = FALSE))
+  nd <- data.frame(x = c(-1, 0, 1))
+  m <- ilm_matrices(f, nd)
+  expect_true(all(m$re$g$new_group))
+  expect_true(all(is.na(m$re$g$level)) && all(is.na(m$re$g$group)))
+  expect_true(all(m$ar$new_group) && all(is.na(m$ar$cell)))
+  expect_identical(nrow(m$ar), 3L)
+  ## the typical group's prediction assembled from them is predict()'s
+  expect_equal(as.numeric(exp(m$X %*% f$beta)),
+               as.numeric(predict(f, newdata = nd, groups = "typical")),
+               tolerance = 1e-10)
+  ## and with the column, a known group still has its code
+  m2 <- ilm_matrices(f, data.frame(x = 0, g = "3", t = 4))
+  expect_identical(m2$re$g$group, 3L)
+  expect_false(m2$re$g$new_group)
 })
 
 test_that("the zero part's and the dispersion model's designs come too", {

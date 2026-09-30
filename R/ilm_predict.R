@@ -73,7 +73,14 @@ ilm_Bhat_term <- function(object, k, bvec = NULL) {
 #' @return A list with `X` and the per-smooth designs.
 #' @keywords internal
 #' @noRd
-ilm_newX <- function(object, newdata) {
+ilm_newX <- function(object, newdata, offset_at = NULL) {
+  ## `offset_at`, one value for every row, stands in for the offset the rows
+  ## would give -- a mean per unit of exposure has no exposure column to read
+  ## -- and a column the offset needs is filled in only so the frame builds
+  if (!is.null(object$offset) && !is.null(offset_at)) {
+    ov <- all.vars(parse(text = paste(ilm_offset_terms(object$terms), collapse = " + ")))
+    for (v in setdiff(ov, names(newdata))) newdata[[v]] <- 1
+  } else ilm_offset_need(object, newdata)
   mt <- stats::delete.response(object$terms)
   mf <- stats::model.frame(mt, newdata, xlev = object$xlev)
   X  <- ilm_drop_intercept(
@@ -92,7 +99,11 @@ ilm_newX <- function(object, newdata) {
          ncol(object$X) - nrp,
          if (nrp) paste0(" besides its ", nrp, " baseline spline columns") else "",
          call. = FALSE)
-  list(X = X, smooths = sd_list)
+  ## the offset at these rows, as the fit's was at its own: from the data
+  off <- if (is.null(object$offset)) NULL
+         else if (!is.null(offset_at)) rep(offset_at, nrow(X))
+         else as.numeric(stats::model.offset(mf))
+  list(X = X, smooths = sd_list, offset = off)
 }
 
 #' Linear predictor on the sum-to-zero scale
@@ -112,6 +123,7 @@ ilm_newX <- function(object, newdata) {
 ilm_eta <- function(object, nd, beta = NULL, bvec = NULL) {
   if (is.null(beta)) beta <- object$beta
   eta <- nd$X %*% beta
+  if (!is.null(nd$offset)) eta <- eta + nd$offset
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
     if (e$kind != "basis") next                        # populations: left at zero
@@ -398,11 +410,53 @@ ilm_rw_elapsed <- function(object, newdata) {
 ## effect, and a time off the fitted cells has no fitted latent value -- past
 ## a group's last cell it would need a forecast -- so both are refused rather
 ## than given the zero a typical group has.
+## The random terms a prediction averages over, for the rows in `pdat`: each
+## grouping term's design and its covariance factors. Shared by predict() and
+## ilm_survival(), so a population average means the same thing in both.
+#' @keywords internal
+#' @noRd
+ilm_latent_terms <- function(object, gk, pdat) {
+  lapply(gk, function(k) {
+    f  <- ilm_re_factors(object, k)
+    Zb <- ilm_re_design(object, k, pdat, f$d)
+    if (is.null(Zb)) {
+      ## the bar varies over something the prediction rows do not carry, so
+      ## the only honest option left is the intercept part -- said out loud,
+      ## because an average over less than the whole term is a different
+      ## quantity from the one that was asked for
+      warning("the random-effect term '", names(object$re)[k], "' varies ",
+              "within a group over a column the prediction data does not ",
+              "have, so the average over the groups integrates its ",
+              "intercept only. Supply that column to average over the ",
+              "whole term.", call. = FALSE)
+      f$A <- matrix(1, 1L, 1L)
+      Zb  <- matrix(1, nrow(pdat), 1L)
+    }
+    list(Zb = Zb, A = f$A, B = f$B)
+  })
+}
+
+## One linear predictor: a row's latent contribution is a single normal, with
+## variance z' Sigma_d z times the term's scale for each term, plus the AR
+## variance (the stationary one, or a random walk's at its elapsed time).
+#' @keywords internal
+#' @noRd
+ilm_latent_var <- function(object, tms, has_ar, ar_el, n) {
+  vrow <- numeric(n)
+  for (tk in tms) vrow <- vrow + rowSums((tk$Zb %*% tk$A)^2) * sum(tk$B^2)
+  if (has_ar) vrow <- vrow + object$Sigma[["ar"]][1L, 1L] *
+      (if (is.null(ar_el)) 1 else ar_el)
+  vrow
+}
+
 #' @keywords internal
 #' @noRd
 ilm_fitted_place <- function(object, newdata) {
   gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
   alt <- "use groups = \"typical\" or groups = \"population\" for them"
+  ## no groups and no cells: nothing to place, and nothing in `newdata` to
+  ## demand -- an offset's column, say, when an exposure was given instead
+  if (!length(gk) && is.null(object$ar)) return(list(re = list(), cell = NULL))
   if (is.null(newdata)) {
     re <- lapply(gk, function(k)
       list(k = k, Z = object$re[[k]]$Z, group = object$re[[k]]$group))
@@ -420,6 +474,21 @@ ilm_fitted_place <- function(object, newdata) {
     stop("the correlation over time was built from vectors, so new rows ",
          "cannot be placed on its fitted cells. Build it by name, ",
          "ilm_", ar$type, "(~ time | group), or ", alt, ".", call. = FALSE)
+  ## a fitted prediction is for a particular group, so it needs the columns
+  ## that say which -- ilm_matrices() places rows without them in no group,
+  ## which is what a typical or population prediction wants and this does not
+  for (j in seq_along(gk)) {
+    miss <- setdiff(all.vars(object$bars[[j]][[3L]]), names(newdata))
+    if (length(miss))
+      stop("`newdata` does not have the grouping variable of the random term '",
+           names(object$re)[gk[j]], "' (", paste(sQuote(miss), collapse = ", "),
+           "), and a fitted prediction is for a particular group; ", alt, ".",
+           call. = FALSE)
+  }
+  if (!is.null(ar) && length(miss <- setdiff(ar$vars, names(newdata))))
+    stop("`newdata` needs ", paste(sQuote(miss), collapse = " and "), " to place ",
+         "its rows among the correlation over time's fitted cells; ", alt, ".",
+         call. = FALSE)
   M <- ilm_matrices(object, newdata)
   re <- lapply(gk, function(k) {
     m <- M$re[[names(object$re)[k]]]
@@ -498,16 +567,18 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #'
 #' @section Which groups:
 #' In a model with random effects every prediction is for some group, and this
-#' is the choice that matters most. There is no safe default that suits
-#' everyone. `groups` says which:
+#' is the choice that matters most. `groups` says which:
 #'
-#' * `"typical"` (the default) sets every random effect to zero, giving the
-#'   prediction for a **typical group**: one exactly at the average.
+#' * `"fitted"` (the default, since 0.0.8.9003) gives each row **its own
+#'   group's** estimated effects, the conditional modes [ilm_ranef()] reports,
+#'   as lme4's `predict()` does by default. A row whose group the fit has not
+#'   seen, or `newdata` without the grouping columns, is an error that names
+#'   the two choices below. See "A fitted group's own prediction".
+#' * `"typical"` sets every random effect to zero, giving the prediction for a
+#'   **typical group**: one exactly at the average. It was the default before
+#'   0.0.8.9003.
 #' * `"population"` averages the prediction over the distribution of random
 #'   effects, giving it for the **population of groups as a whole**.
-#' * `"fitted"` gives each row **its own group's** estimated effects, the
-#'   conditional modes [ilm_ranef()] reports, as lme4's `predict()` does by
-#'   default. See "A fitted group's own prediction".
 #'
 #' The first two differ, sometimes substantially, because averaging and a
 #' nonlinear inverse link do not commute: the average of the transformed
@@ -596,9 +667,9 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #'   used to fit the model.
 #' @param type `"response"` for probabilities (the default), `"link"` for linear
 #'   predictors, or `"class"` for the most likely category.
-#' @param groups `"typical"` (the default) for a group with every random
-#'   effect at zero, `"population"` for the average over the groups, or
-#'   `"fitted"` for each row's own group's estimated effects. See "Which
+#' @param groups `"fitted"` (the default) for each row's own group's
+#'   estimated effects, `"typical"` for a group with every random effect at
+#'   zero, or `"population"` for the average over the groups. See "Which
 #'   groups".
 #' @param se.fit Logical. Return standard errors.
 #' @param interval `"none"` or `"confidence"`.
@@ -610,6 +681,16 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #' @param seed Integer. Random seed, so results are reproducible.
 #' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
 #'   is `groups = "typical"`.
+#' @param per For a model with an offset in its formula,
+#'   `offset(log(exposure))`: the exposure to predict at. `per` rescales the
+#'   offset -- the exposure -- to the value given, for every row. `NULL` (the
+#'   default) predicts at each row's own exposure, as [stats::predict.glm()]
+#'   does -- the fit's rows, or `newdata`'s, which must then carry the
+#'   offset's column; a positive number predicts every row at that exposure,
+#'   a rate per 100,000 with `per = 1e5`; and `"unit"` sets the offset to
+#'   zero, the rate per unit of exposure. [ilm_emmeans()],
+#'   [ilm_ame()] and [ilm_scenario()] report per unit unless told otherwise.
+#'   Ignored without an offset.
 #' @param ... Unused.
 #'
 #' @return A matrix of probabilities (or linear predictors), or a factor for
@@ -625,14 +706,14 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #' @export
 predict.ilm_model <- function(object, newdata = NULL,
                          type = c("response", "link", "class"),
-                         groups = c("typical", "population", "fitted"),
+                         groups = c("fitted", "typical", "population"),
                          se.fit = FALSE,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L,
-                         marginal = NULL, ...) {
+                         marginal = NULL, per = NULL, ...) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   type <- match.arg(type); interval <- match.arg(interval)
-  groups <- ilm_groups_arg(groups, c("typical", "population", "fitted"),
+  groups <- ilm_groups_arg(groups, c("fitted", "typical", "population"),
                            !missing(groups), "predict()", marginal, "marginal",
                            c(`TRUE` = "population", `FALSE` = "typical"))
   marginal <- identical(groups, "population")
@@ -653,7 +734,13 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## needed before point() closes over it
   multinom0 <- object$C > 1L
   Tc <- contr.sum(object$J)
-  nd <- if (is.null(newdata)) list(X = object$X, smooths = NULL) else ilm_newX(object, newdata)
+  ## each row's own offset unless an exposure is given: then every row is at
+  ## it, "unit" being the offset at zero
+  oa <- if (is.null(per)) NULL else ilm_offset_at(object, per)
+  nd <- if (is.null(newdata))
+          list(X = object$X, smooths = NULL,
+               offset = if (is.null(oa)) object$offset else rep(oa, nrow(object$X)))
+        else ilm_newX(object, newdata, offset_at = oa)
   if (is.null(newdata) && length(object$smooths))
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
   ## each row's own group and cell, placed before anything is computed, so a
@@ -687,24 +774,7 @@ predict.ilm_model <- function(object, newdata = NULL,
     pdat <- if (is.null(newdata)) object$model else newdata
     if (has_ar && identical(object$ar$type, "rw1"))
       ar_el <- ilm_rw_elapsed(object, newdata)
-    tms <- lapply(gk, function(k) {
-      f  <- ilm_re_factors(object, k)
-      Zb <- ilm_re_design(object, k, pdat, f$d)
-      if (is.null(Zb)) {
-        ## the bar varies over something the prediction rows do not carry, so
-        ## the only honest option left is the intercept part -- said out loud,
-        ## because an average over less than the whole term is a different
-        ## quantity from the one that was asked for
-        warning("the random-effect term '", names(object$re)[k], "' varies ",
-                "within a group over a column the prediction data does not ",
-                "have, so the average over the groups integrates its ",
-                "intercept only. Supply that column to average over the ",
-                "whole term.", call. = FALSE)
-        f$A <- matrix(1, 1L, 1L)
-        Zb  <- matrix(1, nrow(pdat), 1L)
-      }
-      list(Zb = Zb, A = f$A, B = f$B)
-    })
+    tms <- ilm_latent_terms(object, gk, pdat)
     if (object$C > 1L) {
       ## C linear predictors: draws, with common random numbers, in the same
       ## stream as before for the grouping terms, and the AR term after them
@@ -722,10 +792,7 @@ predict.ilm_model <- function(object, newdata = NULL,
       ## the AR variance. Averaged by quadrature rather than by draws, whose
       ## noise grows with that variance and moves finite-difference effects
       ## with the seed.
-      vrow <- numeric(nrow(pdat))
-      for (tk in tms) vrow <- vrow + rowSums((tk$Zb %*% tk$A)^2) * sum(tk$B^2)
-      if (has_ar) vrow <- vrow + object$Sigma[["ar"]][1L, 1L] *
-          (if (is.null(ar_el)) 1 else ar_el)
+      vrow <- ilm_latent_var(object, tms, has_ar, ar_el, nrow(pdat))
     }
   }
   ## A univariate family has one linear predictor and its own inverse link; the

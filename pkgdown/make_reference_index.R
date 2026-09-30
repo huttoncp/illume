@@ -30,12 +30,12 @@ grp <- list(
          "ilm_fourier", "ilm_cyclic", "ilm_squeeze", "ilm_thresholds")),
 
   list("Parts of a fitted model",
-       "The pieces of a fit, laid out by name for code built on it: its random effects, its variance components, the cells of a correlation over time, and the quadrature behind a population average.",
+       "The pieces of a fit, laid out by name for code built on it: its random effects, its variance components, the cells of a correlation over time, the quadrature behind a population average, and the rows it used.",
        function(x) x %in% c("ilm_ranef", "ilm_varcorr", "ilm_draws",
                             "ilm_matrices", "ilm_dist", "ilm_cells",
-                            "ilm_normal_expect"),
+                            "ilm_normal_expect", "ilm_rows_used"),
        c("ilm_ranef", "ilm_varcorr", "ilm_draws", "ilm_matrices", "ilm_dist",
-         "ilm_cells", "ilm_normal_expect")),
+         "ilm_cells", "ilm_normal_expect", "ilm_rows_used")),
 
   list("Other designs",
        "Identification strategies and sampling designs that are not a single regression.",

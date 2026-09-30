@@ -25,7 +25,8 @@ ilm_fit(
   Zzi = NULL,
   zi_type = c("inflated", "hurdle"),
   reml = FALSE,
-  boundary = c("hold", "avoid")
+  boundary = c("hold", "avoid"),
+  offset = NULL
 )
 }
 \arguments{
@@ -123,6 +124,14 @@ properties. The fit records which of the two it is in \code{reml_exact}. See
 edge of its range is held there) or \code{"avoid"} (the boundary-avoiding
 penalty of Chung et al. 2013, 2015). See \code{\link[=ilm_model]{ilm_model()}} for what each
 implies.}
+
+\item{offset}{Optional numeric vector, one value per row of \code{X}, added to
+the linear predictor with its coefficient fixed at one -- log exposure
+for a rate. Through \code{\link[=ilm_model]{ilm_model()}} it is written in the formula,
+\code{offset(log(exposure))}, as in \code{\link[stats:glm]{stats::glm()}}. Supported for the
+families with one linear predictor; not for multinomial, ordinal or
+flexible parametric survival models. It enters the conditional mean
+only, not a zero part or a dispersion model.}
 }
 \value{
 An object of class \code{"ilm_model"}: a list whose most useful elements are

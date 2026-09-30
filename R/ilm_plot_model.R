@@ -180,8 +180,12 @@ ilm_plot_effect <- function(model, term = NULL, conf = 0.95, colour = "black",
   }
   nd1[[term]] <- grid
 
+  ## a rate model's curve is drawn per unit of exposure, as its means are
+  per_unit <- inherits(model, "ilm_model") && !is.null(model$offset)
   pred1 <- function(nd) {
-    pr <- tryCatch(stats::predict(model, newdata = nd, se.fit = TRUE),
+    pr <- tryCatch(if (per_unit)
+                     stats::predict(model, newdata = nd, se.fit = TRUE, groups = "typical", per = "unit")
+                   else stats::predict(model, newdata = nd, se.fit = TRUE, groups = "typical"),
                    error = function(e)
                      stop("predict() failed for this model: ", conditionMessage(e),
                           call. = FALSE))

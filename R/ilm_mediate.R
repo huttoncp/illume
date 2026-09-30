@@ -52,8 +52,8 @@ ilm_med_draw <- function(fit) {
 #' @keywords internal
 #' @noRd
 ilm_med_mu <- function(fit, nd, beta) {
-  X <- ilm_newX(fit, nd)$X
-  eta <- as.numeric(X %*% beta)
+  nx <- ilm_newX(fit, nd)
+  eta <- as.numeric(nx$X %*% beta) + if (is.null(nx$offset)) 0 else nx$offset
   li <- if (!is.null(fit$family)) fit$family$linkinv else identity
   li(eta)
 }
@@ -244,8 +244,9 @@ ilm_med_set <- function(x, value) {
 #' @keywords internal
 #' @noRd
 ilm_med_rng <- function(fit, nd, beta) {
-  X <- ilm_newX(fit, nd)$X
-  eta <- matrix(as.numeric(X %*% beta), ncol = 1L)
+  nx <- ilm_newX(fit, nd)
+  eta <- matrix(as.numeric(nx$X %*% beta) + if (is.null(nx$offset)) 0 else nx$offset,
+                ncol = 1L)
   fam <- fit$family
   if (is.null(fam)) return(as.numeric(eta))
   d <- ilm_disp_vec(fit)

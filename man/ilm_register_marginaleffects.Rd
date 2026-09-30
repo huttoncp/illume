@@ -19,4 +19,11 @@ Registering the S3 methods alone is not enough. \code{marginaleffects} checks mo
 classes against a fixed list and rejects anything unfamiliar \emph{before} dispatch
 happens, so the methods would never be reached. This also adds \code{"ilm_model"} to
 that list through the option the package provides for the purpose.
+
+\strong{A model with an offset.} \code{marginaleffects} builds its own grids from the
+data, so its predictions and effects are at each row's own exposure -- the
+counts, not the rates that \code{\link[=ilm_emmeans]{ilm_emmeans()}}, \code{\link[=ilm_ame]{ilm_ame()}} and
+\code{\link[=ilm_scenario]{ilm_scenario()}} report per unit of exposure. For rates, give the exposure
+column the value 1 in the grid (\code{newdata = datagrid(e = 1)}, for an offset
+\code{offset(log(e))}), or use illume's own functions.
 }

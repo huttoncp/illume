@@ -120,7 +120,7 @@ ilm_rdd_density <- function(r, cutoff, h, nbins = 20L) {
            stats::glm(cnt ~ mid, family = stats::poisson())),
          error = function(e) NULL)
     if (is.null(g)) return(NULL)
-    pr <- tryCatch(stats::predict(g, newdata = data.frame(mid = cutoff),
+    pr <- tryCatch(stats::predict(g, newdata = data.frame(mid = cutoff), groups = "typical",
                                   se.fit = TRUE), error = function(e) NULL)
     if (is.null(pr)) NULL else c(fit = unname(pr$fit), se = unname(pr$se.fit))
   }
@@ -487,7 +487,7 @@ ilm_plot_rdd <- function(x, nbins = 20L, main = "Regression discontinuity",
     g <- seq(min(rr), max(rr), length.out = 60L)
     nd <- data.frame(.r = g - x$cutoff, .above = as.integer(s))
     nd$.w <- ilm_rdd_weights(nd$.r, x$h, x$kernel)
-    pr <- tryCatch(as.numeric(stats::predict(x$fit, newdata = nd,
+    pr <- tryCatch(as.numeric(stats::predict(x$fit, newdata = nd, groups = "typical",
                                              type = "response")),
                    error = function(e) NULL)
     if (!is.null(pr) && length(pr) == length(g))

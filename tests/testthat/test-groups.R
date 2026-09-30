@@ -14,11 +14,13 @@ grp_fit <- function() {
 grp_reset <- function()
   rm(list = ls(ilm_deprecation_seen), envir = ilm_deprecation_seen)
 
-test_that("the defaults are unchanged", {
+test_that("the defaults: each row's own group, and a typical one for ilm_ame()", {
   f <- grp_fit()
   b <- as.vector(f$X %*% f$beta)
-  expect_equal(unname(predict(f)[, 1]), plogis(b), tolerance = 1e-12)
-  expect_identical(predict(f), predict(f, groups = "typical"))
+  ## predict() gives each row its own group's effects by default (item 213)
+  expect_identical(predict(f), predict(f, groups = "fitted"))
+  expect_equal(unname(predict(f)[, 1]), unname(ilm_fitted(f)[, 1]), tolerance = 1e-12)
+  expect_equal(unname(predict(f, groups = "typical")[, 1]), plogis(b), tolerance = 1e-12)
   expect_identical(ilm_fitted(f), ilm_fitted(f, groups = "fitted"))
   expect_identical(ilm_rqr(f), ilm_rqr(f, groups = "fitted"))
   expect_identical(ilm_scores(f), ilm_scores(f, groups = "fitted"))
@@ -86,7 +88,7 @@ test_that("the words are checked, and a word not taken says where it is", {
   ## a unique abbreviation is the word, and the whole default is the default
   expect_identical(predict(f, groups = "pop"),
                    predict(f, groups = "population"))
-  expect_identical(predict(f, groups = c("typical", "population", "fitted")),
+  expect_identical(predict(f, groups = c("fitted", "typical", "population")),
                    predict(f))
 })
 

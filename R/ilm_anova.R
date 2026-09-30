@@ -228,7 +228,7 @@ ilm_recode_sum <- function(object, which) {
   f$assign <- attr(Xn, "assign")
   f$contrasts <- attr(Xn, "contrasts")
   for (nm in c("call", "formula", "fixed_formula", "terms", "xlev", "model",
-               "smooths", "bars", "na.action", "n_dropped", "ylevels",
+               "smooths", "bars", "na.action", "n_dropped", "rows", "ylevels",
                "term_labels"))
     f[[nm]] <- object[[nm]]
   f

@@ -228,6 +228,7 @@ ilm_power_stub_grid <- function(object, st, d) {
   nd <- ilm_newX(object, d)
   s <- st
   s$X <- nd$X
+  s$offset <- nd$offset                  # the grid's own exposure
   s$y <- numeric(nrow(d))
   s$weights <- NULL
   for (k in seq_along(st$re)) {

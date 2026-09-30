@@ -5,19 +5,35 @@
 \alias{iml_survival}
 \title{Predicted survival curve from a fitted model}
 \usage{
-ilm_survival(object, newdata = NULL, times = NULL, conf = 0.95)
+ilm_survival(
+  object,
+  newdata = NULL,
+  times = NULL,
+  conf = 0.95,
+  groups = c("fitted", "typical", "population"),
+  nsim = 200L,
+  seed = 1L
+)
 }
 \arguments{
-\item{object}{A fitted \code{"ilm_model"} with an accelerated failure time family.}
+\item{object}{A fitted \code{"ilm_model"} with a time-to-event family.}
 
 \item{newdata}{Covariate patterns, one row each. With none, the curve is
 drawn at the median of each numeric predictor and the commonest level of
-each factor.}
+each factor, for a typical group.}
 
 \item{times}{Times at which to evaluate. With none, a grid spanning the
 observed follow-up.}
 
 \item{conf}{Confidence level.}
+
+\item{groups}{\code{"fitted"} (the default), \code{"typical"} or \code{"population"}; see
+"Which groups". Only a model with random effects or a correlation over
+time has a choice to make.}
+
+\item{nsim}{Draws behind the intervals of \code{"fitted"} and \code{"population"}.}
+
+\item{seed}{Random seed for those draws.}
 }
 \value{
 A data frame with \code{row}, \code{time}, \code{surv}, \code{lower} and \code{upper}.
@@ -28,15 +44,38 @@ patterns, with confidence intervals.
 }
 \details{
 All three accelerated failure time families have a closed-form survivor
-function in \verb{z = (log t - eta) / scale}, so the curve and its interval come
-straight from the fitted linear predictor. Intervals are computed on the
-complementary log-log scale, \verb{log(-log S)}, which is linear in \code{eta} and so
-keeps the interval inside \verb{(0, 1)} without truncation.
-
-Uncertainty in the scale parameter is not included: the interval reflects
-uncertainty in the coefficients only. It is therefore slightly narrow, most
-noticeably in the tail beyond the last observed event.
+function in \verb{z = (log t - eta) / scale}, and a flexible (Royston-Parmar)
+model one in its baseline spline plus \code{eta}, so the curve comes straight
+from the linear predictor.
 }
+\section{Which groups}{
+
+In a model with random effects a curve is for some group, and \code{groups} says
+which, as it does for \code{\link[=predict.ilm_model]{predict.ilm_model()}}:
+\itemize{
+\item \code{"fitted"} (the default) draws each row at \strong{its own group's} estimated
+effects. A row whose group the fit has not seen, or \code{newdata} without the
+grouping columns, is an error naming the two choices below.
+\item \code{"typical"} draws each row with every random effect at zero: the curve of
+a \strong{typical group}. With no \code{newdata} the curve is at a typical covariate
+pattern, which belongs to no group, and this is what it gives.
+\item \code{"population"} averages the \strong{survival curve itself} over the
+distribution of random effects, by quadrature at each time: the curve for
+the population of groups as a whole. It is flatter than the typical
+group's curve, not the curve at zero, since survival is not linear in the
+linear predictor.
+}
+
+Intervals for a typical group are computed on the complementary log-log
+scale for the accelerated failure time families, which is linear in \code{eta},
+and on the linear predictor for a flexible model. For \code{"fitted"} and
+\code{"population"} they are percentile intervals from \code{nsim} joint draws of the
+coefficients -- and, for \code{"fitted"}, of the groups' own effects, as
+\code{\link[=predict.ilm_model]{predict.ilm_model()}} draws them. Uncertainty in an accelerated failure time
+family's scale parameter is not included, so its intervals are slightly
+narrow, most in the tail beyond the last observed event.
+}
+
 \examples{
 set.seed(1)
 d <- data.frame(x = rnorm(200))

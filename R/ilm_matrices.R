@@ -18,7 +18,11 @@
 #'
 #' @details
 #' **Groups.** A row's group is matched to the fitted levels by label; a group
-#' the fit has not seen has no code and is marked `new_group`.
+#' the fit has not seen has no code and is marked `new_group`. Without the
+#' grouping column the rows belong to no group the fit knows -- a prediction
+#' for the typical group or averaged over the population needs none -- so
+#' every row is `new_group`, with `level` and `group` missing. Only a
+#' prediction for a particular group needs its column.
 #'
 #' **Over time.** `ar` places each row among its group's cells, as numbered by
 #' [ilm_cells()]: `cell` if the row's time is one of them, and the nearest
@@ -29,6 +33,11 @@
 #' is an error rather than rounded to one. The time and the group are read
 #' from the columns the term was built from, `ilm_rw1(~ time | group)` and
 #' the like; for a term built from vectors, pass them as `time` and `group`.
+#' For a term built by name, rows without its columns are placed nowhere:
+#' every cell and gap is missing and every row `new_group`. A term built from
+#' vectors has no columns to fall back on, so there, rows without `time` and
+#' `group` are an error -- a forgotten argument would otherwise predict each
+#' row as a new series.
 #'
 #' @param object A fitted `"ilm_model"`.
 #' @param newdata A data frame of new rows, with the columns the model uses.
@@ -51,6 +60,9 @@
 #'     \item{`ar`}{with a correlation over time, a data frame with a row per
 #'       new row: `group`, `time`, `cell`, `prev_cell`, `next_cell`,
 #'       `dt_prev`, `dt_next` and `new_group`.}
+#'     \item{`offset`}{with an offset in the formula, its value at each new
+#'       row, made from `newdata`'s own columns; `NULL` otherwise. It adds to
+#'       `X %*% beta` with a coefficient of one.}
 #'   }
 #' @seealso [ilm_draws()], [ilm_cells()], [ilm_ranef()].
 #' @examples
@@ -73,7 +85,7 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
          "how to build the new rows' designs", call. = FALSE)
   nd <- ilm_newX(object, newdata)
   out <- list(X = nd$X, re = list(), smooth = list(), zi = NULL, disp = NULL,
-              ar = NULL)
+              ar = NULL, offset = nd$offset)
   gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
   env <- environment(object$formula)
   if (is.null(env)) env <- parent.frame()
@@ -94,9 +106,14 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
       else if (e$d == 1L) "(Intercept)" else paste0("z", seq_len(e$d))
     b <- object$bars[[match(k, gk)]]
     g <- tryCatch(eval(b[[3L]], newdata, env), error = function(err) NULL)
-    if (is.null(g) || length(g) != nrow(newdata))
-      stop("`newdata` does not have the grouping variable of the random term '",
-           nm, "'", call. = FALSE)
+    ## no grouping column: the rows belong to no group the fit knows -- the
+    ## typical group's or the population's prediction, which needs no unit --
+    ## so every row is a new group, without a level or a code
+    if (is.null(g)) g <- rep(NA_character_, nrow(newdata))
+    if (length(g) != nrow(newdata))
+      stop("the grouping variable of the random term '", nm, "' has ",
+           length(g), " values for ", nrow(newdata), " rows of `newdata`",
+           call. = FALSE)
     lev <- as.character(g)
     code <- if (length(e$levels) == e$nl) match(lev, e$levels)
             else rep(NA_integer_, length(lev))
@@ -118,24 +135,40 @@ ilm_matrices <- function(object, newdata, time = NULL, group = NULL) {
   if (!is.null(object$ar)) {
     v <- object$ar$vars
     if (is.null(time) || is.null(group)) {
+      ## a term built from vectors has no columns to read, so rows without
+      ## times and groups are almost always a forgotten argument -- and placed
+      ## nowhere, a prediction for a known series would come out as a new one
       if (is.null(v))
         stop("the correlation over time was built from vectors, so the new ",
              "rows' times and groups have to be given: pass `time` and ",
              "`group`, or build the term by name, ilm_rw1(~ time | group)",
              call. = FALSE)
-      miss <- setdiff(v, names(newdata))
-      if (length(miss))
-        stop("`newdata` needs ", paste(sQuote(miss), collapse = " and "),
-             " to place its rows among the cells", call. = FALSE)
-      time <- newdata[[v[["time"]]]]; group <- newdata[[v[["group"]]]]
+      if (all(v %in% names(newdata))) {
+        time <- newdata[[v[["time"]]]]; group <- newdata[[v[["group"]]]]
+      }
     }
-    if (length(time) != nrow(newdata) || length(group) != nrow(newdata))
-      stop("`time` and `group` need one value per row of `newdata`",
-           call. = FALSE)
-    out$ar <- ilm_ar_place(object, time, group)
+    ## a term built by name, and new rows without its columns: no place among
+    ## the cells -- a prediction for no particular group, which needs none
+    out$ar <- if (is.null(time) || is.null(group)) ilm_ar_unplaced(nrow(newdata))
+      else {
+        if (length(time) != nrow(newdata) || length(group) != nrow(newdata))
+          stop("`time` and `group` need one value per row of `newdata`",
+               call. = FALSE)
+        ilm_ar_place(object, time, group)
+      }
   }
   out
 }
+
+## Rows placed nowhere among the cells: no group, no time, every one new.
+#' @keywords internal
+#' @noRd
+ilm_ar_unplaced <- function(n)
+  data.frame(group = rep(NA_character_, n), time = rep(NA_real_, n),
+             cell = rep(NA_integer_, n), prev_cell = rep(NA_integer_, n),
+             next_cell = rep(NA_integer_, n), dt_prev = rep(NA_real_, n),
+             dt_next = rep(NA_real_, n), new_group = rep(TRUE, n),
+             stringsAsFactors = FALSE)
 
 ## Where each new row falls among its group's cells.
 #' @keywords internal

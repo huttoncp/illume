@@ -154,6 +154,12 @@ ilm_scen_support <- function(mf, scen, vars) {
 #'   (each against the first) or `"pairwise"`.
 #' @param seed Random seed.
 #' @param progress Show a progress bar; see [illumex::ilm_progress_arg].
+#' @param per For a model with an offset, `offset(log(exposure))`: the
+#'   exposure each scenario's mean is per. `per` rescales the offset -- the
+#'   exposure -- to the value given, for every unit. By default the means are
+#'   per unit of exposure (the offset at zero); a positive number puts every
+#'   unit at that exposure instead -- `per = 1e5` for a rate per 100,000. The
+#'   print says which. Ignored without an offset.
 #' @return An object of class `"ilm_scenario"`: a data frame of the grid with
 #'   `estimate`, `lower` and `upper`, plus any contrasts.
 #' @seealso [ilm_ame()] for the effect of a one-unit change rather than a named
@@ -171,7 +177,7 @@ ilm_scen_support <- function(mf, scen, vars) {
 #' @export
 ilm_scenario <- function(object, ..., over = c("sample", "reference"),
                          sims = 1000L, level = 0.95, contrast = FALSE,
-                         seed = 1L, progress = NULL) {
+                         seed = 1L, progress = NULL, per = NULL) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   over <- match.arg(over)
   if (!inherits(object, "ilm_model"))
@@ -211,6 +217,8 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   ## out as -1.31 at its peak of +1.
   mixed <- any(vapply(object$re, function(e) e$kind != "basis", TRUE)) ||
     !is.null(object$ar)
+  ## with an offset, every unit at the same exposure: per unit unless given
+  ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   nsc <- nrow(grid)
   ## the base data each scenario is applied to
   base <- if (over == "sample") mf else ref
@@ -227,7 +235,7 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   pb <- ilm_progress(sims, progress, "projecting scenarios")
   for (s in seq_len(sims)) {
     obj <- ilm_rebuild(object, P[s, ])
-    for (j in seq_len(nsc)) draws[s, j] <- ilm_scen_mean(obj, nds[[j]], mixed)
+    for (j in seq_len(nsc)) draws[s, j] <- ilm_scen_mean(obj, nds[[j]], mixed, ex)
     pb$tick(s)
   }
   pb$done()
@@ -238,7 +246,7 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   ## the draws give the interval. It was the mean of the draws, which moved
   ## with the seed and, through a nonlinear link, was pulled towards the
   ## middle -- Jensen's inequality over the parameter uncertainty.
-  est <- vapply(nds, function(nd) ilm_scen_mean(object, nd, mixed), 0)
+  est <- vapply(nds, function(nd) ilm_scen_mean(object, nd, mixed, ex), 0)
   res$estimate <- est
   res$lower <- apply(draws, 2L, stats::quantile, a, na.rm = TRUE)
   res$upper <- apply(draws, 2L, stats::quantile, 1 - a, na.rm = TRUE)
@@ -274,7 +282,8 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   structure(res, class = c("ilm_scenario", "data.frame"), draws = draws,
             contrasts = ct, over = over, held = others, reference = ref,
             support = sup, level = level, mixed = mixed,
-            vars = names(spec), sims = sims)
+            vars = names(spec), sims = sims,
+            per_note = ilm_per_note(object, per))
 }
 
 #' Draws of the whole parameter vector, for a scenario's interval
@@ -302,10 +311,11 @@ ilm_scen_par_draws <- function(object, sims) {
 #'
 #' @keywords internal
 #' @noRd
-ilm_scen_mean <- function(object, nd, mixed) {
+ilm_scen_mean <- function(object, nd, mixed, per = NULL) {
   mu <- suppressWarnings(stats::predict(object, newdata = nd, type = "response",
                                         groups = if (mixed) "population"
-                                                 else "typical"))
+                                                 else "typical",
+                                        per = per))
   mean(as.numeric(mu))
 }
 
@@ -328,6 +338,8 @@ print.ilm_scenario <- function(x, ...) {
         "\n", sep = "")
   if (attr(x, "mixed"))
     cat("  averaged over the random effects, so this is a population mean\n")
+  if (!is.null(attr(x, "per_note")))
+    writeLines(strwrap(attr(x, "per_note"), width = 78, indent = 2, exdent = 4))
   d <- as.data.frame(x); class(d) <- "data.frame"
   for (j in c("estimate", "lower", "upper")) d[[j]] <- signif(d[[j]], 4)
   names(d)[names(d) == "outside"] <- "extrapolating"

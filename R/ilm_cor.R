@@ -28,10 +28,11 @@
 ## regime where the Laplace approximation stops being estimable (see the latent
 ## budget work: 33% convergence at 1.5 observations per latent). nlme's corCAR1
 ## does not have this problem because it puts the correlation on the residuals
-## instead. The constructors therefore report the budget and say so out loud
-## when it is thin -- rounding the time to a coarser grid is usually the fix.
-## For a gaussian response none of this binds: the Laplace approximation is
-## exact there, which the fit-time checks know and the constructors cannot.
+## instead. The constructors report the budget, and the fit judges it: for a
+## gaussian response none of this binds -- the Laplace approximation is exact
+## there -- which only the fit, knowing the family, can tell. So the warning is
+## the fit's, worded as its obs_per_ar_latent check, and rounding the time to a
+## coarser grid is usually the fix.
 ## ---------------------------------------------------------------------------
 
 #' @keywords internal
@@ -96,20 +97,13 @@ ilm_cor_cells <- function(z) {
        rest = rest, prev = prev, gap = ct[rest] - ct[prev], n = n)
 }
 
-## Shared budget reporting, so every structure says the same thing the same way.
+## Observations per latent value. Not warned about here: whether a budget is
+## thin depends on the family, which only the fit knows -- a gaussian response
+## makes the Laplace approximation exact -- so the fit warns, in the words of
+## its own obs_per_ar_latent check (ilm_ar_budget_warn()).
 #' @keywords internal
 #' @noRd
-ilm_cor_budget <- function(n_obs, n_cell, what, verbose) {
-  r <- n_obs / n_cell
-  if (verbose && r < 1.5)
-    warning(what, " puts ", n_cell, " latent values under ", n_obs,
-            " observations (", round(r, 2), " per latent). Below about 1.5 the ",
-            "Laplace approximation frequently fails to converge, and a latent ",
-            "value seen once carries no information the residual does not. ",
-            "Round `time` to a coarser grid so observations share a latent.",
-            call. = FALSE)
-  r
-}
+ilm_cor_budget <- function(n_obs, n_cell) n_obs / n_cell
 
 ## ---- a structure given by name -------------------------------------------
 ##
@@ -176,7 +170,10 @@ ilm_cor_build <- function(spec, data) {
 #'   `~ time | group` naming two columns of the model's data; see Details.
 #' @param group Unit identifier, one value per observation. Omitted when
 #'   `time` is a formula.
-#' @param verbose Warn when the latent budget is thin.
+#' @param verbose Warn about the time grid (most of its steps unobserved). The
+#'   latent budget is judged when the model is fitted, where the family is
+#'   known -- see the `obs_per_ar_latent` check -- and `FALSE` here quiets that
+#'   warning too.
 #' @return A `"ilm_ar1"` specification, to pass as `ilm_model(ar = )`.
 #' @seealso [ilm_car1()] for arbitrary gaps, [ilm_rw1()] for a level that
 #'   drifts, [ilm_check_ar()] to test whether the structure is needed,
@@ -221,11 +218,12 @@ ilm_ar1 <- function(time, group, verbose = TRUE) {
             " latent values carry no data. ilm_car1() takes the gaps as they ",
             "are and needs one latent per observed time instead.",
             call. = FALSE)
-  r <- ilm_cor_budget(length(idx), n_cell, "AR(1)", verbose)
+  r <- ilm_cor_budget(length(idx), n_cell)
   structure(list(type = "ar1", idx = idx, n_group = n_group, Tt = Tt,
                  n_cell = n_cell, n_latent = n_cell, step = step,
                  origin = min(u), n_obs = length(idx),
-                 obs_per_latent = r, glev = z$glev, tcls = z$tcls, tz = z$tz),
+                 obs_per_latent = r, glev = z$glev, tcls = z$tcls, tz = z$tz,
+                 warn_budget = isTRUE(verbose)),
             class = c("ilm_ar1", "ilm_cor"))
 }
 
@@ -257,7 +255,9 @@ ilm_ar1 <- function(time, group, verbose = TRUE) {
 #'   one-sided formula `~ time | group` naming two columns of the model's data.
 #' @param group Unit identifier, one value per observation. Omitted when
 #'   `time` is a formula.
-#' @param verbose Warn when the latent budget is thin.
+#' @param verbose Warn about nearly coincident times. The latent budget is
+#'   judged when the model is fitted, where the family is known -- see the
+#'   `obs_per_ar_latent` check -- and `FALSE` here quiets that warning too.
 #' @return A `"ilm_car1"` specification, to pass as `ilm_model(ar = )`.
 #' @seealso [ilm_ar1()] for evenly spaced time, [ilm_rw1()] for a level that
 #'   drifts rather than reverting, [ilm_check_ar()] and [ilm_plot_acf()] to
@@ -291,13 +291,13 @@ ilm_car1 <- function(time, group, verbose = TRUE) {
             ". Nearly coincident times force the correlation to 1 and the ",
             "innovation variance to 0, which the optimiser handles badly. ",
             "Consider rounding `time`.", call. = FALSE)
-  r <- ilm_cor_budget(cc$n, cc$n_cell, "CAR(1)", verbose)
+  r <- ilm_cor_budget(cc$n, cc$n_cell)
   structure(list(type = "car1", idx = cc$idx, n_cell = cc$n_cell,
                  n_latent = cc$n_cell, first = cc$first, prev = cc$prev,
                  rest = cc$rest, gap = gap, ct = cc$ct, cg = cc$cg,
                  n_group = length(cc$first), n_obs = cc$n, obs_per_latent = r,
                  time_range = range(z$t), glev = z$glev, tcls = z$tcls,
-                 tz = z$tz),
+                 tz = z$tz, warn_budget = isTRUE(verbose)),
             class = c("ilm_car1", "ilm_cor"))
 }
 
@@ -421,8 +421,7 @@ print.ilm_cor <- function(x, ...) {
   else
     cat(sprintf("  step: %s, grid of %d time slots\n", signif(x$step, 4), x$Tt))
   if (x$obs_per_latent < 1.5)
-    cat(if (rw) "  whether that is thin depends on the family; the fit checks it\n"
-        else "  the latent budget is thin; see ?ilm_car1\n")
+    cat("  whether that is thin depends on the family; the fit checks it\n")
   invisible(x)
 }
 
