@@ -143,15 +143,15 @@ rate_fit <- function() {
 test_that("predict() takes each row's exposure, or one it is given", {
   r <- rate_fit(); f <- r$f; nd <- r$d[1:5, ]
   own <- as.numeric(predict(f, newdata = nd, type = "response"))
-  unit <- as.numeric(predict(f, newdata = nd, type = "response", exposure = "unit"))
+  unit <- as.numeric(predict(f, newdata = nd, type = "response", per = "unit"))
   expect_equal(own, unit * nd$e, tolerance = 1e-10)
-  big <- as.numeric(predict(f, newdata = nd, type = "response", exposure = 1e5))
+  big <- as.numeric(predict(f, newdata = nd, type = "response", per = 1e5))
   expect_equal(big, unit * 1e5, tolerance = 1e-10)
   ## an exposure needs no exposure column
   expect_equal(as.numeric(predict(f, newdata = data.frame(x = nd$x, k = nd$k),
-                                  type = "response", exposure = "unit")),
+                                  type = "response", per = "unit")),
                unit, tolerance = 1e-10)
-  expect_error(predict(f, newdata = nd, exposure = -1), "positive number")
+  expect_error(predict(f, newdata = nd, per = -1), "positive number")
 })
 
 test_that("marginal means are per unit of exposure, and say so", {
@@ -162,12 +162,14 @@ test_that("marginal means are per unit of exposure, and say so", {
   expect_equal(em$estimate[em$k == "a"], exp(b[[1]] + b[[2]] * mean(r$d$x)),
                tolerance = 1e-8)
   expect_output(print(em), "per unit of exposure", fixed = TRUE)
-  em5 <- ilm_emmeans(f, "k", type = "response", exposure = 1e5)
+  ## the argument that sets another is named in the note (item 166)
+  expect_output(print(em), "`per =` sets another", fixed = TRUE)
+  em5 <- ilm_emmeans(f, "k", type = "response", per = 1e5)
   expect_equal(em5$estimate, em$estimate * 1e5, tolerance = 1e-8)
   expect_output(print(em5), "at e = 1e+05", fixed = TRUE)
   ## a contrast on the link scale does not depend on the exposure
   expect_equal(diff(ilm_emmeans(f, "k")$estimate),
-               diff(ilm_emmeans(f, "k", exposure = 7)$estimate), tolerance = 1e-10)
+               diff(ilm_emmeans(f, "k", per = 7)$estimate), tolerance = 1e-10)
 })
 
 test_that("average marginal effects are on the mean per unit of exposure", {
@@ -177,14 +179,14 @@ test_that("average marginal effects are on the mean per unit of exposure", {
   eta0 <- b[[1]] + b[[2]] * r$d$x + b[[3]] * (r$d$k == "b")
   expect_equal(a$estimate, mean(b[[2]] * exp(eta0)), tolerance = 1e-4)
   expect_output(print(a), "per unit of exposure", fixed = TRUE)
-  a10 <- ilm_ame(f, "x", exposure = 10)
+  a10 <- ilm_ame(f, "x", per = 10)
   expect_equal(a10$estimate, 10 * a$estimate, tolerance = 1e-6)
 })
 
 test_that("a scenario's mean is per unit of exposure unless told otherwise", {
   r <- rate_fit(); f <- r$f
   s1 <- q(ilm_scenario(f, x = 0, sims = 50))
-  s2 <- q(ilm_scenario(f, x = 0, sims = 50, exposure = 100))
+  s2 <- q(ilm_scenario(f, x = 0, sims = 50, per = 100))
   expect_equal(s2$estimate, 100 * s1$estimate, tolerance = 1e-8)
   expect_output(print(s1), "per unit of exposure", fixed = TRUE)
 })

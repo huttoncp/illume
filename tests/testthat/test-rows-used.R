@@ -19,9 +19,9 @@ test_that("complete data: every row used, nothing to say", {
                    c(60L, 60L, 0L, 0L))
   expect_length(r$dropped_by, 0L)
   expect_null(stats::na.action(f))
-  expect_no_match(capture.output(print(f)), "rows used")
+  expect_no_match(capture.output(print(f)), "analysed")
   expect_no_match(capture.output(summary(f)), "^Rows:")
-  expect_output(print(r), "60 of 60 rows used", fixed = TRUE)
+  expect_output(print(r), "Rows: 60 of 60 analysed", fixed = TRUE)
 })
 
 test_that("missing values: the counts, the columns, and stats' record agree", {
@@ -41,10 +41,13 @@ test_that("missing values: the counts, the columns, and stats' record agree", {
   expect_identical(nrow(f$X), length(setdiff(seq_len(r$n_input), as.integer(om))))
   ## the column counts add to 6 against 5 rows dropped, and the line says why
   out <- gsub("[[:space:]]+", " ", paste(capture.output(print(f)), collapse = " "))
-  expect_match(out, paste0("55 of 60 rows used; 5 dropped for missing values ",
+  expect_match(out, paste0("Rows: 55 of 60 analysed; 5 dropped for missing values ",
                            "(y 2, x 3, z 1; a row missing in several columns ",
                            "counts in each)"), fixed = TRUE)
-  expect_output(print(summary(f)), "Rows: 55 of 60 rows used", fixed = TRUE)
+  expect_output(print(summary(f)), "Rows: 55 of 60 analysed; 5 dropped for missing values", fixed = TRUE)
+  ## the line as ruled (item 164), exactly
+  expect_identical(illume:::ilm_rows_line(r),
+    "Rows: 55 of 60 analysed; 5 dropped for missing values (y 2, x 3, z 1; a row missing in several columns counts in each)")
 })
 
 test_that("a grouping factor's missing values count, in a mixed model", {
@@ -53,7 +56,7 @@ test_that("a grouping factor's missing values count, in a mixed model", {
   r <- ilm_rows_used(f)
   expect_identical(c(r$n_used, r$n_dropped), c(58L, 2L))
   expect_identical(r$dropped_by, c(g = 2L))
-  expect_output(print(f), "58 of 60 rows used; 2 dropped for missing values (g 2)",
+  expect_output(print(f), "Rows: 58 of 60 analysed; 2 dropped for missing values (g 2)",
                 fixed = TRUE)
   expect_identical(sort(as.integer(stats::na.action(f))), c(5L, 6L))
 })
@@ -83,7 +86,7 @@ test_that("data that is not a data frame has no input count", {
   r <- ilm_rows_used(f)
   expect_true(is.na(r$n_input))
   expect_identical(r$n_used, 60L)
-  expect_output(print(r), "60 rows used", fixed = TRUE)
+  expect_output(print(r), "Rows: 60 analysed", fixed = TRUE)
 })
 
 test_that("a DAG model's sets each count the rows they used", {
