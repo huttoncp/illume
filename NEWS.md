@@ -1,5 +1,43 @@
 # illume 0.0.8.9003
 
+* A gaussian mixed model's tables test on finite degrees of freedom, as
+  lmerTest does. `summary()` gives each coefficient a df column and t tests
+  on Satterthwaite's df; `ilm_anova()` gives F with its numerator and
+  denominator df (`statistic = "Chisq"` keeps the Wald chi-square table);
+  `ilm_emmeans()` gives t intervals on Satterthwaite's df, and
+  `ilm_contrast()` follows it. `df = "kenward-roger"` asks for Kenward-Roger
+  instead, with its adjusted standard errors, and `df = "asymptotic"` for the
+  z and chi-square tests as before. Where the df cannot be had, as when a
+  variance is held at its boundary with nothing to derive them from, the
+  table falls back to the asymptotic test and says so. The default applies
+  to a linear mixed model -- a grouping term or a correlation over time
+  integrated out, no censored rows, no zero part -- and not to a scaffold,
+  whose variances are assumed; `df = "satterthwaite"` asks for it on any
+  gaussian fit. Other families, linear models, and censored or dispersion
+  models with nothing integrated out are unchanged. On a small between-cluster design the
+  z test's p for a between-cluster effect was too small.
+  **The validated path is REML.** The study behind the default
+  (`studies/findings/df_tables.md`) fitted every model with `reml = TRUE`.
+  A default fit is by maximum likelihood, and its Satterthwaite df come from
+  the ML variance estimates, which are smaller with few clusters. On 6
+  clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
+  4.0 and 0.44 by REML. An arm fitted by maximum likelihood on the same
+  data (pre-registered as A1) did not support that path: Satterthwaite's
+  intervals missed 95% in 6 of the 12 designs with 10 or more clusters
+  (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an ICC
+  of 0.3 they covered 0.893 against REML's 0.961, and with 6 clusters a 5%
+  test of a between-cluster factor rejected 19.0% of the time against 7.8%.
+  Until REML is the default for these models, fit with `reml = TRUE` for
+  the tables the study supports.
+* Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
+  pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
+  is a list by term, and "us" is already its default -- and so did the ANOVA
+  vignette. It now names the call that leaves the within-participant
+  covariance free, for the design's own columns and data: a correlated random
+  effect per within cell, `(0 + session | id)`, in place of the one random
+  intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
+  and hurdle models were out of scope, though `ziformula` fits both; it now
+  points there. Found through an external report.
 * **`predict()` gives each row its own group's prediction by default**
   (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
   whose group the fit has not seen, or `newdata` without the grouping

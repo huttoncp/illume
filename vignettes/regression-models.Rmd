@@ -346,9 +346,11 @@ This matters because the chi-square test treats the residual variance as known,
 which it is not, making it anti-conservative in small samples. Where an exact
 reference exists, illume uses it.
 
-It applies only where it is genuinely available. A Poisson or binomial model
-without random effects is still a GLM, with no exact small-sample analogue, so
-it keeps z and chi-square. So does any model with a random effect.
+It applies only where it is genuinely available. A Poisson or binomial model,
+with or without random effects, is a GLM with no exact small-sample analogue,
+so it keeps z and chi-square. A gaussian model with a random effect has no
+exact reference either; its tables test on Satterthwaite's degrees of freedom,
+as lmerTest does.
 
 ## Other families
 

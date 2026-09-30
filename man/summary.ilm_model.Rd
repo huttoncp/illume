@@ -5,12 +5,17 @@
 \alias{print.summary.ilm_model}
 \title{Summarise a fitted model}
 \usage{
-\method{summary}{ilm_model}(object, ...)
+\method{summary}{ilm_model}(object, df = "auto", ...)
 
 \method{print}{summary.ilm_model}(x, digits = 4, max_corr_dim = 6L, ...)
 }
 \arguments{
 \item{object, x}{A fitted \code{"ilm_model"} object.}
+
+\item{df}{The degrees of freedom of a gaussian mixed model's coefficient
+tests: \code{"auto"} (Satterthwaite's, per coefficient, as \code{lmerTest} reports),
+\code{"kenward-roger"}, \code{"asymptotic"} (the normal) or a number. See
+\code{\link[=ilm_coef_table]{ilm_coef_table()}}. Other fits are unaffected.}
 
 \item{...}{Unused.}
 

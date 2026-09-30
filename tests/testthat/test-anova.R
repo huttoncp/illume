@@ -75,11 +75,11 @@ test_that("Type III with interactions warns when the coding is not orthogonal", 
   # Type II does not depend on the coding at all, and is the default
   expect_silent(ilm_anova(ftrt, type = 2))
   expect_silent(ilm_anova(ftrt))
-  expect_equal(ilm_anova(ftrt)$Chisq, ilm_anova(ftrt, type = 2)$Chisq)
+  expect_equal(ilm_anova(ftrt)[["F value"]], ilm_anova(ftrt, type = 2)[["F value"]])
 
   # the refit lands exactly where fitting with contr.sum by hand lands
-  expect_equal(suppressMessages(ilm_anova(ftrt, type = 3))$Chisq,
-               suppressMessages(ilm_anova(fsum, type = 3))$Chisq,
+  expect_equal(suppressMessages(ilm_anova(ftrt, type = 3))[["F value"]],
+               suppressMessages(ilm_anova(fsum, type = 3))[["F value"]],
                tolerance = 1e-4)
   # and it does not touch the fit it was given
   expect_equal(unname(unlist(ftrt$contrasts["g"])), "contr.treatment")
@@ -91,16 +91,16 @@ test_that("Type III with interactions warns when the coding is not orthogonal", 
   # confound the two things this is separating.
   a1 <- suppressWarnings(ilm_anova(ftrt, type = 3, recode = FALSE))
   a2 <- suppressWarnings(ilm_anova(fsum, type = 3, recode = FALSE))
-  expect_gt(a2["x", "Chisq"] / a1["x", "Chisq"], 3)
+  expect_gt(a2["x", "F value"] / a1["x", "F value"], 3)
   # the multi-column rows are invariant, because both codings span the same
   # subspace for those terms
-  expect_equal(a1["g", "Chisq"], a2["g", "Chisq"], tolerance = 1e-6)
-  expect_equal(a1["g:x", "Chisq"], a2["g:x", "Chisq"], tolerance = 1e-6)
+  expect_equal(a1["g", "F value"], a2["g", "F value"], tolerance = 1e-6)
+  expect_equal(a1["g:x", "F value"], a2["g:x", "F value"], tolerance = 1e-6)
   # but the g row is NOT invariant to where x sits, which is the other half
   # of the same point: it is tested at x = 0 either way, and centring moves
   # that to the average
   a3 <- suppressMessages(ilm_anova(fsum, type = 3))
-  expect_false(isTRUE(all.equal(a2["g", "Chisq"], a3["g", "Chisq"])))
+  expect_false(isTRUE(all.equal(a2["g", "F value"], a3["g", "F value"])))
 })
 
 test_that("an uncentred numeric in an interaction is the same problem", {
@@ -138,7 +138,7 @@ test_that("a model without interactions is never warned about", {
   f <- ilm_model(y ~ g + x + (1 | id), d, family = "gaussian", verbose = FALSE)
   expect_silent(ilm_anova(f, type = 3))
   # with nothing in an interaction, the two types are the same test
-  expect_equal(ilm_anova(f, type = 2)$Chisq, ilm_anova(f, type = 3)$Chisq,
+  expect_equal(ilm_anova(f, type = 2)[["F value"]], ilm_anova(f, type = 3)[["F value"]],
                tolerance = 1e-8)
 })
 
@@ -156,8 +156,8 @@ test_that("interaction terms are grouped, tested and predicted as one term", {
   expect_true("x:z" %in% f$term_labels)
   expect_equal(unname(coef(f)[["x:z"]]), 0.7, tolerance = 0.15)
   a <- suppressWarnings(ilm_anova(f, type = 3))
-  expect_equal(a["g", "Df"], 2L)      # a 3-level factor is one 2-df row
-  expect_equal(a["x:z", "Df"], 1L)
+  expect_equal(a["g", "NumDF"], 2L)      # a 3-level factor is one 2-df row
+  expect_equal(a["x:z", "NumDF"], 1L)
   # the collinearity check reports one row per term, interactions included
   cc <- ilm_check_collinearity(f)
   expect_setequal(cc$term, f$term_labels)

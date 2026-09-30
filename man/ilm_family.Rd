@@ -50,9 +50,12 @@ needing more than one linear predictor: with \code{J} categories it uses
 \code{J - 1} dimensions with sum-to-zero coding.}
 }
 
-Zero-inflation, hurdle models, Tweedie and other specialised families are
-deliberately out of scope. \code{glmmTMB} covers those well and there is nothing to
-gain from a weaker reimplementation.
+Excess zeros are not a family here but a zero part added to one:
+\code{\link[=ilm_model]{ilm_model()}}'s \code{ziformula} gives a Poisson or negative binomial model a
+zero-inflated or hurdle part (\code{zi_type}), the remedy \code{\link[=ilm_check_zeros]{ilm_check_zeros()}}
+names. Tweedie and other specialised families are out of scope; \code{glmmTMB}
+covers those well and there is nothing to gain from a weaker
+reimplementation.
 }
 \section{On numerical stability}{
 

@@ -122,7 +122,7 @@ test_that("summary and anova adapt to the family", {
   expect_true(any(grepl("Dispersion", out)))
   expect_false(any(grepl("SUM-TO-ZERO", out)))   # meaningless with one dimension
   a <- ilm_anova(f, type = 3)
-  expect_equal(a$Df, 1L)                          # one column, one dimension
+  expect_equal(a$NumDF, 1)                        # one column, one dimension
 })
 
 test_that("the binomial likelihood does not overflow at extreme eta", {

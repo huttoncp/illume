@@ -74,14 +74,18 @@ ilm_fmt_corr <- function(S, labs, digits = 3) {
 #' @param digits Integer. Significant digits in the coefficient table.
 #' @param max_corr_dim Integer. Largest `C` for which correlation matrices are
 #'   printed in full.
+#' @param df The degrees of freedom of a gaussian mixed model's coefficient
+#'   tests: `"auto"` (Satterthwaite's, per coefficient, as `lmerTest` reports),
+#'   `"kenward-roger"`, `"asymptotic"` (the normal) or a number. See
+#'   [ilm_coef_table()]. Other fits are unaffected.
 #' @param ... Unused.
 #' @return `summary()` returns an object of class `"summary.ilm_model"`; its print
 #'   method returns it invisibly.
 #' @seealso [ilm_coef_table()], [ilm_appraise()].
 #' @rdname summary.ilm_model
 #' @export
-summary.ilm_model <- function(object, ...) {
-  structure(list(object = object), class = "summary.ilm_model")
+summary.ilm_model <- function(object, df = "auto", ...) {
+  structure(list(object = object, df = df), class = "summary.ilm_model")
 }
 
 #' Summarise a fitted model
@@ -245,9 +249,26 @@ Dispersion model: ", deparse(o$disp_formula), "
     }
   }
   cat("\nFixed effects:\n")
-  ct <- ilm_coef_table(o)
-  stats::printCoefmat(as.matrix(ct), digits = digits, signif.stars = TRUE,
-                      has.Pvalue = TRUE, P.values = TRUE)
+  ct <- ilm_coef_table(o, df = if (is.null(x$df)) "auto" else x$df)
+  cm <- as.matrix(ct)
+  if ("df" %in% colnames(cm))
+    stats::printCoefmat(cm, digits = digits, signif.stars = TRUE, cs.ind = 1:2,
+                        tst.ind = 4L, has.Pvalue = TRUE, P.values = TRUE)
+  else
+    stats::printCoefmat(cm, digits = digits, signif.stars = TRUE,
+                        has.Pvalue = TRUE, P.values = TRUE)
+  ## the reference the tests used, said beneath them: a reader comparing with
+  ## lmerTest or with a z table needs to know which this is
+  dm <- attr(ct, "df_method"); fb <- attr(ct, "fallback")
+  if ("df" %in% colnames(cm))
+    cat(sprintf(" t tests on %s degrees of freedom%s\n",
+                switch(dm,
+                       "kenward-roger" = "Kenward-Roger's (with their adjusted standard errors)",
+                       satterthwaite = "Satterthwaite's", supplied = "the supplied",
+                       asymptotic = "infinite (the normal)", dm),
+                if (is.null(fb)) "" else
+                  sprintf("; %d coefficient(s) against the normal: %s",
+                          length(fb$rows), fb$reason)))
   ## The thresholds are the intercepts of a cumulative link model, and the
   ## sign convention is the trap: the linear predictor is SUBTRACTED from
   ## them, so a positive coefficient pushes probability UP the scale. Reading

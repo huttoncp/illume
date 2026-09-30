@@ -294,15 +294,17 @@ a property of the sample, and take conclusions from the slopes and from
 
 A gaussian model with no random or smooth terms is an ordinary linear model.
 In that case there is nothing to integrate out, so illume reports \strong{exact}
-t tests on \code{n - p} degrees of freedom and F tests in \code{\link[=ilm_anova]{ilm_anova()}}, rather
-than the large-sample normal and chi-square approximations it must use when
-random effects are present. Coefficients, standard errors, the residual
-standard deviation and the F tests then agree with \code{\link[stats:lm]{stats::lm()}} and
-\code{car::Anova()} to numerical precision.
+t tests on \code{n - p} degrees of freedom and F tests in \code{\link[=ilm_anova]{ilm_anova()}}.
+Coefficients, standard errors, the residual standard deviation and the F
+tests then agree with \code{\link[stats:lm]{stats::lm()}} and \code{car::Anova()} to numerical
+precision.
 
-This applies only where an exact reference genuinely exists. A Poisson or
-binomial model without random effects is still a GLM, with no exact
-small-sample analogue, so it keeps z and chi-square.
+A linear mixed model -- gaussian, with a grouping term or a correlation over
+time integrated out -- has no exact reference, and its tables test on
+Satterthwaite's degrees of freedom instead, as lmerTest does; see
+\code{\link[=ilm_coef_table]{ilm_coef_table()}} for Kenward-Roger and the asymptotic tests on request.
+A Poisson or binomial model is a GLM, with or without random effects, with
+no small-sample analogue, so it keeps z and chi-square.
 }
 
 \section{Reading the coefficients}{

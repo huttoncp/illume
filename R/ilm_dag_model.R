@@ -303,8 +303,7 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
 
     ct <- ilm_coef_table(fit)
     k <- ilm_term_cols(fit, x)
-    crit <- if (isTRUE(fit$exact_df))
-              stats::qt(0.975, fit$resid_df) else stats::qnorm(0.975)
+    crit <- ilm_ct_crit(ct, fit)[k]
     rows[[i]] <- if (!length(k)) NULL else data.frame(
       set = i,
       adjusted_for = if (length(z)) paste(z, collapse = " + ") else "(nothing)",
@@ -312,7 +311,7 @@ ilm_dag_model <- function(dag, data, exposure = NULL, outcome = NULL,
       estimate = ct[k, 1], se = ct[k, 2],
       lower = ct[k, 1] - crit * ct[k, 2],
       upper = ct[k, 1] + crit * ct[k, 2],
-      p_value = ct[k, 4], stringsAsFactors = FALSE)
+      p_value = ilm_ct_p(ct)[k], stringsAsFactors = FALSE)
   }
 
   ## ---- 6. the answer -------------------------------------------------------
