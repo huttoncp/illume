@@ -1,5 +1,21 @@
 # illume 0.0.8.9003
 
+* **`predict()` gives each row its own group's prediction by default**
+  (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
+  whose group the fit has not seen, or `newdata` without the grouping
+  columns, is an error that names `groups = "typical"` (every random effect
+  at zero, the old default) and `groups = "population"` (the average over
+  the groups). A model without random effects predicts as before.
+  `ilm_survival()` now follows the same `groups`: `"fitted"` by default,
+  `"typical"`, or `"population"`, which averages the survival curve itself
+  over the random effects rather than taking it at zero -- so the curves of
+  a mixed accelerated failure time or flexible (Royston-Parmar) model change
+  with this release; with no `newdata` the curve stays a typical group's.
+  Its intervals for `"fitted"` and `"population"` come from joint draws, as
+  `predict()`'s do. Where illume predicts for a typical group by design --
+  the effect sentences of `ilm_interpret()`, the effect plots, `ilm_rdd()`,
+  the survival plot and `ilm_impute()`'s imputations -- it asks for one, so
+  their results are unchanged.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * **A correction: under `reml = TRUE`, fits whose variances approach zero
