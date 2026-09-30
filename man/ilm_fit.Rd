@@ -76,8 +76,10 @@ response instead.}
 
 \item{verbose}{Logical. Print the checks while fitting.}
 
-\item{restarts}{Integer. Number of optimiser restarts from the previous
-solution, which helps on difficult surfaces.}
+\item{restarts}{Integer. Number of optimiser restarts from the fit's own
+solution. They refine it and confirm where it stopped (the \code{optimizer}
+check reads them), but begin nowhere else, so they do not search for
+other optima.}
 
 \item{joint}{Logical. Also compute the joint precision over fixed and random
 parameters. Needed by \code{\link[=predict.ilm_model]{predict.ilm_model()}} to propagate uncertainty in penalised

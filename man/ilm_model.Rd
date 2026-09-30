@@ -105,7 +105,9 @@ predictor contrast and is not affected by this argument.}
 
 \item{verbose}{Logical. Print checks while fitting.}
 
-\item{restarts}{Integer. Optimiser restarts.}
+\item{restarts}{Integer. Optimiser restarts from the fit's own solution.
+They refine it and confirm where it stopped (the \code{optimizer} check reads
+them), but begin nowhere else, so they do not search for other optima.}
 
 \item{joint}{Logical or \code{NULL}. Compute the joint precision over fixed and
 random parameters. \code{NULL} (the default) switches it on when the model
@@ -320,6 +322,14 @@ coefficients while its covariance matrix is unusable, making the standard
 errors meaningless. \code{summary()} prints the check verdicts for that reason,
 and \code{fit$checks} holds the full table with a reason and a suggested remedy
 for anything that is not \code{"OK"}.
+
+The \code{parameter_aliasing} line reports the largest correlation between two
+estimated parameters. Under \code{reml = TRUE} the fixed effects are integrated
+out, so the coefficients' correlations and the variance parameters' are
+assessed separately, and a correlation BETWEEN a coefficient and a variance
+parameter is not assessed. For example, a between-group covariate with few
+groups, nearly confounded with the group variance, shows under maximum
+likelihood only. The line says so on a REML fit.
 }
 
 \section{How smooth terms are named}{

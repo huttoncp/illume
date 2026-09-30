@@ -18,6 +18,77 @@
   their results are unchanged.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
+* **A correction: under `reml = TRUE`, fits whose variances approach zero
+  could fail with a singular-system error.** They now fit. The coefficients'
+  covariance under REML is solved from the random effects' block of the
+  joint precision, whose entries run to about 1e20 as a variance nears zero,
+  beside the data's entries of about 1. A dense solve read that as singular
+  ("system is computationally singular") and stopped the whole fit: 20 of
+  4,000 REML fits of low-count areal models. The block is now solved on a
+  rescaled copy, which is exact. Well-conditioned fits' covariances are
+  unchanged, to 1e-10 relative.
+* **A correction: under `reml = TRUE` the `parameter_aliasing` check read OK
+  without examining the coefficients.** REML integrates the fixed effects
+  out, so the covariance the check read held only the variance parameters.
+  Two coefficients that the data could not separate were never compared,
+  and a fit with one variance reported "0.000 (theta <-> theta)", a
+  parameter against itself. The check now puts the coefficients' covariance
+  (from the joint precision) beside the variances'. A near-aliased pair is
+  caught under REML as under maximum likelihood, and a fit with a single
+  parameter says there is nothing to correlate. Correlations BETWEEN a
+  coefficient and a variance parameter are still not assessed under REML,
+  and the line says so. Exact aliasing was already refused before the fit,
+  REML or not.
+* The `parameter_aliasing` line could name a parameter against itself
+  ("theta <-> theta", "(Intercept) <-> (Intercept)") when every correlation
+  was zero, under maximum likelihood as well as REML. The pair it names now
+  always comes from two different parameters.
+* **A correction: REML fits of a count or yes/no outcome whose every variance
+  was at zero were graded usable when they should not have been.** Under
+  `reml = TRUE` the fixed effects are integrated out, so for a non-gaussian
+  family the variances are the only parameters the optimiser estimates.
+  When every one of them reached its boundary, there was nothing left to
+  hold them around, and the fit fell through unheld:
+  - a single `(1 | area)` of a binomial at zero was graded clean, in 4 fits
+    of 4 in a probe;
+  - a BYM fit with both terms at zero was graded usable, and its region
+    intervals covered a third of the regions;
+  - a third fit of the same kind had no intervals at all.
+  Such a fit is now held whole and reported as the plain model: its fixed
+  effects and standard errors are the GLM's (equal to `glm()` to 1e-6).
+  Its hessian line is a WARN, never a clean pass, and group-level
+  predictions from it warn that their intervals are conditional on the
+  variances being zero. Gaussian REML fits, and every fit by maximum
+  likelihood, hold as before.
+  **For an existing `reml = TRUE` fit of a non-gaussian family:** check
+  whether every variance's SD is below 1e-3 (`ilm_varcorr()`). If it is, the
+  fixed effects stand, but do not read its group-level intervals as group
+  estimates. Refit with this version, or with `reml = FALSE`.
+* The `gradient` check reports the gradient along a held direction but does
+  not judge it. A term held at its boundary estimate -- a negative binomial's
+  k run off to its limit, a variance at zero -- sits where the likelihood is
+  flat or still falling slowly, and its estimate is not interpreted; the
+  check judged it anyway. In a 38,400-row fit whose k was held at 3.7e8, the
+  largest gradient (1.4e-2) was along k alone, and the fit failed the check
+  for it. The held directions are now projected out, the check is graded on
+  the rest, and the line gives the held part beside it ("along the held
+  dispersion: 1.41e-02, not judged"). Found through an external report.
+* The `optimizer` check reads nlminb's stopping code beside the fit's own
+  restarts, which begin at the solution. Restarted from its own solution, an
+  optimiser that stays there answers a "false convergence" code: the fit is
+  finished and the likelihood flat there, so the line is OK and says so,
+  where it warned before -- on one data set in two row orders the code was 8
+  in one and 0 in the other at the same optimum. Found through an external
+  report. The restarts confirm where the fit stopped; they do not search for
+  other optima, and the line and the `restarts` help say so.
+* A restart that meets a non-finite gradient is set aside and the answer
+  before it kept, and a first optimisation that stops where the gradient is
+  not finite is tried again from two other starts; either used to stop the
+  fit with "NA/NaN gradient evaluation". What it reaches is graded by the
+  checks as before. Where every start breaks down, the fit returns at the
+  best point any of them reached with the objective and its gradient
+  finite, and its optimizer check fails, suggesting a simpler random
+  structure or a look at the response's scale -- restarting has been tried.
 * `ilm_matrices()` builds a prediction's designs for new rows without their
   grouping column or their place in time. A prediction for the typical group,
   or averaged over the population, needs no unit, and asking for one stopped
