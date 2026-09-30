@@ -15,17 +15,7 @@
 ## from language objects instead of text, it is.
 ## ---------------------------------------------------------------------------
 
-## Names as they must be written in R code: backticked when not syntactic,
-## untouched when they are. deparse() of a symbol knows the rules, reserved
-## words included, which a comparison against make.names() gets subtly wrong.
-## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
-#' @keywords internal
-#' @noRd
-ilm_bq <- function(x) {
-  if (!length(x)) return(character(0))
-  vapply(as.character(x), function(v) deparse(as.name(v), backtick = TRUE), "",
-         USE.NAMES = FALSE)
-}
+## ilm_bq(), a name as it must be written in R code, is in shared-helpers.R.
 
 ## An expression as TERM text, for reformulate(): backticks wherever needed,
 ## on one line however long it is. A bare deparse() splits at 60 characters,
