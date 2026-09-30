@@ -46,18 +46,18 @@ tolerance. This is the strongest available check: a bug that survives it has
 to be a bug the reference implementation shares.
 
 160 replications per task, each on a simulated dataset of 1,000 observations;
-R 4.4.3, illume 0.0.7.9000. `max_diff` is the largest absolute coefficient
-difference against any reference fitting the same model.
+R 4.4.3, illume 0.0.8.9000 (run 2026-09-23). `max_diff` is the largest
+absolute coefficient difference against any reference fitting the same model.
 
 | task | illume (s) | lme4 (s) | glmmTMB (s) | nnet (s) | max_diff |
 |---|---|---|---|---|---|
-| gaussian mixed | 0.173 | 0.026 | 0.194 | -- | 0.0000 |
-| Poisson mixed | 0.243 | 0.517 | 0.269 | -- | 0.0000 |
-| binomial mixed | 0.360 | 0.568 | 0.499 | -- | 0.0001 |
-| multinomial fixed, J = 3 | 0.162 | -- | -- | 0.018 | 0.0011 |
-| multinomial fixed, J = 5 | 0.226 | -- | -- | 0.039 | 0.0001 |
-| multinomial mixed, J = 3 | 0.575 | -- | -- | -- | -- |
-| multinomial mixed, J = 5 | 1.571 | -- | -- | -- | -- |
+| gaussian mixed | 0.209 | 0.031 | 0.232 | -- | 0.0000 |
+| Poisson mixed | 0.274 | 0.534 | 0.286 | -- | 0.0000 |
+| binomial mixed | 0.386 | 0.595 | 0.526 | -- | 0.0001 |
+| multinomial fixed, J = 3 | 0.203 | -- | -- | 0.019 | 0.0011 |
+| multinomial fixed, J = 5 | 0.296 | -- | -- | 0.041 | 0.0001 |
+| multinomial mixed, J = 3 | 0.754 | -- | -- | -- | -- |
+| multinomial mixed, J = 5 | 1.944 | -- | -- | -- | -- |
 
 Largest disagreement with any independent implementation: **1.1e-03**, on
 multinomial fixed effects against `nnet::multinom`. The rest agree to four
@@ -67,26 +67,33 @@ Timing is context, not a contest -- these are different optimisers solving the
 same problem, and the differences are not large enough to choose between
 packages on. `lme4` is faster on the Gaussian case, illume is faster on the
 Poisson and binomial ones, and the em-dashes are the point: the last two rows
-have no comparison because no other R package fits a multinomial mixed model
-by maximum likelihood.
+have no comparison because none of the general-purpose packages here fits a
+multinomial mixed model by maximum likelihood -- `lme4::glmer()` and `glmmTMB`
+have no multinomial family, and `nnet::multinom()` has no random effects.
+Specialised packages fit it by other routes: `mclogit` by penalised
+quasi-likelihood (section 4), `mlogit`, `gmnl` and `apollo` as a
+random-parameters logit by simulated maximum likelihood, and `brms` and
+`MCMCglmm` by sampling.
 
 ## 2. Do the intervals cover?
 
 A 95% interval should contain the true value 95% of the time. This is the
 property inference rests on, and it is cheap to check and easy to get wrong.
 
-24 model types, up to 2000 replications each. `se_ratio` is the mean reported
-standard error divided by the actual standard deviation of the estimates: 1
-means the reported uncertainty is honest.
+32 model configurations, 2000 replications each, on illume 0.0.8.9000 (run
+2026-09-23 and 2026-09-24). `N` is the number of observations in each
+simulated dataset. `se_ratio` is the mean reported standard error divided by
+the actual standard deviation of the estimates: 1 means the reported
+uncertainty is honest.
 
-| model | replications | convergence | coverage | worst coefficient | se_ratio |
+| model | N | convergence | coverage | worst coefficient | se_ratio |
 |---|---|---|---|---|---|
 | Gaussian, fixed | 400 | 1.000 | 0.951 | 0.945 | 1.006 |
 | Gaussian, mixed | 600 | 1.000 | 0.950 | 0.944 | 0.995 |
 | Gaussian, random slope | 600 | 1.000 | 0.947 | 0.942 | 0.987 |
 | Gaussian, smooth | 600 | 1.000 | 0.950 | 0.942 | 0.997 |
 | Gaussian, AR(1) | 1200 | 1.000 | 0.945 | 0.943 | 0.984 |
-| Gaussian, CAR(1) | 360 | 0.981 | 0.944 | 0.936 | 0.988 |
+| Gaussian, CAR(1) | 360 | 0.993 | 0.944 | 0.936 | 0.987 |
 | binomial, mixed | 600 | 1.000 | 0.953 | 0.951 | 1.002 |
 | Poisson, mixed | 600 | 1.000 | 0.949 | 0.945 | 0.996 |
 | negative binomial, mixed | 600 | 1.000 | 0.946 | 0.942 | 0.980 |
@@ -96,12 +103,13 @@ means the reported uncertainty is honest.
 | zero-inflated beta | 600 | 1.000 | 0.951 | 0.946 | 0.991 |
 | ordinal, fixed | 600 | 1.000 | 0.946 | 0.941 | 0.994 |
 | ordinal, mixed | 600 | 1.000 | 0.953 | 0.951 | 1.007 |
-| multinomial J = 3, rich | 600 | 0.999 | 0.952 | 0.948 | 0.999 |
-| multinomial J = 3, thin | 300 | 0.953 | 0.951 | 0.945 | 0.978 |
-| multinomial J = 3, AR(1) | 2000 | 0.768 | 0.954 | 0.949 | 1.009 |
-| multinomial J = 5, rich | 600 | 0.844 | 0.949 | 0.943 | 0.982 |
-| multinomial J = 5, mid | 360 | 0.611 | 0.951 | 0.939 | 0.980 |
-| multinomial J = 5, thin | 240 | 0.416 | 0.948 | 0.935 | 0.954 |
+| multinomial J = 3, rich | 600 | 1.000 | 0.952 | 0.948 | 0.999 |
+| multinomial J = 3, thin | 300 | 1.000 | 0.951 | 0.947 | 0.977 |
+| multinomial J = 3, AR(1) | 2000 | 1.000 | 0.954 | 0.951 | 1.008 |
+| multinomial J = 5, very rich | 1200 | 1.000 | 0.947 | 0.939 | 0.987 |
+| multinomial J = 5, rich | 600 | 0.999 | 0.948 | 0.942 | 0.978 |
+| multinomial J = 5, mid | 360 | 0.990 | 0.951 | 0.940 | 0.979 |
+| multinomial J = 5, thin | 240 | 0.954 | 0.946 | 0.937 | 0.953 |
 | Tobit, ceiling | 600 | 1.000 | 0.945 | 0.938 | 0.993 |
 | AFT Weibull | 600 | 1.000 | 0.944 | 0.940 | 0.976 |
 | AFT log-normal | 600 | 1.000 | 0.948 | 0.946 | 0.993 |
@@ -114,8 +122,8 @@ means the reported uncertainty is honest.
 | survey, stratified | 480 | 1.000 | 0.939 | 0.939 | 0.956 |
 
 Coverage runs from 0.939 to 0.967 across every cell, and the worst single
-coefficient anywhere is 0.935. With 600 replications the Monte Carlo error on
-a coverage estimate is about 0.009, so most of that spread is noise.
+coefficient anywhere is 0.936. With 2000 replications the Monte Carlo error on
+a coverage estimate is about 0.005, so most of that spread is noise.
 
 Two cells are not noise and are worth naming:
 
@@ -134,18 +142,23 @@ interval is a little narrower than it should be.
 
 ### The caveat that matters most
 
-**Coverage in the low-convergence cells is conditional on convergence.**
-Failed fits are excluded from the table. The multinomial J = 5 thin cell
-converges 41.6% of the time, and its 0.948 coverage describes only those
-41.6%. If failure correlates with extreme estimates -- and there is every
+**Coverage in the cells with convergence failures is conditional on
+convergence.** Failed fits are excluded from the table. The multinomial J = 5
+thin cell converges 95.4% of the time, and its 0.946 coverage describes only
+those fits. If failure correlates with extreme estimates -- and there is every
 reason to think it does, since the fits that fail are the ones where the
 likelihood is flattest -- the surviving coverage is optimistic.
+
+A converged fit here includes one whose random-effect covariance sits at its
+boundary, with the direction the data cannot resolve held there: the package
+counts its fixed effects and their standard errors as usable, and so does this
+table. In the thin cell that is most of them, 1731 of the 1907 converged fits.
 
 This is not a defect being hidden. It is the reason `ilm_model()` reports
 convergence status rather than burying it, and the reason the latent budget
 diagnostic exists: a multinomial model with 1.5 observations per latent
 coefficient is being asked a question the data cannot answer, and illume's
-design choice is to fail loudly rather than return a confident-looking number.
+design choice is to say so loudly rather than return a confident-looking number.
 See the *Regression models* vignette for what the budget is and how to read it.
 
 ## 3. Size and power
@@ -162,7 +175,7 @@ primary result. 2000 replications per cell, nominal 0.05.
 | binomial, mixed | 0.048 | 0.050 |
 | Poisson, mixed | 0.053 | 0.053 |
 | negative binomial, mixed | 0.054 | 0.054 |
-| multinomial J = 3, rich | 0.055 | 0.056 |
+| multinomial J = 3, rich | 0.054 | 0.056 |
 | multinomial J = 3, thin | 0.045 | 0.055 |
 | Tobit, ceiling | 0.046 | 0.046 |
 | AFT Weibull | 0.042 | 0.043 |
@@ -192,8 +205,8 @@ validated against `Superpower`, `simr`, `faux` and `lmerTest`.
 
 ## 4. The multinomial mixed model
 
-This is the only model in illume where another R package offers a genuine
-alternative, so it gets the closest look.
+This is the model where the alternative uses a different approximation (PQL
+rather than Laplace), so it gets the closest look.
 
 `mclogit::mblogit()` fits random-effects baseline-category logit models by
 penalised quasi-likelihood. PQL is fast and well understood, and is known to
@@ -337,17 +350,18 @@ a maximum likelihood estimate with a Wald interval and a posterior mean with a
 credible interval answer different questions, and the residual gap is prior
 shrinkage.
 
-3 datasets, 8 coefficients, maximum R-hat 1.008:
+3 datasets, 8 coefficients, maximum R-hat 1.008; illume 0.0.8.9000, run
+2026-09-24:
 
 - agreement with brms: maximum 0.202 standard errors, mean 0.097
 - SE ratio illume/brms: 0.984
-- illume median 0.60s; brms sampling only, median 46.2s
+- illume median 0.79s; brms sampling only, median 52.2s
 
 A mean gap of a tenth of a standard error is agreement. The SE ratio near 1
 says the Laplace approximation is not understating uncertainty relative to
-full posterior sampling on these problems. The 77-fold speed difference is
-the price of that sampling, and it is the reason a frequentist engine is
-worth having.
+full posterior sampling on these problems. The speed difference -- about 66
+times, the ratio of those two medians -- is the price of that sampling, and
+it is the reason a frequentist engine is worth having.
 
 ## What these studies do not show
 
@@ -375,13 +389,14 @@ number of replications and an output directory, and those that run in parallel
 take a number of cores between the two:
 
 ```{r, eval = FALSE}
-# from studies/scripts/, with the replication counts behind the tables above
-Rscript benchmark_freq.R     160    ../runs/0.0.7.9000/bench
-Rscript coverage_study.R    2000 10 ../runs/0.0.7.9000/coverage
-Rscript power_study.R       2000 10 ../runs/0.0.7.9000/power
-Rscript mclogit_compare.R    500 10 ../runs/0.0.7.9000/mclogit
-Rscript messy_compare.R      400 10 ../runs/0.0.7.9000/messy
-Rscript brms_compare.R         3    ../runs/0.0.7.9000/brms
+# from studies/scripts/, with the replication counts behind the tables above;
+# <version> is the illume version being run, e.g. 0.0.8.9000
+Rscript benchmark_freq.R     160    ../runs/<version>/bench
+Rscript coverage_study.R    2000 10 ../runs/<version>/coverage
+Rscript power_study.R       2000 10 ../runs/<version>/power
+Rscript mclogit_compare.R    500 10 ../runs/<version>/mclogit
+Rscript messy_compare.R      400 10 ../runs/<version>/messy
+Rscript brms_compare.R         3    ../runs/<version>/brms
 ```
 
 Raw per-replication output is not committed -- it is several megabytes per
