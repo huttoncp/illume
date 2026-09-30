@@ -50,8 +50,6 @@
   the effect sentences of `ilm_interpret()`, the effect plots, `ilm_rdd()`,
   the survival plot and `ilm_impute()`'s imputations -- it asks for one, so
   their results are unchanged.
-* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
-  needs PCAmixdata.
 * **A correction: under `reml = TRUE`, fits whose variances approach zero
   could fail with a singular-system error.** They now fit. The coefficients'
   covariance under REML is solved from the random effects' block of the
