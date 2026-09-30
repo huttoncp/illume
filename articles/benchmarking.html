@@ -118,9 +118,9 @@ better – and in what sense?</li>
 numerical tolerance. This is the strongest available check: a bug that
 survives it has to be a bug the reference implementation shares.</p>
 <p>160 replications per task, each on a simulated dataset of 1,000
-observations; R 4.4.3, illume 0.0.7.9000. <code>max_diff</code> is the
-largest absolute coefficient difference against any reference fitting
-the same model.</p>
+observations; R 4.4.3, illume 0.0.8.9000 (run 2026-09-23).
+<code>max_diff</code> is the largest absolute coefficient difference
+against any reference fitting the same model.</p>
 <table class="table">
 <thead><tr class="header">
 <th>task</th>
@@ -133,47 +133,47 @@ the same model.</p>
 <tbody>
 <tr class="odd">
 <td>gaussian mixed</td>
-<td>0.173</td>
-<td>0.026</td>
-<td>0.194</td>
+<td>0.209</td>
+<td>0.031</td>
+<td>0.232</td>
 <td>–</td>
 <td>0.0000</td>
 </tr>
 <tr class="even">
 <td>Poisson mixed</td>
-<td>0.243</td>
-<td>0.517</td>
-<td>0.269</td>
+<td>0.274</td>
+<td>0.534</td>
+<td>0.286</td>
 <td>–</td>
 <td>0.0000</td>
 </tr>
 <tr class="odd">
 <td>binomial mixed</td>
-<td>0.360</td>
-<td>0.568</td>
-<td>0.499</td>
+<td>0.386</td>
+<td>0.595</td>
+<td>0.526</td>
 <td>–</td>
 <td>0.0001</td>
 </tr>
 <tr class="even">
 <td>multinomial fixed, J = 3</td>
-<td>0.162</td>
+<td>0.203</td>
 <td>–</td>
 <td>–</td>
-<td>0.018</td>
+<td>0.019</td>
 <td>0.0011</td>
 </tr>
 <tr class="odd">
 <td>multinomial fixed, J = 5</td>
-<td>0.226</td>
+<td>0.296</td>
 <td>–</td>
 <td>–</td>
-<td>0.039</td>
+<td>0.041</td>
 <td>0.0001</td>
 </tr>
 <tr class="even">
 <td>multinomial mixed, J = 3</td>
-<td>0.575</td>
+<td>0.754</td>
 <td>–</td>
 <td>–</td>
 <td>–</td>
@@ -181,7 +181,7 @@ the same model.</p>
 </tr>
 <tr class="odd">
 <td>multinomial mixed, J = 5</td>
-<td>1.571</td>
+<td>1.944</td>
 <td>–</td>
 <td>–</td>
 <td>–</td>
@@ -197,9 +197,16 @@ better.</p>
 solving the same problem, and the differences are not large enough to
 choose between packages on. <code>lme4</code> is faster on the Gaussian
 case, illume is faster on the Poisson and binomial ones, and the
-em-dashes are the point: the last two rows have no comparison because no
-other R package fits a multinomial mixed model by maximum
-likelihood.</p>
+em-dashes are the point: the last two rows have no comparison because
+none of the general-purpose packages here fits a multinomial mixed model
+by maximum likelihood – <code><a href="https://rdrr.io/pkg/lme4/man/glmer.html" class="external-link">lme4::glmer()</a></code> and
+<code>glmmTMB</code> have no multinomial family, and
+<code><a href="https://rdrr.io/pkg/nnet/man/multinom.html" class="external-link">nnet::multinom()</a></code> has no random effects. Specialised
+packages fit it by other routes: <code>mclogit</code> by penalised
+quasi-likelihood (section 4), <code>mlogit</code>, <code>gmnl</code> and
+<code>apollo</code> as a random-parameters logit by simulated maximum
+likelihood, and <code>brms</code> and <code>MCMCglmm</code> by
+sampling.</p>
 </div>
 <div class="section level2">
 <h2 id="do-the-intervals-cover">2. Do the intervals cover?<a class="anchor" aria-label="anchor" href="#do-the-intervals-cover"></a>
@@ -207,22 +214,15 @@ likelihood.</p>
 <p>A 95% interval should contain the true value 95% of the time. This is
 the property inference rests on, and it is cheap to check and easy to
 get wrong.</p>
-<p>24 model types, up to 2000 replications each. <code>se_ratio</code>
-is the mean reported standard error divided by the actual standard
-deviation of the estimates: 1 means the reported uncertainty is
-honest.</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
-</colgroup>
+<p>32 model configurations, 2000 replications each, on illume 0.0.8.9000
+(run 2026-09-23 and 2026-09-24). <code>N</code> is the number of
+observations in each simulated dataset. <code>se_ratio</code> is the
+mean reported standard error divided by the actual standard deviation of
+the estimates: 1 means the reported uncertainty is honest.</p>
+<table class="table">
 <thead><tr class="header">
 <th>model</th>
-<th>replications</th>
+<th>N</th>
 <th>convergence</th>
 <th>coverage</th>
 <th>worst coefficient</th>
@@ -272,10 +272,10 @@ honest.</p>
 <tr class="even">
 <td>Gaussian, CAR(1)</td>
 <td>360</td>
-<td>0.981</td>
+<td>0.993</td>
 <td>0.944</td>
 <td>0.936</td>
-<td>0.988</td>
+<td>0.987</td>
 </tr>
 <tr class="odd">
 <td>binomial, mixed</td>
@@ -352,7 +352,7 @@ honest.</p>
 <tr class="even">
 <td>multinomial J = 3, rich</td>
 <td>600</td>
-<td>0.999</td>
+<td>1.000</td>
 <td>0.952</td>
 <td>0.948</td>
 <td>0.999</td>
@@ -360,44 +360,52 @@ honest.</p>
 <tr class="odd">
 <td>multinomial J = 3, thin</td>
 <td>300</td>
-<td>0.953</td>
+<td>1.000</td>
 <td>0.951</td>
-<td>0.945</td>
-<td>0.978</td>
+<td>0.947</td>
+<td>0.977</td>
 </tr>
 <tr class="even">
 <td>multinomial J = 3, AR(1)</td>
 <td>2000</td>
-<td>0.768</td>
+<td>1.000</td>
 <td>0.954</td>
-<td>0.949</td>
-<td>1.009</td>
+<td>0.951</td>
+<td>1.008</td>
 </tr>
 <tr class="odd">
+<td>multinomial J = 5, very rich</td>
+<td>1200</td>
+<td>1.000</td>
+<td>0.947</td>
+<td>0.939</td>
+<td>0.987</td>
+</tr>
+<tr class="even">
 <td>multinomial J = 5, rich</td>
 <td>600</td>
-<td>0.844</td>
-<td>0.949</td>
-<td>0.943</td>
-<td>0.982</td>
-</tr>
-<tr class="even">
-<td>multinomial J = 5, mid</td>
-<td>360</td>
-<td>0.611</td>
-<td>0.951</td>
-<td>0.939</td>
-<td>0.980</td>
+<td>0.999</td>
+<td>0.948</td>
+<td>0.942</td>
+<td>0.978</td>
 </tr>
 <tr class="odd">
-<td>multinomial J = 5, thin</td>
-<td>240</td>
-<td>0.416</td>
-<td>0.948</td>
-<td>0.935</td>
-<td>0.954</td>
+<td>multinomial J = 5, mid</td>
+<td>360</td>
+<td>0.990</td>
+<td>0.951</td>
+<td>0.940</td>
+<td>0.979</td>
 </tr>
 <tr class="even">
+<td>multinomial J = 5, thin</td>
+<td>240</td>
+<td>0.954</td>
+<td>0.946</td>
+<td>0.937</td>
+<td>0.953</td>
+</tr>
+<tr class="odd">
 <td>Tobit, ceiling</td>
 <td>600</td>
 <td>1.000</td>
@@ -405,7 +413,7 @@ honest.</p>
 <td>0.938</td>
 <td>0.993</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>AFT Weibull</td>
 <td>600</td>
 <td>1.000</td>
@@ -413,7 +421,7 @@ honest.</p>
 <td>0.940</td>
 <td>0.976</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>AFT log-normal</td>
 <td>600</td>
 <td>1.000</td>
@@ -421,7 +429,7 @@ honest.</p>
 <td>0.946</td>
 <td>0.993</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>AFT log-logistic</td>
 <td>600</td>
 <td>1.000</td>
@@ -429,7 +437,7 @@ honest.</p>
 <td>0.946</td>
 <td>0.994</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>AFT with frailty</td>
 <td>600</td>
 <td>1.000</td>
@@ -437,7 +445,7 @@ honest.</p>
 <td>0.946</td>
 <td>0.995</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Royston-Parmar flexible</td>
 <td>800</td>
 <td>0.996</td>
@@ -445,7 +453,7 @@ honest.</p>
 <td>0.951</td>
 <td>1.021</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>dispersion by group</td>
 <td>600</td>
 <td>1.000</td>
@@ -453,7 +461,7 @@ honest.</p>
 <td>0.940</td>
 <td>1.013</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>instrumental variables (2SLS)</td>
 <td>800</td>
 <td>1.000</td>
@@ -461,7 +469,7 @@ honest.</p>
 <td>0.941</td>
 <td>0.993</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>mediation</td>
 <td>600</td>
 <td>1.000</td>
@@ -469,7 +477,7 @@ honest.</p>
 <td>0.967</td>
 <td>1.107</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>survey, stratified</td>
 <td>480</td>
 <td>1.000</td>
@@ -480,8 +488,8 @@ honest.</p>
 </tbody>
 </table>
 <p>Coverage runs from 0.939 to 0.967 across every cell, and the worst
-single coefficient anywhere is 0.935. With 600 replications the Monte
-Carlo error on a coverage estimate is about 0.009, so most of that
+single coefficient anywhere is 0.936. With 2000 replications the Monte
+Carlo error on a coverage estimate is about 0.005, so most of that
 spread is noise.</p>
 <p>Two cells are not noise and are worth naming:</p>
 <p><strong>Mediation over-covers, at 0.967 with an <code>se_ratio</code>
@@ -500,18 +508,23 @@ should be.</p>
 <div class="section level3">
 <h3 id="the-caveat-that-matters-most">The caveat that matters most<a class="anchor" aria-label="anchor" href="#the-caveat-that-matters-most"></a>
 </h3>
-<p><strong>Coverage in the low-convergence cells is conditional on
-convergence.</strong> Failed fits are excluded from the table. The
-multinomial J = 5 thin cell converges 41.6% of the time, and its 0.948
-coverage describes only those 41.6%. If failure correlates with extreme
-estimates – and there is every reason to think it does, since the fits
-that fail are the ones where the likelihood is flattest – the surviving
-coverage is optimistic.</p>
+<p><strong>Coverage in the cells with convergence failures is
+conditional on convergence.</strong> Failed fits are excluded from the
+table. The multinomial J = 5 thin cell converges 95.4% of the time, and
+its 0.946 coverage describes only those fits. If failure correlates with
+extreme estimates – and there is every reason to think it does, since
+the fits that fail are the ones where the likelihood is flattest – the
+surviving coverage is optimistic.</p>
+<p>A converged fit here includes one whose random-effect covariance sits
+at its boundary, with the direction the data cannot resolve held there:
+the package counts its fixed effects and their standard errors as
+usable, and so does this table. In the thin cell that is most of them,
+1731 of the 1907 converged fits.</p>
 <p>This is not a defect being hidden. It is the reason
 <code><a href="../reference/ilm_model.html">ilm_model()</a></code> reports convergence status rather than burying
 it, and the reason the latent budget diagnostic exists: a multinomial
 model with 1.5 observations per latent coefficient is being asked a
-question the data cannot answer, and illume’s design choice is to fail
+question the data cannot answer, and illume’s design choice is to say so
 loudly rather than return a confident-looking number. See the
 <em>Regression models</em> vignette for what the budget is and how to
 read it.</p>
@@ -566,7 +579,7 @@ is the primary result. 2000 replications per cell, nominal 0.05.</p>
 </tr>
 <tr class="even">
 <td>multinomial J = 3, rich</td>
-<td>0.055</td>
+<td>0.054</td>
 <td>0.056</td>
 </tr>
 <tr class="odd">
@@ -677,8 +690,9 @@ simulation routes and how they were validated against
 <div class="section level2">
 <h2 id="the-multinomial-mixed-model">4. The multinomial mixed model<a class="anchor" aria-label="anchor" href="#the-multinomial-mixed-model"></a>
 </h2>
-<p>This is the only model in illume where another R package offers a
-genuine alternative, so it gets the closest look.</p>
+<p>This is the model where the alternative uses a different
+approximation (PQL rather than Laplace), so it gets the closest
+look.</p>
 <p><code>mclogit::mblogit()</code> fits random-effects baseline-category
 logit models by penalised quasi-likelihood. PQL is fast and well
 understood, and is known to attenuate fixed effects for discrete
@@ -955,17 +969,19 @@ is the closest thing to a gold standard available. Agreement is not
 expected to be exact: a maximum likelihood estimate with a Wald interval
 and a posterior mean with a credible interval answer different
 questions, and the residual gap is prior shrinkage.</p>
-<p>3 datasets, 8 coefficients, maximum R-hat 1.008:</p>
+<p>3 datasets, 8 coefficients, maximum R-hat 1.008; illume 0.0.8.9000,
+run 2026-09-24:</p>
 <ul>
 <li>agreement with brms: maximum 0.202 standard errors, mean 0.097</li>
 <li>SE ratio illume/brms: 0.984</li>
-<li>illume median 0.60s; brms sampling only, median 46.2s</li>
+<li>illume median 0.79s; brms sampling only, median 52.2s</li>
 </ul>
 <p>A mean gap of a tenth of a standard error is agreement. The SE ratio
 near 1 says the Laplace approximation is not understating uncertainty
-relative to full posterior sampling on these problems. The 77-fold speed
-difference is the price of that sampling, and it is the reason a
-frequentist engine is worth having.</p>
+relative to full posterior sampling on these problems. The speed
+difference – about 66 times, the ratio of those two medians – is the
+price of that sampling, and it is the reason a frequentist engine is
+worth having.</p>
 </div>
 <div class="section level2">
 <h2 id="what-these-studies-do-not-show">What these studies do not show<a class="anchor" aria-label="anchor" href="#what-these-studies-do-not-show"></a>
@@ -1003,13 +1019,14 @@ the run.</strong> <code>lme4</code>, <code>glmmTMB</code>,
 repository. Each takes the number of replications and an output
 directory, and those that run in parallel take a number of cores between
 the two:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># from studies/scripts/, with the replication counts behind the tables above</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>Rscript benchmark_freq.R     <span class="dv">160</span>    ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>bench</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>Rscript coverage_study.R    <span class="dv">2000</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>coverage</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>Rscript power_study.R       <span class="dv">2000</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>power</span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>Rscript mclogit_compare.R    <span class="dv">500</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>mclogit</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>Rscript messy_compare.R      <span class="dv">400</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>messy</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>Rscript brms_compare.R         <span class="dv">3</span>    ..<span class="sc">/</span>runs<span class="sc">/</span><span class="dv">0</span>.<span class="dv">0</span>.<span class="fl">7.9000</span><span class="sc">/</span>brms</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># from studies/scripts/, with the replication counts behind the tables above;</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co"># &lt;version&gt; is the illume version being run, e.g. 0.0.8.9000</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>Rscript benchmark_freq.R     <span class="dv">160</span>    ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>bench</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>Rscript coverage_study.R    <span class="dv">2000</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>coverage</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>Rscript power_study.R       <span class="dv">2000</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>power</span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>Rscript mclogit_compare.R    <span class="dv">500</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>mclogit</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>Rscript messy_compare.R      <span class="dv">400</span> <span class="dv">10</span> ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>messy</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>Rscript brms_compare.R         <span class="dv">3</span>    ..<span class="sc">/</span>runs<span class="sc">/</span><span class="er">&lt;</span>version<span class="sc">&gt;</span><span class="er">/</span>brms</span></code></pre></div>
 <p>Raw per-replication output is not committed – it is several megabytes
 per version and would sit in the history permanently.
 <code>studies/findings/</code> holds the permanent record, one section

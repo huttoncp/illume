@@ -16,7 +16,8 @@ ilm_scenario(
   level = 0.95,
   contrast = FALSE,
   seed = 1L,
-  progress = NULL
+  progress = NULL,
+  per = NULL
 )
 ```
 
@@ -57,6 +58,15 @@ ilm_scenario(
 
   Show a progress bar; see
   [illumex::ilm_progress_arg](https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html).
+
+- per:
+
+  For a model with an offset, `offset(log(exposure))`: the exposure each
+  scenario's mean is per. `per` rescales the offset – the exposure – to
+  the value given, for every unit. By default the means are per unit of
+  exposure (the offset at zero); a positive number puts every unit at
+  that exposure instead – `per = 1e5` for a rate per 100,000. The print
+  says which. Ignored without an offset.
 
 ## Value
 

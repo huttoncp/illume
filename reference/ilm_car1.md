@@ -27,7 +27,9 @@ ilm_car1(time, group, verbose = TRUE)
 
 - verbose:
 
-  Warn when the latent budget is thin.
+  Warn about nearly coincident times. The latent budget is judged when
+  the model is fitted, where the family is known – see the
+  `obs_per_ar_latent` check – and `FALSE` here quiets that warning too.
 
 ## Value
 
@@ -74,9 +76,8 @@ set.seed(1)
 d <- data.frame(id = rep(1:20, each = 6),
                 day = as.vector(replicate(20, sort(sample(1:60, 6)))))
 ilm_car1(d$day, d$id)
-#> Warning: CAR(1) puts 120 latent values under 120 observations (1 per latent). Below about 1.5 the Laplace approximation frequently fails to converge, and a latent value seen once carries no information the residual does not. Round `time` to a coarser grid so observations share a latent.
 #> CAR(1), continuous time 
 #>   20 groups, 120 latent values, 120 observations (1.00 per latent)
 #>   gaps: min 1, median 7, max 24
-#>   the latent budget is thin; see ?ilm_car1
+#>   whether that is thin depends on the family; the fit checks it
 ```

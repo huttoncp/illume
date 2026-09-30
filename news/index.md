@@ -2,9 +2,104 @@
 
 ## illume 0.0.8.9003
 
+- **[`predict()`](https://rdrr.io/r/stats/predict.html) gives each row
+  its own group’s prediction by default** (Craig’s item 213):
+  `groups = "fitted"`, as lme4’s
+  [`predict()`](https://rdrr.io/r/stats/predict.html) does. A row whose
+  group the fit has not seen, or `newdata` without the grouping columns,
+  is an error that names `groups = "typical"` (every random effect at
+  zero, the old default) and `groups = "population"` (the average over
+  the groups). A model without random effects predicts as before.
+  [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)
+  now follows the same `groups`: `"fitted"` by default, `"typical"`, or
+  `"population"`, which averages the survival curve itself over the
+  random effects rather than taking it at zero – so the curves of a
+  mixed accelerated failure time or flexible (Royston-Parmar) model
+  change with this release; with no `newdata` the curve stays a typical
+  group’s. Its intervals for `"fitted"` and `"population"` come from
+  joint draws, as [`predict()`](https://rdrr.io/r/stats/predict.html)’s
+  do. Where illume predicts for a typical group by design – the effect
+  sentences of
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md),
+  the effect plots,
+  [`ilm_rdd()`](https://huttoncp.github.io/illume/reference/ilm_rdd.md),
+  the survival plot and
+  [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md)’s
+  imputations – it asks for one, so their results are unchanged.
+
 - illume now requires illumex 0.0.8.9001, whose
   [`ilm_reduce()`](https://huttoncp.github.io/illumex/reference/ilm_reduce.html)
   no longer needs PCAmixdata.
+
+- [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
+  builds a prediction’s designs for new rows without their grouping
+  column or their place in time. A prediction for the typical group, or
+  averaged over the population, needs no unit, and asking for one
+  stopped on “`newdata` does not have the grouping variable”. Such rows
+  belong to no group the fit knows: every one is `new_group`, with no
+  level or code, and placed at no cell of a correlation over time. Only
+  a prediction for a particular group needs its column. Found through an
+  external report.
+
+- A correlation over time’s latent budget is judged where the family is
+  known.
+  [`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
+  and
+  [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
+  warned, when built, that below about 1.5 observations per latent value
+  “the Laplace approximation frequently fails” – for a gaussian response
+  too, where it is exact, while the fit’s own `obs_per_ar_latent` check
+  said OK. The fit now warns instead, for families other than the
+  gaussian, in the words of that check, so the console and `fit$checks`
+  agree; for a gaussian response the check says what one latent per
+  observation does cost – the residual SD and the latent SD are weakly
+  separable – and that the hold pass takes whichever the likelihood
+  cannot place. Found through an external report.
+
+- Offsets. `offset(log(exposure))` in the formula models a count as a
+  rate, as in [`glm()`](https://rdrr.io/r/stats/glm.html) and glmmTMB: a
+  term of the linear predictor with its coefficient fixed at one. It
+  fitted to a model-matrix error before. It works for the families with
+  one linear predictor – gaussian, Poisson, negative binomial, binomial
+  (logit), beta and the accelerated failure time families – and enters
+  the conditional mean, not a zero part or a dispersion model; a
+  multinomial, ordinal or flexible parametric survival model refuses it.
+  Fits match [`glm()`](https://rdrr.io/r/stats/glm.html),
+  [`MASS::glm.nb()`](https://rdrr.io/pkg/MASS/man/glm.nb.html),
+  [`lm()`](https://rdrr.io/r/stats/lm.html) and glmmTMB to their
+  reported precision. Fitted values, simulation, refits, the anova
+  refits and
+  [`ilm_matrices()`](https://huttoncp.github.io/illume/reference/ilm_matrices.md)
+  (which gains `offset`) carry it, and
+  [`predict()`](https://rdrr.io/r/stats/predict.html) on new data
+  predicts at that data’s own exposure, saying so by name when the
+  column is missing. The fractional-count error now shows the offset to
+  use.
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md),
+  [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
+  the effect plots and
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  report per unit of exposure – the offset at zero, a rate such as cases
+  per person-year – and say so; `per = 1e5` rescales the offset, the
+  exposure, to report per 100,000.
+  [`predict()`](https://rdrr.io/r/stats/predict.html) keeps each row’s
+  own exposure, as [`glm()`](https://rdrr.io/r/stats/glm.html) does, and
+  takes `per` too (a number, or `"unit"`).
+
+- [`ilm_rows_used()`](https://huttoncp.github.io/illume/reference/ilm_rows_used.md)
+  says which rows a model used: the rows it was given, the rows it kept,
+  the rows missing values took and the columns they were missing in, and
+  any rows with a weight of zero (used, contributing nothing). For an
+  [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
+  it gives one row per adjustment set, since sets adjust for different
+  columns and can lose different rows. The rows themselves are stats’
+  own record, `stats::na.action(fit)`, which works on every fit.
+  [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) now say how many
+  rows missing values took, and from which columns, where they took any,
+  in one line: “Rows: 55 of 60 analysed; 5 dropped for missing values (y
+  2, x 3, z 1; a row missing in several columns counts in each)”.
 
 - Three variance hold lines for gaussian responses, each measured
   against the response’s SD so that none depends on its units, and each

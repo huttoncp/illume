@@ -67,7 +67,8 @@ or a 20-point one depending on where the data sit.</p>
 <span>  terms <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  eps <span class="op">=</span> <span class="fl">1e-04</span>,</span>
 <span>  groups <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typical"</span>, <span class="st">"population"</span><span class="op">)</span>,</span>
-<span>  marginal <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  marginal <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  per <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -96,6 +97,15 @@ over them. See "Which effect, in a mixed model".</p></dd>
 <dt id="arg-marginal">marginal<a class="anchor" aria-label="anchor" href="#arg-marginal"></a></dt>
 <dd><p>Deprecated. <code>TRUE</code> is <code>groups = "population"</code>, and <code>FALSE</code>
 is <code>groups = "typical"</code>.</p></dd>
+
+
+<dt id="arg-per">per<a class="anchor" aria-label="anchor" href="#arg-per"></a></dt>
+<dd><p>For a model with an offset, <code>offset(log(exposure))</code>: the
+exposure the effects on the mean are per. <code>per</code> rescales the offset –
+the exposure – to the value given, for every row. By default the effects
+are per unit of exposure (the offset at zero); a positive number puts
+every row at that exposure instead – <code>per = 1e5</code> for a rate per
+100,000. Such a result prints which. Ignored without an offset.</p></dd>
 
 </dl></div>
     <div class="section level2">

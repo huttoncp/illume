@@ -13,7 +13,7 @@ predict(
   object,
   newdata = NULL,
   type = c("response", "link", "class"),
-  groups = c("typical", "population", "fitted"),
+  groups = c("fitted", "typical", "population"),
   se.fit = FALSE,
   interval = c("none", "confidence"),
   level = 0.95,
@@ -21,6 +21,7 @@ predict(
   ndraw = 200L,
   seed = 1L,
   marginal = NULL,
+  per = NULL,
   ...
 )
 ```
@@ -43,9 +44,9 @@ predict(
 
 - groups:
 
-  `"typical"` (the default) for a group with every random effect at
-  zero, `"population"` for the average over the groups, or `"fitted"`
-  for each row's own group's estimated effects. See "Which groups".
+  `"fitted"` (the default) for each row's own group's estimated effects,
+  `"typical"` for a group with every random effect at zero, or
+  `"population"` for the average over the groups. See "Which groups".
 
 - se.fit:
 
@@ -78,6 +79,23 @@ predict(
   Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
   `groups = "typical"`.
 
+- per:
+
+  For a model with an offset in its formula, `offset(log(exposure))`:
+  the exposure to predict at. `per` rescales the offset – the exposure –
+  to the value given, for every row. `NULL` (the default) predicts at
+  each row's own exposure, as
+  [`stats::predict.glm()`](https://rdrr.io/r/stats/predict.glm.html)
+  does – the fit's rows, or `newdata`'s, which must then carry the
+  offset's column; a positive number predicts every row at that
+  exposure, a rate per 100,000 with `per = 1e5`; and `"unit"` sets the
+  offset to zero, the rate per unit of exposure.
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+  [`ilm_ame()`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+  and
+  [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
+  report per unit unless told otherwise. Ignored without an offset.
+
 - ...:
 
   Unused.
@@ -91,20 +109,22 @@ list with `fit`, `se.fit`, `lower`, `upper`, `level` and `joint`.
 ## Which groups
 
 In a model with random effects every prediction is for some group, and
-this is the choice that matters most. There is no safe default that
-suits everyone. `groups` says which:
+this is the choice that matters most. `groups` says which:
 
-- `"typical"` (the default) sets every random effect to zero, giving the
-  prediction for a **typical group**: one exactly at the average.
+- `"fitted"` (the default, since 0.0.8.9003) gives each row **its own
+  group's** estimated effects, the conditional modes
+  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
+  reports, as lme4's [`predict()`](https://rdrr.io/r/stats/predict.html)
+  does by default. A row whose group the fit has not seen, or `newdata`
+  without the grouping columns, is an error that names the two choices
+  below. See "A fitted group's own prediction".
+
+- `"typical"` sets every random effect to zero, giving the prediction
+  for a **typical group**: one exactly at the average. It was the
+  default before 0.0.8.9003.
 
 - `"population"` averages the prediction over the distribution of random
   effects, giving it for the **population of groups as a whole**.
-
-- `"fitted"` gives each row **its own group's** estimated effects, the
-  conditional modes
-  [`ilm_ranef()`](https://huttoncp.github.io/illume/reference/ilm_ranef.md)
-  reports, as lme4's [`predict()`](https://rdrr.io/r/stats/predict.html)
-  does by default. See "A fitted group's own prediction".
 
 The first two differ, sometimes substantially, because averaging and a
 nonlinear inverse link do not commute: the average of the transformed

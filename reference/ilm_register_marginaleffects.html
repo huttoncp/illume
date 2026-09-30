@@ -67,6 +67,12 @@ invisibly.</p>
 classes against a fixed list and rejects anything unfamiliar <em>before</em> dispatch
 happens, so the methods would never be reached. This also adds <code>"ilm_model"</code> to
 that list through the option the package provides for the purpose.</p>
+<p><strong>A model with an offset.</strong> <code>marginaleffects</code> builds its own grids from the
+data, so its predictions and effects are at each row's own exposure – the
+counts, not the rates that <code><a href="ilm_emmeans.html">ilm_emmeans()</a></code>, <code><a href="ilm_ame.html">ilm_ame()</a></code> and
+<code><a href="ilm_scenario.html">ilm_scenario()</a></code> report per unit of exposure. For rates, give the exposure
+column the value 1 in the grid (<code>newdata = datagrid(e = 1)</code>, for an offset
+<code>offset(log(e))</code>), or use illume's own functions.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

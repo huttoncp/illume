@@ -112,12 +112,21 @@ they multiply are, in <code>coef(object, full = TRUE)</code> and in
 new row: <code>group</code>, <code>time</code>, <code>cell</code>, <code>prev_cell</code>, <code>next_cell</code>,
 <code>dt_prev</code>, <code>dt_next</code> and <code>new_group</code>.</p></dd>
 
+<dt><code>offset</code></dt>
+<dd><p>with an offset in the formula, its value at each new
+row, made from <code>newdata</code>'s own columns; <code>NULL</code> otherwise. It adds to
+<code>X %*% beta</code> with a coefficient of one.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Groups.</strong> A row's group is matched to the fitted levels by label; a group
-the fit has not seen has no code and is marked <code>new_group</code>.</p>
+the fit has not seen has no code and is marked <code>new_group</code>. Without the
+grouping column the rows belong to no group the fit knows – a prediction
+for the typical group or averaged over the population needs none – so
+every row is <code>new_group</code>, with <code>level</code> and <code>group</code> missing. Only a
+prediction for a particular group needs its column.</p>
 <p><strong>Over time.</strong> <code>ar</code> places each row among its group's cells, as numbered by
 <code><a href="ilm_cells.html">ilm_cells()</a></code>: <code>cell</code> if the row's time is one of them, and the nearest
 cells before and after, <code>prev_cell</code> and <code>next_cell</code>, with the time from
@@ -126,7 +135,12 @@ a group's last cell has a <code>prev_cell</code> and no <code>next_cell</code> �
 case. An AR(1) term's grid is fixed, so a time that falls between its steps
 is an error rather than rounded to one. The time and the group are read
 from the columns the term was built from, <code>ilm_rw1(~ time | group)</code> and
-the like; for a term built from vectors, pass them as <code>time</code> and <code>group</code>.</p>
+the like; for a term built from vectors, pass them as <code>time</code> and <code>group</code>.
+For a term built by name, rows without its columns are placed nowhere:
+every cell and gap is missing and every row <code>new_group</code>. A term built from
+vectors has no columns to fall back on, so there, rows without <code>time</code> and
+<code>group</code> are an error – a forgotten argument would otherwise predict each
+row as a new series.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

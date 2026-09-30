@@ -13,7 +13,8 @@ ilm_ame(
   terms = NULL,
   eps = 1e-04,
   groups = c("typical", "population"),
-  marginal = NULL
+  marginal = NULL,
+  per = NULL
 )
 ```
 
@@ -42,6 +43,15 @@ ilm_ame(
 
   Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
   `groups = "typical"`.
+
+- per:
+
+  For a model with an offset, `offset(log(exposure))`: the exposure the
+  effects on the mean are per. `per` rescales the offset – the exposure
+  – to the value given, for every row. By default the effects are per
+  unit of exposure (the offset at zero); a positive number puts every
+  row at that exposure instead – `per = 1e5` for a rate per 100,000.
+  Such a result prints which. Ignored without an offset.
 
 ## Value
 

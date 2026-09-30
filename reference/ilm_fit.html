@@ -79,7 +79,8 @@ is what the formula interface calls internally.</p>
 <span>  Zzi <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  zi_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"inflated"</span>, <span class="st">"hurdle"</span><span class="op">)</span>,</span>
 <span>  reml <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hold"</span>, <span class="st">"avoid"</span><span class="op">)</span></span>
+<span>  boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hold"</span>, <span class="st">"avoid"</span><span class="op">)</span>,</span>
+<span>  offset <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -219,6 +220,16 @@ properties. The fit records which of the two it is in <code>reml_exact</code>. S
 edge of its range is held there) or <code>"avoid"</code> (the boundary-avoiding
 penalty of Chung et al. 2013, 2015). See <code><a href="ilm_model.html">ilm_model()</a></code> for what each
 implies.</p></dd>
+
+
+<dt id="arg-offset">offset<a class="anchor" aria-label="anchor" href="#arg-offset"></a></dt>
+<dd><p>Optional numeric vector, one value per row of <code>X</code>, added to
+the linear predictor with its coefficient fixed at one – log exposure
+for a rate. Through <code><a href="ilm_model.html">ilm_model()</a></code> it is written in the formula,
+<code>offset(log(exposure))</code>, as in <code><a href="https://rdrr.io/r/stats/glm.html" class="external-link">stats::glm()</a></code>. Supported for the
+families with one linear predictor; not for multinomial, ordinal or
+flexible parametric survival models. It enters the conditional mean
+only, not a zero part or a dispersion model.</p></dd>
 
 </dl></div>
     <div class="section level2">

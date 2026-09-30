@@ -67,7 +67,8 @@ client asks before scaling something: what would this do to our population.</p>
 <span>  level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  contrast <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  progress <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  progress <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  per <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -107,6 +108,15 @@ client asks before scaling something: what would this do to our population.</p>
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Show a progress bar; see <a href="https://huttoncp.github.io/illumex/reference/ilm_progress_arg.html">illumex::ilm_progress_arg</a>.</p></dd>
+
+
+<dt id="arg-per">per<a class="anchor" aria-label="anchor" href="#arg-per"></a></dt>
+<dd><p>For a model with an offset, <code>offset(log(exposure))</code>: the
+exposure each scenario's mean is per. <code>per</code> rescales the offset – the
+exposure – to the value given, for every unit. By default the means are
+per unit of exposure (the offset at zero); a positive number puts every
+unit at that exposure instead – <code>per = 1e5</code> for a rate per 100,000. The
+print says which. Ignored without an offset.</p></dd>
 
 </dl></div>
     <div class="section level2">

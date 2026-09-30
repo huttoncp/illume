@@ -78,7 +78,10 @@ on a common step such as <code>c(0, 5, 10, 15)</code>. Or a one-sided formula
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
-<dd><p>Warn when the latent budget is thin.</p></dd>
+<dd><p>Warn about the time grid (most of its steps unobserved). The
+latent budget is judged when the model is fitted, where the family is
+known – see the <code>obs_per_ar_latent</code> check – and <code>FALSE</code> here quiets that
+warning too.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -110,12 +113,11 @@ drifts, <code><a href="ilm_check_ar.html">ilm_check_ar()</a></code> to test whet
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://huttoncp.github.io/illumex/reference/ilm_sim.html">ilm_sim</a></span><span class="op">(</span>n_id <span class="op">=</span> <span class="fl">20</span>, n_period <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu">ilm_ar1</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">date</span><span class="op">)</span><span class="op">)</span>, <span class="va">d</span><span class="op">$</span><span class="va">id</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>AR(1) puts 160 latent values under 160 observations (1 per latent). Below about 1.5 the Laplace approximation frequently fails to converge, and a latent value seen once carries no information the residual does not. Round `time` to a coarser grid so observations share a latent.</span>
 <span class="r-in"><span><span class="va">a</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> AR(1), evenly spaced time </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   20 groups, 160 latent values, 160 observations (1.00 per latent)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   step: 1, grid of 8 time slots</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   the latent budget is thin; see ?ilm_car1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   whether that is thin depends on the family; the fit checks it</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -28,7 +28,8 @@ ilm_fit(
   Zzi = NULL,
   zi_type = c("inflated", "hurdle"),
   reml = FALSE,
-  boundary = c("hold", "avoid")
+  boundary = c("hold", "avoid"),
+  offset = NULL
 )
 ```
 
@@ -191,6 +192,18 @@ ilm_fit(
   of Chung et al. 2013, 2015). See
   [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
   for what each implies.
+
+- offset:
+
+  Optional numeric vector, one value per row of `X`, added to the linear
+  predictor with its coefficient fixed at one – log exposure for a rate.
+  Through
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  it is written in the formula, `offset(log(exposure))`, as in
+  [`stats::glm()`](https://rdrr.io/r/stats/glm.html). Supported for the
+  families with one linear predictor; not for multinomial, ordinal or
+  flexible parametric survival models. It enters the conditional mean
+  only, not a zero part or a dispersion model.
 
 ## Value
 

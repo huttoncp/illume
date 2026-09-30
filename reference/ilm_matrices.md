@@ -67,10 +67,20 @@ A list with
   `group`, `time`, `cell`, `prev_cell`, `next_cell`, `dt_prev`,
   `dt_next` and `new_group`.
 
+- `offset`:
+
+  with an offset in the formula, its value at each new row, made from
+  `newdata`'s own columns; `NULL` otherwise. It adds to `X %*% beta`
+  with a coefficient of one.
+
 ## Details
 
 **Groups.** A row's group is matched to the fitted levels by label; a
 group the fit has not seen has no code and is marked `new_group`.
+Without the grouping column the rows belong to no group the fit knows –
+a prediction for the typical group or averaged over the population needs
+none – so every row is `new_group`, with `level` and `group` missing.
+Only a prediction for a particular group needs its column.
 
 **Over time.** `ar` places each row among its group's cells, as numbered
 by
@@ -83,7 +93,11 @@ case. An AR(1) term's grid is fixed, so a time that falls between its
 steps is an error rather than rounded to one. The time and the group are
 read from the columns the term was built from, `ilm_rw1(~ time | group)`
 and the like; for a term built from vectors, pass them as `time` and
-`group`.
+`group`. For a term built by name, rows without its columns are placed
+nowhere: every cell and gap is missing and every row `new_group`. A term
+built from vectors has no columns to fall back on, so there, rows
+without `time` and `group` are an error – a forgotten argument would
+otherwise predict each row as a new series.
 
 ## See also
 
