@@ -107,7 +107,7 @@ test_that("a Fourier term in t or time is rebuilt, not taken for t() or time()",
                      g = d$g[1])
     nd[[nm]] <- mean(d$t)
     expect_equal(e$estimate,
-                 as.vector(stats::predict(f, nd, type = "link")),
+                 as.vector(stats::predict(f, nd, type = "link", groups = "typical")),
                  tolerance = 1e-10)
     expect_s3_class(ilm_trends(f, "grp", var = "x1"), "ilm_trends")
     expect_setequal(ilm_ame(f)$term, c("x1", "grp"))

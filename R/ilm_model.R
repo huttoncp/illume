@@ -127,6 +127,14 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' and `fit$checks` holds the full table with a reason and a suggested remedy
 #' for anything that is not `"OK"`.
 #'
+#' The `parameter_aliasing` line reports the largest correlation between two
+#' estimated parameters. Under `reml = TRUE` the fixed effects are integrated
+#' out, so the coefficients' correlations and the variance parameters' are
+#' assessed separately, and a correlation BETWEEN a coefficient and a variance
+#' parameter is not assessed. For example, a between-group covariate with few
+#' groups, nearly confounded with the group variance, shows under maximum
+#' likelihood only. The line says so on a REML fit.
+#'
 #' @param formula A formula with random-effect bars and optional smooth terms.
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
@@ -221,7 +229,9 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   multinomial fit uses across its outcome CATEGORIES, which is not a
 #'   predictor contrast and is not affected by this argument.
 #' @param verbose Logical. Print checks while fitting.
-#' @param restarts Integer. Optimiser restarts.
+#' @param restarts Integer. Optimiser restarts from the fit's own solution.
+#'   They refine it and confirm where it stopped (the `optimizer` check reads
+#'   them), but begin nowhere else, so they do not search for other optima.
 #' @param joint Logical or `NULL`. Compute the joint precision over fixed and
 #'   random parameters. `NULL` (the default) switches it on when the model
 #'   contains smooths, which is when [predict.ilm_model()] needs it.

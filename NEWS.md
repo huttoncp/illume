@@ -82,8 +82,19 @@
   gaussian fit. Other families, linear models, and censored or dispersion
   models with nothing integrated out are unchanged. On a small between-cluster design the
   z test's p for a between-cluster effect was too small.
-* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
-  needs PCAmixdata.
+  **The validated path is REML.** The study behind the default
+  (`studies/findings/df_tables.md`) fitted every model with `reml = TRUE`.
+  A default fit is by maximum likelihood, and its Satterthwaite df come from
+  the ML variance estimates, which are smaller with few clusters. On 6
+  clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
+  4.0 and 0.44 by REML. An arm fitted by maximum likelihood on the same
+  data (pre-registered as A1) did not support that path: Satterthwaite's
+  intervals missed 95% in 6 of the 12 designs with 10 or more clusters
+  (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an ICC
+  of 0.3 they covered 0.893 against REML's 0.961, and with 6 clusters a 5%
+  test of a between-cluster factor rejected 19.0% of the time against 7.8%.
+  Until REML is the default for these models, fit with `reml = TRUE` for
+  the tables the study supports.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
   pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
   is a list by term, and "us" is already its default -- and so did the ANOVA
@@ -93,12 +104,87 @@
   intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
   and hurdle models were out of scope, though `ziformula` fits both; it now
   points there. Found through an external report.
+* **`predict()` gives each row its own group's prediction by default**
+  (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
+  whose group the fit has not seen, or `newdata` without the grouping
+  columns, is an error that names `groups = "typical"` (every random effect
+  at zero, the old default) and `groups = "population"` (the average over
+  the groups). A model without random effects predicts as before.
+  `ilm_survival()` now follows the same `groups`: `"fitted"` by default,
+  `"typical"`, or `"population"`, which averages the survival curve itself
+  over the random effects rather than taking it at zero -- so the curves of
+  a mixed accelerated failure time or flexible (Royston-Parmar) model change
+  with this release; with no `newdata` the curve stays a typical group's.
+  Its intervals for `"fitted"` and `"population"` come from joint draws, as
+  `predict()`'s do. Where illume predicts for a typical group by design --
+  the effect sentences of `ilm_interpret()`, the effect plots, `ilm_rdd()`,
+  the survival plot and `ilm_impute()`'s imputations -- it asks for one, so
+  their results are unchanged.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
+* **A correction: under `reml = TRUE`, fits whose variances approach zero
+  could fail with a singular-system error.** They now fit. The coefficients'
+  covariance under REML is solved from the random effects' block of the
+  joint precision, whose entries run to about 1e20 as a variance nears zero,
+  beside the data's entries of about 1. A dense solve read that as singular
+  ("system is computationally singular") and stopped the whole fit: 20 of
+  4,000 REML fits of low-count areal models. The block is now solved on a
+  rescaled copy, which is exact. Well-conditioned fits' covariances are
+  unchanged, to 1e-10 relative.
+* **A correction: under `reml = TRUE` the `parameter_aliasing` check read OK
+  without examining the coefficients.** REML integrates the fixed effects
+  out, so the covariance the check read held only the variance parameters.
+  Two coefficients that the data could not separate were never compared,
+  and a fit with one variance reported "0.000 (theta <-> theta)", a
+  parameter against itself. The check now puts the coefficients' covariance
+  (from the joint precision) beside the variances'. A near-aliased pair is
+  caught under REML as under maximum likelihood, and a fit with a single
+  parameter says there is nothing to correlate. Correlations BETWEEN a
+  coefficient and a variance parameter are still not assessed under REML,
+  and the line says so. Exact aliasing was already refused before the fit,
+  REML or not.
+* The `parameter_aliasing` line could name a parameter against itself
+  ("theta <-> theta", "(Intercept) <-> (Intercept)") when every correlation
+  was zero, under maximum likelihood as well as REML. The pair it names now
+  always comes from two different parameters.
+* **A correction: REML fits of a count or yes/no outcome whose every variance
+  was at zero were graded usable when they should not have been.** Under
+  `reml = TRUE` the fixed effects are integrated out, so for a non-gaussian
+  family the variances are the only parameters the optimiser estimates.
+  When every one of them reached its boundary, there was nothing left to
+  hold them around, and the fit fell through unheld:
+  - a single `(1 | area)` of a binomial at zero was graded clean, in 4 fits
+    of 4 in a probe;
+  - a BYM fit with both terms at zero was graded usable, and its region
+    intervals covered a third of the regions;
+  - a third fit of the same kind had no intervals at all.
+  Such a fit is now held whole and reported as the plain model: its fixed
+  effects and standard errors are the GLM's (equal to `glm()` to 1e-6).
+  Its hessian line is a WARN, never a clean pass, and group-level
+  predictions from it warn that their intervals are conditional on the
+  variances being zero. Gaussian REML fits, and every fit by maximum
+  likelihood, hold as before.
+  **For an existing `reml = TRUE` fit of a non-gaussian family:** check
+  whether every variance's SD is below 1e-3 (`ilm_varcorr()`). If it is, the
+  fixed effects stand, but do not read its group-level intervals as group
+  estimates. Refit with this version, or with `reml = FALSE`.
+* The `gradient` check reports the gradient along a held direction but does
+  not judge it. A term held at its boundary estimate -- a negative binomial's
+  k run off to its limit, a variance at zero -- sits where the likelihood is
+  flat or still falling slowly, and its estimate is not interpreted; the
+  check judged it anyway. In a 38,400-row fit whose k was held at 3.7e8, the
+  largest gradient (1.4e-2) was along k alone, and the fit failed the check
+  for it. The held directions are now projected out, the check is graded on
+  the rest, and the line gives the held part beside it ("along the held
+  dispersion: 1.41e-02, not judged"). Found through an external report.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
-  restarts from the solution. Restarts that return the same optimum answer a
-  "false convergence" code: the fit is finished and the likelihood flat there,
-  so the line is OK and says so, where it warned before -- on one data set
-  in two row orders the code was 8 in one and 0 in the other at the same
-  optimum. Found through an external report.
+  restarts, which begin at the solution. Restarted from its own solution, an
+  optimiser that stays there answers a "false convergence" code: the fit is
+  finished and the likelihood flat there, so the line is OK and says so,
+  where it warned before -- on one data set in two row orders the code was 8
+  in one and 0 in the other at the same optimum. Found through an external
+  report. The restarts confirm where the fit stopped; they do not search for
+  other optima, and the line and the `restarts` help say so.
 * A restart that meets a non-finite gradient is set aside and the answer
   before it kept, and a first optimisation that stops where the gradient is
   not finite is tried again from two other starts; either used to stop the

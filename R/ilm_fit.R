@@ -922,7 +922,7 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
                       pnames = NULL, gap = NULL, hess = NULL,
                       boundary = character(0), avoided = FALSE,
                       ar_type = NULL, disp = NULL, fam_name = NULL,
-                      ysd = NA_real_, restarts = NULL) {
+                      ysd = NA_real_, restarts = NULL, Vb = NULL) {
   how <- if (is.null(hess)) "tmb" else hess$how
   ## The remedy a boundary check names. Under the default the penalised
   ## alternative is named with what it costs; a fit that already used it
@@ -935,7 +935,18 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     "little further from zero")
   held <- if (is.null(hess)) character(0) else hess$held
   kind_of <- function(nm) if (!is.null(kinds) && nm %in% names(kinds)) kinds[[nm]] else "group"
-  ck <- ilm_new_checks(); g <- max(abs(obj$gr(opt$par)))
+  ck <- ilm_new_checks()
+  ## The gradient along a held direction is reported, not judged. A term held
+  ## at its boundary estimate sits where the likelihood is flat, or running off
+  ## to a limit -- a negative binomial's k chasing infinity has a gradient that
+  ## decays without reaching zero -- and its estimate is not interpreted: in a
+  ## 38,400-row fit whose k was held at 3.7e8, the largest gradient (1.4e-2)
+  ## was along k alone. So the held directions (hess$dirs, in the
+  ## coordinates of opt$par, orthonormal) are projected out, and the rest of
+  ## the gradient says whether the fit is at a stationary point.
+  gs <- ilm_grad_judged(tryCatch(as.numeric(obj$gr(opt$par)), error = function(e) NA_real_),
+                        if (length(held)) hess$dirs else NULL)
+  g <- gs$judged; g_held <- gs$held
   ## a gradient that is not finite is as far from a stationary point as any
   if (!is.finite(g)) g <- Inf
   ## nlminb's code 8, "false convergence", means it could not verify a descent
@@ -949,7 +960,8 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   ## 0.690. Grading those FAIL discards a third of perfectly good fits.
   ## Restarts from the solution that come back to the same optimum answer the
   ## code: the fit is finished, and the code says the likelihood is flat
-  ## there. Reported on one data set in two row orders, nlminb gave code 8 in
+  ## there. They begin at the solution, so they say nothing about optima
+  ## elsewhere, and the line says so. Reported on one data set in two row orders, nlminb gave code 8 in
   ## one and success in the other at the same optimum -- the code follows the
   ## path, not the answer.
   rs_same <- !is.null(restarts) && isTRUE(restarts$same) && g <= 1e-2
@@ -967,8 +979,10 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (nonfin) sprintf("nlminb code %d: %s", opt$convergence, opt$message)
     else paste0(sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
            if (rs_same && opt$convergence != 0)
-             sprintf(paste0("; %d restart%s from the solution reached the same optimum, ",
-                            "so the code reflects a flat likelihood, not an unfinished fit ",
+             sprintf(paste0("; restarted %d time%s from its own solution, the optimiser ",
+                            "stayed there, so the code reflects a flat likelihood, not an ",
+                            "unfinished fit. These restarts confirm where the fit stopped; ",
+                            "they do not search for other optima ",
                             "(see the gradient and latent_budget checks)"),
                      restarts$n, if (restarts$n == 1L) "" else "s") else "",
            if (!is.null(restarts) && restarts$failed > 0L)
@@ -985,7 +999,10 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (nonfin) sugg_restart else "")
   ck <- ilm_add_check(ck, "gradient",
     if (g > 1e-2) "FAIL" else if (g > 1e-3) "WARN" else "OK",
-    sprintf("max |gradient| = %.2e", g),
+    paste0(sprintf("max |gradient| = %.2e", g),
+           if (is.finite(g_held))
+             sprintf("; along the held %s: %.2e, not judged (held at its estimate)",
+                     paste(held, collapse = ", "), g_held) else ""),
     if (g > 1e-3) "not at a stationary point" else "",
     if (g > 1e-3) sugg_restart else "")
   pd <- isTRUE(sdr$pdHess)
@@ -995,7 +1012,23 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   anyNaN <- any(!is.finite(cfd[judged])) || any(cfd[judged] <= 0)
   lb <- pre$status[pre$check == "latent_budget"]
   held_cov <- setdiff(held, "dispersion")
-  if (identical(how, "boundary") && !anyNaN && !length(held_cov)) {
+  if (identical(how, "reduced")) {
+    ## every outer parameter held at its boundary (see ilm_hess_recover()):
+    ## never a clean pass, since group-level results assume no variation
+    hq <- paste(sQuote(held, FALSE), collapse = ", ")
+    ck <- ilm_add_check(ck, "hessian", "WARN",
+      sprintf("every variance parameter is at its boundary (%s): all are held, and the fit reduces to the plain model without its random terms", hq),
+      paste0("the model's variances are the only parameters the optimiser ",
+             "estimates here -- under REML the fixed effects are integrated out -- ",
+             "and every one of them is at zero or its limit, so the data show no ",
+             "variation between groups beyond the fixed effects"),
+      paste0("the fixed effects and their standard errors are the plain ",
+             "model's and are usable. Group-level predictions and their intervals ",
+             "are conditional on those variances being zero and leave out their ",
+             "uncertainty, so do not read them as group estimates; ",
+             "ilm_remedies() lists what keeps a variance off zero. Refitting with ",
+             "reml = FALSE holds the terms the usual way"))
+  } else if (identical(how, "boundary") && !anyNaN && !length(held_cov)) {
     ## only the dispersion is held; its own check below says why
     ck <- ilm_add_check(ck, "hessian", "BOUNDARY",
       "flat along the dispersion, which is at its limit; that direction is held at its estimate",
@@ -1169,18 +1202,49 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   cf <- sdr$cov.fixed
   pnm <- if (!is.null(pnames) && !is.null(cf) && length(pnames) == ncol(cf)) pnames
          else make.unique(names(obj$par))
+  ## Under REML the coefficients are integrated out, so cov.fixed holds only
+  ## the variance parameters, and this check read OK without ever looking at
+  ## the coefficients -- "0.000 (theta <-> theta)" on a fit with one variance.
+  ## Their covariance `Vb` (from the joint precision) is put beside the
+  ## variances', the two blocks taken as uncorrelated: under REML the
+  ## coefficients are estimated given the variances.
+  if (!is.null(Vb) && !is.null(cf)) {
+    nb <- nrow(Vb)
+    ok_names <- !is.null(pnames) && length(pnames) == nb + ncol(cf)
+    pnm <- if (ok_names) pnames[-seq_len(nb)] else make.unique(names(obj$par))
+    bnm <- if (ok_names) pnames[seq_len(nb)] else paste0("beta", seq_len(nb))
+  }
   ## a term held at its boundary has no covariance to correlate; judge the rest
   if (!is.null(cf) && length(held)) {
     ok <- is.finite(diag(cf))
     cf <- cf[ok, ok, drop = FALSE]; pnm <- pnm[ok]
   }
-  if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
+  if (!is.null(Vb) && !is.null(cf)) {
+    k1 <- nb; k2 <- ncol(cf)
+    cc <- matrix(0, k1 + k2, k1 + k2)
+    cc[seq_len(k1), seq_len(k1)] <- as.matrix(Vb)
+    if (k2) cc[k1 + seq_len(k2), k1 + seq_len(k2)] <- cf
+    cf <- cc; pnm <- c(bnm, pnm)
+  }
+  ## the blocks are set apart by construction under REML, so the line says
+  ## what it does not see: a coefficient nearly confounded with a variance
+  ## (a between-group covariate with few groups) shows under ML only
+  not_seen <- if (!is.null(Vb)) paste0("; under REML, correlations between ",
+    "coefficients and variance parameters are not assessed") else ""
+  if (!is.null(cf) && ncol(cf) == 1L && all(is.finite(cf)) && all(diag(cf) > 0)) {
+    ck <- ilm_add_check(ck, "parameter_aliasing", "OK",
+      paste0(sprintf("one parameter only (%s): nothing to correlate", pnm[1]), not_seen), "", "")
+  } else if (!is.null(cf) && length(cf) && all(is.finite(cf)) && all(diag(cf) > 0)) {
     cm <- cov2cor(cf); cm[!upper.tri(cm)] <- 0
-    mx <- max(abs(cm)); ij <- which(abs(cm) == mx, arr.ind = TRUE)[1, ]
+    ## the pair from the upper triangle only: where every correlation is 0 (two
+    ## uncorrelated blocks), matching the zeroed diagonal named a parameter
+    ## against itself
+    mx <- max(abs(cm[upper.tri(cm)]))
+    ij <- which(upper.tri(cm) & abs(cm) == mx, arr.ind = TRUE)[1, ]
     pair <- sprintf("%s <-> %s", pnm[ij[1]], pnm[ij[2]])
     ck <- ilm_add_check(ck, "parameter_aliasing",
       if (mx > 0.995) "FAIL" else if (mx > 0.95) "WARN" else "OK",
-      sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair),
+      paste0(sprintf("largest |parameter correlation| = %.3f (%s)", mx, pair), not_seen),
       if (mx > 0.95) sprintf("these data cannot separate %s from %s", pnm[ij[1]], pnm[ij[2]]) else "",
       if (mx > 0.95) "remove one of the two competing terms from the model" else "")
   } else {
@@ -1743,6 +1807,32 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
     return(list(sdr = sdr, how = "tmb", held = character(0), flat = 0L))
   out <- list(sdr = sdr, how = "none", held = character(0), flat = 0L)
   if (!length(opt$par)) return(out)
+  ## EVERY OUTER PARAMETER AT ITS BOUNDARY. Under REML the fixed effects are
+  ## integrated out, so a count or yes/no model's only outer parameters are
+  ## its variances. With every one of them flagged at its boundary, the routes
+  ## below have nothing left to hold them around -- both need a kept
+  ## parameter -- and the fit fell through unheld. Measured: a BYM fit whose
+  ## Hessian then failed (no intervals at all); another whose Hessian TMB
+  ## called positive definite, graded usable, with region intervals covering
+  ## a third of the regions; and a binomial with a single (1 | area) at zero,
+  ## graded clean in 4 fits of 4. The fit is the plain model without its
+  ## random terms. So all of them are held, whatever their curvature, and the
+  ## coefficients' covariance is the inner Hessian's, given them.
+  allb <- flagged && all(seq_along(opt$par) %in%
+                           unlist(cb$blocks[cb$flagged], use.names = FALSE))
+  if (allb) {
+    n <- length(opt$par)
+    Hm <- diag(1e12, n)
+    s2 <- tryCatch(suppressWarnings(
+      sdreport(obj, par.fixed = opt$par, hessian.fixed = Hm,
+               getJointPrecision = joint)), error = function(e) NULL)
+    if (!is.null(s2)) {
+      cf <- s2$cov.fixed; cf[] <- NA_real_
+      s2$cov.fixed <- cf; s2$pdHess <- FALSE
+      return(list(sdr = s2, how = "reduced", held = cb$flagged, flat = n,
+                  H = Hm, dirs = diag(1, n)))
+    }
+  }
   ## A dispersion at its limit is held whatever its curvature -- and also
   ## where the fit stopped short of a stationary point, which the recomputed
   ## covariance below refuses. There the standard errors are TMB's own, from
@@ -1897,6 +1987,47 @@ ilm_hess_recover <- function(obj, opt, sdr, cb, joint) {
   hold_disp(out)
 }
 
+## The gradient split into the part the gradient check judges and the part
+## along held directions, which it reports: `dirs` holds the held directions
+## as orthonormal columns in the coordinates of the parameter vector (NULL
+## when nothing is held). Returns the largest absolute component of each; the
+## held part is NA when nothing is held or the gradient is not finite.
+#' @keywords internal
+#' @noRd
+ilm_grad_judged <- function(gv, dirs = NULL) {
+  held <- NA_real_
+  if (!is.null(dirs) && length(gv) == nrow(dirs) && all(is.finite(gv))) {
+    ph <- drop(dirs %*% crossprod(dirs, gv))
+    held <- max(abs(ph)); gv <- gv - ph
+  }
+  list(judged = max(abs(gv)), held = held)
+}
+
+## The coefficients' covariance under REML: the Schur complement of the
+## random effects' block of the joint precision, (Hbb - Hbu Huu^-1 Hub)^-1.
+## Solved on unit-diagonal copies of each matrix -- exact, not a
+## regularisation. With the variances near zero, Huu's diagonal runs to
+## 1 / sigma^2, about 1e20, beside the data's O(1) entries: badly scaled
+## rather than singular, but a dense solve() on it stopped the whole fit
+## ("system is computationally singular", reciprocal condition 1e-17) in 20
+## of 4,000 REML fits of low-count areal models. With D = diag(1 / sqrt(diag
+## Huu)), Huu^-1 Hub = D (D Huu D)^-1 D Hub, and D Huu D has a unit diagonal.
+#' @keywords internal
+#' @noRd
+ilm_schur_vb <- function(Hbb, Hbu = NULL, Huu = NULL) {
+  unit_solve <- function(A, B = NULL) {
+    d <- 1 / sqrt(pmax(diag(A), .Machine$double.xmin))
+    As <- A * outer(d, d)
+    if (is.null(B)) return(solve(As) * outer(d, d))
+    d * solve(As, d * B)
+  }
+  S <- if (is.null(Hbu)) Hbb else Hbb - Hbu %*% unit_solve(Huu, t(Hbu))
+  S <- (S + t(S)) / 2
+  V <- unit_solve(S)
+  dimnames(V) <- dimnames(Hbb)
+  V
+}
+
 ## Whether the FIXED effects of a fit carry usable standard errors: a positive
 ## definite Hessian, or a boundary term held at its estimate.
 #' @keywords internal
@@ -2033,8 +2164,10 @@ ilm_print_checks <- function(ck, title) {
 #'   zero comes from the zero process and the positives come from a count that
 #'   cannot be zero. Ignored when `Zzi` is `NULL`.
 #' @param verbose Logical. Print the checks while fitting.
-#' @param restarts Integer. Number of optimiser restarts from the previous
-#'   solution, which helps on difficult surfaces.
+#' @param restarts Integer. Number of optimiser restarts from the fit's own
+#'   solution. They refine it and confirm where it stopped (the `optimizer`
+#'   check reads them), but begin nowhere else, so they do not search for
+#'   other optima.
 #' @param joint Logical. Also compute the joint precision over fixed and random
 #'   parameters. Needed by [predict.ilm_model()] to propagate uncertainty in penalised
 #'   smooth coefficients; [ilm_model()] switches it on automatically when the model
@@ -3016,11 +3149,10 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     ## marginal covariance of beta: Schur-complement the other random effects
     ## out of the joint precision
     Hbb <- as.matrix(jp[ibx, ibx, drop = FALSE])
-    reml_Vb <- if (length(iux)) {
-      Hbu <- as.matrix(jp[ibx, iux, drop = FALSE])
-      Huu <- as.matrix(jp[iux, iux, drop = FALSE])
-      solve(Hbb - Hbu %*% solve(Huu, t(Hbu)))
-    } else solve(Hbb)
+    reml_Vb <- if (length(iux))
+      ilm_schur_vb(Hbb, as.matrix(jp[ibx, iux, drop = FALSE]),
+                   as.matrix(jp[iux, iux, drop = FALSE]))
+    else ilm_schur_vb(Hbb)
     srr <- summary(sdr, "random")
     reml_beta <- srr[rownames(srr) == "beta", 1]
     ## An ML-SHAPED objective, built once and never optimised. V_beta(theta) is
@@ -3041,7 +3173,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                     disp = if ("dispersion" %in% cb$flagged)
                       list(family = fam$name,
                            value = exp(opt$par[pn == "logdisp"]), ysd = ysd),
-                    fam_name = fam$name, ysd = ysd, restarts = rs)
+                    fam_name = fam$name, ysd = ysd, restarts = rs,
+                    Vb = if (reml) reml_Vb else NULL)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {

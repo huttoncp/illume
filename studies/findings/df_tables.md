@@ -119,9 +119,120 @@ At G = 6, z was as close to 0.95 as Satterthwaite or closer in 0 of 6 D1 and D2 
 Satterthwaite's df were undefined (NaN, infinite or below 1) in 4 fits of 11998; a table warned of a fallback to z in 3; 0 stopped with an error.
 The pre-registered trigger for a proposal before the default ships for held fits -- Satterthwaite uncalibrated in D3's held fits where Kenward-Roger is calibrated -- is met at: no cell.
 
-CAVEATS that must travel with this result: REML throughout, as Kenward-Roger
-requires; the z and Satterthwaite figures under ML would differ. D2's
-intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the
+**The ML arm** (addendum A1, pre-registered at 098929e before any of its fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. 23999 fits (1 of 24,000 failed to fit). Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. Bold, df_s and held as above:
+
+| arm | G | m | icc | fits | held | z | satterthwaite | df_s |
+|---|---|---|---|---|---|---|---|---|
+| D1 | 6 | 5 | 0.050 | 1000 | 693 | **0.901** | **0.924** | 30.0 |
+| D1 | 10 | 5 | 0.050 | 1000 | 562 | **0.926** | 0.943 | 50.0 |
+| D1 | 20 | 5 | 0.050 | 1000 | 418 | **0.935** | 0.952 | 20.0 |
+| D1 | 6 | 20 | 0.050 | 1000 | 418 | **0.872** | **0.904** | 6.0 |
+| D1 | 10 | 20 | 0.050 | 1000 | 227 | **0.881** | **0.902** | 10.0 |
+| D1 | 20 | 20 | 0.050 | 1000 | 71 | **0.907** | **0.924** | 20.0 |
+| D1 | 6 | 5 | 0.300 | 1000 | 258 | **0.858** | **0.889** | 6.0 |
+| D1 | 10 | 5 | 0.300 | 1000 | 94 | **0.890** | **0.915** | 10.0 |
+| D1 | 20 | 5 | 0.300 | 1000 | 11 | **0.921** | **0.934** | 20.0 |
+| D1 | 6 | 20 | 0.300 | 1000 | 44 | **0.817** | **0.893** | 6.0 |
+| D1 | 10 | 20 | 0.300 | 1000 | 2 | **0.873** | **0.914** | 10.0 |
+| D1 | 20 | 20 | 0.300 | 1000 | 0 | **0.920** | **0.934** | 20.0 |
+| D2 | 6 | 5 | 0.300 | 999 | 807 | **0.930** | 0.958 | 8.5 |
+| D2 | 10 | 5 | 0.300 | 1000 | 662 | **0.929** | 0.947 | 12.4 |
+| D2 | 20 | 5 | 0.300 | 1000 | 425 | 0.942 | 0.953 | 19.8 |
+| D2 | 6 | 20 | 0.300 | 1000 | 421 | **0.917** | 0.953 | 6.2 |
+| D2 | 10 | 20 | 0.300 | 1000 | 192 | **0.911** | 0.945 | 10.0 |
+| D2 | 20 | 20 | 0.300 | 1000 | 28 | **0.926** | 0.942 | 19.6 |
+| D3 | 6 | 5 | 0.000 | 1000 | 778 | **0.920** | **0.936** | 30.0 |
+| D3 | 10 | 5 | 0.000 | 1000 | 716 | 0.940 | 0.954 | 50.0 |
+| D3 | 20 | 5 | 0.000 | 1000 | 673 | 0.951 | 0.957 | 100.0 |
+| D4 | 6 | 5 | 0.300 | 1000 | 414 | **0.275** | **0.190** | 6.0 |
+| D4 | 12 | 5 | 0.300 | 1000 | 81 | **0.142** | **0.088** | 12.0 |
+| D4 | 21 | 5 | 0.300 | 1000 | 10 | **0.100** | **0.069** | 21.0 |
+
+**The ML arm's verdicts**, beside the main run's (REML):
+
+| verdict | ML | REML_main |
+|---|---|---|
+| Satterthwaite calibrated in every D1/D2 cell with G >= 10 | does not hold | does not hold |
+| Satterthwaite closer to 0.95 than z in every D1/D2 cell with G = 6 | holds | does not hold |
+| D3: Satterthwaite calibrated in the held fits | does not hold | does not hold |
+| D3: KR calibrated in the held fits | NA | does not hold |
+| D3: every Satterthwaite df defined (finite and at least 1) | holds | holds |
+| D4: Satterthwaite's F size calibrated in every cell | does not hold | does not hold |
+| D4: KR's F size calibrated in every cell | NA | does not hold |
+| D4: chi-square size calibrated in every cell | does not hold | does not hold |
+
+**Literal verdict, as pre-registered:** the ML path's default is supported if the first two verdicts hold under ML. They do not both hold: the first does not hold and the second holds, so it is not supported, and the addendum sends that to Craig with a proposal.
+
+**ML arm.** Satterthwaite missed calibration in the D1 and D2 cells with G >= 10 at: D1 G = 10, m = 20, ICC 0.05: 0.902; D1 G = 20, m = 20, ICC 0.05: 0.924; D1 G = 10, m = 5, ICC 0.3: 0.915; D1 G = 20, m = 5, ICC 0.3: 0.934; D1 G = 10, m = 20, ICC 0.3: 0.914; D1 G = 20, m = 20, ICC 0.3: 0.934; z at: D1 G = 10, m = 5, ICC 0.05: 0.926; D1 G = 20, m = 5, ICC 0.05: 0.935; D1 G = 10, m = 20, ICC 0.05: 0.881; D1 G = 20, m = 20, ICC 0.05: 0.907; D1 G = 10, m = 5, ICC 0.3: 0.890; D1 G = 20, m = 5, ICC 0.3: 0.921; D1 G = 10, m = 20, ICC 0.3: 0.873; D1 G = 20, m = 20, ICC 0.3: 0.920; D2 G = 10, m = 5, ICC 0.3: 0.929; D2 G = 10, m = 20, ICC 0.3: 0.911; D2 G = 20, m = 20, ICC 0.3: 0.926.
+At G = 6, z was as close to 0.95 as Satterthwaite or closer in 0 of 6 D1 and D2 cells.
+Satterthwaite's df were undefined (NaN, infinite or below 1) in 7 fits of 23999; a table warned of a fallback to z in 13; 0 stopped with an error.
+
+**ML against REML on the same replicates** (pre-registered beside the verdicts, not graded): coverage or size by z and Satterthwaite, the median Satterthwaite df, the mean SE, and the share of fits held:
+
+| arm | G | m | icc | what | z_reml | z_ml | s_reml | s_ml | df_s_reml | df_s_ml | se_reml | se_ml | held_reml | held_ml |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| D1 | 6 | 5 | 0.050 | coverage | 0.925 | 0.901 | 0.946 | 0.924 | 4.000 | 30.000 | 0.426 | 0.379 | 0.475 | 0.693 |
+| D1 | 10 | 5 | 0.050 | coverage | 0.944 | 0.926 | 0.957 | 0.943 | 8.000 | 50.000 | 0.326 | 0.303 | 0.409 | 0.562 |
+| D1 | 20 | 5 | 0.050 | coverage | 0.948 | 0.935 | 0.962 | 0.952 | 18.000 | 20.000 | 0.227 | 0.218 | 0.292 | 0.418 |
+| D1 | 6 | 20 | 0.050 | coverage | 0.911 | 0.872 | 0.944 | 0.904 | 4.000 | 6.000 | 0.259 | 0.222 | 0.256 | 0.418 |
+| D1 | 10 | 20 | 0.050 | coverage | 0.902 | 0.881 | 0.935 | 0.902 | 8.000 | 10.000 | 0.199 | 0.180 | 0.133 | 0.227 |
+| D1 | 20 | 20 | 0.050 | coverage | 0.923 | 0.907 | 0.938 | 0.924 | 18.000 | 20.000 | 0.141 | 0.134 | 0.045 | 0.071 |
+| D1 | 6 | 5 | 0.300 | coverage | 0.893 | 0.858 | 0.949 | 0.889 | 4.000 | 6.000 | 0.612 | 0.511 | 0.148 | 0.258 |
+| D1 | 10 | 5 | 0.300 | coverage | 0.912 | 0.890 | 0.949 | 0.915 | 8.000 | 10.000 | 0.487 | 0.437 | 0.042 | 0.094 |
+| D1 | 20 | 5 | 0.300 | coverage | 0.932 | 0.921 | 0.950 | 0.934 | 18.000 | 20.000 | 0.352 | 0.334 | 0.007 | 0.011 |
+| D1 | 6 | 20 | 0.300 | coverage | 0.889 | 0.817 | 0.961 | 0.893 | 4.000 | 6.000 | 0.524 | 0.429 | 0.025 | 0.044 |
+| D1 | 10 | 20 | 0.300 | coverage | 0.910 | 0.873 | 0.946 | 0.914 | 8.000 | 10.000 | 0.420 | 0.375 | 0.002 | 0.002 |
+| D1 | 20 | 20 | 0.300 | coverage | 0.933 | 0.920 | 0.946 | 0.934 | 18.000 | 20.000 | 0.305 | 0.289 | 0.000 | 0.000 |
+| D2 | 6 | 5 | 0.300 | coverage | 0.939 | 0.930 | 0.970 | 0.958 | 5.813 | 8.568 | 0.257 | 0.246 | 0.710 | 0.807 |
+| D2 | 10 | 5 | 0.300 | coverage | 0.928 | 0.929 | 0.950 | 0.947 | 9.822 | 12.390 | 0.192 | 0.188 | 0.581 | 0.662 |
+| D2 | 20 | 5 | 0.300 | coverage | 0.944 | 0.942 | 0.953 | 0.953 | 17.732 | 19.821 | 0.131 | 0.130 | 0.358 | 0.424 |
+| D2 | 6 | 20 | 0.300 | coverage | 0.931 | 0.917 | 0.965 | 0.953 | 5.090 | 6.243 | 0.153 | 0.142 | 0.324 | 0.421 |
+| D2 | 10 | 20 | 0.300 | coverage | 0.928 | 0.911 | 0.953 | 0.945 | 8.943 | 10.012 | 0.119 | 0.113 | 0.147 | 0.192 |
+| D2 | 20 | 20 | 0.300 | coverage | 0.933 | 0.926 | 0.949 | 0.942 | 18.683 | 19.646 | 0.085 | 0.083 | 0.024 | 0.028 |
+| D3 | 6 | 5 | 0.000 | coverage | 0.937 | 0.920 | 0.959 | 0.936 | 28.000 | 30.000 | 0.397 | 0.360 | 0.576 | 0.778 |
+| D3 | 10 | 5 | 0.000 | coverage | 0.954 | 0.940 | 0.966 | 0.954 | 48.000 | 50.000 | 0.303 | 0.286 | 0.558 | 0.716 |
+| D3 | 20 | 5 | 0.000 | coverage | 0.958 | 0.951 | 0.962 | 0.957 | 98.000 | 100.000 | 0.210 | 0.204 | 0.556 | 0.673 |
+| D4 | 6 | 5 | 0.300 | size | 0.164 | 0.275 | 0.078 | 0.190 | 3.000 | 6.000 |   NA |   NA | 0.188 | 0.414 |
+| D4 | 12 | 5 | 0.300 | size | 0.087 | 0.142 | 0.040 | 0.088 | 9.000 | 12.000 |   NA |   NA | 0.033 | 0.081 |
+| D4 | 21 | 5 | 0.300 | size | 0.069 | 0.100 | 0.040 | 0.069 | 18.000 | 21.000 |   NA |   NA | 0.001 | 0.010 |
+
+Where a variance is held at zero the Satterthwaite df are the residual variance's own: in D3, with n = G x m observations and 2 fixed effects, the median df are 30 under ML against 28 under REML (n = 30); 50 under ML against 48 under REML (n = 50); 100 under ML against 98 under REML (n = 100). ML's residual variance divides by n and REML's by n - 2, and the df follow: with a variance held, ML's df exceed REML's by the number of fixed effects.
+
+**Paired, chosen after the ML arm ran (post hoc, not a verdict).** Both arms fitted the same data, so per cell the exact two-sided McNemar test on the replicates both fitted: reml_only counts the replicates whose interval covered (or whose test rejected) under REML only, ml_only under ML only (scripts/df_tables_ml_paired.R):
+
+| arm | G | m | icc | what | s_reml | s_ml | s_reml_only | s_ml_only | s_p | z_reml_only | z_ml_only | z_p |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| D1 | 6 | 5 | 0.050 | covers | 0.946 | 0.924 | 22 | 0 | 4.8e-07 | 24 | 0 | 1.2e-07 |
+| D1 | 10 | 5 | 0.050 | covers | 0.957 | 0.943 | 14 | 0 | 0.00012 | 18 | 0 | 7.6e-06 |
+| D1 | 20 | 5 | 0.050 | covers | 0.962 | 0.952 | 10 | 0 | 0.002 | 13 | 0 | 0.00024 |
+| D1 | 6 | 20 | 0.050 | covers | 0.944 | 0.904 | 40 | 0 | 1.8e-12 | 39 | 0 | 3.6e-12 |
+| D1 | 10 | 20 | 0.050 | covers | 0.935 | 0.902 | 33 | 0 | 2.3e-10 | 21 | 0 | 9.5e-07 |
+| D1 | 20 | 20 | 0.050 | covers | 0.938 | 0.924 | 14 | 0 | 0.00012 | 16 | 0 | 3.1e-05 |
+| D1 | 6 | 5 | 0.300 | covers | 0.949 | 0.889 | 60 | 0 | 1.7e-18 | 35 | 0 | 5.8e-11 |
+| D1 | 10 | 5 | 0.300 | covers | 0.949 | 0.915 | 34 | 0 | 1.2e-10 | 22 | 0 | 4.8e-07 |
+| D1 | 20 | 5 | 0.300 | covers | 0.950 | 0.934 | 16 | 0 | 3.1e-05 | 11 | 0 | 0.00098 |
+| D1 | 6 | 20 | 0.300 | covers | 0.961 | 0.893 | 68 | 0 | 6.8e-21 | 72 | 0 | 4.2e-22 |
+| D1 | 10 | 20 | 0.300 | covers | 0.946 | 0.914 | 32 | 0 | 4.7e-10 | 37 | 0 | 1.5e-11 |
+| D1 | 20 | 20 | 0.300 | covers | 0.946 | 0.934 | 12 | 0 | 0.00049 | 13 | 0 | 0.00024 |
+| D2 | 6 | 5 | 0.300 | covers | 0.970 | 0.958 | 13 | 1 | 0.0018 | 10 | 1 | 0.012 |
+| D2 | 10 | 5 | 0.300 | covers | 0.950 | 0.947 | 5 | 2 | 0.45 | 2 | 3 | 1 |
+| D2 | 20 | 5 | 0.300 | covers | 0.953 | 0.953 | 1 | 1 | 1 | 4 | 2 | 0.69 |
+| D2 | 6 | 20 | 0.300 | covers | 0.965 | 0.953 | 12 | 0 | 0.00049 | 15 | 1 | 0.00052 |
+| D2 | 10 | 20 | 0.300 | covers | 0.953 | 0.945 | 8 | 0 | 0.0078 | 17 | 0 | 1.5e-05 |
+| D2 | 20 | 20 | 0.300 | covers | 0.949 | 0.942 | 7 | 0 | 0.016 | 7 | 0 | 0.016 |
+| D3 | 6 | 5 | 0.000 | covers | 0.959 | 0.936 | 23 | 0 | 2.4e-07 | 17 | 0 | 1.5e-05 |
+| D3 | 10 | 5 | 0.000 | covers | 0.966 | 0.954 | 12 | 0 | 0.00049 | 14 | 0 | 0.00012 |
+| D3 | 20 | 5 | 0.000 | covers | 0.962 | 0.957 | 5 | 0 | 0.062 | 7 | 0 | 0.016 |
+| D4 | 6 | 5 | 0.300 | rejects | 0.078 | 0.190 | 0 | 112 | 3.9e-34 | 0 | 111 | 7.7e-34 |
+| D4 | 12 | 5 | 0.300 | rejects | 0.040 | 0.088 | 0 | 48 | 7.1e-15 | 0 | 55 | 5.6e-17 |
+| D4 | 21 | 5 | 0.300 | rejects | 0.040 | 0.069 | 0 | 29 | 3.7e-09 | 0 | 31 | 9.3e-10 |
+
+Satterthwaite under REML covered more often than under ML, at p < 0.05, in 18 of 21 D1 to D3 cells; less often in 0; not shown different in 3 (D2 G = 10, m = 5: 5 against 2, p = 0.45; D2 G = 20, m = 5: 1 against 1, p = 1; D3 G = 20, m = 5: 5 against 0, p = 0.062). In D4, Satterthwaite's F under ML rejected more often than under REML in 3 of 3 cells (sizes 0.190, 0.088, 0.069 against 0.078, 0.040, 0.040).
+
+CAVEATS that must travel with this result: the main and fresh runs are REML,
+as Kenward-Roger requires; the ML arm measures ilm_model()'s default, and its
+paired reading was chosen after it ran.
+D2's intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the
 script's header before any run. The default's scope was narrowed to linear
 mixed models (acf93c2) before the runs; every cell here is one.
 

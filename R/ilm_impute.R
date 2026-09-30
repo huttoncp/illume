@@ -47,7 +47,9 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
     f2 <- tryCatch(ilm_rebuild(fit, bs), error = function(e) fit)
   }
   mu <- tryCatch(suppressWarnings(
-          stats::predict(f2, newdata = newdata, type = "response")),
+          ## a typical group's, as before item 213 made each row's own group
+          ## predict()'s default: the imputations the studies validated
+          stats::predict(f2, newdata = newdata, type = "response", groups = "typical")),
         error = function(e) NULL)
   if (is.null(mu)) return(NULL)
   nmiss <- nrow(newdata)
