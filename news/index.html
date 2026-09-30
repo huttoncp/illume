@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">illume</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9002</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.8.9003</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,8 +47,15 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.8.9002" id="illume-0089002">illume 0.0.8.9002<a class="anchor" aria-label="anchor" href="#illume-0089002"></a></h2>
-<ul><li><p>illume now requires illumex 0.0.8.9000.</p></li>
+<h2 class="pkg-version" data-toc-text="0.0.8.9003" id="illume-0089003">illume 0.0.8.9003<a class="anchor" aria-label="anchor" href="#illume-0089003"></a></h2>
+<ul><li><p>illume now requires illumex 0.0.8.9001, whose <code><a href="https://huttoncp.github.io/illumex/reference/ilm_reduce.html">ilm_reduce()</a></code> no longer needs PCAmixdata.</p></li>
+<li>
+<p>Three variance hold lines for gaussian responses, each measured against the response’s SD so that none depends on its units, and each holding a term only where the likelihood is flat below it, as before:</p>
+<ul><li>sigma below 0.2 of sd(y), where the line was 1e-3 of it. The optimiser could stop at 0.02 to 0.05 of sd(y) on a flat likelihood, with draws of sigma to 1e14 and beyond. Measured on 6,300 fits and confirmed on 6,300 fresh ones (<code>studies/scripts/sigma_limit.R</code>): no line held a fit that was not at its boundary, and the pre-registered criterion chose the flatness test alone; the 0.2 line guards ridge fits the study did not cover.</li>
+<li>a gaussian AR(1)’s SD below 0.1 of sd(y), where it was 1e-3 on any scale: 1,358 held on fresh seeds against 1,268, none falsely. 0.1 and not 0.2, since a trend or a season can dominate sd(y).</li>
+<li>a random effect’s SD below 0.1 of sd(y), where it was 0.1 in the response’s units: the same fits held in the study’s units, and none missed in any other. Other families keep 0.1 on the link scale. Where sigma and an AR SD are both flat – the noise and the latent interchangeable – only the one whose push moves the objective least is held: pushed together they were never flat. A CAR(1), a random walk and an AR in another family keep the old rule for now.</li>
+</ul></li>
+<li><p><code>variance_boundary</code> grades a random-effect or AR term the fit holds as at zero, naming where the optimiser stopped, rather than reading OK beside a hessian check that says the term is held. <code>dispersion_limit</code> says a dispersion is held only where it is.</p></li>
 <li><p>A model fitted inside a function that passes its arguments on with <code>...</code> refits. Its recorded call held the wrapper’s <code>..1</code>, <code>..2</code>, so <code>ilm_refit(fit, data = )</code>, a remedy or <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> that evaluates the call again stopped with “..4 used in an incorrect context” – for a model with a correlation over time, which is rebuilt from the call. The call now records the expressions the user wrote, and a refit rebuilds the correlation over time (<code><a href="../reference/ilm_ar1.html">ilm_ar1()</a></code>, <code><a href="../reference/ilm_car1.html">ilm_car1()</a></code>, <code><a href="../reference/ilm_rw1.html">ilm_rw1()</a></code> given by name) from the fit itself, so a wrapper of a wrapper refits as well. Found by another agent.</p></li>
 <li><p>A fit whose gradient stops being finite – the optimiser walked a parameter along a flat direction to where the arithmetic breaks down – is now returned with a failing optimizer check, instead of stopping with nlminb’s “NA/NaN gradient evaluation” error. The fit restarts once from the best point where the gradient was finite, and if it breaks down again, stops there. Seen on macOS for a beta whose phi ran to its limit.</p></li>
 <li><p><code><a href="../reference/ilm_interpret.html">ilm_interpret()</a></code> on an <code><a href="../reference/ilm_dag_model.html">ilm_dag_model()</a></code> describes the exposure’s effect and nothing else. It used to describe every coefficient of the fit in causal language, so an adjustment covariate was said to “affect” the outcome – in the documented example a confounder with no arrow into the outcome at all – which the graph does not license (the “Table 2 fallacy”). The covariates are now named as adjusted for, with their coefficients not interpreted, and when several adjustment sets identify the effect the prose says which one it describes.</p></li>

@@ -95,6 +95,6 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 ilm_check_variance(f, B = 20, plot = FALSE)
 #> Warning: B = 20 puts the smallest achievable p-value at 0.048, so a FAIL verdict is unreachable. Use B >= 100.
-#> spread vs fitted: rho = 0.043, p = 0.4118
+#> spread vs fitted: rho = 0.043, p = 0.4762
 #> OK
 ```
