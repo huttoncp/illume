@@ -1,10 +1,113 @@
 ## ---------------------------------------------------------------------------
-## A copy of illumex's plotting-character helpers (illumex: R/ilm_plot.R).
-## illume's own plots take a `pch` argument too, and one package should not
-## reach into another's internals, so the helpers live in both.
-## tests/testthat/test-shared-helpers.R fails if the two copies differ: change
-## them together.
+## Helpers illumex and illume share.
+##
+## This file is the same, byte for byte, in both packages. Each package's
+## dev/check_shared_helpers.R compares it with the other's main, so a change
+## is made in both at once, in the same bytes, agreed through the conductor.
 ## ---------------------------------------------------------------------------
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+## Prose wrapped to the console, with an indent.
+#' @keywords internal
+#' @noRd
+ilm_wrap <- function(x, width = 76L, indent = "") {
+  paste0(indent, strwrap(x, width = width - nchar(indent)), collapse = "\n")
+}
+
+## Names as they must be written in R code: backticked when not syntactic,
+## untouched when they are. deparse() of a symbol knows the rules, reserved
+## words included, which a comparison against make.names() gets subtly wrong.
+#' @keywords internal
+#' @noRd
+ilm_bq <- function(x) {
+  if (!length(x)) return(character(0))
+  vapply(as.character(x), function(v) deparse(as.name(v), backtick = TRUE), "",
+         USE.NAMES = FALSE)
+}
+
+## "a", "a and b", "a, b and c"
+#' @keywords internal
+#' @noRd
+ilm_and <- function(x) {
+  if (length(x) <= 1L) return(paste(x, collapse = ""))
+  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
+}
+
+## ---------------------------------------------------------------------------
+## Progress reporting.
+##
+## Measured before being added: against a realistic loop -- 2000 bootstrap
+## replicates on 20,000 rows -- a bar updated every 1%, or even every single
+## iteration, made no difference beyond the run-to-run noise. The overhead
+## only shows against a body so fast that a bar would be pointless anyway.
+##
+## So the bar is free wherever it is worth having, and the 1% step is there to
+## avoid writing to a slow console rather than to save time.
+##
+## The default is interactive(): visible when a person is watching, silent in
+## scripts, tests and knitr. A bar written into a vignette or a test log is
+## noise, and would break every expect_silent() in the suite.
+## ---------------------------------------------------------------------------
+
+## A bar, or a silent stand-in with the same shape so callers need no branch.
+#' @keywords internal
+#' @noRd
+ilm_progress <- function(n, progress = NULL, label = NULL) {
+  on <- isTRUE(progress) ||
+    (is.null(progress) && interactive() && n > 1L)
+  if (!on || !is.finite(n) || n < 1L)
+    return(list(tick = function(i) invisible(NULL),
+                done = function() invisible(NULL)))
+  if (!is.null(label)) message(label)
+  pb <- utils::txtProgressBar(min = 0, max = n, style = 3)
+  step <- max(1L, as.integer(n) %/% 100L)
+  list(
+    tick = function(i) {
+      if (i %% step == 0L || i == n) utils::setTxtProgressBar(pb, i)
+      invisible(NULL)
+    },
+    done = function() { utils::setTxtProgressBar(pb, n); close(pb); invisible(NULL) })
+}
+
+## ---------------------------------------------------------------------------
+## The random-number stream is the user's.
+##
+## A function given a seed sets it for its own draws -- so its result is the
+## same every time -- and used to leave the stream there, so that a user's
+## next rnorm() after ilm_sim(), ilm_cluster() or ilm_anomaly() came out the
+## same whatever came before it. That is a side effect nobody asked for, and
+## one that makes a simulation of the user's own quietly less random.
+##
+## So a seeded function puts the stream back as it leaves: as it was, or
+## absent if it was absent (a fresh session has no .Random.seed until the
+## first draw, and should not be given one). The function's own draws are
+## untouched -- set.seed() stays where it was -- so every seeded result is
+## what it was. With seed = NULL nothing is set and nothing is restored: the
+## function draws from the user's stream, as any R code does.
+## ---------------------------------------------------------------------------
+
+## Register, in the CALLER's frame, a restore of the global random stream to
+## run when the caller exits -- normally or by an error. The deferred call is
+## base R's on.exit(), reached from the caller's frame the way withr::defer()
+## reaches it, with add = TRUE so a handler the caller registers later cannot
+## replace it, as long as that one adds too.
+#' @keywords internal
+#' @noRd
+ilm_rng_restore <- function(seed, envir = parent.frame()) {
+  if (is.null(seed)) return(invisible(FALSE))
+  genv <- globalenv()
+  had <- exists(".Random.seed", envir = genv, inherits = FALSE)
+  old <- if (had) get(".Random.seed", envir = genv, inherits = FALSE)
+  restore <- function() {
+    if (had) assign(".Random.seed", old, envir = genv)
+    else if (exists(".Random.seed", envir = genv, inherits = FALSE))
+      rm(".Random.seed", envir = genv)
+  }
+  thunk <- as.call(list(function() restore()))
+  do.call(base::on.exit, list(thunk, TRUE, FALSE), envir = envir)
+  invisible(TRUE)
+}
 
 ## ---- plotting characters by name -------------------------------------------
 ##
