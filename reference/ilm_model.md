@@ -322,7 +322,13 @@ formula fit also stores `call`, `terms`, `xlev`, `contrasts`, the model
 frame and the smooth objects – everything needed to rebuild a reference
 grid for
 [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
-and for `emmeans` or `marginaleffects`.
+and for `emmeans` or `marginaleffects`. Fitted inside a function that
+passes its arguments on with `...`, the `call` records the expressions
+written at the outer call. Where those are a function's own arguments or
+locals, [`update()`](https://rdrr.io/r/stats/update.html) on the fit
+cannot find them outside it;
+[`ilm_refit()`](https://huttoncp.github.io/illume/reference/ilm_refit.md)
+does not read them, and refits such a fit to other data regardless.
 
 An object of class `"ilm_model"`.
 

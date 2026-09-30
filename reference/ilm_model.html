@@ -345,7 +345,11 @@ alternative.</p></dd>
 <code><a href="ilm_fit.html">ilm_fit()</a></code>, a formula fit also stores <code>call</code>, <code>terms</code>, <code>xlev</code>,
 <code>contrasts</code>, the model frame and the smooth objects – everything needed to
 rebuild a reference grid for <code><a href="predict.ilm_model.html">predict.ilm_model()</a></code> and for <code>emmeans</code> or
-<code>marginaleffects</code>.</p>
+<code>marginaleffects</code>. Fitted inside a function that passes its arguments on
+with <code>...</code>, the <code>call</code> records the expressions written at the outer call.
+Where those are a function's own arguments or locals, <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> on the
+fit cannot find them outside it; <code><a href="ilm_refit.html">ilm_refit()</a></code> does not read them, and
+refits such a fit to other data regardless.</p>
 <p>An object of class <code>"ilm_model"</code>.</p>
     </div>
     <div class="section level2">
