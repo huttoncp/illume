@@ -681,12 +681,14 @@ ilm_fitted_shift <- function(object, pl, n, bvec = NULL, bar = NULL) {
 #' @param seed Integer. Random seed, so results are reproducible.
 #' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
 #'   is `groups = "typical"`.
-#' @param exposure For a model with an offset in its formula,
-#'   `offset(log(exposure))`: `NULL` (the default) predicts at each row's own
-#'   exposure, as [stats::predict.glm()] does -- the fit's rows, or
-#'   `newdata`'s, which must then carry the offset's column; a positive number
-#'   predicts every row at that exposure, a rate per 100,000 with `1e5`; and
-#'   `"unit"` sets the offset to zero, the rate per unit. [ilm_emmeans()],
+#' @param per For a model with an offset in its formula,
+#'   `offset(log(exposure))`: the exposure to predict at. `per` rescales the
+#'   offset -- the exposure -- to the value given, for every row. `NULL` (the
+#'   default) predicts at each row's own exposure, as [stats::predict.glm()]
+#'   does -- the fit's rows, or `newdata`'s, which must then carry the
+#'   offset's column; a positive number predicts every row at that exposure,
+#'   a rate per 100,000 with `per = 1e5`; and `"unit"` sets the offset to
+#'   zero, the rate per unit of exposure. [ilm_emmeans()],
 #'   [ilm_ame()] and [ilm_scenario()] report per unit unless told otherwise.
 #'   Ignored without an offset.
 #' @param ... Unused.
@@ -708,7 +710,7 @@ predict.ilm_model <- function(object, newdata = NULL,
                          se.fit = FALSE,
                          interval = c("none", "confidence"), level = 0.95,
                          nsim = 200L, ndraw = 200L, seed = 1L,
-                         marginal = NULL, exposure = NULL, ...) {
+                         marginal = NULL, per = NULL, ...) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   type <- match.arg(type); interval <- match.arg(interval)
   groups <- ilm_groups_arg(groups, c("fitted", "typical", "population"),
@@ -734,7 +736,7 @@ predict.ilm_model <- function(object, newdata = NULL,
   Tc <- contr.sum(object$J)
   ## each row's own offset unless an exposure is given: then every row is at
   ## it, "unit" being the offset at zero
-  oa <- if (is.null(exposure)) NULL else ilm_offset_at(object, exposure)
+  oa <- if (is.null(per)) NULL else ilm_offset_at(object, per)
   nd <- if (is.null(newdata))
           list(X = object$X, smooths = NULL,
                offset = if (is.null(oa)) object$offset else rep(oa, nrow(object$X)))
