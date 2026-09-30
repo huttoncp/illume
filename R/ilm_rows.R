@@ -112,18 +112,20 @@ print.ilm_rows_used <- function(x, ...) {
   invisible(x)
 }
 
-## The line's words, kept in one place: the wording is a ruling (item 164),
-## and "used" may become "analysed" to match a Table 1 and illumex's print.
+## The line's words, kept in one place: the wording is Craig's ruling (item
+## 164), "analysed" to match a Table 1 and illumex's print.
 #' @keywords internal
 #' @noRd
 ilm_rows_words <- list(
-  used = "used",
+  lead = "Rows: ",
+  used = "analysed",
   dropped = "dropped for missing values",
   several = "a row missing in several columns counts in each",
   zero = "with weight zero, %s but contributing nothing")
 
-## One line for print(), summary() and the record: "200 of 250 rows used; 50
-## dropped for missing values (x 30, z 25)". The per-column counts can add up
+## One line for print(), summary() and the record: "Rows: 55 of 60 analysed;
+## 5 dropped for missing values (y 2, x 3, z 1; a row missing in several
+## columns counts in each)". The per-column counts can add up
 ## to more than the rows dropped, and the line says why when they do. NULL
 ## when nothing was dropped and no weight is zero, unless `always`.
 #' @keywords internal
@@ -133,8 +135,8 @@ ilm_rows_line <- function(r, always = TRUE) {
   nd <- r$n_dropped; nz <- r$n_zero_weight
   quiet <- (is.na(nd) || nd == 0L) && (is.null(nz) || nz == 0L)
   if (quiet && !always) return(NULL)
-  head <- if (is.na(r$n_input)) sprintf("%d rows %s", r$n_used, w$used)
-          else sprintf("%d of %d rows %s", r$n_used, r$n_input, w$used)
+  head <- if (is.na(r$n_input)) sprintf("%s%d %s", w$lead, r$n_used, w$used)
+          else sprintf("%s%d of %d %s", w$lead, r$n_used, r$n_input, w$used)
   drop <- if (!is.na(nd) && nd > 0L) {
     by <- r$dropped_by
     cols <- if (!length(by)) "" else

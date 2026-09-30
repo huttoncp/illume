@@ -21,12 +21,8 @@
 ## Otherwise it is "associated with", every time.
 ## ---------------------------------------------------------------------------
 
-## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
-#' @keywords internal
-#' @noRd
-ilm_wrap <- function(x, width = 76L, indent = "") {
-  paste0(indent, strwrap(x, width = width - nchar(indent)), collapse = "\n")
-}
+## ilm_wrap() and ilm_and(), which build these sentences, are in
+## shared-helpers.R, the same file in illume and illumex.
 
 #' @keywords internal
 #' @noRd
@@ -117,11 +113,12 @@ ilm_fmt_pct <- function(p)
 #'   over them. See "Which effect, in a mixed model".
 #' @param marginal Deprecated. `TRUE` is `groups = "population"`, and `FALSE`
 #'   is `groups = "typical"`.
-#' @param exposure For a model with an offset, `offset(log(exposure))`: the
-#'   effects are on the mean per unit of exposure by default (the offset at
-#'   zero for every row), and a positive number puts every row at that
-#'   exposure instead -- `1e5` for a rate per 100,000. Such a result prints
-#'   which. Ignored without an offset.
+#' @param per For a model with an offset, `offset(log(exposure))`: the
+#'   exposure the effects on the mean are per. `per` rescales the offset --
+#'   the exposure -- to the value given, for every row. By default the effects
+#'   are per unit of exposure (the offset at zero); a positive number puts
+#'   every row at that exposure instead -- `per = 1e5` for a rate per
+#'   100,000. Such a result prints which. Ignored without an offset.
 #' @return A data frame with `term`, `level`, `estimate`, `se`, `lower`,
 #'   `upper`, and `kind` (`"slope"` or `"contrast"`). For an outcome with
 #'   categories -- multinomial or ordinal -- there is also a `category` column
@@ -138,7 +135,7 @@ ilm_fmt_pct <- function(p)
 #' @export
 ilm_ame <- function(object, terms = NULL, eps = 1e-4,
                     groups = c("typical", "population"), marginal = NULL,
-                    exposure = NULL) {
+                    per = NULL) {
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
          call. = FALSE)
@@ -176,11 +173,11 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   ## call -- at each parameter perturbation and each side of each difference
   ## -- integrates over the same thing and the differences are not noise
   ## with an offset, every row at the same exposure: per unit unless given
-  ex <- if (is.null(object$offset)) NULL else if (is.null(exposure)) "unit" else exposure
+  ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   mu <- function(dd) {
     p <- suppressWarnings(stats::predict(object, newdata = dd,
                                          type = "response", groups = groups,
-                                         exposure = ex))
+                                         per = ex))
     if (!is.null(cats)) as.matrix(p)
     else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
   }
@@ -258,15 +255,15 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   ## a rate model's effects are per some exposure, and the print says which
   if (!is.null(object$offset))
     out <- structure(out, class = c("ilm_ame", "data.frame"),
-                     exposure_note = ilm_exposure_note(object, exposure))
+                     per_note = ilm_per_note(object, per))
   out
 }
 
 #' @export
 print.ilm_ame <- function(x, ...) {
   print(as.data.frame(x), ...)
-  if (!is.null(attr(x, "exposure_note")))
-    writeLines(strwrap(paste0("Effects on the mean ", attr(x, "exposure_note"), "."),
+  if (!is.null(attr(x, "per_note")))
+    writeLines(strwrap(paste0("Effects on the mean ", attr(x, "per_note"), "."),
                        width = 78, indent = 2, exdent = 2))
   invisible(x)
 }
@@ -284,8 +281,8 @@ print.ilm_ame <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4,
-                         exposure = NULL) {
-  ex <- if (is.null(object$offset)) NULL else if (is.null(exposure)) "unit" else exposure
+                         per = NULL) {
+  ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   mf <- ilm_data(object)
   x <- mf[[var]]
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
@@ -294,7 +291,7 @@ ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4,
   fn <- function(obj) {
     mu <- function(dd) {
       p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response",
-                                           exposure = ex))
+                                           per = ex))
       if (!is.null(cats)) as.matrix(p)
       else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
     }
@@ -380,14 +377,6 @@ ilm_event_words <- function(object, respname) {
   if (is.numeric(y) && !is.matrix(y) && all(y %in% c(0, 1), na.rm = TRUE))
     return(sprintf("%s is 1", respname))
   NULL
-}
-
-## "a, b and c"
-#' @keywords internal
-#' @noRd
-ilm_and <- function(x) {
-  if (length(x) < 2L) return(x)
-  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
 }
 
 ## The sentence for one predictor, in the response's own units: over the
@@ -873,7 +862,7 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   ## a rate model: the effects quoted are on a mean per some exposure
   if (!is.null(object$offset))
     cav <- c(cav, paste0("The model has an offset, so the effects on the mean are ",
-                         ilm_exposure_note(object), "."))
+                         ilm_per_note(object), "."))
   sec$caveats <- cav
 
   structure(list(sections = sec, family = fam, causal = is_causal,
