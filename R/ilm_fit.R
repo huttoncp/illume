@@ -914,14 +914,22 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   ## and recovered the same coefficients to within Monte Carlo error: -0.542,
   ## 0.273, 0.699 against -0.539, 0.251, 0.696, for a truth of -0.541, 0.258,
   ## 0.690. Grading those FAIL discards a third of perfectly good fits.
+  ## where the gradient stopped being finite, the optimiser was cut off, not
+  ## done, however small the gradient is where it stopped (see ilm_nlminb)
+  nonfin <- isTRUE(opt$nonfinite)
   ck <- ilm_add_check(ck, "optimizer",
-    if (opt$convergence == 0) "OK" else if (g <= 1e-2) "WARN" else "FAIL",
-    sprintf("nlminb code %d (%s)", opt$convergence, opt$message),
-    if (opt$convergence != 0)
+    if (opt$convergence == 0) "OK" else if (g <= 1e-2 && !nonfin) "WARN" else "FAIL",
+    sprintf(if (nonfin) "nlminb code %d: %s" else "nlminb code %d (%s)",
+            opt$convergence, opt$message),
+    if (nonfin)
+      paste0("the objective's arithmetic broke down where the optimiser went, ",
+             "so it stopped short of an optimum")
+    else if (opt$convergence != 0)
       paste0("optimizer stopped without meeting its tolerance",
              if (g <= 1e-2)
                "; the gradient is small, so this is its stopping rule rather than the fit"
-             else "") else "", "")
+             else "") else "",
+    if (nonfin) "restart from the current estimates, or simplify the random structure" else "")
   ck <- ilm_add_check(ck, "gradient",
     if (g > 1e-2) "FAIL" else if (g > 1e-3) "WARN" else "OK",
     sprintf("max |gradient| = %.2e", g),
@@ -1507,6 +1515,44 @@ ilm_floor_pos <- function(re, ty, toff, C, pn, ar = NULL) {
       pos <- c(pos, it[toff[k] + dg])
   if (!is.null(ar)) pos <- c(pos, which(pn == "lchol_ar")[dg])
   pos
+}
+
+## A GRADIENT THAT IS NOT FINITE. Along a direction the likelihood is flat on,
+## the optimiser can walk a parameter out to where the objective's arithmetic
+## breaks down, and nlminb then stops with an error ("NA/NaN gradient
+## evaluation"), so the user gets no fit at all. Seen on CI (macOS arm64,
+## RTMB 2.0) for a beta whose phi ran to its limit beside an AR(1) latent.
+## Instead, keep the best point at which the objective and its gradient were
+## both finite, restart from it once, and if the arithmetic breaks again,
+## return that point marked `nonfinite`: a fit whose optimizer check FAILs,
+## not an error. The point is not moved, so nothing about the model changes.
+#' @keywords internal
+#' @noRd
+ilm_nlminb <- function(start, obj, ctl) {
+  best <- NULL; at <- list(p = NULL, v = NA_real_)
+  fn <- function(p) { v <- obj$fn(p); at <<- list(p = p, v = v); v }
+  gr <- function(p) {
+    g <- obj$gr(p)
+    v <- if (identical(p, at$p)) at$v else NA_real_
+    if (all(is.finite(g)) && is.finite(v) && (is.null(best) || v <= best$objective))
+      best <<- list(par = p, objective = v)
+    g
+  }
+  run <- function(st) tryCatch(nlminb(st, fn, gr, control = ctl), error = function(e) e)
+  o <- run(start)
+  if (!inherits(o, "error")) return(o)
+  if (is.null(best)) stop(o)
+  why <- conditionMessage(o)
+  o <- run(best$par)
+  if (!inherits(o, "error")) return(o)
+  par <- best$par; names(par) <- names(start)
+  list(par = par, objective = best$objective, convergence = 1L,
+       iterations = NA_integer_,
+       evaluations = c("function" = NA_integer_, gradient = NA_integer_),
+       message = paste0("the gradient was not finite at a point the optimiser ",
+                        "tried (", why, "), so it stopped at the best point where ",
+                        "it was finite"),
+       nonfinite = TRUE)
 }
 
 ## Refit with the floor as a lower bound -- only when the unconstrained fit went
@@ -2592,9 +2638,12 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
     stop(sprintf("internal: %d parameter names for %d parameters",
                  n_expected, length(obj$par)))
   ctl <- list(iter.max = 3000, eval.max = 3000)
-  opt <- nlminb(obj$par, obj$fn, obj$gr, control = ctl)
-  for (k in seq_len(restarts))
-    opt <- nlminb(opt$par, obj$fn, obj$gr, control = ctl)
+  opt <- ilm_nlminb(obj$par, obj, ctl)
+  ## a restart whose arithmetic broke down does not replace a fit whose did not
+  for (k in seq_len(restarts)) {
+    o <- ilm_nlminb(opt$par, obj, ctl)
+    if (!isTRUE(o$nonfinite) || isTRUE(opt$nonfinite)) opt <- o
+  }
   ## a correlation taken towards +/-1 past where the Laplace arithmetic holds
   ## is brought back to the floor (see ilm_logsd_floor)
   fpos <- ilm_floor_pos(re, ty, toff, C, names(obj$par), ar)
