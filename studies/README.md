@@ -91,9 +91,9 @@ Write output into `runs/<version>/<study>/`, which is the layout the summariser
 and pruner expect, and record the run in `runs/<version>/RUNINFO.dcf`:
 
 ```
-Rscript scripts/coverage_study.R  2000 10 runs/0.0.1.9000/coverage
-Rscript scripts/power_study.R     2000 10 runs/0.0.1.9000/power
-Rscript scripts/mclogit_compare.R  500 10 runs/0.0.1.9000/mclogit
+Rscript scripts/coverage_study.R  2000 10 runs/<version>/coverage
+Rscript scripts/power_study.R     2000 10 runs/<version>/power
+Rscript scripts/mclogit_compare.R  500 10 runs/<version>/mclogit
 ```
 
 They need illume **installed**, not merely loaded, because the parallel workers

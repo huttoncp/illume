@@ -46,18 +46,18 @@ tolerance. This is the strongest available check: a bug that survives it has
 to be a bug the reference implementation shares.
 
 160 replications per task, each on a simulated dataset of 1,000 observations;
-R 4.4.3, illume 0.0.7.9000. `max_diff` is the largest absolute coefficient
-difference against any reference fitting the same model.
+R 4.4.3, illume 0.0.8.9000 (run 2026-09-23). `max_diff` is the largest
+absolute coefficient difference against any reference fitting the same model.
 
 | task | illume (s) | lme4 (s) | glmmTMB (s) | nnet (s) | max_diff |
 |---|---|---|---|---|---|
-| gaussian mixed | 0.173 | 0.026 | 0.194 | -- | 0.0000 |
-| Poisson mixed | 0.243 | 0.517 | 0.269 | -- | 0.0000 |
-| binomial mixed | 0.360 | 0.568 | 0.499 | -- | 0.0001 |
-| multinomial fixed, J = 3 | 0.162 | -- | -- | 0.018 | 0.0011 |
-| multinomial fixed, J = 5 | 0.226 | -- | -- | 0.039 | 0.0001 |
-| multinomial mixed, J = 3 | 0.575 | -- | -- | -- | -- |
-| multinomial mixed, J = 5 | 1.571 | -- | -- | -- | -- |
+| gaussian mixed | 0.209 | 0.031 | 0.232 | -- | 0.0000 |
+| Poisson mixed | 0.274 | 0.534 | 0.286 | -- | 0.0000 |
+| binomial mixed | 0.386 | 0.595 | 0.526 | -- | 0.0001 |
+| multinomial fixed, J = 3 | 0.203 | -- | -- | 0.019 | 0.0011 |
+| multinomial fixed, J = 5 | 0.296 | -- | -- | 0.041 | 0.0001 |
+| multinomial mixed, J = 3 | 0.754 | -- | -- | -- | -- |
+| multinomial mixed, J = 5 | 1.944 | -- | -- | -- | -- |
 
 Largest disagreement with any independent implementation: **1.1e-03**, on
 multinomial fixed effects against `nnet::multinom`. The rest agree to four
@@ -175,7 +175,7 @@ primary result. 2000 replications per cell, nominal 0.05.
 | binomial, mixed | 0.048 | 0.050 |
 | Poisson, mixed | 0.053 | 0.053 |
 | negative binomial, mixed | 0.054 | 0.054 |
-| multinomial J = 3, rich | 0.055 | 0.056 |
+| multinomial J = 3, rich | 0.054 | 0.056 |
 | multinomial J = 3, thin | 0.045 | 0.055 |
 | Tobit, ceiling | 0.046 | 0.046 |
 | AFT Weibull | 0.042 | 0.043 |
@@ -205,8 +205,8 @@ validated against `Superpower`, `simr`, `faux` and `lmerTest`.
 
 ## 4. The multinomial mixed model
 
-This is the only model in illume where another R package offers a genuine
-alternative, so it gets the closest look.
+This is the model where the alternative uses a different approximation (PQL
+rather than Laplace), so it gets the closest look.
 
 `mclogit::mblogit()` fits random-effects baseline-category logit models by
 penalised quasi-likelihood. PQL is fast and well understood, and is known to
@@ -389,13 +389,14 @@ number of replications and an output directory, and those that run in parallel
 take a number of cores between the two:
 
 ```{r, eval = FALSE}
-# from studies/scripts/, with the replication counts behind the tables above
-Rscript benchmark_freq.R     160    ../runs/0.0.7.9000/bench
-Rscript coverage_study.R    2000 10 ../runs/0.0.7.9000/coverage
-Rscript power_study.R       2000 10 ../runs/0.0.7.9000/power
-Rscript mclogit_compare.R    500 10 ../runs/0.0.7.9000/mclogit
-Rscript messy_compare.R      400 10 ../runs/0.0.7.9000/messy
-Rscript brms_compare.R         3    ../runs/0.0.7.9000/brms
+# from studies/scripts/, with the replication counts behind the tables above;
+# <version> is the illume version being run, e.g. 0.0.8.9000
+Rscript benchmark_freq.R     160    ../runs/<version>/bench
+Rscript coverage_study.R    2000 10 ../runs/<version>/coverage
+Rscript power_study.R       2000 10 ../runs/<version>/power
+Rscript mclogit_compare.R    500 10 ../runs/<version>/mclogit
+Rscript messy_compare.R      400 10 ../runs/<version>/messy
+Rscript brms_compare.R         3    ../runs/<version>/brms
 ```
 
 Raw per-replication output is not committed -- it is several megabytes per
