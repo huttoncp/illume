@@ -21,12 +21,8 @@
 ## Otherwise it is "associated with", every time.
 ## ---------------------------------------------------------------------------
 
-## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
-#' @keywords internal
-#' @noRd
-ilm_wrap <- function(x, width = 76L, indent = "") {
-  paste0(indent, strwrap(x, width = width - nchar(indent)), collapse = "\n")
-}
+## ilm_wrap() and ilm_and(), which build these sentences, are in
+## shared-helpers.R, the same file in illume and illumex.
 
 #' @keywords internal
 #' @noRd
@@ -355,14 +351,6 @@ ilm_event_words <- function(object, respname) {
   if (is.numeric(y) && !is.matrix(y) && all(y %in% c(0, 1), na.rm = TRUE))
     return(sprintf("%s is 1", respname))
   NULL
-}
-
-## "a, b and c"
-#' @keywords internal
-#' @noRd
-ilm_and <- function(x) {
-  if (length(x) < 2L) return(x)
-  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
 }
 
 ## The sentence for one predictor, in the response's own units: over the
