@@ -334,10 +334,15 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     ## so it is offered as a description only
     ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts")),
 
-  optimizer = if (status == "FAIL") c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit))) else list(),
+  ## where every start broke down, more restarts from the same place is
+  ## advice the fit has already taken
+  optimizer = if (status == "FAIL")
+    c(ilm_rem_rescale(fit),
+      if (!isTRUE(fit$opt$all_starts)) list(ilm_rem_restarts(fit))) else list(),
 
-  gradient = c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit),
-    ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
+  gradient = c(ilm_rem_rescale(fit),
+    if (!isTRUE(fit$opt$all_starts)) list(ilm_rem_restarts(fit)),
+    list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
 
   hessian = if (status == "BOUNDARY") {
     held <- intersect(fit$hessian_held, ilm_rem_groups(fit))
