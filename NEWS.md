@@ -27,8 +27,8 @@
   (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an ICC
   of 0.3 they covered 0.893 against REML's 0.961, and with 6 clusters a 5%
   test of a between-cluster factor rejected 19.0% of the time against 7.8%.
-  Until REML is the default for these
-  models, fit with `reml = TRUE` for the tables the study supports.
+  Until REML is the default for these models, fit with `reml = TRUE` for
+  the tables the study supports.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
   pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
   is a list by term, and "us" is already its default -- and so did the ANOVA
