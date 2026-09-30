@@ -237,18 +237,20 @@ graph in one case and by the design in the other.
 ## Predictions
 
 By default `predict()` returns a probability for every observation and category,
-as `nnet::multinom(type = "probs")` does.
+as `nnet::multinom(type = "probs")` does, each from its own subject's fitted
+effects, as lme4's `predict()` does.
 
 ```{r predict}
 head(round(predict(fit), 3))
 ```
 
 There is a choice to make here, and `groups` makes it. With
-`groups = "typical"` (the default) the random effects are set to zero, giving
-probabilities for a *typical* subject. With `groups = "population"` the
-prediction is averaged over the distribution of subjects, giving probabilities
-for the *population*. The subjects' own fitted effects are in `ilm_fitted()`,
-for the rows the model was fitted to.
+`groups = "fitted"` (the default) each row gets its own subject's estimated
+effects, so a row needs a subject the model has seen. With `groups = "typical"`
+the random effects are set to zero, giving probabilities for a *typical*
+subject. With `groups = "population"` the prediction is averaged over the
+distribution of subjects, giving probabilities for the *population*. A grid of
+new values belongs to no subject, so it takes one of the last two:
 
 ```{r marginal}
 grid <- data.frame(x1 = 0, grp = factor(c("a", "b", "c"), levels = levels(dd$grp)))
@@ -265,7 +267,7 @@ Standard errors and intervals come from simulation, and the intervals are
 percentile intervals, so they always lie between 0 and 1.
 
 ```{r se}
-pr <- predict(fit, newdata = grid, se.fit = TRUE, nsim = 100)
+pr <- predict(fit, newdata = grid, groups = "typical", se.fit = TRUE, nsim = 100)
 round(data.frame(fit = pr$fit[, 1], lower = pr$lower[, 1], upper = pr$upper[, 1]), 3)
 ```
 
