@@ -23,8 +23,6 @@
   clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
   4.0 and 0.44 by REML. That path is being studied now. Until it reports,
   fit with `reml = TRUE` for the tables the study supports.
-* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
-  needs PCAmixdata.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
   pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
   is a list by term, and "us" is already its default -- and so did the ANOVA
@@ -50,6 +48,8 @@
   the effect sentences of `ilm_interpret()`, the effect plots, `ilm_rdd()`,
   the survival plot and `ilm_impute()`'s imputations -- it asks for one, so
   their results are unchanged.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
 * **A correction: under `reml = TRUE`, fits whose variances approach zero
   could fail with a singular-system error.** They now fit. The coefficients'
   covariance under REML is solved from the random effects' block of the
