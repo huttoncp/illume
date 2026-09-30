@@ -396,14 +396,16 @@ a property of the sample, and take conclusions from the slopes and from
 
 <p>A gaussian model with no random or smooth terms is an ordinary linear model.
 In that case there is nothing to integrate out, so illume reports <strong>exact</strong>
-t tests on <code>n - p</code> degrees of freedom and F tests in <code><a href="ilm_anova.html">ilm_anova()</a></code>, rather
-than the large-sample normal and chi-square approximations it must use when
-random effects are present. Coefficients, standard errors, the residual
-standard deviation and the F tests then agree with <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code> and
-<code><a href="https://rdrr.io/pkg/car/man/Anova.html" class="external-link">car::Anova()</a></code> to numerical precision.</p>
-<p>This applies only where an exact reference genuinely exists. A Poisson or
-binomial model without random effects is still a GLM, with no exact
-small-sample analogue, so it keeps z and chi-square.</p>
+t tests on <code>n - p</code> degrees of freedom and F tests in <code><a href="ilm_anova.html">ilm_anova()</a></code>.
+Coefficients, standard errors, the residual standard deviation and the F
+tests then agree with <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code> and <code><a href="https://rdrr.io/pkg/car/man/Anova.html" class="external-link">car::Anova()</a></code> to numerical
+precision.</p>
+<p>A linear mixed model – gaussian, with a grouping term or a correlation over
+time integrated out – has no exact reference, and its tables test on
+Satterthwaite's degrees of freedom instead, as lmerTest does; see
+<code><a href="ilm_coef_table.html">ilm_coef_table()</a></code> for Kenward-Roger and the asymptotic tests on request.
+A Poisson or binomial model is a GLM, with or without random effects, with
+no small-sample analogue, so it keeps z and chi-square.</p>
     </div>
     <div class="section level2">
     <h2 id="reading-the-coefficients">Reading the coefficients<a class="anchor" aria-label="anchor" href="#reading-the-coefficients"></a></h2>
@@ -502,13 +504,14 @@ hierarchical models. <em>Journal of Educational and Behavioral Statistics</em>,
 <span class="r-out co"><span class="r-pr">#&gt;</span>  sigma    1.0184   (residual standard deviation)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Fixed effects:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             Estimate Std. Error z value Pr(&gt;|z|)    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.87644    0.19283   4.545 5.49e-06 ***</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1           0.48338    0.06087   7.941 2.00e-15 ***</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> grpb         0.04956    0.14692   0.337   0.7359    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> grpc        -0.30097    0.15298  -1.967   0.0491 *  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             Estimate Std. Error     df t value Pr(&gt;|t|)    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.87644    0.19283  46.85   4.545 3.86e-05 ***</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1           0.48338    0.06087 276.81   7.941 5.05e-14 ***</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grpb         0.04956    0.14692 274.36   0.337   0.7361    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grpc        -0.30097    0.15298 275.41  -1.967   0.0501 .  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  t tests on Satterthwaite's degrees of freedom</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Model checks: all passed.</span>
 <span class="r-in"><span></span></span>

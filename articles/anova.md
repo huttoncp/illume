@@ -158,16 +158,20 @@ place.
 
 ``` r
 
-ilm_model(recall ~ dose * session + (1 | id), data = d,
-          re_struct = "us", family = "gaussian")
+ilm_model(recall ~ dose * session + (0 + session | id), data = d,
+          family = "gaussian")
 ```
 
-`re_struct = "us"` leaves the covariance between sessions completely
-free, so there is nothing to correct. If sphericity fails badly,
+`(0 + session | id)` gives each participant a correlated random effect
+per session in place of one random intercept, which leaves the
+covariance between sessions completely free, so there is nothing to
+correct. The residual SD cannot be told apart from that covariance’s
+diagonal, so the fit holds that one direction and says so; the fixed
+effects are usable. If sphericity fails,
 [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
-will say so and point you here. It is not always the right move – it
-costs parameters, and with few participants that matters – but it is the
-honest alternative to adjusting a broken test.
+says so and names this call for your design. It is not always the right
+move – it costs parameters, and with few participants that matters – but
+it is the honest alternative to adjusting a broken test.
 
 ## Following up a significant effect
 

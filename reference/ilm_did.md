@@ -183,7 +183,7 @@ ilm_did(d, "y", "unit", "time", treated = "treated", post = "post",
 #> <ilm_did> y ~ treatment  | 20 treated, 20 control units
 #>   family: gaussian   random intercept: unit  
 #> 
-#>   ATT    0.7254  ( 0.3000,  1.1507)  p = 0.000831
+#>   ATT    0.7254  ( 0.2982,  1.1525)  p = 0.000944
 #> 
 #>   parallel trends before treatment: OK  (slope difference 0.2003, p = 0.15)
 #>   event study: 8 periods, 0 pre-treatment coefficient(s) excluding zero  (ilm_plot_did)

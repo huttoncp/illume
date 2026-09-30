@@ -14,7 +14,7 @@ coefficient table with Wald tests, and – unusually for a
 
 ``` r
 # S3 method for class 'ilm_model'
-summary(object, ...)
+summary(object, df = "auto", ...)
 
 # S3 method for class 'summary.ilm_model'
 print(x, digits = 4, max_corr_dim = 6L, ...)
@@ -25,6 +25,14 @@ print(x, digits = 4, max_corr_dim = 6L, ...)
 - object, x:
 
   A fitted `"ilm_model"` object.
+
+- df:
+
+  The degrees of freedom of a gaussian mixed model's coefficient tests:
+  `"auto"` (Satterthwaite's, per coefficient, as `lmerTest` reports),
+  `"kenward-roger"`, `"asymptotic"` (the normal) or a number. See
+  [`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md).
+  Other fits are unaffected.
 
 - ...:
 

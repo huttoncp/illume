@@ -113,9 +113,12 @@ needing more than one linear predictor: with <code>J</code> categories it uses
 <code>J - 1</code> dimensions with sum-to-zero coding.</p></dd>
 
 
-</dl><p>Zero-inflation, hurdle models, Tweedie and other specialised families are
-deliberately out of scope. <code>glmmTMB</code> covers those well and there is nothing to
-gain from a weaker reimplementation.</p>
+</dl><p>Excess zeros are not a family here but a zero part added to one:
+<code><a href="ilm_model.html">ilm_model()</a></code>'s <code>ziformula</code> gives a Poisson or negative binomial model a
+zero-inflated or hurdle part (<code>zi_type</code>), the remedy <code><a href="ilm_check_zeros.html">ilm_check_zeros()</a></code>
+names. Tweedie and other specialised families are out of scope; <code>glmmTMB</code>
+covers those well and there is nothing to gain from a weaker
+reimplementation.</p>
     </div>
     <div class="section level2">
     <h2 id="on-numerical-stability">On numerical stability<a class="anchor" aria-label="anchor" href="#on-numerical-stability"></a></h2>

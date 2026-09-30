@@ -12,7 +12,9 @@ ilm_anova(
   test = c("Wald", "LRT"),
   ncores = 1L,
   restarts = 2L,
-  recode = TRUE
+  recode = TRUE,
+  df = "auto",
+  statistic = c("F", "Chisq")
 )
 ```
 
@@ -50,17 +52,35 @@ ilm_anova(
   those factors and say so. `FALSE` tests the model exactly as coded and
   warns instead. The fit passed in is never modified either way.
 
+- df:
+
+  For a gaussian mixed model's Wald tests, the denominator degrees of
+  freedom of each F: `"auto"` (Satterthwaite's, as `lmerTest` reports),
+  `"satterthwaite"`, `"kenward-roger"` (their df and scaled F, on their
+  adjusted covariance; REML fits) or `"asymptotic"`. Other fits are
+  unaffected.
+
+- statistic:
+
+  `"F"` (the default) or `"Chisq"`. For a gaussian mixed model's Wald
+  tests, `"F"` gives an F test on the denominator df above and `"Chisq"`
+  the large-sample chi-square the table gave before; with few groups the
+  chi-square is too liberal. Every other fit keeps its own reference:
+  exact F with nothing integrated out, chi-square otherwise.
+
 ## Value
 
 An `"anova"` data frame with one row per fixed-effect term. The columns
-are `Df`, `Chisq` and `Pr(>Chisq)` in general, or `Df`, `F value` and
+are `Df`, `Chisq` and `Pr(>Chisq)` in general; `Df`, `F value` and
 `Pr(>F)` when the model admits exact inference – a gaussian model with
 no random or smooth terms, where the residual variance is estimated
 rather than assumed known (see
-[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)).
-A model with no terms to test, such as an intercept-only model, returns
-a table with zero rows rather than an error: "there is nothing to test"
-is an answer, not a failure.
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md));
+and `NumDF`, `DenDF`, `F value` and `Pr(>F)` for a gaussian mixed
+model's Wald tests with `statistic = "F"`. A model with no terms to
+test, such as an intercept-only model, returns a table with zero rows
+rather than an error: "there is nothing to test" is an answer, not a
+failure.
 
 ## Why this exists rather than car
 

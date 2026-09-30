@@ -383,16 +383,18 @@ effect curves.
 A gaussian model with no random or smooth terms is an ordinary linear
 model. In that case there is nothing to integrate out, so illume reports
 **exact** t tests on `n - p` degrees of freedom and F tests in
-[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
-rather than the large-sample normal and chi-square approximations it
-must use when random effects are present. Coefficients, standard errors,
-the residual standard deviation and the F tests then agree with
-[`stats::lm()`](https://rdrr.io/r/stats/lm.html) and
-[`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html) to numerical
-precision.
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).
+Coefficients, standard errors, the residual standard deviation and the F
+tests then agree with [`stats::lm()`](https://rdrr.io/r/stats/lm.html)
+and [`car::Anova()`](https://rdrr.io/pkg/car/man/Anova.html) to
+numerical precision.
 
-This applies only where an exact reference genuinely exists. A Poisson
-or binomial model without random effects is still a GLM, with no exact
+A linear mixed model – gaussian, with a grouping term or a correlation
+over time integrated out – has no exact reference, and its tables test
+on Satterthwaite's degrees of freedom instead, as lmerTest does; see
+[`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md)
+for Kenward-Roger and the asymptotic tests on request. A Poisson or
+binomial model is a GLM, with or without random effects, with no
 small-sample analogue, so it keeps z and chi-square.
 
 ## Reading the coefficients
@@ -506,13 +508,14 @@ summary(fit)
 #>  sigma    1.0184   (residual standard deviation)
 #> 
 #> Fixed effects:
-#>             Estimate Std. Error z value Pr(>|z|)    
-#> (Intercept)  0.87644    0.19283   4.545 5.49e-06 ***
-#> x1           0.48338    0.06087   7.941 2.00e-15 ***
-#> grpb         0.04956    0.14692   0.337   0.7359    
-#> grpc        -0.30097    0.15298  -1.967   0.0491 *  
+#>             Estimate Std. Error     df t value Pr(>|t|)    
+#> (Intercept)  0.87644    0.19283  46.85   4.545 3.86e-05 ***
+#> x1           0.48338    0.06087 276.81   7.941 5.05e-14 ***
+#> grpb         0.04956    0.14692 274.36   0.337   0.7361    
+#> grpc        -0.30097    0.15298 275.41  -1.967   0.0501 .  
 #> ---
 #> Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+#>  t tests on Satterthwaite's degrees of freedom
 #> 
 #> Model checks: all passed.
 

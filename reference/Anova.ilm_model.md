@@ -24,7 +24,9 @@ Anova(mod, type = c("II", "III", 2, 3), test.statistic = "Chisq", ...)
 
 - test.statistic:
 
-  Ignored; present for compatibility.
+  `"Chisq"` (car's default) or `"F"`: for a gaussian mixed model, the
+  chi-square or the F test on finite denominator df; see `statistic` in
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md).
 
 - ...:
 

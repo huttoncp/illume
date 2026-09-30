@@ -14,7 +14,8 @@ ilm_emmeans(
   weights = c("equal", "proportional", "cells"),
   type = c("link", "response"),
   level = 0.95,
-  per = NULL
+  per = NULL,
+  df = "auto"
 )
 ```
 
@@ -55,6 +56,18 @@ ilm_emmeans(
   zero, a rate such as cases per person-year); a positive number reports
   them per that much exposure instead – `per = 1e5` for a rate per
   100,000. The print says which. Ignored without an offset.
+
+- df:
+
+  For a gaussian mixed model, the degrees of freedom of each mean's
+  interval: `"auto"` (Satterthwaite's, as emmeans gives on an `lmerTest`
+  fit), `"satterthwaite"`, `"kenward-roger"` (their df and adjusted
+  standard errors; REML fits), `"asymptotic"` (the normal) or a number.
+  A `df` column then gives each row's. Other fits are unaffected: exact
+  t with nothing integrated out, the normal otherwise. Contrasts of the
+  means
+  ([`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md))
+  use the same method.
 
 ## Value
 

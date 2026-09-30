@@ -64,9 +64,14 @@ Supported families:
   one linear predictor: with `J` categories it uses `J - 1` dimensions
   with sum-to-zero coding.
 
-Zero-inflation, hurdle models, Tweedie and other specialised families
-are deliberately out of scope. `glmmTMB` covers those well and there is
-nothing to gain from a weaker reimplementation.
+Excess zeros are not a family here but a zero part added to one:
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)'s
+`ziformula` gives a Poisson or negative binomial model a zero-inflated
+or hurdle part (`zi_type`), the remedy
+[`ilm_check_zeros()`](https://huttoncp.github.io/illume/reference/ilm_check_zeros.md)
+names. Tweedie and other specialised families are out of scope;
+`glmmTMB` covers those well and there is nothing to gain from a weaker
+reimplementation.
 
 ## On numerical stability
 

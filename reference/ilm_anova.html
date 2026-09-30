@@ -62,7 +62,9 @@ for a multinomial outcome <strong>across all category dimensions</strong>.</p>
 <span>  test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Wald"</span>, <span class="st">"LRT"</span><span class="op">)</span>,</span>
 <span>  ncores <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  restarts <span class="op">=</span> <span class="fl">2L</span>,</span>
-<span>  recode <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  recode <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  df <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  statistic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"F"</span>, <span class="st">"Chisq"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -100,14 +102,31 @@ refit with <code><a href="https://rdrr.io/r/stats/contrast.html" class="external
 tests the model exactly as coded and warns instead. The fit passed in is
 never modified either way.</p></dd>
 
+
+<dt id="arg-df">df<a class="anchor" aria-label="anchor" href="#arg-df"></a></dt>
+<dd><p>For a gaussian mixed model's Wald tests, the denominator degrees
+of freedom of each F: <code>"auto"</code> (Satterthwaite's, as <code>lmerTest</code> reports),
+<code>"satterthwaite"</code>, <code>"kenward-roger"</code> (their df and scaled F, on their
+adjusted covariance; REML fits) or <code>"asymptotic"</code>. Other fits are
+unaffected.</p></dd>
+
+
+<dt id="arg-statistic">statistic<a class="anchor" aria-label="anchor" href="#arg-statistic"></a></dt>
+<dd><p><code>"F"</code> (the default) or <code>"Chisq"</code>. For a gaussian mixed
+model's Wald tests, <code>"F"</code> gives an F test on the denominator df above and
+<code>"Chisq"</code> the large-sample chi-square the table gave before; with few
+groups the chi-square is too liberal. Every other fit keeps its own
+reference: exact F with nothing integrated out, chi-square otherwise.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An <code>"anova"</code> data frame with one row per fixed-effect term. The
-columns are <code>Df</code>, <code>Chisq</code> and <code>Pr(&gt;Chisq)</code> in general, or <code>Df</code>, <code>F value</code>
+columns are <code>Df</code>, <code>Chisq</code> and <code>Pr(&gt;Chisq)</code> in general; <code>Df</code>, <code>F value</code>
 and <code>Pr(&gt;F)</code> when the model admits exact inference – a gaussian model with
 no random or smooth terms, where the residual variance is estimated rather
-than assumed known (see <code><a href="ilm_model.html">ilm_model()</a></code>). A model with no terms to test, such
+than assumed known (see <code><a href="ilm_model.html">ilm_model()</a></code>); and <code>NumDF</code>, <code>DenDF</code>, <code>F value</code> and
+<code>Pr(&gt;F)</code> for a gaussian mixed model's Wald tests with <code>statistic = "F"</code>. A model with no terms to test, such
 as an intercept-only model, returns a table with zero rows rather than an
 error: "there is nothing to test" is an answer, not a failure.</p>
     </div>

@@ -221,14 +221,17 @@ rejects. You can force it:</p>
 is another option: use a model that never assumed sphericity in the
 first place.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">recall</span> <span class="op">~</span> <span class="va">dose</span> <span class="op">*</span> <span class="va">session</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span>
-<span>          re_struct <span class="op">=</span> <span class="st">"us"</span>, family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span></code></pre></div>
-<p><code>re_struct = "us"</code> leaves the covariance between sessions
-completely free, so there is nothing to correct. If sphericity fails
-badly, <code><a href="../reference/ilm_aov_ez.html">ilm_aov_ez()</a></code> will say so and point you here. It is
-not always the right move – it costs parameters, and with few
-participants that matters – but it is the honest alternative to
-adjusting a broken test.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">recall</span> <span class="op">~</span> <span class="va">dose</span> <span class="op">*</span> <span class="va">session</span> <span class="op">+</span> <span class="op">(</span><span class="fl">0</span> <span class="op">+</span> <span class="va">session</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>,</span>
+<span>          family <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span></code></pre></div>
+<p><code>(0 + session | id)</code> gives each participant a correlated
+random effect per session in place of one random intercept, which leaves
+the covariance between sessions completely free, so there is nothing to
+correct. The residual SD cannot be told apart from that covariance’s
+diagonal, so the fit holds that one direction and says so; the fixed
+effects are usable. If sphericity fails, <code><a href="../reference/ilm_aov_ez.html">ilm_aov_ez()</a></code> says
+so and names this call for your design. It is not always the right move
+– it costs parameters, and with few participants that matters – but it
+is the honest alternative to adjusting a broken test.</p>
 </div>
 </div>
 <div class="section level2">
