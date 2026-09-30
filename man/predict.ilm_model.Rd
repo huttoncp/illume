@@ -16,7 +16,7 @@
   ndraw = 200L,
   seed = 1L,
   marginal = NULL,
-  exposure = NULL,
+  per = NULL,
   ...
 )
 }
@@ -50,12 +50,14 @@ averaged by quadrature and does not use it.}
 \item{marginal}{Deprecated. \code{TRUE} is \code{groups = "population"}, and \code{FALSE}
 is \code{groups = "typical"}.}
 
-\item{exposure}{For a model with an offset in its formula,
-\code{offset(log(exposure))}: \code{NULL} (the default) predicts at each row's own
-exposure, as \code{\link[stats:predict.glm]{stats::predict.glm()}} does -- the fit's rows, or
-\code{newdata}'s, which must then carry the offset's column; a positive number
-predicts every row at that exposure, a rate per 100,000 with \code{1e5}; and
-\code{"unit"} sets the offset to zero, the rate per unit. \code{\link[=ilm_emmeans]{ilm_emmeans()}},
+\item{per}{For a model with an offset in its formula,
+\code{offset(log(exposure))}: the exposure to predict at. \code{per} rescales the
+offset -- the exposure -- to the value given, for every row. \code{NULL} (the
+default) predicts at each row's own exposure, as \code{\link[stats:predict.glm]{stats::predict.glm()}}
+does -- the fit's rows, or \code{newdata}'s, which must then carry the
+offset's column; a positive number predicts every row at that exposure,
+a rate per 100,000 with \code{per = 1e5}; and \code{"unit"} sets the offset to
+zero, the rate per unit of exposure. \code{\link[=ilm_emmeans]{ilm_emmeans()}},
 \code{\link[=ilm_ame]{ilm_ame()}} and \code{\link[=ilm_scenario]{ilm_scenario()}} report per unit unless told otherwise.
 Ignored without an offset.}
 

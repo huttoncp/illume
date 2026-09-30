@@ -114,9 +114,6 @@ ilm_plot_coef <- function(model, conf = 0.95, colour = "black", size = 1,
                        excludes_zero = sig, row.names = NULL))
 }
 
-## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 ## ---- partial dependence ----------------------------------------------------
 
 ## One predictor varied across its range with the others held at typical
@@ -187,7 +184,7 @@ ilm_plot_effect <- function(model, term = NULL, conf = 0.95, colour = "black",
   per_unit <- inherits(model, "ilm_model") && !is.null(model$offset)
   pred1 <- function(nd) {
     pr <- tryCatch(if (per_unit)
-                     stats::predict(model, newdata = nd, se.fit = TRUE, exposure = "unit")
+                     stats::predict(model, newdata = nd, se.fit = TRUE, per = "unit")
                    else stats::predict(model, newdata = nd, se.fit = TRUE),
                    error = function(e)
                      stop("predict() failed for this model: ", conditionMessage(e),
