@@ -189,11 +189,12 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 #' @param weights `"equal"`, `"proportional"` or `"cells"`; see above.
 #' @param type `"link"` or `"response"`.
 #' @param level Confidence level.
-#' @param exposure For a model with an offset, `offset(log(exposure))`: the
-#'   means are per unit of exposure by default (the offset at zero, a rate
-#'   such as cases per person-year), and a positive number reports them at
-#'   that exposure instead -- `1e5` for a rate per 100,000. The print says
-#'   which. Ignored without an offset.
+#' @param per For a model with an offset, `offset(log(exposure))`: the
+#'   exposure the means are per. `per` rescales the offset -- the exposure --
+#'   to the value given. By default the means are per unit of exposure (the
+#'   offset at zero, a rate such as cases per person-year); a positive number
+#'   reports them per that much exposure instead -- `per = 1e5` for a rate per
+#'   100,000. The print says which. Ignored without an offset.
 #' @param df For a gaussian mixed model, the degrees of freedom of each mean's
 #'   interval: `"auto"` (Satterthwaite's, as emmeans gives on an `lmerTest`
 #'   fit), `"satterthwaite"`, `"kenward-roger"` (their df and adjusted
@@ -215,7 +216,7 @@ ilm_emm_avg <- function(mm, g, specs, w) {
 ilm_emmeans <- function(object, specs, at = NULL,
                         weights = c("equal", "proportional", "cells"),
                         type = c("link", "response"), level = 0.95,
-                        exposure = NULL, df = "auto") {
+                        per = NULL, df = "auto") {
   weights <- match.arg(weights); type <- match.arg(type)
   if (!inherits(object, "ilm_model"))
     stop("`object` must be a fitted ilm_model, not ", class(object)[1],
@@ -264,7 +265,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   L <- av$L; lv <- av$lv
   ## the grid's design has no offset, so these are per unit of exposure; an
   ## exposure moves every mean by the same amount on the link scale
-  oa <- ilm_offset_at(object, exposure)
+  oa <- ilm_offset_at(object, per)
   est <- as.numeric(L %*% b) + if (is.null(oa)) 0 else oa
   Vem <- L %*% V %*% t(L)
   se <- sqrt(pmax(diag(Vem), 0))
@@ -302,7 +303,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   structure(out, class = c("ilm_emm", "data.frame"), L = L, V = Vem,
             specs = specs, weights = weights, type = type, level = level,
             family = fam, object = object,
-            exposure_note = ilm_exposure_note(object, exposure),
+            per_note = ilm_per_note(object, per),
             df_method = if (is.null(dd)) {
               if (isTRUE(object$exact_df)) "residual" else "asymptotic"
             } else attr(dd, "method"),
@@ -476,9 +477,9 @@ print.ilm_emm <- function(x, ...) {
                        satterthwaite = "Satterthwaite's", supplied = "the supplied",
                        asymptotic = "infinite (the normal)", attr(x, "df_method"))))
   ## a model with an offset: what the means are per
-  if (!is.null(attr(x, "exposure_note"))) {
+  if (!is.null(attr(x, "per_note"))) {
     cat("\n")
-    writeLines(strwrap(paste0("Means ", attr(x, "exposure_note"), "."), width = 78,
+    writeLines(strwrap(paste0("Means ", attr(x, "per_note"), "."), width = 78,
                        indent = 2, exdent = 2))
   }
   ord <- startsWith(attr(x, "family"), "ordinal")
