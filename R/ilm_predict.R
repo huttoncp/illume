@@ -430,7 +430,7 @@ ilm_fitted_place <- function(object, newdata) {
   ar <- object$ar
   if (!is.null(ar) && is.null(ar$vars))
     stop("the correlation over time was built from vectors, so new rows ",
-         "cannot be placed on its fitted cells. Build it by name, ",
+         "cannot be placed in it. Build it by name, ",
          "ilm_", ar$type, "(~ time | group), or ", alt, ".", call. = FALSE)
   ## a fitted prediction is for a particular group, so it needs the columns
   ## that say which -- ilm_matrices() places rows without them in no group,
@@ -445,7 +445,7 @@ ilm_fitted_place <- function(object, newdata) {
   }
   if (!is.null(ar) && length(miss <- setdiff(ar$vars, names(newdata))))
     stop("`newdata` needs ", paste(sQuote(miss), collapse = " and "), " to place ",
-         "its rows among the correlation over time's fitted cells; ", alt, ".",
+         "its rows in the fitted correlation over time; ", alt, ".",
          call. = FALSE)
   M <- ilm_matrices(object, newdata)
   re <- lapply(gk, function(k) {
@@ -475,10 +475,10 @@ ilm_fitted_place <- function(object, newdata) {
           "have to be forecast, which predict() does not do")
         else "between two of its group's fitted times"
       stop(sum(off), " row", if (sum(off) > 1L) "s" else "", " of `newdata` ",
-           if (sum(off) > 1L) "fall" else "falls", " off the correlation ",
-           "over time's fitted cells: row ", i, " is at ", format(a$time[i]),
+           if (sum(off) > 1L) "are" else "is", " at no time the correlation ",
+           "over time was fitted at: row ", i, " is at ", format(a$time[i]),
            " in group ", a$group[i], ", ", why, ". groups = \"fitted\" uses ",
-           "the fitted value of each row's cell; ", alt, ".", call. = FALSE)
+           "the fitted value at each row's own time; ", alt, ".", call. = FALSE)
     }
     cell <- a$cell
   }
