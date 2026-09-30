@@ -187,7 +187,7 @@ ilm_plot_effect <- function(model, term = NULL, conf = 0.95, colour = "black",
   per_unit <- inherits(model, "ilm_model") && !is.null(model$offset)
   pred1 <- function(nd) {
     pr <- tryCatch(if (per_unit)
-                     stats::predict(model, newdata = nd, se.fit = TRUE, exposure = "unit")
+                     stats::predict(model, newdata = nd, se.fit = TRUE, per = "unit")
                    else stats::predict(model, newdata = nd, se.fit = TRUE),
                    error = function(e)
                      stop("predict() failed for this model: ", conditionMessage(e),
