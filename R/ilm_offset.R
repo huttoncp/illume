@@ -40,50 +40,49 @@ ilm_offset_need <- function(object, newdata) {
 ## A mean, a marginal effect or a scenario from a model with an offset is
 ## reported per unit of exposure -- the offset at zero, so for
 ## offset(log(exposure)) the rate per one unit of it, cases per person-year
-## -- and says so. An argument sets another exposure, per 100,000 say. The
-## argument's NAME is a ruling still to come (item 152), so it is kept here,
-## for the messages and notes; predict() keeps each row's own exposure unless
-## told otherwise, as glm() does.
+## -- and says so. The argument `per` (Craig's item 166) rescales the offset,
+## the exposure, to another value: per = 1e5 for a rate per 100,000. Its name
+## is kept here, for the messages and notes. predict() keeps each row's own
+## exposure unless told otherwise, as glm() does.
 #' @keywords internal
 #' @noRd
-ilm_exposure_arg <- "exposure"
+ilm_per_arg <- "per"
 
 ## The offset's value at an exposure: the offset's expression evaluated with
-## each of its variables set to `exposure`. NULL (per unit) is an offset of 0;
+## each of its variables set to `per`. NULL (per unit) is an offset of 0;
 ## "unit" says the same inside predict(). NULL when the model has no offset.
 #' @keywords internal
 #' @noRd
-ilm_offset_at <- function(object, exposure = NULL) {
+ilm_offset_at <- function(object, per = NULL) {
   if (is.null(object$offset)) return(NULL)
-  if (is.null(exposure) || identical(exposure, "unit")) return(0)
-  if (!is.numeric(exposure) || length(exposure) != 1L || !is.finite(exposure) ||
-      exposure <= 0)
-    stop("`", ilm_exposure_arg, "` must be one positive number, the exposure ",
+  if (is.null(per) || identical(per, "unit")) return(0)
+  if (!is.numeric(per) || length(per) != 1L || !is.finite(per) || per <= 0)
+    stop("`", ilm_per_arg, "` must be one positive number, the exposure ",
          "to report at", call. = FALSE)
   ot <- ilm_offset_terms(object$terms)
   vv <- all.vars(parse(text = paste(ot, collapse = " + ")))
-  env <- list2env(stats::setNames(rep(list(exposure), length(vv)), vv),
+  env <- list2env(stats::setNames(rep(list(per), length(vv)), vv),
                   parent = if (is.null(environment(object$formula))) baseenv()
                            else environment(object$formula))
   val <- sum(vapply(ot, function(t) as.numeric(eval(str2lang(t), env)), 0))
   if (!is.finite(val))
     stop("the offset, ", paste(ot, collapse = " + "), ", is not finite at ",
-         ilm_exposure_arg, " = ", format(exposure), call. = FALSE)
+         ilm_per_arg, " = ", format(per), call. = FALSE)
   val
 }
 
 ## What a result from a model with an offset is per: said in its print.
 #' @keywords internal
 #' @noRd
-ilm_exposure_note <- function(object, exposure = NULL) {
+ilm_per_note <- function(object, per = NULL) {
   if (is.null(object$offset)) return(NULL)
   ot <- ilm_offset_terms(object$terms)
   vv <- all.vars(parse(text = paste(ot, collapse = " + ")))
-  if (is.null(exposure))
+  if (is.null(per))
     paste0("per unit of exposure: the offset, ", paste(ot, collapse = " + "),
            ", at 0 (", paste(vv, collapse = ", "), " = 1 for a log offset); `",
-           ilm_exposure_arg, " =` sets another")
+           ilm_per_arg, " =` sets another")
   else
-    paste0("at ", paste(vv, collapse = ", "), " = ", format(exposure, big.mark = ","),
+    paste0("at ", paste(vv, collapse = ", "), " = ", format(per, big.mark = ","),
            ", through the offset ", paste(ot, collapse = " + "))
 }
