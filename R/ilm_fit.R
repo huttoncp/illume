@@ -890,7 +890,8 @@ ilm_precheck <- function(y, J, re, re_struct, ar = NULL, weights = NULL,
 ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, kinds = NULL,
                       pnames = NULL, gap = NULL, hess = NULL,
                       boundary = character(0), avoided = FALSE,
-                      ar_type = NULL, disp = NULL) {
+                      ar_type = NULL, disp = NULL, fam_name = NULL,
+                      ysd = NA_real_) {
   how <- if (is.null(hess)) "tmb" else hess$how
   ## The remedy a boundary check names. Under the default the penalised
   ## alternative is named with what it costs; a fit that already used it
@@ -973,6 +974,12 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (!pd || anyNaN) "simplify the covariance structure; standard errors are unusable until this is resolved" else "")
   if (!is.null(disp)) {
     w <- ilm_disp_limit_words(disp$family, disp$value, disp$ysd)
+    ## "held" only where the fit holds it: what this check says and what the
+    ## hessian check and the draws do must agree
+    if (!"dispersion" %in% held)
+      w$detail <- sub("where it is held at its estimate",
+                      "but NOT held: no covariance holding it could be formed (see the hessian check)",
+                      w$detail, fixed = TRUE)
     ck <- ilm_add_check(ck, "dispersion_limit", "BOUNDARY", w$detail, w$why,
                         w$remedy)
   }
@@ -984,12 +991,26 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
   nmv <- if (nrow(rp)) rownames(rp) else character(0)
   ## Grouping terms only.  For a basis (spline) term a component shrinking to
   ## zero is how penalisation WORKS -- it is reported by smooth_shrinkage below.
-  gsd <- unlist(lapply(names(Sig), function(nm)
-    if (kind_of(nm) == "basis") NULL else sqrt(diag(Sig[[nm]]))))
-  if (length(gsd)) {
-    bad <- gsd < 1e-3
+  ## A term the fit HOLDS at its boundary is at zero, wherever on the flat
+  ## ridge the optimiser stopped: an SD held at 1.04e-03 used to read OK here
+  ## while the hessian check said it was held. Held counts as zero below the
+  ## line the hold rule itself uses -- a term held for a correlation at its
+  ## edge, with its SDs identified, is not.
+  gnm <- Filter(function(nm) kind_of(nm) != "basis", names(Sig))
+  if (length(gnm)) {
+    sdmin <- vapply(gnm, function(nm)
+      min(sqrt(pmax(diag(as.matrix(Sig[[nm]])), 0))), 0)
+    rel <- identical(fam_name, "gaussian") && is.finite(ysd)
+    line <- vapply(gnm, function(nm)
+      if (identical(nm, "ar")) (if (rel) ilm_ar_sd_limit * ysd else 1e-3)
+      else if (rel) ilm_re_sd_limit * ysd else ilm_re_sd_limit, 0)
+    held0 <- gnm %in% held & sdmin < line & sdmin >= 1e-3
+    bad <- sdmin < 1e-3 | held0
     ck <- ilm_add_check(ck, "variance_boundary", if (any(bad)) "WARN" else "OK",
-      sprintf("smallest random-effect SD across grouping terms = %.2e", min(gsd)),
+      paste0(sprintf("smallest random-effect SD across grouping terms = %.2e", min(sdmin)),
+             if (any(held0)) paste0("; held at zero: ", paste(sprintf(
+               "%s (the optimiser stopped at %.2e)", gnm[held0], sdmin[held0]),
+               collapse = ", ")) else ""),
       if (any(bad)) "a random-effect variance has collapsed to zero" else "",
       if (any(bad)) paste0("drop that term if the design does not call for ",
                            "it; if it does -- repeated measures, say -- keep ",
@@ -1207,8 +1228,12 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
     if (bad) flagged <- c(flagged, nm)
     ## a single SD under the wider line is a candidate, held only where the
     ## likelihood is flat below it (ilm_re_flat)
+    ## -- measured against the response's SD for a gaussian response, whose
+    ## units are the user's, and on the link scale otherwise
     else if (!identical(re[[k]]$kind, "basis") && length(sdv) == 1L &&
-             dk[k] == 1L && isTRUE(sdv < ilm_re_sd_limit))
+             dk[k] == 1L &&
+             isTRUE(if (identical(fam$name, "gaussian") && is.finite(ysd))
+                      sdv / ysd < ilm_re_sd_limit else sdv < ilm_re_sd_limit))
       maybe <- c(maybe, nm)
   }
   if (!is.null(ar)) {
@@ -1229,6 +1254,12 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
       eff <- if (car) rho^stats::median(ar$gap) else rho
       if (abs(eff) > 0.99 || any(sqrt(pmax(diag(Sa), 0)) < 1e-3) || flat)
         flagged <- c(flagged, "ar")
+      ## a gaussian AR(1)'s single SD under the wider line is a candidate,
+      ## held only where the likelihood is flat below it (ilm_re_flat)
+      else if (identical(ar$type, "ar1") && identical(fam$name, "gaussian") &&
+               nrow(Sa) == 1L && is.finite(ysd) &&
+               isTRUE(sqrt(max(Sa[1, 1], 0)) / ysd < ilm_ar_sd_limit))
+        maybe <- c(maybe, "ar")
     }
   }
   ## A dispersion at its unbounded limit is the same kind of edge: the
@@ -1274,7 +1305,30 @@ ilm_disp_limit <- 1e-2
 ## below 1e-3, here of the response's SD so that the line does not depend on
 ## its units -- and the same flatness test, with log sigma pushed 3 LOWER
 ## (studies/scripts/dispersion_limit_gaussian.R).
-ilm_sigma_limit <- 1e-3
+##
+## The line was 1e-3 of the response's SD, and the optimiser can stop well
+## above it on the flat likelihood: at 0.023 to 0.05 of it in a panel of
+## noise-free AR(1) series, with draws of sigma to 1e14 and beyond. Measured
+## on 6,300 gaussian fits (studies/scripts/sigma_limit.R), and again on
+## 6,300 fresh ones: no fit the flatness test calls flat had sigma above
+## 0.107 of sd(y), and no line held a fit that was not at its boundary -- the
+## pre-registered criterion chose the flatness test alone. The line is 0.2,
+## Craig's ruling: a guard for ridge fits, where noise and a latent trade
+## off, that the study did not cover.
+ilm_sigma_limit <- 0.2
+
+## A GAUSSIAN AR(1)'s SD SHORT OF ZERO, the mirror case: with weak
+## correlation the residual takes up the latent's variance, and its SD stops
+## short of zero on a flat likelihood. Held by the random-effect SD's rule --
+## below ilm_ar_sd_limit of sd(y), and the objective moving by at most
+## ilm_re_flat_tol with its log SD pushed 3 lower -- measured on the same
+## fits: no false hold at any line, 1,358 held on fresh seeds at 0.1 or
+## above against 1,268 at 1e-3. The line is 0.1, not 0.2: in a time series
+## a trend or a season can dominate sd(y), so a fraction of it is looser than
+## it looks (Craig). Gaussian responses and ar1 only; a CAR(1), a random
+## walk or another family's AR keeps the rule above, since its scale is not
+## sd(y)'s and it is not yet measured.
+ilm_ar_sd_limit <- 0.1
 
 ## ...and the likelihood flat beyond it: pushing the log dispersion 3 further
 ## -- k or phi twenty times larger -- changes the objective, with the random
@@ -1298,6 +1352,7 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
   f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
   ## the tape last evaluated at the pushed point; put it back at the optimum
   invisible(tryCatch(obj$fn(par), error = function(e) NULL))
+  cb$push[["dispersion"]] <- f1 - f0
   if (isTRUE(f1 - f0 <= ilm_disp_flat_tol)) return(cb)
   cb$flagged <- setdiff(cb$flagged, "dispersion")
   cb$blocks[["dispersion"]] <- NULL
@@ -1319,6 +1374,14 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
 ## without the term fits as well; a looser 5e-3 would have held 46 terms
 ## whose removal cost more than that. Confirmed on fresh seeds. The
 ## tolerance is the dispersion rule's.
+##
+## For a gaussian response the line is 0.1 of sd(y), not 0.1 in the
+## response's units: the flatness test does not move with the units, and an
+## absolute line did. Rebuilt from the stored fits' seeds, the relative line
+## held the same 656 (641 fresh) with no false hold, the flat SDs reaching
+## 0.049 of sd(y) -- so in grams where the study had kilograms the absolute
+## line would have missed every one. Other families keep 0.1 on the link
+## scale, which has no units.
 ilm_re_sd_limit <- 0.1
 ilm_re_flat_tol <- ilm_disp_flat_tol
 
@@ -1329,11 +1392,30 @@ ilm_re_flat <- function(obj, par, cb) {
   f0 <- tryCatch(obj$fn(par), error = function(e) NA_real_)
   for (nm in cb$maybe) {
     id <- cb$blocks[[nm]]
+    ## an AR block is its log SD and its correlation; only the SD is pushed
+    if (identical(nm, "ar")) id <- id[names(par)[id] == "lchol_ar"]
     p2 <- par; p2[id] <- p2[id] - 3
     f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
+    cb$push[[nm]] <- f1 - f0
     if (isTRUE(f1 - f0 <= ilm_re_flat_tol)) {
       cb$flagged <- c(cb$flagged, nm)
       cb$force <- c(cb$force, nm)
+    }
+  }
+  ## A gaussian residual SD and an AR SD can both look flat when the noise
+  ## and the latent are interchangeable, their sum determined; holding both
+  ## would set the total to zero, which the data refute (in 221 such fits,
+  ## pushing both together was never flat). Only the one whose own push
+  ## moves the objective least is held.
+  if ("ar" %in% cb$force && "dispersion" %in% cb$flagged &&
+      is.finite(cb$push[["ar"]] %||% NA) && is.finite(cb$push[["dispersion"]] %||% NA)) {
+    drop <- if (cb$push[["dispersion"]] <= cb$push[["ar"]]) "ar" else "dispersion"
+    cb$flagged <- setdiff(cb$flagged, drop)
+    cb$force <- setdiff(cb$force, drop)
+    if (identical(drop, "dispersion")) {
+      id <- cb$blocks[["dispersion"]]
+      cb$blocks[["dispersion"]] <- NULL
+      cb$keep <- sort(c(cb$keep, id))
     }
   }
   ## the tape last evaluated at a pushed point; put it back at the optimum
@@ -2705,7 +2787,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                     ar_type = ar$type,
                     disp = if ("dispersion" %in% cb$flagged)
                       list(family = fam$name,
-                           value = exp(opt$par[pn == "logdisp"]), ysd = ysd))
+                           value = exp(opt$par[pn == "logdisp"]), ysd = ysd),
+                    fam_name = fam$name, ysd = ysd)
   if (verbose) ilm_print_checks(post, "post-fit convergence checks")
   st <- c(pre$status, post$status)
   if (verbose) {

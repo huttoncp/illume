@@ -248,7 +248,6 @@ test_that("a predictor in a multinomial model gets one verdict, in shares", {
 })
 
 test_that("a cluster profile is written up as the profile of each cluster", {
-  skip_if_not_installed("PCAmixdata")
   skip_if_not_installed("cluster")
   skip_if_not("not_distinctive" %in% names(
     suppressMessages(illumex::ilm_profile(mtcars[1:4], k = 2, B = 5, seed = 1,

@@ -1,6 +1,31 @@
-# illume 0.0.8.9002
+# illume 0.0.8.9003
 
-* illume now requires illumex 0.0.8.9000.
+* illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
+  needs PCAmixdata.
+* Three variance hold lines for gaussian responses, each measured against
+  the response's SD so that none depends on its units, and each holding a
+  term only where the likelihood is flat below it, as before:
+  - sigma below 0.2 of sd(y), where the line was 1e-3 of it. The optimiser
+    could stop at 0.02 to 0.05 of sd(y) on a flat likelihood, with draws of
+    sigma to 1e14 and beyond. Measured on 6,300 fits and confirmed on 6,300
+    fresh ones (`studies/scripts/sigma_limit.R`): no line held a fit that
+    was not at its boundary, and the pre-registered criterion chose the
+    flatness test alone; the 0.2 line guards ridge fits the study did not
+    cover.
+  - a gaussian AR(1)'s SD below 0.1 of sd(y), where it was 1e-3 on any
+    scale: 1,358 held on fresh seeds against 1,268, none falsely. 0.1 and
+    not 0.2, since a trend or a season can dominate sd(y).
+  - a random effect's SD below 0.1 of sd(y), where it was 0.1 in the
+    response's units: the same fits held in the study's units, and none
+    missed in any other. Other families keep 0.1 on the link scale.
+  Where sigma and an AR SD are both flat -- the noise and the latent
+  interchangeable -- only the one whose push moves the objective least is
+  held: pushed together they were never flat. A CAR(1), a random walk and
+  an AR in another family keep the old rule for now.
+* `variance_boundary` grades a random-effect or AR term the fit holds as at
+  zero, naming where the optimiser stopped, rather than reading OK beside a
+  hessian check that says the term is held. `dispersion_limit` says a
+  dispersion is held only where it is.
 * A model fitted inside a function that passes its arguments on with `...`
   refits. Its recorded call held the wrapper's `..1`, `..2`, so
   `ilm_refit(fit, data = )`, a remedy or `update()` that evaluates the call

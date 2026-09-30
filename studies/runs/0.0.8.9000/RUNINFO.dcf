@@ -60,3 +60,4 @@ Note: bench, boundary_se, mclogit and brms reproduce 0.0.7.9000's estimates
  7.2 at J = 5, about a fifth slower relative to nnet. Not yet explained.
 Note: From 04:15 on 2026-09-24 the re-runs used 5 workers rather than 10.
  Every replicate sets its own seed, so only the secs columns are affected.
+Date.sigma_limit: 2026-09-27 (phase 1) and 2026-09-28 (fresh seeds)
