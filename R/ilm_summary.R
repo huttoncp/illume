@@ -167,7 +167,7 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   ## the rows the fit used, when missing values took some: a model fitted to
   ## 61% of the data should say so beside its fit statistics
   rl <- ilm_rows_line(ilm_rows_used(o), always = FALSE)
-  if (!is.null(rl)) writeLines(strwrap(paste0("Rows: ", rl), width = 78, exdent = 6))
+  if (!is.null(rl)) writeLines(strwrap(rl, width = 78, exdent = 6))
 
   if (length(o$re)) cat("\nRandom effects:\n")
   for (k in seq_along(o$re)) {
