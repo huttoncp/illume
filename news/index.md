@@ -18,6 +18,14 @@
   given by name) from the fit itself, so a wrapper of a wrapper refits
   as well. Found by another agent.
 
+- A fit whose gradient stops being finite – the optimiser walked a
+  parameter along a flat direction to where the arithmetic breaks down –
+  is now returned with a failing optimizer check, instead of stopping
+  with nlminb’s “NA/NaN gradient evaluation” error. The fit restarts
+  once from the best point where the gradient was finite, and if it
+  breaks down again, stops there. Seen on macOS for a beta whose phi ran
+  to its limit.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   on an
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
