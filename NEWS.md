@@ -27,7 +27,9 @@
   since sets adjust for different columns and can lose different rows. The
   rows themselves are stats' own record, `stats::na.action(fit)`, which works
   on every fit. `print()` and `summary()` now say how many rows missing
-  values took, and from which columns, where they took any.
+  values took, and from which columns, where they took any, in one line:
+  "Rows: 55 of 60 analysed; 5 dropped for missing values (y 2, x 3, z 1; a
+  row missing in several columns counts in each)".
 * Three variance hold lines for gaussian responses, each measured against
   the response's SD so that none depends on its units, and each holding a
   term only where the likelihood is flat below it, as before:
@@ -61,6 +63,12 @@
   correlation over time (`ilm_ar1()`, `ilm_car1()`, `ilm_rw1()` given by
   name) from the fit itself, so a wrapper of a wrapper refits as well.
   Found by another agent.
+* A fit whose gradient stops being finite -- the optimiser walked a parameter
+  along a flat direction to where the arithmetic breaks down -- is now
+  returned with a failing optimizer check, instead of stopping with nlminb's
+  "NA/NaN gradient evaluation" error. The fit restarts once from the best
+  point where the gradient was finite, and if it breaks down again, stops
+  there. Seen on macOS for a beta whose phi ran to its limit.
 * `ilm_interpret()` on an `ilm_dag_model()` describes the exposure's effect
   and nothing else. It used to describe every coefficient of the fit in
   causal language, so an adjustment covariate was said to "affect" the

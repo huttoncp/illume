@@ -114,9 +114,6 @@ ilm_plot_coef <- function(model, conf = 0.95, colour = "black", size = 1,
                        excludes_zero = sig, row.names = NULL))
 }
 
-## illumex has a copy; tests/testthat/test-shared-helpers.R keeps them equal.
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 ## ---- partial dependence ----------------------------------------------------
 
 ## One predictor varied across its range with the others held at typical
