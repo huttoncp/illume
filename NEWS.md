@@ -24,9 +24,10 @@
   4.0 and 0.44 by REML. An arm fitted by maximum likelihood on the same
   data (pre-registered as A1) did not support that path: Satterthwaite's
   intervals missed 95% in 6 of the 12 designs with 10 or more clusters
-  (0.902 to 0.934), against 1 under REML; with 6 clusters they covered 0.893
-  against REML's 0.961, and a 5% test of a between-cluster factor rejected
-  19.0% of the time against 7.8%. Until REML is the default for these
+  (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an ICC
+  of 0.3 they covered 0.893 against REML's 0.961, and with 6 clusters a 5%
+  test of a between-cluster factor rejected 19.0% of the time against 7.8%.
+  Until REML is the default for these
   models, fit with `reml = TRUE` for the tables the study supports.
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
   pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
