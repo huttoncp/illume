@@ -58,5 +58,27 @@ f <- ilm_model(visits ~ income + (1 | id), data = d, family = "poisson",
 #> Warning: NA/NaN function evaluation
 #> Warning: NA/NaN function evaluation
 #> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
+#> Warning: NA/NaN function evaluation
 ilm_check_predictive(f, B = 30)
 ```

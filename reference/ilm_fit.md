@@ -114,8 +114,10 @@ ilm_fit(
 
 - restarts:
 
-  Integer. Number of optimiser restarts from the previous solution,
-  which helps on difficult surfaces.
+  Integer. Number of optimiser restarts from the fit's own solution.
+  They refine it and confirm where it stopped (the `optimizer` check
+  reads them), but begin nowhere else, so they do not search for other
+  optima.
 
 - joint:
 

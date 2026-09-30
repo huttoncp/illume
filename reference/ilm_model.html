@@ -199,7 +199,9 @@ predictor contrast and is not affected by this argument.</p></dd>
 
 
 <dt id="arg-restarts">restarts<a class="anchor" aria-label="anchor" href="#arg-restarts"></a></dt>
-<dd><p>Integer. Optimiser restarts.</p></dd>
+<dd><p>Integer. Optimiser restarts from the fit's own solution.
+They refine it and confirm where it stopped (the <code>optimizer</code> check reads
+them), but begin nowhere else, so they do not search for other optima.</p></dd>
 
 
 <dt id="arg-joint">joint<a class="anchor" aria-label="anchor" href="#arg-joint"></a></dt>
@@ -423,6 +425,13 @@ coefficients while its covariance matrix is unusable, making the standard
 errors meaningless. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> prints the check verdicts for that reason,
 and <code>fit$checks</code> holds the full table with a reason and a suggested remedy
 for anything that is not <code>"OK"</code>.</p>
+<p>The <code>parameter_aliasing</code> line reports the largest correlation between two
+estimated parameters. Under <code>reml = TRUE</code> the fixed effects are integrated
+out, so the coefficients' correlations and the variance parameters' are
+assessed separately, and a correlation BETWEEN a coefficient and a variance
+parameter is not assessed. For example, a between-group covariate with few
+groups, nearly confounded with the group variance, shows under maximum
+likelihood only. The line says so on a REML fit.</p>
     </div>
     <div class="section level2">
     <h2 id="how-smooth-terms-are-named">How smooth terms are named<a class="anchor" aria-label="anchor" href="#how-smooth-terms-are-named"></a></h2>

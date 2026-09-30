@@ -196,10 +196,10 @@ a
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
 #>   z tests
 #> 
-#>  contrast estimate     se  df  lower upper   p_adj
-#>     2 - 1   0.8775 0.2762 Inf 0.2310 1.524 0.00385
-#>     3 - 1   2.1202 0.2762 Inf 1.4736 2.767 0.00000
-#>     3 - 2   1.2427 0.2762 Inf 0.5961 1.889 0.00000
+#>  contrast estimate     se  df  lower upper  p_adj
+#>     2 - 1   0.8775 0.2762 Inf 0.2307 1.524 0.0039
+#>     3 - 1   2.1202 0.2762 Inf 1.4734 2.767 0.0000
+#>     3 - 2   1.2427 0.2762 Inf 0.5959 1.889 0.0000
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 
@@ -231,10 +231,10 @@ a
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
 #>   z tests
 #> 
-#>  contrast estimate     se  df   lower  upper  p_adj
-#>     2 - 1 -0.37908 0.3906 Inf -1.2934 0.5353 0.5988
-#>     3 - 1 -0.08503 0.3906 Inf -0.9994 0.8293 0.9748
-#>     3 - 2  0.29406 0.3906 Inf -0.6203 1.2084 0.7349
+#>  contrast estimate     se  df  lower upper  p_adj
+#>     2 - 1 -0.37908 0.3906 Inf -1.297 0.539 0.6002
+#>     3 - 1 -0.08503 0.3906 Inf -1.003 0.833 0.9752
+#>     3 - 2  0.29406 0.3906 Inf -0.624 1.212 0.7379
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 

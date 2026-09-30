@@ -154,8 +154,10 @@ response instead.</p></dd>
 
 
 <dt id="arg-restarts">restarts<a class="anchor" aria-label="anchor" href="#arg-restarts"></a></dt>
-<dd><p>Integer. Number of optimiser restarts from the previous
-solution, which helps on difficult surfaces.</p></dd>
+<dd><p>Integer. Number of optimiser restarts from the fit's own
+solution. They refine it and confirm where it stopped (the <code>optimizer</code>
+check reads them), but begin nowhere else, so they do not search for
+other optima.</p></dd>
 
 
 <dt id="arg-joint">joint<a class="anchor" aria-label="anchor" href="#arg-joint"></a></dt>

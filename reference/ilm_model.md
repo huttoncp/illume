@@ -157,7 +157,9 @@ ilm_model_formula(
 
 - restarts:
 
-  Integer. Optimiser restarts.
+  Integer. Optimiser restarts from the fit's own solution. They refine
+  it and confirm where it stopped (the `optimizer` check reads them),
+  but begin nowhere else, so they do not search for other optima.
 
 - joint:
 
@@ -412,6 +414,15 @@ standard errors meaningless.
 [`summary()`](https://rdrr.io/r/base/summary.html) prints the check
 verdicts for that reason, and `fit$checks` holds the full table with a
 reason and a suggested remedy for anything that is not `"OK"`.
+
+The `parameter_aliasing` line reports the largest correlation between
+two estimated parameters. Under `reml = TRUE` the fixed effects are
+integrated out, so the coefficients' correlations and the variance
+parameters' are assessed separately, and a correlation BETWEEN a
+coefficient and a variance parameter is not assessed. For example, a
+between-group covariate with few groups, nearly confounded with the
+group variance, shows under maximum likelihood only. The line says so on
+a REML fit.
 
 ## How smooth terms are named
 
