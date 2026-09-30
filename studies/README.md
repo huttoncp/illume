@@ -91,9 +91,9 @@ Write output into `runs/<version>/<study>/`, which is the layout the summariser
 and pruner expect, and record the run in `runs/<version>/RUNINFO.dcf`:
 
 ```
-Rscript scripts/coverage_study.R  2000 10 runs/0.0.1.9000/coverage
-Rscript scripts/power_study.R     2000 10 runs/0.0.1.9000/power
-Rscript scripts/mclogit_compare.R  500 10 runs/0.0.1.9000/mclogit
+Rscript scripts/coverage_study.R  2000 10 runs/<version>/coverage
+Rscript scripts/power_study.R     2000 10 runs/<version>/power
+Rscript scripts/mclogit_compare.R  500 10 runs/<version>/mclogit
 ```
 
 They need illume **installed**, not merely loaded, because the parallel workers
@@ -116,17 +116,11 @@ directory.
 
 ## Findings
 
-See `findings/*.md`. As of version 0.0.1.9000 (run 2026-09-19):
-
-- **Coverage is nominal everywhere** — 0.947 to 0.954 across 11 designs.
-- **The latent budget governs convergence, not coverage** — 33% / 58% / 83% /
-  98% convergence at 1.5 / 3 / 5 / 10 observations per latent value, with
-  coverage among converged fits staying nominal throughout.
-- **Type I error is nominal** for Wald and LRT, with uniform null p-values.
-- **mclogit's PQL silently under-covers** — 0.891 against illume's 0.949 at four
-  observations per cluster.
-- **Agreement with independent implementations** at numerical tolerance, and
-  within 0.10 SE of brms at ~82x the speed.
+Each study's results are in `findings/<study>.md`, one section per package
+version, newest first; the newest section is the current run. As of this
+writing that is 0.0.8.9000, run on 2026-09-23 and 2026-09-24 (the dates of
+each study are in `runs/0.0.8.9000/RUNINFO.dcf`). The figures are not repeated
+here, so that they cannot fall out of step with the run that produced them.
 
 Each findings file carries the caveats that belong with its result, including
 that coverage in cells with convergence failures is conditional on convergence.

@@ -111,6 +111,12 @@ test_that("a correlation over time contributes the fitted value of each cell", {
                "forecast")
   expect_error(predict(f, data.frame(t = 3, id = "z"), groups = "fitted"),
                "a group the fit has not seen")
+  ## said plainly: the row is at no fitted time, or has no time to be placed at
+  expect_error(predict(f, data.frame(t = 3, id = "z"), groups = "fitted"),
+               "1 row of `newdata` is at no time the correlation over time was fitted at",
+               fixed = TRUE)
+  expect_error(predict(f, data.frame(id = "a"), groups = "fitted"),
+               "to place its rows in the fitted correlation over time", fixed = TRUE)
   ## a term built from vectors cannot place new rows
   fv2 <- ilm_model(y ~ 1, data = d, family = "gaussian",
                    ar = ilm_rw1(d$t, d$id), verbose = FALSE)
