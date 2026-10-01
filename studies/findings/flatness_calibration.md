@@ -124,3 +124,34 @@ the line) are held by the pushes (largest 0.006 and 0.001) with nlminb code 1.
 for CI's five platforms, and only the negative binomial and the random
 effects have labels. The confirmation fixed the floor at e^6 in advance, so
 V1 and V2 are tests of it, not choices of it.
+
+## Known limitation: a runaway fit's hold differs between platforms
+
+Found on main's CI after the rule merged (#60, run 36879360132; all five
+runners on RTMB 2.0 and TMB 1.9.25, so the difference is the platforms'
+arithmetic, not the packages). The curved CI beta, seed 63362 with phi 1e4,
+runs away without converging (here: nlminb code 1, largest gradient 3.96,
+optimizer and gradient checks FAIL):
+
+- on Windows and macOS (and both local builds) it stops e^-9.43 below its
+  line, past the floor, and is held by its value;
+- on Linux's R release and devel it stops e^-5.76 below the line, short of
+  the floor, and the pushes do not hold it;
+- on Linux's R oldrel (R 4.5.3, Matrix 1.7-4) it stops past the floor and is
+  flagged by value, but is still not held.
+
+The last is the hold's mechanics, not the rule's. Off a stationary point
+every route to a hold that uses the fit's own Hessian refuses, and the one
+left (hold_disp() in R/ilm_fit.R) keeps TMB's covariance, which it takes only
+where TMB calls its Hessian positive definite. At a non-stationary point that
+verdict is float noise, so whether such a fit's dispersion is held -- and so
+what summary() and vcov() say of it -- can differ between platforms. Its
+optimizer and gradient checks FAIL on every platform, which is what the fit
+says of itself either way. The tests no longer assert a hold for a fit that
+does not converge (test-dispersion-limit.R; the hold by value is tested on a
+gaussian sigma that converges e^-11.8 below its line).
+
+Follow-up, to be registered before it runs and run after the fix merges: the
+confirmation's runaway fits (V6's list) under a Linux build -- one here if it
+becomes available, or on a GitHub runner through a workflow_dispatch job,
+which needs Craig's word as a push.
