@@ -615,11 +615,14 @@ space and separation in time are the same statistic over a different distance:
 ilm_variogram(fit, coords = dd[, c("easting", "northing")])
 ```
 
-The remedy it names is different, and deliberately so. illume fits no spatial
-covariance — no Matern field, no exponential one — so the advice does not
-pretend otherwise. What it points at is putting the structure in the **mean**:
-a tensor-product smooth of the coordinates, `t2(x, y)`, absorbs smooth spatial
-variation, and a random effect for a spatial grouping absorbs the coarse kind.
+The remedy it names is different, and it names the terms in the data's own
+variables. illume fits no Matern or exponential covariance, so the advice does
+not pretend otherwise; it points at the terms that do the job. For point
+locations, a tensor-product smooth of the coordinates, `t2(easting, northing)`,
+absorbs smooth spatial variation. For areal units -- districts, counties -- with
+a neighbour list `nb`, a Markov random field over the neighbours does:
+`s(area, bs = "mrf", xt = list(nb = nb))`, with `(1 | area)` beside it for the
+Besag-York-Mollie form of disease mapping (see `?ilm_model`).
 
 Measured on 300 points carrying an exponential field, residual correlation ran
 0.242 at the shortest distance down through 0.071 to −0.072 at the longest.

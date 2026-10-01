@@ -1696,6 +1696,62 @@ ilm_floor_refit <- function(obj, opt, pos, floor, ctl) {
   o2
 }
 
+## AN AR(1) CORRELATION HAS A FLOOR TOO, AND AN EDGE THAT IS NOT AN OPTIMUM.
+## It is fitted as atanh(rho), which has no end. Past about |atanh(rho)| = 11
+## the stationary terms' 1 - rho^2 loses its digits: the objective falls away,
+## spuriously, and the gradient with it. Measured on a 12-point gaussian
+## series from a simulation study, profiled along atanh(rho) with everything
+## else re-optimised: the objective moves by under 1e-6 between 8 and 10, by
+## 5e-6 at 12, 1e-4 at 14, 3e-3 at 15, and at 19 it is 0.24 against a true
+## minimum of 0.49 at rho = -0.55 -- which is where the fit had gone, graded
+## FAIL with a gradient of 11. Short of that, the objective flattens towards
+## the edge, and there the gradient is small enough for the optimiser to stop
+## at rho = -1 with everything graded well: at 0.666, not 0.490. So a fit that
+## ends near the edge (|rho| above 0.99, where the rho_boundary check fails)
+## is refitted with atanh(rho) bounded at 8 (rho within 2.3e-7 of +/-1),
+## from where it stopped (brought back to the floor if it went past it) and
+## from a correlation of 0; bounded, the optimiser reaches the true minimum
+## from every start tried, 0 and +/-1 to -3 among them. The start from 0 is
+## kept only if it is better. Where the AR SD has gone to zero the
+## correlation is not identified, the objective is the same at every value,
+## and one at exactly 0 has no curvature at all -- the joint draws' solve is
+## then exactly singular -- so on a tie the fit stays where it was, or at the
+## floor. A fit that went past the floor keeps the refit even when its
+## objective is "worse": the one past the floor is not real. Every fit with
+## |rho| at or below 0.99 is exactly what it was. A correlation whose true
+## optimum is at the edge ends there, where the boundary checks and the hold
+## treat it as a correlation at +/-1.
+ilm_rho_floor <- 8
+ilm_rho_edge <- atanh(0.99)
+
+#' @keywords internal
+#' @noRd
+ilm_rho_refit <- function(obj, opt, k, fpos, ffl, ctl, bound = ilm_rho_floor,
+                          edge = ilm_rho_edge) {
+  if (!length(k) || all(abs(opt$par[k]) <= edge)) return(opt)
+  ## the variance floor's bounds are kept, so neither refit undoes the other
+  lo <- rep(-Inf, length(opt$par)); hi <- rep(Inf, length(opt$par))
+  lo[fpos] <- ffl; lo[k] <- -bound; hi[k] <- bound
+  fit_from <- function(st) tryCatch({
+    st <- pmin(pmax(st, lo), hi)
+    o <- nlminb(st, obj$fn, obj$gr, lower = lo, upper = hi, control = ctl)
+    nlminb(o$par, obj$fn, obj$gr, lower = lo, upper = hi, control = ctl)
+  }, error = function(e) NULL)
+  ok <- function(o) !is.null(o) && is.finite(o$objective)
+  past <- any(abs(opt$par[k]) > bound)
+  inc <- if (past) fit_from(opt$par) else opt
+  s0 <- opt$par; s0[k] <- 0
+  o0 <- fit_from(s0)
+  ## TMB remembers the lowest objective it has seen and starts its inner
+  ## optimisations there; the searches above moved it
+  if (exists("value.best", envir = obj$env, inherits = FALSE))
+    assign("value.best", Inf, envir = obj$env)
+  if (!ok(inc) && !ok(o0)) return(opt)
+  if (!ok(inc) || (ok(o0) && o0$objective < inc$objective - 1e-6 * max(1, abs(inc$objective))))
+    return(o0)
+  inc
+}
+
 ## The outcomes: "recomputed" (the accurate Hessian is positive definite and
 ## nothing is at a boundary, so the fit is fully usable), "boundary" (the
 ## terms in `held` have the directions in which their covariance cannot be
@@ -2455,6 +2511,24 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   if (!is.null(ar)) pnames <- c(pnames, ilm_nm_tri("ar", C),
                                 if (!identical(ar$type, "rw1")) "ar:rho_raw")
 
+  ## ---- the fit runs on standardised columns (ilm_rescale.R) ----------------
+  ## Each non-constant column of the fixed design, the zero part's and the
+  ## dispersion model's is divided by its SD (and centred, in that variant),
+  ## and everything is converted back exactly before the fit is returned.
+  ## A flexible baseline's columns are functions of the response and are
+  ## left as they are, with the derivative design that matches them.
+  rs_mode <- getOption("illume.rescale", "scale")
+  sc_x <- sc_zi <- sc_d <- NULL
+  X_user <- X; Zzi_user <- Zzi; Zd_user <- Zd
+  if (!identical(rs_mode, "none")) {
+    cen <- identical(rs_mode, "centre")
+    sc_x <- ilm_col_scales(X, cen, skip = if (!is.null(rp)) rp$cols else integer(0))
+    X <- ilm_apply_scales(X, sc_x)
+    if (!is.null(Zzi)) { sc_zi <- ilm_col_scales(Zzi, cen); Zzi <- ilm_apply_scales(Zzi, sc_zi) }
+    if (!is.null(Zd))  { sc_d  <- ilm_col_scales(Zd, cen);  Zd  <- ilm_apply_scales(Zd, sc_d) }
+  }
+  rescaled <- isTRUE(sc_x$any) || isTRUE(sc_zi$any) || isTRUE(sc_d$any)
+
   dl <- list(X = X, yobs = yobs, wrow = weights, Tct = t(Tc),
              offv = if (is.null(offset)) numeric(N) else offset,
              n_disp = fam$n_disp,
@@ -2958,7 +3032,13 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
       ilm_logsd_floor - 0.5 * log(stats::median(ar$gap))
   ## not when every start broke down: there is no optimum to correct, and a
   ## refit would replace the record of the breakdown
-  if (!all_broke) opt <- ilm_floor_refit(obj, opt, fpos, ffl, ctl)
+  if (!all_broke) {
+    opt <- ilm_floor_refit(obj, opt, fpos, ffl, ctl)
+    ## and an AR(1) correlation near its edge or past it (see ilm_rho_floor); CAR(1)'s
+    ## parameter is log(range), whose arithmetic holds far beyond any range
+    if (identical(ar$type, "ar1"))
+      opt <- ilm_rho_refit(obj, opt, which(names(obj$par) == "rho_raw"), fpos, ffl, ctl)
+  }
   ## a floor refit moves the optimum, and the restarts' record is of the one before
   if (!identical(opt$objective, obj_before_floor)) rs$same <- NA
   invisible(tryCatch(obj$fn(opt$par), error = function(e) NULL))
@@ -3174,6 +3254,94 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## REML fit predicted NA: ilm_ame(), ilm_scenario() and the effects in
   ## ilm_interpret() with it, including every ilm_dag_model(), which fits by
   ## REML.
+  ## ---- back to the user's columns (ilm_rescale.R) ---------------------------
+  ## eta is the same in both coordinates, so only the coefficient blocks move,
+  ## by an exact linear map; the random effects, the variance parameters and
+  ## every reported quantity built from them are untouched. A tape on the
+  ## user's columns replaces the fitting one, so that everything downstream
+  ## evaluates the objective at the parameters it is handed.
+  if (rescaled) {
+    maps <- list()
+    if (isTRUE(sc_x$any))  maps$beta  <- ilm_scale_map(sc_x)
+    if (isTRUE(sc_zi$any)) maps$gzi   <- ilm_scale_map(sc_zi)
+    if (isTRUE(sc_d$any))  maps$gamma <- ilm_scale_map(sc_d)
+    ## Each map touches only the rows and columns of the coefficient blocks.
+    ## A covariance with a term held at its boundary carries NA in that
+    ## term's rows, and a whole-matrix product spreads it everywhere (0 * NA
+    ## is NA): the variance components' covariance came back all NA, and
+    ## Satterthwaite fell back to z.
+    blk <- function(nms) which(nms %in% names(maps))
+    mapv <- function(v) {
+      if (is.null(v) || !length(v)) return(v)
+      I <- blk(names(v)); if (!length(I)) return(v)
+      M <- ilm_param_map(names(v), maps)
+      v[I] <- drop(M$A[I, I, drop = FALSE] %*% v[I]); v
+    }
+    mapV <- function(V, nms) {
+      if (is.null(V)) return(V)
+      I <- blk(nms); if (!length(I)) return(V)
+      A <- ilm_param_map(nms, maps)$A[I, I, drop = FALSE]
+      out <- as.matrix(V)
+      out[I, ] <- A %*% out[I, , drop = FALSE]
+      out[, I] <- out[, I, drop = FALSE] %*% t(A)
+      dimnames(out) <- dimnames(V); out
+    }
+    mapP <- function(P, nms) {
+      if (is.null(P)) return(P)
+      I <- blk(nms); if (!length(I)) return(P)
+      B <- ilm_param_map(nms, maps)$Ainv[I, I, drop = FALSE]
+      sp <- inherits(P, "sparseMatrix")
+      out <- as.matrix(P)
+      out[I, ] <- t(B) %*% out[I, , drop = FALSE]
+      out[, I] <- out[, I, drop = FALSE] %*% B
+      dimnames(out) <- dimnames(P)
+      if (!sp) return(out)
+      ## back to a general sparse matrix, without the methods package
+      nz <- which(out != 0, arr.ind = TRUE)
+      Matrix::sparseMatrix(i = nz[, 1], j = nz[, 2], x = out[nz], dims = dim(out),
+                           dimnames = dimnames(out))
+    }
+    ## put the fitting tape at its optimum, and read its parameter list there
+    invisible(tryCatch(obj$fn(if (reml) opt$par[names(opt$par) != "beta"] else opt$par),
+                       error = function(e) NULL))
+    pl <- obj$env$parList()
+    opt$par <- mapv(opt$par)
+    sdr$cov.fixed <- mapV(sdr$cov.fixed, names(opt$par))
+    if (!is.null(sdr$par.fixed)) sdr$par.fixed <- mapv(sdr$par.fixed)
+    if (!is.null(sdr$par.random)) sdr$par.random <- mapv(sdr$par.random)
+    if (!is.null(sdr$jointPrecision))
+      sdr$jointPrecision <- mapP(sdr$jointPrecision, rownames(sdr$jointPrecision))
+    if (!is.null(hess$H)) {
+      hess$H <- mapP(hess$H, pn)
+      if (!is.null(hess$dirs)) {
+        I <- blk(pn)
+        if (length(I)) hess$dirs[I, ] <- ilm_param_map(pn, maps)$A[I, I, drop = FALSE] %*%
+          hess$dirs[I, , drop = FALSE]
+      }
+    }
+    pe <- mapv(stats::setNames(pe, pn))
+    if (reml && !is.null(reml_beta) && !is.null(maps$beta)) {
+      Ab <- maps$beta
+      reml_beta <- as.vector(Ab %*% matrix(reml_beta, p, C))
+      ## the change of variable scaled the restricted likelihood by |det A|
+      opt$objective <- opt$objective + C * sum(log(sc_x$s))
+    }
+    ## the user's columns, and a tape on them at the same optimum
+    for (b in names(maps)) if (!is.null(pl[[b]])) {
+      v <- pl[[b]]
+      pl[[b]] <- if (is.matrix(v)) maps[[b]] %*% v else as.vector(maps[[b]] %*% v)
+    }
+    X <- X_user; Zzi <- Zzi_user; Zd <- Zd_user
+    dl$X <- X_user
+    if (!is.null(Zzi_user)) dl$Zzi <- Zzi_user
+    if (!is.null(Zd_user)) dl$Zdisp <- Zd_user
+    obj <- MakeADFun(f, pl, random = if (length(rnd_fit)) rnd_fit else NULL,
+                     map = map, silent = TRUE)
+    invisible(tryCatch(obj$fn(obj$par), error = function(e) NULL))
+    if (!is.null(obj_ml))
+      obj_ml <- MakeADFun(f, pl, random = if (length(rnd)) rnd else NULL,
+                          map = map, silent = TRUE)
+  }
   beta_hat <- matrix(if (reml) reml_beta else pe[pn == "beta"], p, C)
   structure(list(obj = obj, opt = opt, sdr = sdr, checks = rbind(pre, post),
                  ## how many of those rows were checks of the DESIGN, made
@@ -3187,6 +3355,10 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  ## the ML-shaped twin, present only under REML, used by
                  ## ilm_denom_df() to differentiate V_beta(theta)
                  obj_ml = obj_ml, reml = reml, reml_exact = reml_exact,
+                 ## the column scales the fit ran on (ilm_rescale.R), for the
+                 ## checks that read a coefficient's size in standard units
+                 rescale = if (rescaled) list(x = sc_x, zi = sc_zi, d = sc_d,
+                                              mode = rs_mode) else NULL,
                  ## how the standard errors were obtained: "tmb" (the first
                  ## Hessian was fine), "recomputed" (a more accurate one was),
                  ## "boundary" (the directions in which the covariance of the

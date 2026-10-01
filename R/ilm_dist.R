@@ -245,6 +245,8 @@ ilm_dist <- function(object) {
     y <- rep_len(y, n); e <- rep_len(e, n)
     if (!is.null(ld)) ld <- rep_len(ld, n)
     size <- rep_len(size, n)
+    pz <- if (is.null(zero)) NULL else rep_len(zprob(lp), n)
+    g <- ilm_dist_guard(y, e, ld, pz); y <- g$x; e <- g$e; ld <- g$ld; pz <- g$pz
     if (is.null(zero)) {
       v <- base$d(y, e, ld, TRUE, size)
       if (!is.null(status)) {
@@ -257,9 +259,8 @@ ilm_dist <- function(object) {
         if (any(hi))
           v[hi] <- log(base$p(y[hi], e[hi], ld[hi], FALSE, size[hi]) + 1e-300)
       }
-      return(if (log) v else exp(v))
+      return(g$put(if (log) v else exp(v)))
     }
-    pz <- rep_len(zprob(lp), n)
     l0 <- if (cont_zero) rep(-Inf, n) else base$d(rep(0, n), e, ld, TRUE, size)
     v <- numeric(n)
     z0 <- y == 0
@@ -271,7 +272,7 @@ ilm_dist <- function(object) {
       v[z0] <- log(pz[z0] + (1 - pz[z0]) * exp(l0[z0]))
       v[!z0] <- log1p(-pz[!z0]) + base$d(y[!z0], e[!z0], ld[!z0], TRUE, size[!z0])
     }
-    if (log) v else exp(v)
+    g$put(if (log) v else exp(v))
   }
 
   p <- if (name == "multinomial") NULL else function(q, lp, par, lower.tail = TRUE,
@@ -290,15 +291,16 @@ ilm_dist <- function(object) {
     q <- rep_len(q, n); e <- rep_len(e, n)
     if (!is.null(ld)) ld <- rep_len(ld, n)
     size <- rep_len(size, n)
-    if (is.null(zero)) return(base$p(q, e, ld, lower.tail, size))
-    pz <- rep_len(zprob(lp), n)
+    pz <- if (is.null(zero)) NULL else rep_len(zprob(lp), n)
+    g <- ilm_dist_guard(q, e, ld, pz); q <- g$x; e <- g$e; ld <- g$ld; pz <- g$pz
+    if (is.null(zero)) return(g$put(base$p(q, e, ld, lower.tail, size)))
     Fc <- base$p(q, e, ld, TRUE, size)
     v <- if (zero == "hurdle" && !cont_zero) {
       f0 <- exp(base$d(rep(0, n), e, ld, TRUE, size))
       pz + (1 - pz) * pmax(Fc - f0, 0) / (1 - f0)
     } else pz + (1 - pz) * Fc
     v[q < 0] <- 0
-    if (lower.tail) v else 1 - v
+    g$put(if (lower.tail) v else 1 - v)
   }
 
   q <- if (name == "multinomial") NULL else function(prob, lp, par, size = 1) {
@@ -314,8 +316,9 @@ ilm_dist <- function(object) {
     prob <- rep_len(prob, n); e <- rep_len(e, n)
     if (!is.null(ld)) ld <- rep_len(ld, n)
     size <- rep_len(size, n)
-    if (is.null(zero)) return(base$q(prob, e, ld, size))
-    pz <- rep_len(zprob(lp), n)
+    pz <- if (is.null(zero)) NULL else rep_len(zprob(lp), n)
+    g <- ilm_dist_guard(prob, e, ld, pz); prob <- g$x; e <- g$e; ld <- g$ld; pz <- g$pz
+    if (is.null(zero)) return(g$put(base$q(prob, e, ld, size)))
     out <- numeric(n)
     up <- prob > pz
     a <- (prob[up] - pz[up]) / (1 - pz[up])
@@ -324,7 +327,7 @@ ilm_dist <- function(object) {
       a <- f0 + a * (1 - f0)
     }
     out[up] <- base$q(a, e[up], ld[up], size[up])
-    out
+    g$put(out)
   }
 
   r <- function(lp, par, size = 1) {
@@ -407,4 +410,30 @@ print.ilm_dist <- function(x, ...) {
         paste(x$par_names, collapse = ", ") else "none",
       "\n  functions: d", if (!is.null(x$p)) ", p, q", ", r, mean\n", sep = " ")
   invisible(x)
+}
+
+## NaN in, NaN out, as base R's d, p and q functions have it. An element whose
+## mean, dispersion or zero-part parameter is NaN or NA gives NaN; one whose
+## argument (y, q or prob) is NA or NaN gives that back. The zero part's
+## arithmetic compares the argument with the zero probability, and a missing
+## value there used to stop the call or, worse, return 0 as a quantile. The
+## flagged elements are computed on placeholders and put back afterwards.
+#' @keywords internal
+#' @noRd
+ilm_dist_guard <- function(x, e, ld, pz) {
+  badp <- is.na(e) | (if (is.null(ld)) FALSE else is.na(ld)) |
+    (if (is.null(pz)) FALSE else is.na(pz))
+  badx <- is.na(x) & !badp
+  x0 <- x
+  if (any(badp | badx)) {
+    e[badp] <- 0
+    if (!is.null(ld)) ld[badp] <- 0
+    if (!is.null(pz)) pz[badp] <- 0.5
+    x[badp | badx] <- 0
+  }
+  list(x = x, e = e, ld = ld, pz = pz, put = function(v) {
+    v[badp] <- NaN
+    v[badx] <- x0[badx]
+    v
+  })
 }

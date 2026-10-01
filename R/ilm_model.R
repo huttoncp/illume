@@ -46,6 +46,8 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   y ~ x1 + time + (1 + time | subj)          random intercept and slope
 #'   y ~ x1 + s(xs, k = 10) + (1 | subj)        penalised smooth of xs
 #'   y ~ x1 + t2(lon, lat) + (1 | site)         2-D surface (spatial)
+#'   y ~ x1 + s(area, bs = "mrf", xt = list(nb = nb)) + (1 | area)
+#'                                              areal units (BYM form)
 #' }
 #'
 #' Two rules for smooth terms. Use `t2()` rather than `te()` for tensor
@@ -56,6 +58,44 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'
 #' A categorical outcome may be a factor or a character vector; its levels set
 #' the category labels used throughout the output.
+#'
+#' @section Areal units, and the BYM form:
+#' Counts or measurements for areal units -- districts, counties, postcodes --
+#' are usually correlated with their neighbours'. The term for that is mgcv's
+#' Markov random field smooth, `s(area, bs = "mrf", xt = list(nb = nb))`, where
+#' `nb` is a list with one element per level of `area`, named by the levels,
+#' holding the indices of the units adjacent to it. It is an intrinsic
+#' conditional autoregression over the neighbour graph. Beside it, a random
+#' intercept `(1 | area)` gives each unit an unstructured effect of its own:
+#' the pair is the Besag-York-Mollie (BYM) form of disease mapping, which
+#' splits the between-unit variation into a spatially smooth part and noise.
+#' For a disease map, put the population at risk in the formula as
+#' `offset(log(expected))` and read each unit's relative risk from
+#' `predict(fit, newdata, groups = "fitted")`, which keeps the unit's own
+#' effects; the default, `"typical"`, sets them to zero. For points rather
+#' than areas, a smooth of the coordinates, `t2(x, y)`, plays the same part.
+#' [ilm_variogram()] with `coords` finds spatial structure a model leaves out
+#' and names these terms.
+#'
+#' @section Predictors in any units:
+#' A predictor in dollars beside one in thousandths makes the fit's
+#' arithmetic badly conditioned, though the model is the same in any units:
+#' fits used to fail with undefined standard errors and advice pointing the
+#' wrong way. So the fit rescales a column of the fixed-effect design -- or
+#' of the zero-inflation and dispersion formulas -- whose standard deviation is
+#' below 0.01 or above 100, to unit standard deviation, fits there, and
+#' converts the estimates, their covariance and everything built from them
+#' back to your units by an exact map: the results are the ones you would get
+#' by rescaling by hand, to within the optimiser's tolerance. A column whose
+#' standard deviation is between 0.01 and 100 is already where the optimiser
+#' works well and is left exactly as it is, so a model whose columns all are
+#' is fitted exactly as it would be without rescaling. Left as they are too:
+#' offsets, which enter with a fixed coefficient of
+#' one; 0/1 indicators and constant columns, already well scaled; a smooth's
+#' penalised part (its unpenalised columns are rescaled like any other); and
+#' the covariate of a random slope, whose scale sits in the random-effect
+#' covariance -- if a fit with a random slope on a covariate in large units
+#' fails, [ilm_remedies()] names rescaling that covariate by hand first.
 #'
 #' @section Simple models get exact inference:
 #' A gaussian model with no random or smooth terms is an ordinary linear model.
@@ -287,6 +327,13 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' Weakly informative prior for point estimation of covariance matrices in
 #' hierarchical models. *Journal of Educational and Behavioral Statistics*,
 #' 40(2), 136--157.
+#'
+#' Besag, J., York, J., & Mollié, A. (1991). Bayesian image restoration, with
+#' two applications in spatial statistics. *Annals of the Institute of
+#' Statistical Mathematics*, 43(1), 1--20.
+#'
+#' Wood, S. N. (2017). *Generalized Additive Models: An Introduction with R*
+#' (2nd ed.). Chapman and Hall/CRC.
 #'
 #' @examples
 #' set.seed(1)
@@ -601,6 +648,18 @@ ilm_model_formula <- function(formula, data, family = "auto",
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
+  ## A level no row uses is dropped from the frame: it gets no coefficient and
+  ## cannot be predicted for. That used to happen without a word.
+  empty_lv <- tryCatch(ilm_empty_levels(data, mf, all.vars(gp$pf)),
+                       error = function(e) list())
+  if (length(empty_lv))
+    message("ilm_model(): ", ilm_and(sprintf("`%s` has %s with no rows (%s)",
+              names(empty_lv), ifelse(lengths(empty_lv) == 1L, "a level", "levels"),
+              vapply(empty_lv, function(e) paste(utils::head(e, 5), collapse = ", "), ""))),
+            ", dropped from the fit: no coefficient is estimated for ",
+            if (sum(lengths(empty_lv)) == 1L) "it" else "them",
+            ", and a prediction for one stops. Drop the level with droplevels() to ",
+            "say so, or check the data if a row should be there.")
   ## The variables the terms are built from, for the rows the frame kept. The
   ## frame holds a transformed term as its own column -- "log(x)", a Fourier
   ## basis -- and not the variable underneath, so everything that builds new
@@ -800,6 +859,12 @@ ilm_model_formula <- function(formula, data, family = "auto",
     }
   }
 
+  ## ---- the whole fixed design, smooths' null spaces included, must have
+  ## full rank (ilm_alias.R): a dependence is named before the fit, not left
+  ## to come back as a failed Hessian and standard errors of NaN
+  alias <- ilm_alias_find(X, asgn, attr(mt, "term.labels"))
+  if (!is.null(alias)) stop(ilm_alias_message(alias, mf), call. = FALSE)
+
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
     ## the grouping side as model.frame() names a column: a lone name bare,
@@ -904,6 +969,15 @@ ilm_model_formula <- function(formula, data, family = "auto",
   }
   ## the offset, for the rows the frame kept: log exposure for a rate
   off <- if (length(off_terms)) stats::model.offset(mf) else NULL
+  ## Separation, from the data alone and before the fit: a level (or a cell
+  ## of two factors) whose outcome takes no second value has no finite
+  ## coefficient (see ilm_separation.R). Its flat-likelihood partner is read
+  ## after the fit, and both go into one check.
+  ## A family where no level can be separated (gaussian, survival) has no check.
+  sep_rule <- ilm_sep_rule(fam, !is.null(Zzi))
+  sep_lv <- if (is.null(sep_rule)) NULL else
+    tryCatch(ilm_sep_levels(mf, yi, w, sep_rule, attr(mt, "term.labels"), J),
+             error = function(e) NULL)
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
@@ -970,6 +1044,18 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## hypotheses can be blocked across the category dimension later
   fit$assign      <- asgn
   fit$term_labels <- attr(mt, "term.labels")
+  fit$empty_levels <- empty_lv
+  ## separation: the levels found before the fit, and the coefficients whose
+  ## likelihood is flat where they stopped, in one check
+  if (!is.null(sep_lv)) {
+    sep_fl <- tryCatch(ilm_sep_flat(fit), error = function(e) NULL)
+    if (is.null(sep_fl)) sep_fl <- ilm_sep_flat_none()
+    fit <- ilm_sep_check(fit, sep_lv, sep_fl)
+    if (!isTRUE(fit$checks$status[fit$checks$check == "separation"] == "OK"))
+      message("ilm_model(): ", ilm_sep_words(fit$separation), " Estimates, ",
+              "standard errors and predictions that rest on it mean nothing; the ",
+              "separation check says what to do.")
+  }
   fit
 }
 
