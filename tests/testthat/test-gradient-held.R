@@ -11,6 +11,8 @@ test_that("the held part of the gradient is split off and reported", {
   gs <- illume:::ilm_grad_judged(gv, D)
   expect_equal(gs$held, 1.41e-2)
   expect_equal(gs$judged, 6.42e-3)          # WARN, not FAIL, on today's lines
+  ## the held part is the largest, and it is not what is judged
+  expect_gt(gs$held, gs$judged)
   ## nothing held: all of it is judged
   gs0 <- illume:::ilm_grad_judged(gv, NULL)
   expect_equal(gs0$judged, 1.41e-2)
@@ -21,15 +23,18 @@ test_that("the held part of the gradient is split off and reported", {
   gs2 <- illume:::ilm_grad_judged(gv2, matrix(u, ncol = 1))
   expect_equal(gs2$held, 0.02, tolerance = 1e-12)
   expect_equal(gs2$judged, 1e-4, tolerance = 1e-12)
+  expect_gt(gs2$held, gs2$judged)
   ## a gradient that is not finite is judged whole, as far from a stationary
   ## point as any
   expect_identical(illume:::ilm_grad_judged(c(NA, 1e-4), D[1:2, , drop = FALSE])$judged, NA_real_)
 })
 
-test_that("a fit whose held dispersion carries the largest gradient is judged on the rest", {
+test_that("a fit whose dispersion is held reports its gradient in two parts", {
   ## Poisson counts fitted as a negative binomial with a random walk: k runs
-  ## off and is held, and here the largest component of the gradient is
-  ## along it
+  ## off and is held. Which part of the gradient is larger here is whatever
+  ## the optimiser left on a flat direction -- 1.5e-4 along k on one machine,
+  ## 1.5e-6 on another, for these same data -- so the ordering is tested above,
+  ## where it is deterministic, and this fit's line is held to what it reports.
   set.seed(28)
   G <- 8; Tn <- 24
   d <- expand.grid(t = seq_len(Tn), g = factor(seq_len(G)))
@@ -42,7 +47,6 @@ test_that("a fit whose held dispersion carries the largest gradient is judged on
   expect_true("dispersion" %in% f$hessian_held)
   gr <- as.numeric(f$obj$gr(f$opt$par)); pn <- names(f$opt$par)
   gd <- abs(gr[pn == "logdisp"]); go <- max(abs(gr[pn != "logdisp"]))
-  expect_gt(gd, go)                          # the held part is the largest
   r <- f$checks[f$checks$check == "gradient", ]
   expect_match(r$detail, sprintf("max |gradient| = %.2e", go), fixed = TRUE)
   expect_match(r$detail, sprintf("along the held dispersion: %.2e, not judged", gd), fixed = TRUE)
