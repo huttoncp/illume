@@ -195,7 +195,7 @@ ilm_ar_place <- function(object, time, group) {
   dtp <- dtn <- rep(NA_real_, n)
   for (g in unique(gi[!is.na(gi)])) {
     idx <- which(cg == g); tg <- ct[idx]
-    tol <- 1e-9 * max(1, abs(tg))
+    tol <- ilm_time_tol(tg)
     for (i in which(gi == g)) {
       at <- which(abs(tg - tn[i]) <= tol)
       if (length(at)) cell[i] <- idx[at[1L]]
@@ -210,6 +210,20 @@ ilm_ar_place <- function(object, time, group) {
   out$time <- time
   out[, c("group", "time", "cell", "prev_cell", "next_cell", "dt_prev",
           "dt_next", "new_group")]
+}
+
+## How near a new row's time must be to one of its group's fitted times to
+## be placed at it: a millionth of the smallest gap between the group's
+## distinct fitted times, so that matching never merges two of them, however
+## irregular the series. A tolerance scaled by the times' size did: date-times
+## are seconds since 1970, about 1.7e9, so 1e-9 of that is 1.7 seconds, and a
+## row one second after a fitted time was placed at it. With a single fitted
+## time there is no gap to scale by, and the tolerance is an absolute 1e-9.
+#' @keywords internal
+#' @noRd
+ilm_time_tol <- function(tg) {
+  u <- sort(unique(tg))
+  if (length(u) < 2L) 1e-9 else 1e-6 * min(diff(u))
 }
 
 ## The dispersion model's design for new rows. `mu` is reserved -- a power of
