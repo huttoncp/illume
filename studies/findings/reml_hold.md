@@ -51,13 +51,15 @@ The hold rule (rule C: hold only the flat directions at a boundary) on the path 
 
 **Literal verdict, as pre-registered:** V1 does not hold, V2 unresolved and V3 does not hold. The pre-registration sends a V1 or V3 that does not hold to Craig with a proposal before the REML default ships for fits held at a boundary (his item 262).
 
+**Craig's ruling on item 262 (2026-10-01), on these verdicts and the readings below:** the REML default ships as he ruled in item 249. The boundary at a correlation of +/-1, whose reduced model is rank one, is open work for after the release.
+
 **Readings, chosen after the run (post hoc, not verdicts).**
 V1 fails in H2 only: its median ratios are 1.040, 1.014, 1.039, 1.013 with 0.46, 0.64, 0.46, 0.69 of held fits within 3%, while H1 and H4 are exact (medians 1.000, 1.000, 1.000, 1.000, all within 3%). A probe of H2's first 40 replicates (scripts/reml_hold_h2_probe.R) finds every held fit stopped at a correlation of +/-1 with a slope SD above zero -- 31 of 31 under REML, 35 of 35 under maximum likelihood -- and none at a slope SD of zero. The reduced model that boundary implies is rank one, which illume has no structure for; the intercept-only refit the pre-registration took as H2's reference is the truth's reduced model, not the boundary's. Against it maximum likelihood is further off than REML (median 1.062 against 1.032, 0.34 against 0.48 within 3%).
 V2: the held fits' coverage at G = 20 misses its band in H1 (0.927) in the main run. There rule C's SE equals the reduced refit's (median ratio 1.000), so the reduced model gives the same interval: the shortfall is in which fits hold -- those whose clusters happen to look alike -- not in rule C.
 V3: no SE exceeds 2.56 times its reference. REML's failures against maximum likelihood's on the same data, paired by exact McNemar (scripts/reml_hold_failures_paired.R): main run 33 REML-only against 45 ML-only, p = 0.21; fresh run 29 REML-only against 18 ML-only, p = 0.14 -- not shown different; the per-cell counts are 0 to 12.
 
 CAVEATS that must travel with this result: the H2 reference was pre-registered as the
-intercept-only refit, and the fits' own boundary is rank one; a rank-one boundary is
-open work (Craig's item 262). Every arm is gaussian; the REML default applies to
-gaussian mixed models only.
+intercept-only refit, and the fits' own boundary is rank one; a rank-one boundary, at a
+correlation of +/-1, is open work for after the release (Craig's ruling on item 262).
+Every arm is gaussian; the REML default applies to gaussian mixed models only.
 

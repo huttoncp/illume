@@ -338,6 +338,10 @@ summarise_study <- function(dir, study) {
                  vt$reading[2], " and V3 ", vt$reading[3], ". The pre-registration sends a V1 or ",
                  "V3 that does not hold to Craig with a proposal before the REML default ships for ",
                  "fits held at a boundary (his item 262)."),
+      "", paste0("**Craig's ruling on item 262 (2026-10-01), on these verdicts and the readings ",
+                 "below:** the REML default ships as he ruled in item 249. The boundary at a ",
+                 "correlation of +/-1, whose reduced model is rank one, is open work for after ",
+                 "the release."),
       "", paste0("**Readings, chosen after the run (post hoc, not verdicts).**"),
       paste0("V1 fails in H2 only: its median ratios are ", paste(num(h2$ratio_median), collapse = ", "),
              " with ", paste(num(h2$ratio_within, 2), collapse = ", "), " of held fits within 3%, ",
@@ -368,9 +372,9 @@ summarise_study <- function(dir, study) {
              max(fp$reml_only[fp$cell != "all"], fp$ml_only[fp$cell != "all"]), "."),
       "",
       "CAVEATS that must travel with this result: the H2 reference was pre-registered as the",
-      "intercept-only refit, and the fits' own boundary is rank one; a rank-one boundary is",
-      "open work (Craig's item 262). Every arm is gaussian; the REML default applies to",
-      "gaussian mixed models only.")
+      "intercept-only refit, and the fits' own boundary is rank one; a rank-one boundary, at a",
+      "correlation of +/-1, is open work for after the release (Craig's ruling on item 262).",
+      "Every arm is gaussian; the REML default applies to gaussian mixed models only.")
   } else if (study == "power") {
     d <- read_all(dir, "^power_summary.csv$"); if (is.null(d)) return(NULL)
     nul <- d[d$delta == 0, c("cell", "n_wald", "rej_wald", "rej_lrt")]
