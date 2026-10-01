@@ -2,6 +2,29 @@
 
 ## illume 0.0.8.9003
 
+- A term at its limit is held by a rule that gives the same answer on
+  every platform measured. A dispersion, a residual SD, or a random
+  effect’s or AR(1)’s SD past its line was held when one push of 3
+  towards its limit moved the objective by at most 1e-3, and near that
+  tolerance the answer depended on where the optimiser happened to stop,
+  so the same data were held on one machine and not on another. Now the
+  term is pushed by 1.5, 3 and 6, and held when every push moves the
+  objective by at most 0.05; a push that LOWERS it by more than 0.05
+  means the fit stopped short of the limit, so nothing is held and the
+  `optimizer` check FAILs and says so. A term already more than e^6
+  below its line is held by its value, without the pushes. Calibrated on
+  6,204 stored fits, each under two R and RTMB builds, then confirmed,
+  with that floor fixed in advance, on 6,204 fresh ones: no decision
+  differed between the builds, and no negative binomial’s k or random
+  effect’s SD was held where the model at its limit, or without the
+  term, fits worse by more than 0.05. A fit that ran past the floor
+  without converging has its term held, and its optimizer and gradient
+  checks still FAIL.
+
+- [`summary()`](https://rdrr.io/r/base/summary.html) always shows a held
+  limit among the model checks. It showed the first four rows that were
+  not OK, which could leave the held limit out.
+
 - New rows given date-times are placed at the right fitted time. A row
   was matched to a group’s fitted time within 1e-9 of the times’ size,
   and a date-time counts seconds since 1970, so that was about 1.7
@@ -24,6 +47,18 @@
   advice pointing elsewhere. The message names the columns, the terms
   and the fix – for an empty cell, which cells. A numeric `by` beside
   its own main effect keeps its own message.
+
+- `ilm_model(aliased = "drop")` fits a model whose ordinary columns are
+  not all separable by dropping each column that is a combination of
+  earlier ones, as [`lm()`](https://rdrr.io/r/stats/lm.html) and `lme4`
+  do, and says which at fitting and in
+  [`summary()`](https://rdrr.io/r/base/summary.html); `fit$aliased`
+  holds them. Predictions, marginal means, trends and
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
+  rebuild the design without them, and a term with no column left is not
+  tested, which the table’s heading says. The default, `"stop"`, is
+  unchanged, and its message now names the option. Where a smooth is
+  involved the fit stops either way.
 
 - Predictors in any units. The fit rescales each column of the
   fixed-effect design, the zero part’s and the dispersion model’s to
