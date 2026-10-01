@@ -52,9 +52,9 @@ Delete this file once the queue is empty.
       - a sentence in `reml`’s help on few groups.
   2.  An outlier and influence check.
   3.  `ilm_plot_model_pdp()`, with its causal-language guard.
-  4.  Reporting, version 1 (`ilm_session_log()` and `ilm_report()`,
-      owned by illumex and extended by illume), as agreed with Craig on
-      2026-09-24.
+  4.  (Settled 2026-10-01:
+      [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+      stays, as prose only.)
   5.  The multinomial slowdown, warm-started refits, and whether
       reformulas moves to Imports.
   6.  After that, for the same agent:
@@ -161,14 +161,14 @@ Two traps that bit repeatedly this session, both now in memory:
     no-op), “drop term ‘s(x)’” for a smooth shrunk to a line (which
     would drop the line too), and two remedies the package does not
     have.
-3.  **A design document for the conductor (`ilm_analysis()`) –
-    WRITTEN:** `dev/design-ilm-analysis.md` (build-ignored). Not to
-    build now. It keeps the agreed shape (`ilm_plan()`, the remedy loop
-    over the functions above with a revert rule and a refit budget, a
-    decision log and sensitivity table, `ilm_report()`, validation on
-    the messy regimes) and the rules that must survive: REML to report
-    only where it is exact (gaussian), follow-ups declared and
-    multiplicity-adjusted, only the exposure causal on the DAG route.
+3.  **An automated analysis (`ilm_analysis()`) – NOT PLANNED** (settled
+    2026-10-01): no plan object, no `ilm_plan()` and no `ilm_report()`;
+    the design document that described them is retired. The remedies
+    above are applied by the person running the analysis. The rules that
+    design recorded still hold where they apply: REML reported only
+    where it is exact (gaussian), follow-ups declared and
+    multiplicity-adjusted, and only the exposure causal on the DAG
+    route.
 4.  **Gaps, all worth filling** (Craig agreed): Firth-type bias
     reduction for sparse multinomial categories; small-sample inference
     for GLMM Wald tests with few clusters; multinomial parity
