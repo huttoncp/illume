@@ -1,0 +1,12 @@
+## model
+A beta model of pr, fitted to 240 observations. The model works on the logit scale, so its coefficients are not in units of the proportion; the effects below are converted.
+
+## effects
+x: very strong evidence (p < 0.001) that x is associated with pr. Across the middle half of x, predicted pr is 0.442 at -0.871 against 0.629 at 0.678: 0.187 higher (95% interval 0.174 to 0.2).
+
+## diagnostics
+All 5 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
+
+## caveats
+These are associations. Nothing here rules out a common cause of a predictor and the response, so an effect could differ in size or sign from what is reported. To say more you need a design that identifies one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+

@@ -1,0 +1,14 @@
+## model
+A binomial model of ys, fitted to 240 observations. The model works on the logit scale, so its coefficients are not in percentage points of probability; the effects below are converted.
+
+## effects
+x: very strong evidence (p < 0.001) that x is associated with ys. Across the middle half of x, the predicted probability that ys is 1 is 15% at -0.871 against 45% at 0.678: 30 percentage points higher (95% interval 21 to 39). (Odds ratio 3.51 per unit of x.)
+h3: not estimable for 'west'. 'west' has every trial a failure, so that level's coefficient has no finite estimate and neither size nor interval means anything; the other levels' coefficients are estimated as usual (see the separation check).
+
+## diagnostics
+FAIL -- separation: h3 = west: every trial a failure (78 rows). The outcome does not vary within h3 'west', so the coefficient has no finite estimate: it runs off towards infinity, and its estimate, its standard error and anything predicted for it mean nothing. What to do: merge 'west' with a neighbouring level of h3, drop its rows, or remove the term; the other coefficients are then estimable.
+At least one check FAILED. Standard errors and intervals above rest on the model being adequate, so treat them as provisional until that is resolved.
+
+## caveats
+These are associations. Nothing here rules out a common cause of a predictor and the response, so an effect could differ in size or sign from what is reported. To say more you need a design that identifies one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+

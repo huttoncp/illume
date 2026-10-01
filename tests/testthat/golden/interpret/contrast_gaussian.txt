@@ -1,0 +1,11 @@
+## model
+3 comparisons of marginal means, with intervals and p-values adjusted so that all 3 hold together at 95% (the single-step studentized maximum).
+
+## effects
+south - north: a difference of 0.024 (95% interval -0.359 to 0.407, adjusted p = 0.989) -- little evidence.
+west - north: a difference of -0.461 (95% interval -0.847 to -0.074, adjusted p = 0.015) -- moderate evidence.
+west - south: a difference of -0.485 (95% interval -0.870 to -0.099, adjusted p = 0.0101) -- moderate evidence.
+
+## caveats
+An interval that includes zero means the data are consistent with no difference -- not that there is none.
+

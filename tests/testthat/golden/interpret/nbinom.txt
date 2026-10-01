@@ -1,0 +1,13 @@
+## model
+A nbinom model of kn, fitted to 240 observations. The model works on the log scale, so its coefficients are not in counts; the effects below are converted.
+
+## effects
+x: very strong evidence (p < 0.001) that x is associated with kn. Across the middle half of x, predicted kn is 1.73 at -0.871 against 3.48 at 0.678: 1.75 higher (95% interval 1.32 to 2.17). (Rate ratio 1.57 per unit of x.)
+g2: little evidence (p = 0.519) that g2 is associated with kn. Predicted kn is 2.93 for 'control' and 2.71 for 'treated': 0.219 lower for 'treated' (95% interval from 0.445 higher to 0.883 lower). (Rate ratio 0.925 for 'treated' against 'control'.) The interval includes zero, which means the data are consistent with no effect -- not that there is none.
+
+## diagnostics
+All 6 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
+
+## caveats
+These are associations. Nothing here rules out a common cause of a predictor and the response, so an effect could differ in size or sign from what is reported. To say more you need a design that identifies one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+
