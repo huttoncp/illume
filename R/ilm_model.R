@@ -313,6 +313,19 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   heavy-tailed as well. `"hold"` stays the default for that reason; the fit
 #'   says when a boundary was reached under it, and names `"avoid"` as the
 #'   alternative.
+#' @param aliased What to do when the fixed-effect columns are not all
+#'   separable -- two covariates one a multiple of the other, or an
+#'   interaction with an empty cell -- so that the model has no unique fit.
+#'   `"stop"`, the default, stops before fitting and names the columns, the
+#'   terms and any empty cells, so the model can be written without the
+#'   overlap. `"drop"` drops each column that is a combination of earlier
+#'   ones, as `lm()` and `lme4` do, fits the rest, and says which were dropped
+#'   at fitting and in `summary()`; `fit$aliased` holds them. The model is the
+#'   same, written with fewer columns, but a dropped coefficient has no
+#'   estimate, and which column of a dependent set goes is a matter of their
+#'   order in the formula. Where a smooth is involved the fit stops whichever
+#'   is chosen: a smooth's unpenalised part has no column that can sensibly
+#'   be dropped.
 #'
 #' @return An object of class `"ilm_model"`. Beyond the elements listed in
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
@@ -478,9 +491,11 @@ ilm_model_formula <- function(formula, data, family = "auto",
                          censor = NULL, dispformula = NULL,
                          rp_df = 3L, rp_knots = NULL, ziformula = NULL,
                          zi_type = c("inflated", "hurdle"), design = NULL,
-                         reml = FALSE, boundary = c("hold", "avoid")) {
+                         reml = FALSE, boundary = c("hold", "avoid"),
+                         aliased = c("stop", "drop")) {
   zi_type <- match.arg(zi_type)
   boundary <- match.arg(boundary)
+  aliased <- match.arg(aliased)
   ## A survey design supplies the weights, so taking them from both places
   ## would silently apply one and ignore the other.
   if (!is.null(design)) {
@@ -869,7 +884,17 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## full rank (ilm_alias.R): a dependence is named before the fit, not left
   ## to come back as a failed Hessian and standard errors of NaN
   alias <- ilm_alias_find(X, asgn, attr(mt, "term.labels"))
-  if (!is.null(alias)) stop(ilm_alias_message(alias, mf), call. = FALSE)
+  al_drop <- NULL
+  if (!is.null(alias)) {
+    ## asked for, and no smooth involved: drop the dependent columns, as lm()
+    ## and lme4 do, and say so (item 214)
+    if (identical(aliased, "drop") && !alias$smooth) {
+      al_drop <- list(columns = alias$dependent, note = ilm_alias_drop_note(alias))
+      kc <- !colnames(X) %in% alias$dependent
+      X <- X[, kc, drop = FALSE]; asgn <- asgn[kc]
+      message("ilm_model(): ", al_drop$note)
+    } else stop(ilm_alias_message(alias, mf, aliased), call. = FALSE)
+  }
 
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
@@ -1050,6 +1075,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## hypotheses can be blocked across the category dimension later
   fit$assign      <- asgn
   fit$term_labels <- attr(mt, "term.labels")
+  ## the columns dropped as aliased, which every design rebuilt from the
+  ## terms drops too (ilm_fit_cols)
+  fit$aliased     <- al_drop
   fit$empty_levels <- empty_lv
   ## separation: the levels found before the fit, and the coefficients whose
   ## likelihood is flat where they stopped, in one check

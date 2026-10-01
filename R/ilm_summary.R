@@ -269,6 +269,10 @@ Dispersion model: ", deparse(o$disp_formula), "
                 if (is.null(fb)) "" else
                   sprintf("; %d coefficient(s) against the normal: %s",
                           length(fb$rows), fb$reason)))
+  ## columns dropped as aliased have no row above, so say which and why
+  if (!is.null(o$aliased))
+    writeLines(strwrap(sub("^the", "The", o$aliased$note), width = 78,
+                       indent = 1, exdent = 1))
   ## The thresholds are the intercepts of a cumulative link model, and the
   ## sign convention is the trap: the linear predictor is SUBTRACTED from
   ## them, so a positive coefficient pushes probability UP the scale. Reading
