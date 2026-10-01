@@ -1,5 +1,9 @@
 # illume 0.0.8.9003
 
+* `ilm_interpret()` describes a term that is not a variable of the formula,
+  such as `poly(x, 2)`, by its coefficients. It used to treat it as a variable
+  and say that moving it "across the middle half" changed the prediction by
+  "0".
 * A model whose fixed-effect columns are not all separable stops before the
   fit and says why. The whole fixed design is checked for rank, a smooth's
   unpenalised columns with it: `s(x, by = z) + s(w, by = z)`, whose

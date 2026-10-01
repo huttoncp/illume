@@ -400,6 +400,11 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
   prob <- identical(fam, "binomial")
   catg <- fam %in% c("multinomial", "ordinal", "ordinal_probit", "ordinal_cloglog")
   if (!(cont || prob || catg) || is.null(xv)) return(NULL)
+  ## a term is said here only when it is a variable the formula names: a
+  ## column such as poly(x, 2) is in the model frame, as a matrix, but it is
+  ## not a variable, and moving it moves nothing (ilm_ame()'s rule)
+  av <- all.vars(stats::delete.response(stats::terms(object)))
+  if (is.matrix(xv) || !vn %in% av) return(NULL)
   event <- if (prob) ilm_event_words(object, respname)
   if (prob && is.null(event)) return(NULL)
   num <- is.numeric(xv)

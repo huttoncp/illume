@@ -317,3 +317,15 @@ test_that("the few-groups caveat names the test that can run liberal", {
                      fam == "gaussian")
   }
 })
+
+test_that("a term that is not a variable of the formula is said by its coefficients", {
+  ## poly(x, 2) is in the model frame as a matrix, not a variable, and was said
+  ## to change the prediction by "0" over its middle half
+  set.seed(3)
+  d <- data.frame(x = rnorm(200)); d$y <- 1 + d$x - 0.5 * d$x^2 + rnorm(200)
+  f <- suppressMessages(ilm_model(y ~ poly(x, 2), data = d, family = "gaussian", verbose = FALSE))
+  s <- unclass(ilm_interpret(f, ame = FALSE))$sections$effects
+  expect_length(s, 2L)
+  expect_true(all(startsWith(s, "poly(x, 2)")))
+  expect_false(any(grepl("middle half", s)))
+})
