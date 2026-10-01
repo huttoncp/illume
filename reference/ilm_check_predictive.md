@@ -49,14 +49,5 @@ set.seed(1)
 d <- ilm_sim()
 f <- ilm_model(visits ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
 ilm_check_predictive(f, B = 30)
 ```

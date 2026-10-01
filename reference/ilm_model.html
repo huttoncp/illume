@@ -365,6 +365,8 @@ can mix them freely:</p>
   y ~ x1 + time + (1 + time | subj)          random intercept and slope
   y ~ x1 + s(xs, k = 10) + (1 | subj)        penalised smooth of xs
   y ~ x1 + t2(lon, lat) + (1 | site)         2-D surface (spatial)
+  y ~ x1 + s(area, bs = "mrf", xt = list(nb = nb)) + (1 | area)
+                                             areal units (BYM form)
 </code></pre></div>
 
 <p>Two rules for smooth terms. Use <code>t2()</code> rather than <code>te()</code> for tensor
@@ -389,6 +391,50 @@ time and the sample-specific value 94.3%; the slopes were unaffected, which
 is what the centring is for. Read the intercept of a model with a smooth as
 a property of the sample, and take conclusions from the slopes and from
 <code><a href="ilm_plot_model.html">ilm_plot_model()</a></code>'s effect curves.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="areal-units-and-the-bym-form">Areal units, and the BYM form<a class="anchor" aria-label="anchor" href="#areal-units-and-the-bym-form"></a></h2>
+
+
+<p>Counts or measurements for areal units – districts, counties, postcodes –
+are usually correlated with their neighbours'. The term for that is mgcv's
+Markov random field smooth, <code>s(area, bs = "mrf", xt = list(nb = nb))</code>, where
+<code>nb</code> is a list with one element per level of <code>area</code>, named by the levels,
+holding the indices of the units adjacent to it. It is an intrinsic
+conditional autoregression over the neighbour graph. Beside it, a random
+intercept <code>(1 | area)</code> gives each unit an unstructured effect of its own:
+the pair is the Besag-York-Mollie (BYM) form of disease mapping, which
+splits the between-unit variation into a spatially smooth part and noise.
+For a disease map, put the population at risk in the formula as
+<code>offset(log(expected))</code> and read each unit's relative risk from
+<code>predict(fit, newdata, groups = "fitted")</code>, which keeps the unit's own
+effects; the default, <code>"typical"</code>, sets them to zero. For points rather
+than areas, a smooth of the coordinates, <code>t2(x, y)</code>, plays the same part.
+<code><a href="ilm_variogram.html">ilm_variogram()</a></code> with <code>coords</code> finds spatial structure a model leaves out
+and names these terms.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="predictors-in-any-units">Predictors in any units<a class="anchor" aria-label="anchor" href="#predictors-in-any-units"></a></h2>
+
+
+<p>A predictor in dollars beside one in thousandths makes the fit's
+arithmetic badly conditioned, though the model is the same in any units:
+fits used to fail with undefined standard errors and advice pointing the
+wrong way. So the fit rescales a column of the fixed-effect design – or
+of the zero-inflation and dispersion formulas – whose standard deviation is
+below 0.01 or above 100, to unit standard deviation, fits there, and
+converts the estimates, their covariance and everything built from them
+back to your units by an exact map: the results are the ones you would get
+by rescaling by hand, to within the optimiser's tolerance. A column whose
+standard deviation is between 0.01 and 100 is already where the optimiser
+works well and is left exactly as it is, so a model whose columns all are
+is fitted exactly as it would be without rescaling. Left as they are too:
+offsets, which enter with a fixed coefficient of
+one; 0/1 indicators and constant columns, already well scaled; a smooth's
+penalised part (its unpenalised columns are rescaled like any other); and
+the covariate of a random slope, whose scale sits in the random-effect
+covariance – if a fit with a random slope on a covariate in large units
+fails, <code><a href="ilm_remedies.html">ilm_remedies()</a></code> names rescaling that covariate by hand first.</p>
     </div>
     <div class="section level2">
     <h2 id="simple-models-get-exact-inference">Simple models get exact inference<a class="anchor" aria-label="anchor" href="#simple-models-get-exact-inference"></a></h2>
@@ -467,6 +513,11 @@ multilevel models. <em>Psychometrika</em>, 78(4), 685–709.</p>
 Weakly informative prior for point estimation of covariance matrices in
 hierarchical models. <em>Journal of Educational and Behavioral Statistics</em>,
 40(2), 136–157.</p>
+<p>Besag, J., York, J., &amp; Mollié, A. (1991). Bayesian image restoration, with
+two applications in spatial statistics. <em>Annals of the Institute of
+Statistical Mathematics</em>, 43(1), 1–20.</p>
+<p>Wood, S. N. (2017). <em>Generalized Additive Models: An Introduction with R</em>
+(2nd ed.). Chapman and Hall/CRC.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

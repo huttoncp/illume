@@ -54,12 +54,6 @@ set.seed(1)
 d <- ilm_sim()
 f <- ilm_model(downtime ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
-#> Warning: NA/NaN function evaluation
 ilm_check_zeros(f, B = 200)
 #> ilm_check_zeros: observed 576 zeros against about 237 expected; refit with ilm_model(ziformula = ~ 1), or ziformula = ~ x if the excess depends on a predictor. Use zi_type = "hurdle" when every zero comes from one process and "inflated" when some units were never at risk
 ```

@@ -52,6 +52,7 @@ set.seed(1)
 d <- ilm_sim()
 f <- ilm_model(score ~ income + grp + (1 | id), data = d,
                family = "gaussian", verbose = FALSE)
+#> ilm_model(): `grp` has a level with no rows (epsilon), dropped from the fit: no coefficient is estimated for it, and a prediction for one stops. Drop the level with droplevels() to say so, or check the data if a row should be there.
 ilm_check_collinearity(f)
 #>     term df  gvif se_inflation status
 #> 1 income  1 1.004        1.002     OK

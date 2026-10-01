@@ -2,6 +2,88 @@
 
 ## illume 0.0.8.9003
 
+- A model whose fixed-effect columns are not all separable stops before
+  the fit and says why. The whole fixed design is checked for rank, a
+  smooth’s unpenalised columns with it: `s(x, by = z) + s(w, by = z)`,
+  whose unpenalised parts both hold z; `poly(z, 2) + s(x, by = z)`;
+  `x + s(x)`; two covariates one a multiple of the other; an interaction
+  with an empty cell. Each used to fit and come back with a failed
+  Hessian and standard errors of NaN, or a FAIL after the fit, with the
+  advice pointing elsewhere. The message names the columns, the terms
+  and the fix – for an empty cell, which cells. A numeric `by` beside
+  its own main effect keeps its own message.
+
+- Predictors in any units. The fit rescales each column of the
+  fixed-effect design, the zero part’s and the dispersion model’s to
+  unit SD, fits there, and converts the estimates, covariance, joint
+  precision and Hessian back to the user’s units by an exact linear map
+  (a REML fit’s restricted likelihood with its Jacobian). With income in
+  dollars, a zero-inflated negative binomial with a random intercept
+  failed 12 fits of 12 with undefined standard errors; it now fits all
+  12, and a dollars fit and a thousands fit agree to about 1e-9.
+  Offsets, 0/1 indicators, a flexible baseline’s columns, a smooth’s
+  penalised part and random slopes’ covariates are left alone; for a
+  failed fit with a random slope on a covariate in large units,
+  [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  names rescaling it by hand first. The separation check’s flat catch
+  sizes coefficients in standard units, so it is the same in any units.
+
+- Separation is caught and said. When the outcome does not vary within a
+  level of a categorical predictor – every count zero in one region,
+  every trial a success in one arm – that level’s coefficient has no
+  finite estimate, and the fit used to stop out towards infinity with
+  every check passing: three all-zero rows in one level of a Poisson fit
+  gave a predicted count of 0.00000005. A new `separation` check names
+  the level (or the cell of two factors) from the data before the fit,
+  and catches a coefficient whose likelihood is flat where it stopped
+  after the fit, which also finds separation by a numeric predictor. It
+  FAILs, the fit says so as it returns,
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+  calls the term’s effect not estimable for that level (and says whether
+  the other levels’ comparisons stand), and
+  [`ilm_remedies()`](https://huttoncp.github.io/illume/reference/ilm_remedies.md)
+  names merging or dropping the level. A factor level no row uses, which
+  the fit drops, is now announced rather than dropped without a word,
+  and recorded in `fit$empty_levels`.
+
+- [`ilm_variogram()`](https://huttoncp.github.io/illume/reference/ilm_variogram.md)’s
+  spatial advice names the terms that remove the structure, in the
+  data’s own variables: a smooth of the coordinates,
+  `t2(easting, northing)`, for points, and for areal units a Markov
+  random field over a neighbour list,
+  `s(area, bs = "mrf", xt = list(nb = nb))`, with `(1 | area)` beside it
+  for the Besag-York-Mollie form. It used to say that illume fits no
+  spatial covariance and name only the smooth.
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
+  help gains a section on areal units and the BYM form, including
+  reading each unit’s relative risk with `groups = "fitted"`.
+
+- [`ilm_dist()`](https://huttoncp.github.io/illume/reference/ilm_dist.md)’s
+  `d()`, `p()` and [`q()`](https://rdrr.io/r/base/quit.html) give NaN
+  for an element whose mean, dispersion or zero-part parameter is NaN or
+  NA, and give back a missing argument as it came, as base R’s
+  distribution functions do. A zero part’s quantile compared the
+  probability with a missing zero probability: one element came back as
+  0, and several stopped with “NAs are not allowed in subscripted
+  assignments”. Found through an external report.
+
+- An AR(1) correlation has a floor, as the variances have had. Fitted as
+  atanh(rho), it could run past where 1 - rho^2 keeps its digits, to a
+  spuriously low objective: one 12-point series ended at rho = -1,
+  graded FAIL with a gradient of 11, where the true minimum is at rho =
+  -0.55. Short of that, the objective flattens towards the edge, and the
+  optimiser could stop there at a worse objective with every check
+  passing. A fit that ends with \|rho\| above 0.99 is now refitted with
+  atanh(rho) bounded at 8, from where it stopped and from a correlation
+  of 0, and moves only to a better objective (or, past the bound, back
+  inside it). On 1,080 single-series fits from a simulation study, the
+  866 with \|rho\| at or below 0.99 are unchanged; all 83 that had gone
+  past the bound now pass their checks (72 held at the bound as a
+  correlation at +/-1, 10 at an interior optimum), and 2 of the 131 near
+  the edge found a better optimum inside. Gradient failures went from 10
+  to none. CAR(1) is untouched: its parameter is log(range), which has
+  no such limit.
+
 - A gaussian mixed model’s tables test on finite degrees of freedom, as
   lmerTest does. [`summary()`](https://rdrr.io/r/base/summary.html)
   gives each coefficient a df column and t tests on Satterthwaite’s df;

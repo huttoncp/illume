@@ -146,7 +146,9 @@ S-PLUS*. Springer. (Chapter 5 covers the residual variogram.)
 ## See also
 
 [`ilm_car1()`](https://huttoncp.github.io/illume/reference/ilm_car1.md)
-for the remedy,
+for the remedy over time and the "Areal units" section of
+[`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+for the one in space,
 [`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
 for evenly spaced data,
 [`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md).
