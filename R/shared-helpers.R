@@ -227,10 +227,14 @@ ilm_pch_names <- function() {
 ## shows the same digits for the same value:
 ##   1. rounding, half away from zero on the value's 15-figure decimal form;
 ##   2. a display-rule formatter returning {text, rule, digits}.
-## Names carry an `ilm_disp_` prefix where the two packages each have an
-## older helper of the same idea with different behaviour (ilm_fmt_pct(): in
-## illume a phrase with "under 1%"/"over 99%" ends, in illumex a plain
-## percentage), so neither package's existing calls change meaning.
+## Names carry an `ilm_disp_` prefix to keep them apart from each package's
+## older helpers of the same idea (ilm_fmt_pct(): in illume a phrase with
+## "under 1%"/"over 99%" ends, in illumex a plain percentage). The prefix
+## alone does not prevent a clash: illume's dispersion helpers are also
+## ilm_disp_*, so no shared name may be ilm_disp_design, _flat, _limit,
+## _rows, _vec or _words, and a name defined here must be defined nowhere
+## else in a package's R/ -- this file collates late and would silently
+## replace it. Each package's tests check that (test-shared-helpers.R).
 ## ---------------------------------------------------------------------------
 
 ## Rounding half away from zero, on the value's 15-significant-figure decimal
