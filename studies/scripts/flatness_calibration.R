@@ -48,6 +48,9 @@
 ##    whose label says the limit or dropped model is worse by more than 0.05
 ##    (the studies required no false hold of the old rule too); misses, fits
 ##    the label puts at the limit that the rule does not hold, are reported.
+## V2b missed holds (addendum A1, committed before the run; reported, not a
+##    gate): per study and path, the candidates whose label puts the limit or
+##    dropped model within 0.05 that the new rule does not hold.
 ## V3 margin: the share of candidates whose largest |push| is within a factor
 ##    of 2 of 0.05 ([0.025, 0.1]), the band where a decision could flip, per
 ##    study and path.
