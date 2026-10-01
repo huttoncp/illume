@@ -22,7 +22,7 @@
 ##               standard errors account for: a random effect whose variance
 ##               is not zero removed, categories merged, levels pooled
 ## The tier is for whoever decides which remedies may be tried without being
-## asked -- a person now, a conductor later (NEXT-SESSION, item 3).
+## asked: the person running the analysis (NEXT-SESSION, item 3).
 ## ilm_apply_remedy() applies whichever remedy it is given.
 
 ilm_rem_tiers <- c("numerical", "structural", "estimand")

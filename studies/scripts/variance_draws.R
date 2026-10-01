@@ -198,8 +198,8 @@
 ##     cores, and 5 for the fresh one.** The earlier 3.5 hours was a guess, and
 ##     it is withdrawn.
 ##
-##   If that is too long, one option for the conductor, decided before any
-##     run: a 13-point grid over the same range, which about halves it (5 hours
+##   If that is too long, one option, to be decided before any run: a
+##     13-point grid over the same range, which about halves it (5 hours
 ##     and 2.5). It costs resolution at the interval's ends: 0.83 on the log
 ##     scale between points, against 0.42.
 ## - Build: about a day for the script, the profile draws and the summariser.
@@ -376,7 +376,7 @@ sample_profile <- function(pr, n, cap, trim = 0) {
   sample(fine[keep], n, replace = TRUE, prob = exp(l[keep] - max(l[keep])))
 }
 ## THE LOWER PLATEAU -- EXPLORATORY, POST-REGISTRATION (added after the smoke
-## run, before any main-run data, at the conductor's request; it measures the
+## run, before any main-run data; it measures the
 ## registered grid, and changes no label, flag or registered remedy). Where the
 ## profile is flat at the grid's lower edge, remedy 2 spreads mass down to
 ## est - 4, so the edge acts as a floor. Recorded per parameter: whether the deviance
