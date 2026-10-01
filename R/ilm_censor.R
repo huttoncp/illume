@@ -123,8 +123,9 @@ ilm_censor <- function(y, lower = NA, upper = NA, censored = NULL, event = NULL)
       stop("`censored` must be -1 (left-censored), 0 (observed) or 1 ",
            "(right-censored). Values seen: ",
            paste(utils::head(sort(unique(censored)), 5), collapse = ", "),
-           ". For an event indicator, where 1 means the event was observed, ",
-           "give it as `event`.", call. = FALSE)
+           ". For an event indicator, where 1 means the event was observed ",
+           "(Surv()'s convention), give it as `event =` instead, or use ",
+           "ilm_surv(time, event) for time-to-event data.", call. = FALSE)
     ## only 0s and 1s is also what an event indicator looks like, coded the
     ## other way round -- said once a session
     if (all(s %in% c(0L, 1L)) && is.null(ilm_censor_said$binary)) {

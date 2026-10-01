@@ -49,7 +49,8 @@ test_that("misspecification is named", {
   expect_error(ilm_censor(1:5, lower = 3, upper = 1), "must be below")
   expect_error(ilm_censor(1:5, censored = c(0, 1)), "but `y` has")
   expect_error(ilm_censor(1:5, censored = c(0, 1, 2, 0, 1)), "must be -1")
-  expect_error(ilm_censor(1:5, censored = rep(2, 5)), "give it as `event`", fixed = TRUE)
+  expect_error(ilm_censor(1:5, censored = rep(2, 5)),
+               "give it as `event =` instead, or use ilm_surv(time, event)", fixed = TRUE)
   expect_error(ilm_censor(1:5, event = c(1, 0, 2, 1, 1)), "must be 1 (the event was observed)",
                fixed = TRUE)
   expect_error(ilm_censor(letters[1:5], lower = 1), "must be numeric")
