@@ -3,7 +3,7 @@ A gaussian model of y, fitted to 240 observations.
 
 ## effects
 x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.926 at -0.871 against 1.83 at 0.678: 0.903 higher (95% interval 0.718 to 1.09). That is 0.583 per unit of x.
-g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.1 for 'control' and 1.76 for 'treated': 0.666 higher for 'treated' (95% interval 0.399 to 0.933).
+g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.10 for 'control' and 1.76 for 'treated': 0.666 higher for 'treated' (95% interval 0.399 to 0.933).
 h3: strong evidence (p = 0.00459) that h3 is associated with y. Predicted y is 1.54 for 'north', 1.56 for 'south' and 1.08 for 'west'.
 
 ## diagnostics

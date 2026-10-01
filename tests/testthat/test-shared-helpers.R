@@ -9,7 +9,10 @@
 test_that("the helpers illume shares with illumex are the same code", {
   shared <- c("%||%", "ilm_bq", "ilm_wrap", "ilm_and", "ilm_progress",
               "ilm_pch", "ilm_pch_spec", "ilm_pch_table", "ilm_pch_names",
-              "ilm_rng_restore")
+              "ilm_rng_restore", "ILM_POW10", "ilm_disp_scale",
+              "ilm_disp_prod_err", "ilm_disp_mantissa", "ilm_disp_digits",
+              "ilm_disp_value", "ilm_disp_round", "ilm_disp_signif_digits",
+              "ilm_disp_signif", "ilm_disp_text", "ilm_disp")
   for (f in shared) {
     mine <- get(f, envir = asNamespace("illume"))
     theirs <- get(f, envir = asNamespace("illumex"))

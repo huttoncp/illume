@@ -2,8 +2,8 @@
 A binomial model of yb, fitted to 240 observations. The model works on the logit scale, so its coefficients are not in percentage points of probability; the effects below are converted.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with yb. Across the middle half of x, the predicted probability that yb is 1 is 25% at -0.871 against 67% at 0.678: 42 percentage points higher (95% interval 31 to 53). Its effect varies with g2 (x:g2, below), so this is the average.
-g2: moderate evidence (p = 0.0475) that g2 is associated with yb. The predicted probability that yb is 1 is 42% for 'control' and 53% for 'treated': 11 percentage points higher for 'treated' (95% interval 0.34 to 22). Its effect varies with x (x:g2, below), so this is the average.
+x: very strong evidence (p < 0.001) that x is associated with yb. Across the middle half of x, the predicted probability that yb is 1 is 25.2% at -0.871 against 67.2% at 0.678: 42.0 percentage points higher (95% interval 31.4 to 52.6). Its effect varies with g2 (x:g2, below), so this is the average.
+g2: moderate evidence (p = 0.0475) that g2 is associated with yb. The predicted probability that yb is 1 is 41.9% for 'control' and 53.2% for 'treated': 11.4 percentage points higher for 'treated' (95% interval 0.342 to 22.4). Its effect varies with x (x:g2, below), so this is the average.
 x:g2treated: little evidence that a higher x:g2 is associated with a lower value of yb (estimate -0.394, 95% interval -1.08 to 0.292, p = 0.261). On the odds ratio scale that is 0.675. The interval includes zero, which means the data are consistent with no effect -- not that there is none.
 
 ## diagnostics

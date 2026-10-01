@@ -2,7 +2,7 @@
 A gaussian model of yi, fitted to 240 observations.
 
 ## effects
-income: very strong evidence (p < 0.001) that income is associated with yi. Across the middle half of income, predicted yi is 26.6 at 35,200 against 34.8 at 71,800: 8.13 higher (95% interval 7.18 to 9.08). That is 0.000222 per unit of income.
+income: very strong evidence (p < 0.001) that income is associated with yi. Across the middle half of income, predicted yi is 26.6 at 35,215 against 34.8 at 71,849: 8.13 higher (95% interval 7.18 to 9.08). That is 0.000222 per unit of income.
 
 ## diagnostics
 All 5 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().

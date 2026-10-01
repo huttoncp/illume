@@ -2,7 +2,7 @@
 A binomial model of ys, fitted to 240 observations. The model works on the logit scale, so its coefficients are not in percentage points of probability; the effects below are converted.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with ys. Across the middle half of x, the predicted probability that ys is 1 is 15% at -0.871 against 45% at 0.678: 30 percentage points higher (95% interval 21 to 39). (Odds ratio 3.51 per unit of x.)
+x: very strong evidence (p < 0.001) that x is associated with ys. Across the middle half of x, the predicted probability that ys is 1 is 15.4% at -0.871 against 45.3% at 0.678: 29.9 percentage points higher (95% interval 21.1 to 38.8). (Odds ratio 3.51 per unit of x.)
 h3: not estimable for 'west'. 'west' has every trial a failure, so that level's coefficient has no finite estimate and neither size nor interval means anything; the other levels' coefficients are estimated as usual (see the separation check).
 
 ## diagnostics
