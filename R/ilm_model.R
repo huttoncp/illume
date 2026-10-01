@@ -497,6 +497,16 @@ ilm_model_formula <- function(formula, data, family = "auto",
   auto <- is.null(family) || identical(family, "auto")
   fam <- if (auto) NULL else if (is.list(family)) family else ilm_family(family)
   cl <- match.call()
+  ## Surv(time, event) on the left: right-censored follow-up, fitted exactly
+  ## as `time ~ ...` with censor = ilm_surv(time, event) (ilm_surv_lhs()).
+  ## The censoring is built once the model frame has dropped its rows.
+  sv <- ilm_surv_lhs(formula)
+  if (!is.null(sv)) {
+    if (!is.null(censor))
+      stop("give the censoring once: Surv() on the left of the formula, or ",
+           "`censor`, not both.", call. = FALSE)
+    formula <- sv$formula
+  }
 
   ## Where the terms of the formula get evaluated. nobars(),
   ## mgcv::interpret.gam() and reformulate() all hand back a formula carrying
@@ -650,10 +660,23 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## and model.offset() reads it back.
   off_terms <- ilm_offset_terms(gp$pf)
   rhs <- unique(c(rhs, off_terms))
+  ## Surv()'s event joins the frame as the weights do, so na.action drops a
+  ## row from it and from the response together
+  ## (wrapped in I() unless it is a name: `event == 1` added to the formula
+  ## as it stands would be read as `(x + event) == 1`)
+  sv_term <- if (is.null(sv)) NULL else if (is.name(sv$event)) sv$event
+             else as.call(list(as.name("I"), sv$event))
+  if (!is.null(sv)) rhs <- unique(c(rhs, ilm_term_text(sv_term)))
   if (!length(rhs)) rhs <- "1"
   form_all <- stats::reformulate(rhs, response = formula[[2]], env = fenv)
   mf <- stats::model.frame(form_all, data, na.action = na.action,
                            drop.unused.levels = TRUE)
+  surv_read <- NULL
+  if (!is.null(sv)) {
+    sev <- ilm_surv_event(mf[[ilm_mf_name(sv_term)]])
+    censor <- ilm_surv(stats::model.response(mf), sev)
+    surv_read <- c(events = sum(sev == 1), censored = sum(sev == 0))
+  }
   ## A level no row uses is dropped from the frame: it gets no coefficient and
   ## cannot be predicted for. That used to happen without a word.
   empty_lv <- tryCatch(ilm_empty_levels(data, mf, all.vars(gp$pf)),
@@ -1050,6 +1073,8 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## hypotheses can be blocked across the category dimension later
   fit$assign      <- asgn
   fit$term_labels <- attr(mt, "term.labels")
+  ## Surv() read off the formula's left side: its counts, for summary()
+  fit$surv_read   <- surv_read
   fit$empty_levels <- empty_lv
   ## separation: the levels found before the fit, and the coefficients whose
   ## likelihood is flat where they stopped, in one check

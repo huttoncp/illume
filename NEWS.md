@@ -1,5 +1,20 @@
 # illume 0.0.8.9003
 
+* `ilm_censor()`'s `status` argument is renamed `censored`: `-1`
+  left-censored, `0` observed, `1` right-censored -- the direction of
+  censoring. `event =` is its alternative in `survival::Surv()`'s
+  convention, `1` when the event was observed; the two code the same data
+  oppositely, and giving both stops. A `censored` of only 0s and 1s is said
+  once a session, since that is what an event indicator given to the wrong
+  argument looks like. The help sets the two codings side by side, with the
+  `Surv()` trap shown.
+* `Surv(time, event)` on the left of a formula is read as right-censored
+  follow-up and fitted exactly as `time ~ ...` with
+  `censor = ilm_surv(time, event)`; `summary()` says
+  "Surv() read as right-censored: n events, m censored". Left-censored,
+  interval-censored and start-stop `Surv()` stop and name what to use.
+* `summary()` of every censored fit says how many rows were observed and how
+  many right- or left-censored.
 * A term at its limit is held by a rule that gives the same answer on every
   platform measured. A dispersion, a residual SD, or a random effect's or
   AR(1)'s SD past its line was held when one push of 3 towards its limit

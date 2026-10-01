@@ -157,6 +157,17 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   if (fam == "binomial")
     writeLines(paste0("        ", ilm_bin_target(o)))
   if (!is.null(o$formula)) cat("Formula:", deparse(o$formula), "\n")
+  ## what was censored, said for every censored fit: the coding is easy to
+  ## get backwards, and the counts show at once which way it went
+  if (!is.null(o$surv_read))
+    cat(sprintf("Surv() read as right-censored: %d events, %d censored\n",
+                o$surv_read[["events"]], o$surv_read[["censored"]]))
+  if (!is.null(o$censor)) {
+    cc <- as.integer(o$censor)
+    cat(sprintf("Censoring: %d observed, %d right-censored%s\n", sum(cc == 0L),
+                sum(cc == 1L), if (any(cc == -1L))
+                  sprintf(", %d left-censored", sum(cc == -1L)) else ""))
+  }
   ll <- logLik(o); dev <- -2 * as.numeric(ll)
   nn <- if (!is.null(o$weights)) sum(o$weights) else nrow(o$X)
   cat(sprintf("\n     AIC      BIC   logLik deviance df.resid\n%8.1f %8.1f %8.1f %8.1f %8d\n",

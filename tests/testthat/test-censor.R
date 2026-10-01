@@ -28,8 +28,8 @@ test_that("codes are derived from the limits", {
   expect_equal(as.integer(ilm_censor(y, upper = 5)), c(0L, 0L, 0L, 0L, 1L, 1L))
 })
 
-test_that("a status can be given directly, and then the limits are not known", {
-  s <- ilm_censor(1:5, status = c(0, 0, 1, 1, 0))
+test_that("codes can be given directly, and then the limits are not known", {
+  s <- suppressMessages(ilm_censor(1:5, censored = c(0, 0, 1, 1, 0)))
   expect_equal(as.integer(s), c(0L, 0L, 1L, 1L, 0L))
   expect_true(is.na(attr(s, "lower")))
   # with no limits the codes are held as supplied, whatever response is handed in
@@ -45,11 +45,13 @@ test_that("codes are re-derived for a simulated response", {
 })
 
 test_that("misspecification is named", {
-  expect_error(ilm_censor(1:5), "give `lower`, `upper` or `status`")
+  expect_error(ilm_censor(1:5), "give `lower`, `upper`, `censored` or `event`")
   expect_error(ilm_censor(1:5, lower = 3, upper = 1), "must be below")
-  expect_error(ilm_censor(1:5, status = c(0, 1)), "but `y` has")
-  expect_error(ilm_censor(1:5, status = c(0, 1, 2, 0, 1)), "must be -1")
-  expect_error(ilm_censor(1:5, status = rep(2, 5)), "1 - event", fixed = TRUE)
+  expect_error(ilm_censor(1:5, censored = c(0, 1)), "but `y` has")
+  expect_error(ilm_censor(1:5, censored = c(0, 1, 2, 0, 1)), "must be -1")
+  expect_error(ilm_censor(1:5, censored = rep(2, 5)), "give it as `event`", fixed = TRUE)
+  expect_error(ilm_censor(1:5, event = c(1, 0, 2, 1, 1)), "must be 1 (the event was observed)",
+               fixed = TRUE)
   expect_error(ilm_censor(letters[1:5], lower = 1), "must be numeric")
   expect_warning(ilm_censor(1:5, lower = -99), "nothing is censored")
 })
@@ -59,7 +61,7 @@ test_that("printing says how much is censored", {
   expect_true(any(grepl("2 left", out)))
   expect_true(any(grepl("1 right", out)))
   expect_true(any(grepl("limits", out)))
-  out2 <- capture.output(print(ilm_censor(1:4, status = c(0, 0, 1, 1))))
+  out2 <- capture.output(print(suppressMessages(ilm_censor(1:4, censored = c(0, 0, 1, 1)))))
   expect_true(any(grepl("limits not recorded", out2)))
 })
 
