@@ -20,6 +20,15 @@
 * `summary()` always shows a held limit among the model checks. It showed
   the first four rows that were not OK, which could leave the held limit
   out.
+* New rows given date-times are placed at the right fitted time. A row was
+  matched to a group's fitted time within 1e-9 of the times' size, and a
+  date-time counts seconds since 1970, so that was about 1.7 seconds: a row
+  one second after a fitted time was placed at it, and
+  `predict(groups = "fitted")` gave the earlier time's fitted value. Times
+  near 1e7 confused any two fitted times closer than 0.01 the same way. The tolerance is now a millionth
+  of the smallest gap between the group's fitted times, so no two of them
+  are ever merged; with a single fitted time, it is 1e-9. `ilm_matrices()`
+  places rows by the same rule.
 * A model whose fixed-effect columns are not all separable stops before the
   fit and says why. The whole fixed design is checked for rank, a smooth's
   unpenalised columns with it: `s(x, by = z) + s(w, by = z)`, whose
