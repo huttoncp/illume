@@ -36,8 +36,7 @@ Delete this file once the queue is empty.
      - a sentence in `reml`'s help on few groups.
   2. An outlier and influence check.
   3. `ilm_plot_model_pdp()`, with its causal-language guard.
-  4. (Settled 2026-10-01: no session log and no exported analysis records;
-     `ilm_interpret()` stays, as prose only.)
+  4. (Settled 2026-10-01: `ilm_interpret()` stays, as prose only.)
   5. The multinomial slowdown, warm-started refits, and whether reformulas
      moves to Imports.
   6. After that, for the same agent: `ilm_scores()`, `ilm_calibration()` and
