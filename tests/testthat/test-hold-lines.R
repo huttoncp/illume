@@ -104,3 +104,62 @@ test_that("with sigma and an AR SD both flat, only the flatter is held", {
   expect_false("dispersion" %in% cb$flagged)
   expect_true(2L %in% cb$keep)
 })
+
+test_that("the flatness rule: held, not held, unconverged, and held by value", {
+  ## an objective that moves by `f(h)` when the one parameter is pushed by h
+  mk <- function(f) {
+    n <- 0L
+    list(obj = list(fn = function(p) { n <<- n + 1L; f(p[["logdisp"]] - 2) }),
+         calls = function() n)
+  }
+  par <- c(beta = 1, logdisp = 2)
+  ## flat: every push within 0.05
+  o <- mk(function(h) 0.01 * abs(h) / 6)
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)
+  expect_true(j$held); expect_false(j$by_value); expect_false(j$unconverged)
+  expect_equal(j$push, c(1.5, 3, 6) * 0.01 / 6)
+  ## rising past the tolerance at the furthest push: not held
+  o <- mk(function(h) 0.06 * (h / 6)^2)
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)
+  expect_false(j$held); expect_false(j$unconverged)
+  ## the push goes the way it is told: down, for a log SD
+  o <- mk(function(h) if (h > 0) 1 else 0)
+  expect_true(illume:::ilm_push_judge(o$obj, par, 2L, -1, below = -1)$held)
+  expect_false(illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)$held)
+  ## falling by more than the tolerance: unconverged, and not held
+  o <- mk(function(h) -0.06 * (h / 6))
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)
+  expect_false(j$held); expect_true(j$unconverged)
+  ## falling by less is within the tolerance
+  o <- mk(function(h) -0.04 * (h / 6))
+  expect_true(illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)$held)
+  ## an objective that cannot be evaluated at a pushed point holds nothing
+  o <- mk(function(h) if (h > 4) stop("non-finite") else 0)
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -1)
+  expect_false(j$held); expect_false(j$unconverged); expect_true(is.na(j$size))
+  ## past the floor, held by value, with no push at all
+  o <- mk(function(h) -100 * h)
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -illume:::ilm_hold_floor - 0.01)
+  expect_true(j$held); expect_true(j$by_value); expect_false(j$unconverged)
+  expect_identical(o$calls(), 0L)
+  ## just inside it, pushed as usual
+  j <- illume:::ilm_push_judge(o$obj, par, 2L, 1, below = -illume:::ilm_hold_floor + 0.01)
+  expect_false(j$held); expect_true(j$unconverged)
+})
+
+test_that("a dispersion's unconverged push is kept for the optimizer check", {
+  par <- c(beta = 1, logdisp = 2)
+  obj <- list(fn = function(p) -(p[["logdisp"]] - 2) * 0.1)
+  cb <- list(flagged = "dispersion", blocks = list(dispersion = 2L), keep = 1L,
+             below = list(dispersion = -2))
+  cb <- illume:::ilm_disp_flat(obj, par, names(par), cb, side = 1L)
+  expect_false("dispersion" %in% cb$flagged)
+  expect_true(2L %in% cb$keep)
+  expect_equal(cb$unconverged[["dispersion"]], -0.6)
+  ## past the floor: held by value, and nothing is recorded as unconverged
+  cb <- list(flagged = "dispersion", blocks = list(dispersion = 2L), keep = 1L,
+             below = list(dispersion = -7))
+  cb <- illume:::ilm_disp_flat(obj, par, names(par), cb, side = 1L)
+  expect_true("dispersion" %in% cb$flagged)
+  expect_null(cb$unconverged)
+})

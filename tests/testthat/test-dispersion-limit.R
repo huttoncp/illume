@@ -74,17 +74,76 @@ dl_beta <- function(seed, phi) {
   d
 }
 
-test_that("a beta's phi is held at its limit, and not at a curved optimum", {
-  ## flat beyond phi = 6e7: held
-  f <- suppressMessages(dl_fit(dl_beta(71272, 200), "beta"))
+test_that("a beta's phi is held at its limit by the pushes", {
+  ## 1 / sqrt(phi) e^-3.6 below its line, and flat beyond it: pushes of 1.5,
+  ## 3 and 6 move the objective by at most 3e-4 under both R / RTMB builds
+  ## measured (the item 269 confirmation, cell 8, replicate 1001), far inside
+  ## the tolerance of 0.05
+  f <- suppressMessages(dl_fit(dl_beta(64353, 1e4), "beta"))
   expect_true("dispersion" %in% f$hessian_held)
   expect_match(f$checks$cause[f$checks$check == "dispersion_limit"],
                "other terms carry all the variation")
-  ## phi near 1e12, but at a curved optimum, the latent interpolating nearly
-  ## noiseless data: past the line, not flat, so not held
-  f2 <- suppressMessages(dl_fit(dl_beta(63362, 1e4), "beta"))
-  expect_lt(exp(-f2$opt$par[names(f2$opt$par) == "logdisp"] / 2), 1e-2)
-  expect_false("dispersion" %in% f2$hessian_held)
+  ## (Not the curved beta of seed 63362, phi near 1e12: a fit that runs away
+  ## without converging stops where a build's arithmetic lets it -- e^-9.4
+  ## below the line on Windows, macOS and here, e^-5.8 on Linux's R release
+  ## and devel -- and off a stationary point its hold rests on TMB's verdict
+  ## on its Hessian, which was float noise on Linux's R oldrel. Its optimizer
+  ## and gradient checks FAIL wherever it is held. The hold by value is
+  ## tested below on a fit that converges.)
+})
+
+test_that("a hold in the fragile band is consistent whichever way it falls", {
+  ## The largest of this fit's pushes, 0.033, sits in the band [0.025, 0.1]
+  ## where a decision against the tolerance of 0.05 can differ between
+  ## builds (the item 269 confirmation, cell 8, replicate 1005; held under
+  ## both builds measured). Its decision is platform-dependent by design, so
+  ## only what holds either way is asserted: a held phi has no standard
+  ## error and stays fixed in the draws; an unheld one keeps its own.
+  f <- suppressMessages(dl_fit(dl_beta(64357, 1e4), "beta"))
+  pn <- names(f$opt$par)
+  v <- diag(f$sdr$cov.fixed)[pn == "logdisp"]
+  if ("dispersion" %in% f$hessian_held) {
+    expect_true(is.na(v))
+    dr <- ilm_draws(f, nsim = 20, seed = 1, natural = FALSE)
+    ld <- dr$draws[rownames(dr$draws) == "logdisp", ]
+    expect_true(all(ld == ld[1]))
+  } else {
+    expect_false("dispersion_limit" %in% f$checks$check)
+  }
+})
+
+test_that("a push that lowers the objective reports the fit unconverged, not held", {
+  ## the decision forced, on a real fit: the optimizer check FAILs and says
+  ## why, and the dispersion is estimated like any other parameter
+  ## (a beta's dispersion is pushed up; anything pushed down is judged as usual)
+  real <- ilm_push_judge
+  local_mocked_bindings(ilm_push_judge = function(obj, par, id, dir, below = NULL) {
+    if (dir < 0) return(real(obj, par, id, dir, below))
+    list(held = FALSE, by_value = FALSE, unconverged = TRUE,
+         push = c(1e-4, -0.02, -0.31), size = 0.31)
+  })
+  f <- suppressMessages(dl_fit(dl_beta(64353, 1e4), "beta"))
+  expect_false("dispersion" %in% f$hessian_held)
+  expect_false("dispersion_limit" %in% f$checks$check)
+  ck <- f$checks[f$checks$check == "optimizer", ]
+  expect_identical(ck$status, "FAIL")
+  expect_match(ck$detail, paste("pushing the dispersion further towards its limit",
+                                "lowered the objective by 0.31, so the fit had not",
+                                "converged along it"), fixed = TRUE)
+  expect_match(ck$cause, "stopped before the dispersion reached the limit", fixed = TRUE)
+  expect_false(f$ok)
+})
+
+test_that("summary() shows a held limit however many checks come before it", {
+  f <- suppressMessages(dl_fit(dl_counts(5)))
+  extra <- f$checks[rep(1L, 5L), ]
+  extra$check <- paste0("made_up_", 1:5); extra$status <- "WARN"
+  extra$detail <- "a row ahead of the held limit"
+  f$checks <- rbind(extra, f$checks)
+  out <- capture.output(summary(f))
+  expect_true(any(grepl("[BOUNDARY] dispersion_limit:", out, fixed = TRUE)))
+  ## the other rows fill the places left, and the rest are counted
+  expect_true(any(grepl("more; see fit$checks", out, fixed = TRUE)))
 })
 
 test_that("the hold reads the same whatever the covariate's units, at both edges", {
@@ -130,6 +189,29 @@ dl_gauss <- function(seed, noise = 0.5) {
   d$y <- 0.5 + 0.3 * d$x + lat + stats::rnorm(nrow(d), 0, noise)
   d
 }
+
+test_that("a residual SD far past the floor is held by its value, with no push", {
+  ## noise 0.2 that the AR(1) latent takes up whole: sigma e^-11.8 below its
+  ## line of 0.2 of sd(y), on both R / RTMB builds measured, with the fit
+  ## converged and its checks OK (the item 269 confirmation, cell 2,
+  ## replicate 1062) -- nearly six past the floor, so no build's stopping
+  ## point brings it back inside, and the hold goes by the fit's own Hessian
+  judged <- list()
+  real <- ilm_push_judge
+  local_mocked_bindings(ilm_push_judge = function(obj, par, id, dir, below = NULL) {
+    j <- real(obj, par, id, dir, below)
+    judged[[length(judged) + 1L]] <<- c(below = unname(below %||% NA_real_), by_value = j$by_value)
+    j
+  })
+  f <- suppressMessages(dl_fit(dl_gauss(13076, 0.2), "gaussian"))
+  expect_true("dispersion" %in% f$hessian_held)
+  jd <- do.call(rbind, judged)
+  expect_identical(nrow(jd), 1L)
+  expect_lt(jd[1, "below"], -ilm_hold_floor - 2)
+  expect_equal(unname(jd[1, "by_value"]), 1)
+  ck <- f$checks
+  expect_identical(ck$status[ck$check %in% c("optimizer", "gradient")], c("OK", "OK"))
+})
 
 test_that("a gaussian residual SD at zero is held, and a healthy one is not", {
   expect_message(f <- dl_fit(dl_gauss(6027), "gaussian"),
