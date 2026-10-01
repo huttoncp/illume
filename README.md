@@ -11,6 +11,8 @@ The exploratory half -- describing, cleaning, plotting and profiling data before
 a model -- is the companion package [`illumex`](https://github.com/huttoncp/illumex).
 `illume` attaches it, so `library(illume)` gives you both.
 
+Note: illumex is being republished and installs will work again shortly.
+
 > Not on CRAN yet. This is pre-release software under active development.
 
 ## Two commitments
