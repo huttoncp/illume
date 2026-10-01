@@ -10,6 +10,14 @@
   elsewhere. The message names the columns, the terms and the fix -- for an
   empty cell, which cells. A numeric `by` beside its own main effect keeps
   its own message.
+* `ilm_model(aliased = "drop")` fits a model whose ordinary columns are not
+  all separable by dropping each column that is a combination of earlier
+  ones, as `lm()` and `lme4` do, and says which at fitting and in
+  `summary()`; `fit$aliased` holds them. Predictions, marginal means, trends
+  and `ilm_anova()` rebuild the design without them, and a term with no
+  column left is not tested, which the table's heading says. The default,
+  `"stop"`, is unchanged, and its message now names the option. Where a
+  smooth is involved the fit stops either way.
 * Predictors in any units. The fit rescales each column of the fixed-effect
   design, the zero part's and the dispersion model's to unit SD, fits there,
   and converts the estimates, covariance, joint precision and Hessian back to

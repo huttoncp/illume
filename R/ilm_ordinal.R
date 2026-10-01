@@ -71,20 +71,29 @@ ilm_ord_pmat <- function(object, eta) {
   ilm_ord_probs(eta, object$zeta, object$family$pfun)
 }
 
-#' Drop the intercept column from a rebuilt design, for an ordinal fit
+#' The fitted design's columns, from a design rebuilt from the terms
 #'
 #' A cumulative link fit has thresholds where every other family has an
-#' intercept, so its design carries no column of ones. Anything that rebuilds
-#' a design from the model's terms -- predictions for new data, a reference
-#' grid, an average marginal effect -- gets one back from `model.matrix()` and
-#' has to drop it, or the columns no longer line up with the coefficients.
+#' intercept, so its design carries no column of ones; and a fit with
+#' `aliased = "drop"` has no column for a coefficient it dropped. Anything
+#' that rebuilds a design from the model's terms -- predictions for new data,
+#' a reference grid, an average marginal effect -- gets those back from
+#' `model.matrix()` and has to drop them, or the columns no longer line up
+#' with the coefficients.
 #'
 #' @keywords internal
 #' @noRd
-ilm_drop_intercept <- function(X, object) {
-  if (!isTRUE(object$ordinal)) return(X)
-  ic <- match("(Intercept)", colnames(X), nomatch = 0L)
-  if (ic > 0L) X <- X[, -ic, drop = FALSE]
+ilm_fit_cols <- function(X, object) {
+  ## and any column dropped as aliased (ilm_model(aliased = "drop")), with
+  ## the column -> term map kept in step
+  drop <- object$aliased$columns
+  if (isTRUE(object$ordinal)) drop <- c(drop, "(Intercept)")
+  kc <- !colnames(X) %in% drop
+  if (all(kc)) return(X)
+  a <- attr(X, "assign"); ct <- attr(X, "contrasts")
+  X <- X[, kc, drop = FALSE]
+  if (!is.null(a)) attr(X, "assign") <- a[kc]
+  if (!is.null(ct)) attr(X, "contrasts") <- ct
   X
 }
 
