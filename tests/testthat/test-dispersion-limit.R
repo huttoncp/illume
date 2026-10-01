@@ -74,7 +74,7 @@ dl_beta <- function(seed, phi) {
   d
 }
 
-test_that("a beta's phi is held at its limit, by the pushes or by its value", {
+test_that("a beta's phi is held at its limit by the pushes", {
   ## 1 / sqrt(phi) e^-3.6 below its line, and flat beyond it: pushes of 1.5,
   ## 3 and 6 move the objective by at most 3e-4 under both R / RTMB builds
   ## measured (the item 269 confirmation, cell 8, replicate 1001), far inside
@@ -83,14 +83,13 @@ test_that("a beta's phi is held at its limit, by the pushes or by its value", {
   expect_true("dispersion" %in% f$hessian_held)
   expect_match(f$checks$cause[f$checks$check == "dispersion_limit"],
                "other terms carry all the variation")
-  ## phi near 1e12 at a curved optimum, the latent interpolating nearly
-  ## noiseless data: e^-9.4 below the line, past the floor of e^-6, so held
-  ## by its value with no push -- whether or not the optimiser settled there,
-  ## which the optimizer and gradient checks say for themselves
-  f2 <- suppressMessages(dl_fit(dl_beta(63362, 1e4), "beta"))
-  lp <- f2$opt$par[names(f2$opt$par) == "logdisp"]
-  expect_lt(-lp / 2 - log(1e-2), -ilm_hold_floor)
-  expect_true("dispersion" %in% f2$hessian_held)
+  ## (Not the curved beta of seed 63362, phi near 1e12: a fit that runs away
+  ## without converging stops where a build's arithmetic lets it -- e^-9.4
+  ## below the line on Windows, macOS and here, e^-5.8 on Linux's R release
+  ## and devel -- and off a stationary point its hold rests on TMB's verdict
+  ## on its Hessian, which was float noise on Linux's R oldrel. Its optimizer
+  ## and gradient checks FAIL wherever it is held. The hold by value is
+  ## tested below on a fit that converges.)
 })
 
 test_that("a hold in the fragile band is consistent whichever way it falls", {
@@ -190,6 +189,29 @@ dl_gauss <- function(seed, noise = 0.5) {
   d$y <- 0.5 + 0.3 * d$x + lat + stats::rnorm(nrow(d), 0, noise)
   d
 }
+
+test_that("a residual SD far past the floor is held by its value, with no push", {
+  ## noise 0.2 that the AR(1) latent takes up whole: sigma e^-11.8 below its
+  ## line of 0.2 of sd(y), on both R / RTMB builds measured, with the fit
+  ## converged and its checks OK (the item 269 confirmation, cell 2,
+  ## replicate 1062) -- nearly six past the floor, so no build's stopping
+  ## point brings it back inside, and the hold goes by the fit's own Hessian
+  judged <- list()
+  real <- ilm_push_judge
+  local_mocked_bindings(ilm_push_judge = function(obj, par, id, dir, below = NULL) {
+    j <- real(obj, par, id, dir, below)
+    judged[[length(judged) + 1L]] <<- c(below = unname(below %||% NA_real_), by_value = j$by_value)
+    j
+  })
+  f <- suppressMessages(dl_fit(dl_gauss(13076, 0.2), "gaussian"))
+  expect_true("dispersion" %in% f$hessian_held)
+  jd <- do.call(rbind, judged)
+  expect_identical(nrow(jd), 1L)
+  expect_lt(jd[1, "below"], -ilm_hold_floor - 2)
+  expect_equal(unname(jd[1, "by_value"]), 1)
+  ck <- f$checks
+  expect_identical(ck$status[ck$check %in% c("optimizer", "gradient")], c("OK", "OK"))
+})
 
 test_that("a gaussian residual SD at zero is held, and a healthy one is not", {
   expect_message(f <- dl_fit(dl_gauss(6027), "gaussian"),
