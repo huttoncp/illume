@@ -154,8 +154,8 @@
 ##   every column by its SD moved fits whose columns were already well
 ##   scaled (factors like 0.97), so the optimiser stopped elsewhere within
 ##   its tolerance, and a pathological beta landed in a worse basin. Settled
-##   within the intent of Craig's ruling on item 6 (the conductor,
-##   2026-09-29): the build under test is now c0377f3, which rescales a
+##   within the intent of Craig's ruling on item 6 (2026-09-29): the build
+##   under test is now c0377f3, which rescales a
 ##   column only when its SD is outside [1e-2, 1e2]. So:
 ## (i) The AFTER arm is rerun on a new pinned library (lib-rsc, from c0377f3,
 ##     with its manifest), same seeds, same cells. BEFORE and HAND are the
