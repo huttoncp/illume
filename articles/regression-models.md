@@ -284,36 +284,39 @@ instead, which needs no such derivation:
 ilm_pb_lrt(fit, "x1", B = 200, ncores = 4)
 ```
 
-## Maximum likelihood, and when to switch to REML
+## REML or maximum likelihood
 
 Variance components estimated by maximum likelihood are biased downward,
 because ML does not account for the degrees of freedom spent on the
 fixed effects. With many clusters that hardly matters; with few it
-carries through into standard errors and degrees of freedom.
-
-`reml = TRUE` corrects it:
+carries through into standard errors and degrees of freedom. **So a
+gaussian mixed model is fitted by REML by default** – since illume
+0.0.8.9003; before that the default was maximum likelihood, so the
+gaussian mixed models in this vignette now fit by REML when you run
+them. Every other model is fitted by maximum likelihood. A gaussian
+mixed model’s [`print()`](https://rdrr.io/r/base/print.html) and
+[`summary()`](https://rdrr.io/r/base/summary.html) say which it was
+fitted by, and `reml = FALSE` fits it by maximum likelihood:
 
 ``` r
 
 ilm_model(y ~ x1 + grp + (1 | id), data = d, family = "gaussian",
-          reml = TRUE)
+          reml = FALSE)
 ```
 
-The default is maximum likelihood, and the reason is the order you work
-in. A restricted likelihood is the likelihood of contrasts orthogonal to
-the design matrix, so changing the fixed effects changes which data it
-is the likelihood of. Two REML fits with different fixed effects are not
-comparable, and their difference is not a likelihood ratio.
-
-So: **settle the mean structure under the default, then refit with
-`reml = TRUE` for the estimates you report.** Once set,
-`ilm_anova(test = "LRT")` and
+A restricted likelihood is the likelihood of contrasts orthogonal to the
+design matrix, so changing the fixed effects changes which data it is
+the likelihood of. Two REML fits with different fixed effects are not
+comparable, and their difference is not a likelihood ratio. So the
+comparisons illume makes – `ilm_anova(test = "LRT")`,
 [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
-refuse rather than quietly comparing things that are not comparable, and
-so does
+and McFadden’s R-squared – refit a REML fit by maximum likelihood for
+the comparison, and say that they did. AIC and BIC are the REML fit’s:
+compare them only between models with the same fixed effects, or refit
+with `reml = FALSE` to compare others.
 [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
-– a sandwich needs per-observation scores, and integrating the
-coefficients out leaves none.
+refuses a REML fit – a sandwich needs per-observation scores, and
+integrating the coefficients out leaves none.
 
 For a gaussian response this is REML exactly: the Laplace approximation
 to the restricted likelihood is exact for a linear model, and the

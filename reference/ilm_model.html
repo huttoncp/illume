@@ -98,7 +98,7 @@ by <code>ilm_model()</code>; documented separately only because <code>ilm_model(
 <span>  ziformula <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  zi_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"inflated"</span>, <span class="st">"hurdle"</span><span class="op">)</span>,</span>
 <span>  design <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  reml <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  reml <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hold"</span>, <span class="st">"avoid"</span><span class="op">)</span>,</span>
 <span>  aliased <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"stop"</span>, <span class="st">"drop"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -268,30 +268,17 @@ replicate count are different things and the design already carries one.</p></dd
 
 
 <dt id="arg-reml">reml<a class="anchor" aria-label="anchor" href="#arg-reml"></a></dt>
-<dd><p>Logical. Estimate the variance components by RESTRICTED maximum
-likelihood instead of maximum likelihood. Defaults to <code>FALSE</code>, and the
-reason is the order you work in: maximum likelihood is what lets you
-compare fixed-effect structures, because a restricted likelihood belongs
-to contrasts orthogonal to the design matrix and changing that matrix
-changes which data it is the likelihood of. Settle the fixed effects under
-the default, then refit with <code>reml = TRUE</code> for the estimates you report –
-maximum likelihood biases the variance components downward, and with few
-clusters that carries through to standard errors and to the degrees of
-freedom from <code><a href="ilm_denom_df.html">ilm_denom_df()</a></code>. With few groups the difference is
-measurable: in a study of 8 groups of 6, nominal 90% prediction intervals
-for new groups, built from the fitted variance components, covered 0.903
-with REML against 0.891 with maximum likelihood for a gaussian response,
-and 0.892 against 0.872 for a Poisson one. Once set, any likelihood-ratio
-test refuses
-rather than quietly comparing things that are not comparable, and so does
-<code><a href="ilm_robust.html">ilm_robust()</a></code>, whose sandwich needs per-observation scores that a
-restricted likelihood does not have. Available for every family, but exact
-only for a gaussian response: for any other family it is an approximately
-restricted likelihood, which reduces the downward bias without REML's
-exact properties, and <code>fit$reml_exact</code> says which a fit has (see the
-<em>Regression models</em> vignette). <code><a href="ilm_dag_model.html">ilm_dag_model()</a></code> defaults to <code>TRUE</code> for a
-gaussian response, because there the graph fixed the adjustment set
-before any data were seen.</p></dd>
+<dd><p><code>NULL</code> (the default), <code>TRUE</code> or <code>FALSE</code>: estimate the variance
+components by RESTRICTED maximum likelihood (REML) or by maximum
+likelihood. <code>NULL</code> fits a gaussian mixed model by REML and every other
+model by maximum likelihood; see "REML or maximum likelihood" for why and
+when to change it. A gaussian mixed model's <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> say
+which it was fitted by, and whether that was the default. REML is
+available for every family but exact only for a gaussian response: for
+any other family it is an approximately restricted likelihood, which
+reduces the downward bias without REML's exact properties, and
+<code>fit$reml_exact</code> says which a fit has (see the <em>Regression models</em>
+vignette).</p></dd>
 
 
 <dt id="arg-boundary">boundary<a class="anchor" aria-label="anchor" href="#arg-boundary"></a></dt>
@@ -505,6 +492,35 @@ groups, nearly confounded with the group variance, shows under maximum
 likelihood only. The line says so on a REML fit.</p>
     </div>
     <div class="section level2">
+    <h2 id="reml-or-maximum-likelihood">REML or maximum likelihood<a class="anchor" aria-label="anchor" href="#reml-or-maximum-likelihood"></a></h2>
+    <p>the defaults, and when to change them:
+A gaussian mixed model – gaussian with an identity link, a grouping term or
+a correlation over time, and no zero part or censoring – is fitted by REML
+by default; every other model by maximum likelihood. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> of a gaussian mixed model say which estimator it has and
+whether that was the default.</p>
+<p>Why REML there: maximum likelihood estimates the variance components as if
+the fixed effects were known, so with few groups it estimates them too
+small, and the standard errors, degrees of freedom and intervals built on
+them are too narrow. On 24,000 simulated fits of 6 to 20 groups, the
+Satterthwaite intervals of REML fits covered close to 95% in 11 of the 12
+designs with 10 or more groups; on the same data, maximum likelihood
+covered 0.902 to 0.934 in 6 of them, and a test of a between-group factor
+at a nominal 5% rejected 19% of the time with 6 groups against 7.8% for
+REML (<code>studies/findings/df_tables.md</code>).</p>
+<p>When to change it: set <code>reml = FALSE</code> to fit a gaussian mixed model by
+maximum likelihood – to reproduce another program's ML fit, or to compare
+AIC or likelihoods between models that differ in their fixed effects. You do
+not need it for the comparisons illume makes itself: <code>ilm_anova(test = "LRT")</code>, <code><a href="ilm_pb_lrt.html">ilm_pb_lrt()</a></code> and McFadden's R-squared refit a REML fit by maximum
+likelihood for the comparison and say that they did, because a restricted
+likelihood belongs to contrasts orthogonal to the fixed design and two
+models with different fixed effects have restricted likelihoods of
+different data. Set <code>reml = TRUE</code> to ask for REML in another family.
+<code><a href="ilm_dag_model.html">ilm_dag_model()</a></code> fits a gaussian response by REML whether or not it has
+random terms, because there the graph fixed the adjustment set before any
+data were seen.</p>
+    </div>
+    <div class="section level2">
     <h2 id="how-smooth-terms-are-named">How smooth terms are named<a class="anchor" aria-label="anchor" href="#how-smooth-terms-are-named"></a></h2>
 
 
@@ -560,29 +576,31 @@ Statistical Mathematics</em>, 43(1), 1–20.</p>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ilm_model</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">grp</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">subj</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dd</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span></span>
 <span class="r-in"><span>                 verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Linear mixed model fit by maximum likelihood (Laplace approximation)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Linear mixed model fit by restricted maximum likelihood (REML) (Laplace approximation)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Family: gaussian (identity link)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Fitted by REML, the default for a gaussian mixed model; reml = FALSE fits by</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  maximum likelihood.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Formula: y ~ x1 + grp + (1 | subj) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      AIC      BIC   logLik deviance df.resid</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    937.8    960.0   -462.9    925.8      294</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    947.4    969.6   -467.7    935.4      294</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Random effects:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  subj  [us]  30 levels</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      SD</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.881</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.898</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of obs: 300; groups: subj 30</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dispersion:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  sigma    1.0184   (residual standard deviation)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  sigma    1.0240   (residual standard deviation)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Fixed effects:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             Estimate Std. Error     df t value Pr(&gt;|t|)    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.87644    0.19283  46.85   4.545 3.86e-05 ***</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1           0.48338    0.06087 276.81   7.941 5.05e-14 ***</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> grpb         0.04956    0.14692 274.36   0.337   0.7361    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> grpc        -0.30097    0.15298 275.41  -1.967   0.0501 .  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.87704    0.19564  44.88   4.483 5.05e-05 ***</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1           0.48354    0.06119 273.63   7.902 6.72e-14 ***</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grpb         0.04881    0.14750 271.27   0.331    0.741    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> grpc        -0.30141    0.15376 272.28  -1.960    0.051 .  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  t tests on Satterthwaite's degrees of freedom</span>

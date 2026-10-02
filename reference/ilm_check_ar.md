@@ -131,9 +131,9 @@ ilm_check_ar(f, time = as.integer(factor(d$date)), group = d$id,
 #> 
 #> residual autocorrelation vs simulated envelope (12 refits)
 #>  lag component estimate null_mean      lo     hi  maxz      p status n_pairs
-#>    1  residual  -0.1768   -0.1278 -0.3871 0.1315 -0.57 0.4615     OK     140
-#>    2  residual  -0.1317   -0.0836 -0.2908 0.1236 -0.44 0.9231     OK     120
-#>    3  residual  -0.0654   -0.1369 -0.3296 0.0558  0.83 0.5385     OK     100
+#>    1  residual  -0.1777   -0.1293 -0.3899 0.1312 -0.56 0.4615     OK     140
+#>    2  residual  -0.1329   -0.0851 -0.2916 0.1214 -0.44 0.9231     OK     120
+#>    3  residual  -0.0671   -0.1385 -0.3322 0.0551  0.83 0.5385     OK     100
 #> 
 #> >> residual autocorrelation is consistent with the fitted model.
 ```

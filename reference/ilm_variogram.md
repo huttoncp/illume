@@ -169,10 +169,10 @@ ilm_variogram(f, d$t, d$id, breaks = 4, B = 15, plot = FALSE)
 #> 
 #> residual correlation by separation (15 refits, 200 pairs)
 #>  bin separation component estimate null_mean      lo     hi  maxz      p status
-#>    1      2.096  residual  -0.2914   -0.0394 -0.2110 0.1322 -2.89 0.0625     OK
-#>    2      4.938  residual  -0.1124   -0.0152 -0.2037 0.1734 -0.94 0.5000     OK
-#>    3      8.029  residual   0.1819   -0.0389 -0.4175 0.3396  1.49 0.1875     OK
-#>    4     12.200  residual  -0.1688   -0.0531 -0.2898 0.1836 -0.92 0.5000     OK
+#>    1      2.096  residual  -0.2914   -0.0472 -0.2292 0.1348 -2.75 0.0625     OK
+#>    2      4.938  residual  -0.1124   -0.0232 -0.2160 0.1695 -0.86 0.5000     OK
+#>    3      8.029  residual   0.1819   -0.0468 -0.4231 0.3296  1.54 0.1875     OK
+#>    4     12.200  residual  -0.1688   -0.0607 -0.2952 0.1739 -0.87 0.5625     OK
 #>  n_pairs
 #>       52
 #>       64

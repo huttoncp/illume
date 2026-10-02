@@ -73,9 +73,9 @@ fit <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
 ystar <- ilm_simulate(fit, nsim = 1, seed = 2)[, 1]
 coef(ilm_refit(fit, y = ystar))
 #> (Intercept)           x 
-#>   0.8618735   0.3489162 
+#>   0.8747901   0.3474312 
 ## the same model on the first eight groups
 coef(ilm_refit(fit, data = d[d$id %in% 1:8, ]))
 #> (Intercept)           x 
-#>   0.8354456   0.3997347 
+#>   0.8355169   0.3989372 
 ```

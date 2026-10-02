@@ -142,21 +142,21 @@ summing over draws and this function cannot disagree at the estimate.</p>
 <span class="r-in"><span><span class="fu">ilm_varcorr</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Variance components (natural scale)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Groups   Name        Variance Std.Dev.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  id       (Intercept) 0.3968   0.63    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           t           0.09065  0.3011  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  id       (Intercept) 0.4699   0.6855  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           t           0.1029   0.3208  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Residual             0.7757   0.8807  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Correlations</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  Groups Between           Corr </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  id     (Intercept) and t 0.089</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  id     (Intercept) and t 0.038</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Dispersion: sigma = 0.8807 -- sigma, the residual standard deviation (not the variance)  </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu">ilm_varcorr</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        grp        var1 var2       vcov      sdcor</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1       id (Intercept) &lt;NA&gt; 0.39684120 0.62995333</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2       id           t &lt;NA&gt; 0.09065218 0.30108500</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3       id (Intercept)    t 0.01693502 0.08928698</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 Residual        &lt;NA&gt; &lt;NA&gt; 0.77571995 0.88074965</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        grp        var1 var2        vcov      sdcor</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1       id (Intercept) &lt;NA&gt; 0.469852811 0.68545810</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2       id           t &lt;NA&gt; 0.102923010 0.32081616</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3       id (Intercept)    t 0.008401448 0.03820472</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 Residual        &lt;NA&gt; &lt;NA&gt; 0.775719463 0.88074938</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

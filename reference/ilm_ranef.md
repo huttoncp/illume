@@ -122,10 +122,10 @@ head(ilm_ranef(fit))
 #>   re: id: 6 
 #> 
 #>  type term factor level         dim row     mode     sd
-#>    re   id     id   s01 (Intercept)   4  1.53000 0.3115
-#>    re   id     id   s02 (Intercept)   5 -0.76030 0.3115
-#>    re   id     id   s03 (Intercept)   6  0.40380 0.3115
-#>    re   id     id   s04 (Intercept)   7  0.05781 0.3115
-#>    re   id     id   s05 (Intercept)   8 -1.32600 0.3115
-#>    re   id     id   s06 (Intercept)   9 -0.29910 0.3115
+#>    re   id     id   s01 (Intercept)   4  1.54200 0.4697
+#>    re   id     id   s02 (Intercept)   5 -0.76590 0.4724
+#>    re   id     id   s03 (Intercept)   6  0.40680 0.4703
+#>    re   id     id   s04 (Intercept)   7  0.05826 0.4695
+#>    re   id     id   s05 (Intercept)   8 -1.33600 0.4706
+#>    re   id     id   s06 (Intercept)   9 -0.30130 0.4697
 ```

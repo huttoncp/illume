@@ -423,16 +423,18 @@ correlation of −0.413, against 2, 1.2 and −0.4 assumed.</p>
 random slopes are simulated correctly — they were not, until recently,
 and an independent generator is what settled it.</p>
 <p>And illume sits above Superpower’s exact calculation, for two reasons
-that can be taken apart. It counts the test its analysis reports, and a
-mixed model’s default analysis is maximum likelihood with a z reference.
+that can be taken apart. It counts the test its analysis reports, which
+in this comparison was a maximum-likelihood fit with a z reference.
 Maximum likelihood’s variance components run small, which flatters the
-power by about 1.5 points here; <code>reml = TRUE</code> plans for a
-REML analysis instead, and brings illume within Monte Carlo error of
-<code>simr</code>, which uses REML too. What remains is z against an
-exact F: a Satterthwaite reference takes <code>simr</code> down to
-Superpower’s value. Expect gaps of that size when comparing against
-G*Power or Superpower, and choose <code>reml</code> to match the
-analysis you will actually run.</p>
+power by about 1.5 points here; a REML analysis brings illume within
+Monte Carlo error of <code>simr</code>, which uses REML too. What
+remains is z against an exact F: a Satterthwaite reference takes
+<code>simr</code> down to Superpower’s value. Since illume 0.0.8.9003 a
+gaussian mixed model is fitted by REML by default, and the power
+functions plan for that analysis unless <code>reml</code> says otherwise
+– the table’s “illume (REML)” column. Expect gaps of that size when
+comparing against G*Power or Superpower, and choose <code>reml</code> to
+match the analysis you will actually run.</p>
 </div>
 </div>
 <div class="section level2">

@@ -116,11 +116,11 @@ new rows. A correlation over time must then have been given by name,
 <span class="r-in"><span><span class="va">ystar</span> <span class="op">&lt;-</span> <span class="fu"><a href="ilm_simulate.html">ilm_simulate</a></span><span class="op">(</span><span class="va">fit</span>, nsim <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu">ilm_refit</span><span class="op">(</span><span class="va">fit</span>, y <span class="op">=</span> <span class="va">ystar</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)           x </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.8618735   0.3489162 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.8747901   0.3474312 </span>
 <span class="r-in"><span><span class="co">## the same model on the first eight groups</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu">ilm_refit</span><span class="op">(</span><span class="va">fit</span>, data <span class="op">=</span> <span class="va">d</span><span class="op">[</span><span class="va">d</span><span class="op">$</span><span class="va">id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fl">1</span><span class="op">:</span><span class="fl">8</span>, <span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)           x </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.8354456   0.3997347 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.8355169   0.3989372 </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

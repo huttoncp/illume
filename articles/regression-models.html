@@ -322,29 +322,34 @@ with a simulated one instead, which needs no such derivation:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"x1"</span>, B <span class="op">=</span> <span class="fl">200</span>, ncores <span class="op">=</span> <span class="fl">4</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="maximum-likelihood-and-when-to-switch-to-reml">Maximum likelihood, and when to switch to REML<a class="anchor" aria-label="anchor" href="#maximum-likelihood-and-when-to-switch-to-reml"></a>
+<h2 id="reml-or-maximum-likelihood">REML or maximum likelihood<a class="anchor" aria-label="anchor" href="#reml-or-maximum-likelihood"></a>
 </h2>
 <p>Variance components estimated by maximum likelihood are biased
 downward, because ML does not account for the degrees of freedom spent
 on the fixed effects. With many clusters that hardly matters; with few
-it carries through into standard errors and degrees of freedom.</p>
-<p><code>reml = TRUE</code> corrects it:</p>
+it carries through into standard errors and degrees of freedom.
+<strong>So a gaussian mixed model is fitted by REML by default</strong>
+– since illume 0.0.8.9003; before that the default was maximum
+likelihood, so the gaussian mixed models in this vignette now fit by
+REML when you run them. Every other model is fitted by maximum
+likelihood. A gaussian mixed model’s <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> say which it was fitted by, and
+<code>reml = FALSE</code> fits it by maximum likelihood:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">grp</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
-<span>          reml <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>The default is maximum likelihood, and the reason is the order you
-work in. A restricted likelihood is the likelihood of contrasts
-orthogonal to the design matrix, so changing the fixed effects changes
-which data it is the likelihood of. Two REML fits with different fixed
-effects are not comparable, and their difference is not a likelihood
-ratio.</p>
-<p>So: <strong>settle the mean structure under the default, then refit
-with <code>reml = TRUE</code> for the estimates you report.</strong>
-Once set, <code>ilm_anova(test = "LRT")</code> and
-<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code> refuse rather than quietly comparing things
-that are not comparable, and so does <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> – a
-sandwich needs per-observation scores, and integrating the coefficients
-out leaves none.</p>
+<span>          reml <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<p>A restricted likelihood is the likelihood of contrasts orthogonal to
+the design matrix, so changing the fixed effects changes which data it
+is the likelihood of. Two REML fits with different fixed effects are not
+comparable, and their difference is not a likelihood ratio. So the
+comparisons illume makes – <code>ilm_anova(test = "LRT")</code>,
+<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code> and McFadden’s R-squared – refit a REML fit by
+maximum likelihood for the comparison, and say that they did. AIC and
+BIC are the REML fit’s: compare them only between models with the same
+fixed effects, or refit with <code>reml = FALSE</code> to compare
+others. <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> refuses a REML fit – a sandwich needs
+per-observation scores, and integrating the coefficients out leaves
+none.</p>
 <p>For a gaussian response this is REML exactly: the Laplace
 approximation to the restricted likelihood is exact for a linear model,
 and the variance components agree with <code>lme4</code> to 1e-05.

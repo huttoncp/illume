@@ -96,19 +96,19 @@ fit <- ilm_model(y ~ t + (1 + t | id), data = d, family = "gaussian",
 ilm_varcorr(fit)
 #> Variance components (natural scale)
 #>  Groups   Name        Variance Std.Dev.
-#>  id       (Intercept) 0.3968   0.63    
-#>           t           0.09065  0.3011  
+#>  id       (Intercept) 0.4699   0.6855  
+#>           t           0.1029   0.3208  
 #>  Residual             0.7757   0.8807  
 #> 
 #> Correlations
 #>  Groups Between           Corr 
-#>  id     (Intercept) and t 0.089
+#>  id     (Intercept) and t 0.038
 #> 
 #> Dispersion: sigma = 0.8807 -- sigma, the residual standard deviation (not the variance)  
 as.data.frame(ilm_varcorr(fit))
-#>        grp        var1 var2       vcov      sdcor
-#> 1       id (Intercept) <NA> 0.39684120 0.62995333
-#> 2       id           t <NA> 0.09065218 0.30108500
-#> 3       id (Intercept)    t 0.01693502 0.08928698
-#> 4 Residual        <NA> <NA> 0.77571995 0.88074965
+#>        grp        var1 var2        vcov      sdcor
+#> 1       id (Intercept) <NA> 0.469852811 0.68545810
+#> 2       id           t <NA> 0.102923010 0.32081616
+#> 3       id (Intercept)    t 0.008401448 0.03820472
+#> 4 Residual        <NA> <NA> 0.775719463 0.88074938
 ```

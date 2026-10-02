@@ -84,7 +84,7 @@ write in a protocol.</p>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  categories <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  thresholds <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  reml <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  reml <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -195,11 +195,13 @@ points on the latent scale, increasing.</p></dd>
 
 
 <dt id="arg-reml">reml<a class="anchor" aria-label="anchor" href="#arg-reml"></a></dt>
-<dd><p>Plan for an analysis fitted by restricted maximum likelihood,
-as <code>ilm_model(reml = TRUE)</code> fits one: every simulated study is then
-refitted by REML. For a gaussian mixed model that is the analysis most
-software reports, and its power is a little lower than that of the
-maximum-likelihood fit, whose variance components run small.</p></dd>
+<dd><p>The analysis to plan for, as <code><a href="ilm_model.html">ilm_model()</a></code>'s <code>reml</code> chooses
+it: <code>NULL</code> (the default) plans for the analysis <code><a href="ilm_model.html">ilm_model()</a></code> fits by
+default – REML for a gaussian mixed model, maximum likelihood for every
+other – and <code>TRUE</code> or <code>FALSE</code> for REML or maximum likelihood. Every
+simulated study is refitted that way. A maximum-likelihood fit's
+variance components run small, so its power is a little higher than
+REML's; plan for the analysis you will run.</p></dd>
 
 </dl></div>
     <div class="section level2">

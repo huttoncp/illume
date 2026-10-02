@@ -39,7 +39,9 @@ survives it has to be a bug the reference implementation shares.
 160 replications per task, each on a simulated dataset of 1,000
 observations; R 4.4.3, illume 0.0.8.9000 (run 2026-09-23). `max_diff` is
 the largest absolute coefficient difference against any reference
-fitting the same model.
+fitting the same model. The gaussian mixed model was fitted by maximum
+likelihood, illume’s default when this ran; it is now fitted by REML
+unless `reml = FALSE` is given.
 
 | task                     | illume (s) | lme4 (s) | glmmTMB (s) | nnet (s) | max_diff |
 |--------------------------|------------|----------|-------------|----------|----------|
@@ -80,7 +82,12 @@ get wrong.
 (run 2026-09-23 and 2026-09-24). `N` is the number of observations in
 each simulated dataset. `se_ratio` is the mean reported standard error
 divided by the actual standard deviation of the estimates: 1 means the
-reported uncertainty is honest.
+reported uncertainty is honest. The Gaussian mixed, random-slope, AR(1)
+and CAR(1) cells were fitted by maximum likelihood, illume’s default
+when they ran; a gaussian model with a grouping term or a correlation
+over time is now fitted by REML unless `reml = FALSE` is given, and the
+study behind that default (`studies/findings/df_tables.md`) found REML’s
+intervals the better calibrated with few groups.
 
 | model | N | convergence | coverage | worst coefficient | se_ratio |
 |----|----|----|----|----|----|
@@ -412,6 +419,10 @@ Rscript mclogit_compare.R    500 10 ../runs/<version>/mclogit
 Rscript messy_compare.R      400 10 ../runs/<version>/messy
 Rscript brms_compare.R         3    ../runs/<version>/brms
 ```
+
+The scripts take each model’s defaults, so a run on a version with the
+REML default fits the gaussian cells named above by REML, and their
+figures will differ from the tables’ a little.
 
 Raw per-replication output is not committed – it is several megabytes
 per version and would sit in the history permanently.

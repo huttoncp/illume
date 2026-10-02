@@ -113,7 +113,6 @@ d <- data.frame(id = factor(rep(c("a", "b", "c"), each = 10)), t = rep(1:10, 3))
 d$y <- rnorm(30) + rep(cumsum(rnorm(10, 0, 0.5)), 3)
 fit <- ilm_model(y ~ 1, data = d, family = "gaussian",
                  ar = ilm_rw1(~ t | id), verbose = FALSE)
-#> ilm_model(): the random-effect covariance of `ar` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.
 nd <- data.frame(t = c(5, 12, 3), id = c("a", "a", "z"))
 ilm_matrices(fit, nd)$ar
 #>   group time cell prev_cell next_cell dt_prev dt_next new_group

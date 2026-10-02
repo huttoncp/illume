@@ -92,7 +92,7 @@ fit <- ilm_model(y ~ 1, data = d, ar = ilm_rw1(~ t | unit),
 #> ilm_model(): family = "gaussian", inferred from `y`: continuous values from 0.414 to 7.2. Pass `family` to choose another.
 fit$Sigma$ar                 # variance of the walk per unit of time
 #>           [,1]
-#> [1,] 0.2615382
+#> [1,] 0.2758353
 head(ilm_cells(fit))
 #>   term type group time index n_obs anchor  last
 #> 1   ar  rw1     a    1    NA     1   TRUE FALSE

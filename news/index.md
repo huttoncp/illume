@@ -2,6 +2,40 @@
 
 ## illume 0.0.8.9003
 
+- **A gaussian mixed model is now fitted by REML by default.** `reml`
+  defaults to `NULL`: REML for a gaussian mixed model – an identity
+  link, a grouping term or a correlation over time, no zero part or
+  censoring – and maximum likelihood for every other model, as before.
+  Maximum likelihood estimates the variance components as if the fixed
+  effects were known, so with few groups it estimates them too small,
+  and the standard errors and intervals built on them come out too
+  narrow. On 24,000 simulated fits of 6 to 20 groups, REML’s
+  Satterthwaite intervals covered close to 95% in 11 of the 12 designs
+  with 10 or more groups; on the same data, maximum likelihood covered
+  0.902 to 0.934 in 6 of them, and a 5% test of a between-group factor
+  rejected 19% of the time with 6 groups against REML’s 7.8%
+  (`studies/findings/df_tables.md`). What you will see:
+
+  - a gaussian mixed model’s
+    [`print()`](https://rdrr.io/r/base/print.html),
+    [`summary()`](https://rdrr.io/r/base/summary.html) and verbose fit
+    say how it was fitted and why: “Fitted by REML, the default for a
+    gaussian mixed model; reml = FALSE fits by maximum likelihood”;
+  - its estimates change: the variance components come out larger, and
+    the fixed effects’ standard errors and intervals wider, most with
+    few groups; the fixed effects themselves change little, and not at
+    all in a balanced design;
+  - comparisons of models with different fixed effects need maximum
+    likelihood, so `ilm_anova(test = "LRT")`,
+    [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
+    and McFadden’s R-squared refit a REML fit by maximum likelihood and
+    say so, where they used to refuse a REML fit; AIC, BIC and
+    [`logLik()`](https://rdrr.io/r/stats/logLik.html) are the REML
+    fit’s, to compare only between models with the same fixed effects;
+  - `reml = FALSE` gives the old fit exactly.
+    [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
+    help has a section on the defaults and when to change them.
+
 - Numbers in the prose are written in full up to 15 figures before the
   point and, below 1, up to 6 decimals, and in R’s scientific notation
   beyond, as R’s tables print it: an estimate of 0.00001 to three
@@ -177,20 +211,11 @@
   for it on any gaussian fit. Other families, linear models, and
   censored or dispersion models with nothing integrated out are
   unchanged. On a small between-cluster design the z test’s p for a
-  between-cluster effect was too small. **The validated path is REML.**
-  The study behind the default (`studies/findings/df_tables.md`) fitted
-  every model with `reml = TRUE`. A default fit is by maximum
-  likelihood, and its Satterthwaite df come from the ML variance
-  estimates, which are smaller with few clusters. On 6 clusters, one
-  between-cluster slope had df 6.0 and SE 0.36 by ML, against 4.0 and
-  0.44 by REML. An arm fitted by maximum likelihood on the same data
-  (pre-registered as A1) did not support that path: Satterthwaite’s
-  intervals missed 95% in 6 of the 12 designs with 10 or more clusters
-  (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an
-  ICC of 0.3 they covered 0.893 against REML’s 0.961, and with 6
-  clusters a 5% test of a between-cluster factor rejected 19.0% of the
-  time against 7.8%. Until REML is the default for these models, fit
-  with `reml = TRUE` for the tables the study supports.
+  between-cluster effect was too small. The study behind the default
+  (`studies/findings/df_tables.md`) fitted every model by REML, and an
+  arm by maximum likelihood on the same data found the ML path’s
+  intervals too narrow; REML is now the default for these models (the
+  first entry above).
 
 - Remedies named that did not exist.
   [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md),

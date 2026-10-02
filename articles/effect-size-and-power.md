@@ -400,15 +400,18 @@ correctly — they were not, until recently, and an independent generator
 is what settled it.
 
 And illume sits above Superpower’s exact calculation, for two reasons
-that can be taken apart. It counts the test its analysis reports, and a
-mixed model’s default analysis is maximum likelihood with a z reference.
+that can be taken apart. It counts the test its analysis reports, which
+in this comparison was a maximum-likelihood fit with a z reference.
 Maximum likelihood’s variance components run small, which flatters the
-power by about 1.5 points here; `reml = TRUE` plans for a REML analysis
-instead, and brings illume within Monte Carlo error of `simr`, which
-uses REML too. What remains is z against an exact F: a Satterthwaite
-reference takes `simr` down to Superpower’s value. Expect gaps of that
-size when comparing against G\*Power or Superpower, and choose `reml` to
-match the analysis you will actually run.
+power by about 1.5 points here; a REML analysis brings illume within
+Monte Carlo error of `simr`, which uses REML too. What remains is z
+against an exact F: a Satterthwaite reference takes `simr` down to
+Superpower’s value. Since illume 0.0.8.9003 a gaussian mixed model is
+fitted by REML by default, and the power functions plan for that
+analysis unless `reml` says otherwise – the table’s “illume (REML)”
+column. Expect gaps of that size when comparing against G\*Power or
+Superpower, and choose `reml` to match the analysis you will actually
+run.
 
 ## After: how large the effect
 

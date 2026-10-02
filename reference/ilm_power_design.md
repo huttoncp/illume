@@ -31,7 +31,7 @@ ilm_power_design(
   verbose = TRUE,
   categories = NULL,
   thresholds = NULL,
-  reml = FALSE
+  reml = NULL
 )
 ```
 
@@ -147,11 +147,15 @@ ilm_power_design(
 
 - reml:
 
-  Plan for an analysis fitted by restricted maximum likelihood, as
-  `ilm_model(reml = TRUE)` fits one: every simulated study is then
-  refitted by REML. For a gaussian mixed model that is the analysis most
-  software reports, and its power is a little lower than that of the
-  maximum-likelihood fit, whose variance components run small.
+  The analysis to plan for, as
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)'s
+  `reml` chooses it: `NULL` (the default) plans for the analysis
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  fits by default – REML for a gaussian mixed model, maximum likelihood
+  for every other – and `TRUE` or `FALSE` for REML or maximum
+  likelihood. Every simulated study is refitted that way. A
+  maximum-likelihood fit's variance components run small, so its power
+  is a little higher than REML's; plan for the analysis you will run.
 
 ## Value
 

@@ -32,7 +32,7 @@ ilm_scaffold(
   verbose = TRUE,
   categories = NULL,
   thresholds = NULL,
-  reml = FALSE
+  reml = NULL
 )
 ```
 
@@ -135,11 +135,15 @@ ilm_scaffold(
 
 - reml:
 
-  Plan for an analysis fitted by restricted maximum likelihood, as
-  `ilm_model(reml = TRUE)` fits one: every simulated study is then
-  refitted by REML. For a gaussian mixed model that is the analysis most
-  software reports, and its power is a little lower than that of the
-  maximum-likelihood fit, whose variance components run small.
+  The analysis to plan for, as
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)'s
+  `reml` chooses it: `NULL` (the default) plans for the analysis
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)
+  fits by default – REML for a gaussian mixed model, maximum likelihood
+  for every other – and `TRUE` or `FALSE` for REML or maximum
+  likelihood. Every simulated study is refitted that way. A
+  maximum-likelihood fit's variance components run small, so its power
+  is a little higher than REML's; plan for the analysis you will run.
 
 ## Value
 
@@ -251,11 +255,11 @@ s2 <- ilm_scaffold(y ~ arm * time + (1 | id),
 ilm_emmeans(s2, c("arm", "time"))
 #> <ilm_emm> marginal means of arm x time (link scale, equal weights)
 #> 
-#>        arm time estimate    se  lower upper
-#>    control  pre     12.0 1.064  9.916 14.08
-#>  treatment  pre     12.0 1.064  9.916 14.08
-#>    control post     12.2 1.064 10.116 14.28
-#>  treatment post     14.5 1.064 12.416 16.58
+#>        arm time estimate    se lower upper
+#>    control  pre     12.0 1.082  9.88 14.12
+#>  treatment  pre     12.0 1.082  9.88 14.12
+#>    control post     12.2 1.082 10.08 14.32
+#>  treatment post     14.5 1.082 12.38 16.62
 #>   Compare them with ilm_contrast().
 
 ## a three-category outcome, stated as the probabilities in each arm

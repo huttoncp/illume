@@ -308,9 +308,9 @@ did <- ilm_did(panel, "y", "unit", "time", treated = "treated", post = "post")
 #> [2/5] response
 #>   `y`: continuous values from -2.1 to 6.93 -> family "gaussian"
 #> [3/5] estimate
-#>   ATT = 0.6248  (0.1874, 1.0622)  p = 0.00527
+#>   ATT = 0.6248  (0.1810, 1.0687)  p = 0.00597
 #> [4/5] parallel trends, before treatment
-#>   difference in pre-treatment slope: 0.0025 (se 0.1428), p = 0.986 -- OK
+#>   difference in pre-treatment slope: 0.0025 (se 0.1441), p = 0.986 -- OK
 #> [5/5] event study
 #>   8 periods relative to treatment (reference -1); 1 pre-treatment coefficient(s) exclude zero
 ```
@@ -321,7 +321,7 @@ did
 #> <ilm_did> y ~ treatment  | 20 treated, 20 control units
 #>   family: gaussian   random intercept: unit  
 #> 
-#>   ATT    0.6248  ( 0.1874,  1.0622)  p = 0.00527
+#>   ATT    0.6248  ( 0.1810,  1.0687)  p = 0.00597
 #> 
 #>   parallel trends before treatment: OK  (slope difference 0.0025, p = 0.986)
 #>   event study: 8 periods, 1 pre-treatment coefficient(s) excluding zero  (ilm_plot_did)
