@@ -152,8 +152,8 @@ ilm_interpret(fit, ame = FALSE)
 #> 
 #> What it says
 #>   x: very strong evidence (p < 0.001) that x is associated with y. Across
-#>   the middle half of x, predicted y is 0.0787 at -0.59 against 0.644 at
-#>   0.667: 0.565 higher. That is 0.45 per unit of x.
+#>   the middle half of x, predicted y is 0.0787 at -0.590 against 0.644 at
+#>   0.667: 0.565 higher. That is 0.450 per unit of x.
 #> 
 #>   g: very strong evidence (p < 0.001) that g is associated with y.
 #>   Predicted y is -0.0988 for 'a' and 0.793 for 'b': 0.892 higher for 'b'.
