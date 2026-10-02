@@ -256,9 +256,16 @@ test_that("a spatial field is detected and sent to a smooth of the coordinates",
   # strongest at the shortest distance, which is what a field looks like
   expect_equal(which.max(v$table$estimate), 1L)
   a <- illume:::ilm_variogram_advice(v)
-  expect_match(a, "t2(x, y)", fixed = TRUE)
+  # the terms that remove it, in the data's own names: a smooth of these
+  # coordinates, and for areal units the Markov random field and the BYM form
+  expect_match(a, "t2(sx, sy)", fixed = TRUE)
+  expect_match(a, "s(unit, bs = \"mrf\", xt = list(nb = nb))", fixed = TRUE)
+  expect_match(a, "(1 | unit)", fixed = TRUE)
   # and it does NOT name a temporal remedy for a spatial problem
   expect_false(grepl("ilm_car1", a, fixed = TRUE))
+  # a fit with one grouping factor has its unit named
+  v$unit <- "region"
+  expect_match(illume:::ilm_variogram_advice(v), "s(region, bs = \"mrf\"", fixed = TRUE)
 })
 
 test_that("a spatial variogram with no field stays quiet", {
@@ -310,4 +317,23 @@ test_that("a departure too small to act on is not called a failure", {
   # and fitting the smooth is what made the difference, not the floor
   expect_lt(AIC(f1), AIC(f0))
   expect_lt(sqrt(diag(vcov(f1)))[["x"]], sqrt(diag(vcov(f0)))[["x"]])
+})
+
+test_that("a spatial variogram carries the coordinates' names and the fit's unit", {
+  ## so the advice can write its terms in the data's own variables
+  set.seed(11)
+  xy <- expand.grid(cx = 1:5, cy = 1:5)
+  d <- data.frame(region = factor(rep(seq_len(25), each = 3)),
+                  cx = rep(xy$cx, each = 3), cy = rep(xy$cy, each = 3),
+                  x = stats::rnorm(75))
+  d$y <- 1 + 0.5 * d$x + stats::rnorm(25, 0, 0.5)[d$region] + stats::rnorm(75)
+  f <- ilm_model(y ~ x + (1 | region), data = d, family = "gaussian", verbose = FALSE)
+  v <- suppressWarnings(ilm_variogram(f, coords = d[, c("cx", "cy")], breaks = 3L,
+                                      B = 10L, plot = FALSE, verbose = FALSE))
+  expect_identical(v$coord_names, c("cx", "cy"))
+  expect_identical(v$unit, "region")
+  ## and a time variogram carries neither
+  vt <- suppressWarnings(ilm_variogram(f, time = stats::runif(75, 0, 10), group = d$region,
+                                       breaks = 2L, B = 10L, plot = FALSE, verbose = FALSE))
+  expect_null(vt$coord_names); expect_null(vt$unit)
 })

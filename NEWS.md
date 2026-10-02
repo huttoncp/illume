@@ -26,6 +26,123 @@
     to compare only between models with the same fixed effects;
   - `reml = FALSE` gives the old fit exactly. `ilm_model()`'s help has a
     section on the defaults and when to change them.
+* `ilm_interpret()` writes each number by what it is. An estimate has three
+  significant figures with its trailing zeros (1.10, 0.610, 42.0, and a
+  share of 25.2% where it said 25%; percentage points 41.5 where it said
+  41); a count is whole; a data value is whole where it is a whole number
+  (an income quartile of 35,215 where it said 35,200) and three figures
+  otherwise. Numbers are rounded half away from zero on the value as
+  written, so 2.675 to two decimals is 2.68 and 1.005 is 1.01, and long
+  numbers keep the figures they have (7195166.76 to five decimals is
+  7,195,166.76000). The rules are illumex's, in the file the two packages
+  share.
+* `ilm_interpret()` describes a term that is not a variable of the formula,
+  such as `poly(x, 2)`, by its coefficients. It used to treat it as a variable
+  and say that moving it "across the middle half" changed the prediction by
+  "0".
+* A term at its limit is held by a rule that gives the same answer on every
+  platform measured. A dispersion, a residual SD, or a random effect's or
+  AR(1)'s SD past its line was held when one push of 3 towards its limit
+  moved the objective by at most 1e-3, and near that tolerance the answer
+  depended on where the optimiser happened to stop, so the same data were
+  held on one machine and not on another. Now the term is pushed by 1.5, 3
+  and 6, and held when every push moves the objective by at most 0.05; a
+  push that LOWERS it by more than 0.05 means the fit stopped short of the
+  limit, so nothing is held and the `optimizer` check FAILs and says so. A
+  term already more than e^6 below its line is held by its value, without
+  the pushes. Calibrated on 6,204 stored fits, each under two R and RTMB
+  builds, then confirmed, with that floor fixed in advance, on 6,204 fresh
+  ones: no decision differed between the builds, and no negative binomial's
+  k or random effect's SD was held where the model at its limit, or without
+  the term, fits worse by more than 0.05. A fit
+  that ran past the floor without converging has its term held, and its
+  optimizer and gradient checks still FAIL.
+* `summary()` always shows a held limit among the model checks. It showed
+  the first four rows that were not OK, which could leave the held limit
+  out.
+* New rows given date-times are placed at the right fitted time. A row was
+  matched to a group's fitted time within 1e-9 of the times' size, and a
+  date-time counts seconds since 1970, so that was about 1.7 seconds: a row
+  one second after a fitted time was placed at it, and
+  `predict(groups = "fitted")` gave the earlier time's fitted value. Times
+  near 1e7 confused any two fitted times closer than 0.01 the same way. The tolerance is now a millionth
+  of the smallest gap between the group's fitted times, so no two of them
+  are ever merged; with a single fitted time, it is 1e-9. `ilm_matrices()`
+  places rows by the same rule.
+* A model whose fixed-effect columns are not all separable stops before the
+  fit and says why. The whole fixed design is checked for rank, a smooth's
+  unpenalised columns with it: `s(x, by = z) + s(w, by = z)`, whose
+  unpenalised parts both hold z; `poly(z, 2) + s(x, by = z)`; `x + s(x)`;
+  two covariates one a multiple of the other; an interaction with an empty
+  cell. Each used to fit and come back with a failed Hessian and standard
+  errors of NaN, or a FAIL after the fit, with the advice pointing
+  elsewhere. The message names the columns, the terms and the fix -- for an
+  empty cell, which cells. A numeric `by` beside its own main effect keeps
+  its own message.
+* `ilm_model(aliased = "drop")` fits a model whose ordinary columns are not
+  all separable by dropping each column that is a combination of earlier
+  ones, as `lm()` and `lme4` do, and says which at fitting and in
+  `summary()`; `fit$aliased` holds them. Predictions, marginal means, trends
+  and `ilm_anova()` rebuild the design without them, and a term with no
+  column left is not tested, which the table's heading says. The default,
+  `"stop"`, is unchanged, and its message now names the option. Where a
+  smooth is involved the fit stops either way.
+* Predictors in any units. The fit rescales each column of the fixed-effect
+  design, the zero part's and the dispersion model's to unit SD, fits there,
+  and converts the estimates, covariance, joint precision and Hessian back to
+  the user's units by an exact linear map (a REML fit's restricted likelihood
+  with its Jacobian). With income in dollars, a zero-inflated negative
+  binomial with a random intercept failed 12 fits of 12 with undefined
+  standard errors; it now fits all 12, and a dollars fit and a thousands fit
+  agree to about 1e-9. Offsets, 0/1 indicators, a flexible baseline's
+  columns, a smooth's penalised part and random slopes' covariates are left
+  alone; for a failed fit with a random slope on a covariate in large units,
+  `ilm_remedies()` names rescaling it by hand first. The separation check's
+  flat catch sizes coefficients in standard units, so it is the same in any
+  units.
+* Separation is caught and said. When the outcome does not vary within a
+  level of a categorical predictor -- every count zero in one region, every
+  trial a success in one arm -- that level's coefficient has no finite
+  estimate, and the fit used to stop out towards infinity with every check
+  passing: three all-zero rows in one level of a Poisson fit gave a
+  predicted count of 0.00000005. A new `separation` check names the level
+  (or the cell of two factors) from the data before the fit, and catches a
+  coefficient whose likelihood is flat where it stopped after the fit, which
+  also finds separation by a numeric predictor. It FAILs, the fit says so as
+  it returns, `ilm_interpret()` calls the term's effect not estimable for
+  that level (and says whether the other levels' comparisons stand), and
+  `ilm_remedies()` names merging or dropping the level. A factor level no
+  row uses, which the fit drops, is now announced rather than dropped
+  without a word, and recorded in `fit$empty_levels`.
+* `ilm_variogram()`'s spatial advice names the terms that remove the
+  structure, in the data's own variables: a smooth of the coordinates,
+  `t2(easting, northing)`, for points, and for areal units a Markov random
+  field over a neighbour list, `s(area, bs = "mrf", xt = list(nb = nb))`,
+  with `(1 | area)` beside it for the Besag-York-Mollie form. It used to say
+  that illume fits no spatial covariance and name only the smooth.
+  `ilm_model()`'s help gains a section on areal units and the BYM form,
+  including reading each unit's relative risk with `groups = "fitted"`.
+* `ilm_dist()`'s `d()`, `p()` and `q()` give NaN for an element whose
+  mean, dispersion or zero-part parameter is NaN or NA, and give back a
+  missing argument as it came, as base R's distribution functions do. A zero
+  part's quantile compared the probability with a missing zero probability:
+  one element came back as 0, and several stopped with "NAs are not allowed
+  in subscripted assignments". Found through an external report.
+* An AR(1) correlation has a floor, as the variances have had. Fitted as
+  atanh(rho), it could run past where 1 - rho^2 keeps its digits, to a
+  spuriously low objective: one 12-point series ended at rho = -1, graded
+  FAIL with a gradient of 11, where the true minimum is at rho = -0.55. Short
+  of that, the objective flattens towards the edge, and the optimiser could
+  stop there at a worse objective with every check passing. A fit that ends
+  with |rho| above 0.99 is now refitted with atanh(rho) bounded at 8, from
+  where it stopped and from a correlation of 0, and moves only to a better
+  objective (or, past the bound, back inside it). On 1,080 single-series fits
+  from a simulation study, the 866 with |rho| at or below 0.99 are
+  unchanged; all 83 that had gone past the bound now pass their checks (72
+  held at the bound as a correlation at +/-1, 10 at an interior optimum), and
+  2 of the 131 near the edge found a better optimum inside. Gradient
+  failures went from 10 to none. CAR(1) is untouched: its parameter is
+  log(range), which has no such limit.
 * A gaussian mixed model's tables test on finite degrees of freedom, as
   lmerTest does. `summary()` gives each coefficient a df column and t tests
   on Satterthwaite's df; `ilm_anova()` gives F with its numerator and
@@ -46,6 +163,31 @@
   every model by REML, and an arm by maximum likelihood on the same data
   found the ML path's intervals too narrow; REML is now the default for these
   models (the first entry above).
+* Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
+  pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
+  is a list by term, and "us" is already its default -- and so did the ANOVA
+  vignette. It now names the call that leaves the within-participant
+  covariance free, for the design's own columns and data: a correlated random
+  effect per within cell, `(0 + session | id)`, in place of the one random
+  intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
+  and hurdle models were out of scope, though `ziformula` fits both; it now
+  points there. Found through an external report.
+* **`predict()` gives each row its own group's prediction by default**
+  (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
+  whose group the fit has not seen, or `newdata` without the grouping
+  columns, is an error that names `groups = "typical"` (every random effect
+  at zero, the old default) and `groups = "population"` (the average over
+  the groups). A model without random effects predicts as before.
+  `ilm_survival()` now follows the same `groups`: `"fitted"` by default,
+  `"typical"`, or `"population"`, which averages the survival curve itself
+  over the random effects rather than taking it at zero -- so the curves of
+  a mixed accelerated failure time or flexible (Royston-Parmar) model change
+  with this release; with no `newdata` the curve stays a typical group's.
+  Its intervals for `"fitted"` and `"population"` come from joint draws, as
+  `predict()`'s do. Where illume predicts for a typical group by design --
+  the effect sentences of `ilm_interpret()`, the effect plots, `ilm_rdd()`,
+  the survival plot and `ilm_impute()`'s imputations -- it asks for one, so
+  their results are unchanged.
 * illume now requires illumex 0.0.8.9001, whose `ilm_reduce()` no longer
   needs PCAmixdata.
 * **A correction: under `reml = TRUE`, fits whose variances approach zero
@@ -103,15 +245,6 @@
   for it. The held directions are now projected out, the check is graded on
   the rest, and the line gives the held part beside it ("along the held
   dispersion: 1.41e-02, not judged"). Found through an external report.
-* Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
-  pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
-  is a list by term, and "us" is already its default -- and so did the ANOVA
-  vignette. It now names the call that leaves the within-participant
-  covariance free, for the design's own columns and data: a correlated random
-  effect per within cell, `(0 + session | id)`, in place of the one random
-  intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
-  and hurdle models were out of scope, though `ziformula` fits both; it now
-  points there. Found through an external report.
 * The `optimizer` check reads nlminb's stopping code beside the fit's own
   restarts, which begin at the solution. Restarted from its own solution, an
   optimiser that stays there answers a "false convergence" code: the fit is

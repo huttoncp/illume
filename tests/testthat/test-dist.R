@@ -181,3 +181,60 @@ test_that("a survival family's density, quantile and mean are exact", {
   expect_false(dd$discrete)
   expect_error(ilm_dist(mtcars), "must be a fitted ilm_model")
 })
+
+test_that("a missing parameter gives NaN, and a missing argument gives it back", {
+  ## as base R's d, p and q functions: a zero part's quantile used to stop
+  ## on a NaN zero probability, or return 0 for it
+  set.seed(4); n <- 300
+  d <- data.frame(x = stats::runif(n, 0, 3), z = stats::rnorm(n))
+  pz <- stats::plogis(-1 + 0.8 * d$z)
+  d$yz <- ifelse(stats::runif(n) < pz, 0, stats::rpois(n, exp(0.3 + 0.4 * d$x)))
+  d$yh <- ifelse(stats::runif(n) < pz, 0,
+                 stats::rnbinom(n, mu = exp(0.5 + 0.3 * d$x), size = 2))
+  mu <- stats::plogis(-0.5 + 0.4 * d$x)
+  d$yb <- ifelse(stats::runif(n) < pz, 0, stats::rbeta(n, mu * 5, (1 - mu) * 5))
+  d$yd <- 1 + 0.5 * d$x + stats::rnorm(n)
+  fits <- list(
+    gaus = ilm_model(yd ~ x, data = d, family = "gaussian", verbose = FALSE),
+    zip = ilm_model(yz ~ x, data = d, family = "poisson", ziformula = ~ z,
+                    verbose = FALSE),
+    hnb = ilm_model(yh ~ x, data = d, family = "nbinom", ziformula = ~ z,
+                    zi_type = "hurdle", verbose = FALSE),
+    hbeta = ilm_model(yb ~ x, data = d, family = "beta", ziformula = ~ z,
+                      zi_type = "hurdle", verbose = FALSE))
+  for (nm in names(fits)) {
+    f <- fits[[nm]]; D <- ilm_dist(f); par <- f$opt$par
+    lp <- list(mu = rep(0.2, 3))
+    if (!is.null(D$zero)) lp$zi <- rep(-0.5, 3)
+    x <- rep(if (nm == "hbeta") 0.3 else 1, 3); pr <- rep(0.6, 3)
+    run <- function(L, P = par, X = x, PR = pr)
+      list(d = D$d(X, L, P), p = D$p(X, L, P), q = D$q(PR, L, P))
+    ref <- run(lp)
+    ## a NaN in each linear predictor, in the first element only: that
+    ## element is NaN and the others are as they were
+    bads <- list(mu = within(lp, mu[1] <- NaN))
+    if (!is.null(D$zero)) bads$zi <- within(lp, zi[1] <- NaN)
+    for (b in names(bads)) {
+      got <- run(bads[[b]])
+      for (k in names(got)) {
+        expect_true(is.nan(got[[k]][1]), label = paste(nm, b, k))
+        expect_equal(got[[k]][-1], ref[[k]][-1], label = paste(nm, b, k, "others"))
+      }
+    }
+    ## a NaN dispersion reaches every element
+    if (any(names(par) == "logdisp")) {
+      p2 <- par; p2[names(p2) == "logdisp"] <- NaN
+      got <- run(lp, P = p2)
+      for (k in names(got)) expect_true(all(is.nan(got[[k]])), label = paste(nm, "disp", k))
+    }
+    ## a missing argument comes back as it came, NA as NA
+    got <- run(lp, X = c(NA, x[-1]), PR = c(NA, pr[-1]))
+    for (k in names(got)) {
+      expect_true(is.na(got[[k]][1]) && !is.nan(got[[k]][1]), label = paste(nm, "NA", k))
+      expect_equal(got[[k]][-1], ref[[k]][-1], label = paste(nm, "NA", k, "others"))
+    }
+  }
+  ## one element on its own, the case that returned 0
+  D <- ilm_dist(fits$zip)
+  expect_true(is.nan(D$q(0.5, list(mu = 0.2, zi = NaN), NULL)))
+})

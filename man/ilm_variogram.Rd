@@ -122,6 +122,7 @@ Pinheiro, J. C., & Bates, D. M. (2000). \emph{Mixed-Effects Models in S and
 S-PLUS}. Springer. (Chapter 5 covers the residual variogram.)
 }
 \seealso{
-\code{\link[=ilm_car1]{ilm_car1()}} for the remedy, \code{\link[=ilm_check_ar]{ilm_check_ar()}} for evenly spaced
+\code{\link[=ilm_car1]{ilm_car1()}} for the remedy over time and the "Areal units" section
+of \code{\link[=ilm_model]{ilm_model()}} for the one in space, \code{\link[=ilm_check_ar]{ilm_check_ar()}} for evenly spaced
 data, \code{\link[=ilm_plot_acf]{ilm_plot_acf()}}.
 }

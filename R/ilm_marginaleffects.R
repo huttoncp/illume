@@ -99,7 +99,7 @@ ilm_rho_from_raw <- function(type, rr) {
 ## with one column per draw -- on the scale the fit reports it on.
 #' @keywords internal
 #' @noRd
-ilm_disp_scale <- function(object, logdisp) {
+ilm_dispersion_scale <- function(object, logdisp) {
   d <- exp(logdisp)
   ## the fit reports the residual SD on the unbiased (n - p) scale wherever
   ## it can, so a rebuilt object has to use the same scale or the two are
@@ -129,7 +129,7 @@ ilm_rebuild_aux <- function(object, tl) {
   has_dm <- !is.null(object$Zd) || isTRUE(object$disp_mu)
 
   if (!is.null(fam) && fam$n_disp > 0L && !has_dm && any(tl == "logdisp")) {
-    d <- ilm_disp_scale(object, unname(pe[tl == "logdisp"]))
+    d <- ilm_dispersion_scale(object, unname(pe[tl == "logdisp"]))
     object$dispersion <- stats::setNames(d, fam$disp_names)
   } else if (has_dm && any(tl %in% c("gamma", "mu_pow"))) {
     g  <- unname(pe[tl == "gamma"])

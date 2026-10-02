@@ -22,11 +22,19 @@
 ## ---------------------------------------------------------------------------
 
 ## ilm_wrap() and ilm_and(), which build these sentences, are in
-## shared-helpers.R, the same file in illume and illumex.
+## shared-helpers.R, the same file in illume and illumex, and so is
+## ilm_disp(), which writes every number below. Each number DECLARES what it
+## is (Craig's rulings 16 and 256): an estimate is shown to three significant
+## figures with its trailing zeros (51.0, 2.50, 0.610), never whole for
+## happening to be whole; a count is shown whole (ilm_fmt_count()); a data
+## value is whole where it is a whole number, and to three figures otherwise
+## (ilm_fmt_data()), as illumex shows them.
 
+## A number to `digits` decimals, zeros kept, where a caller asks for
+## decimals rather than figures.
 #' @keywords internal
 #' @noRd
-ilm_fmt <- function(v, digits = 3) formatC(v, format = "f", digits = digits)
+ilm_fmt <- function(v, digits = 3) ilm_disp(v, "fixed", digits)$text
 
 ## A p-value is reported as a number and as a strength of evidence. The
 ## dichotomy on its own is what makes people write "no effect" for a wide
@@ -48,25 +56,37 @@ ilm_evidence <- function(p) {
 #' @noRd
 ilm_fmt_p <- function(p, prefix = "p") {
   if (is.na(p)) return(paste(prefix, "not available"))
-  if (p < 0.001) return(paste(prefix, "< 0.001"))
-  paste(prefix, "=", format(signif(p, 3), scientific = FALSE, drop0trailing = TRUE))
+  t <- ilm_disp(p, "p")$text
+  if (startsWith(t, "<")) paste(prefix, t) else paste(prefix, "=", t)
 }
 
-## A number as a reader writes it: three significant figures, and a thousands
-## separator where one helps. Trimmed, because formatC()'s "fg" pads to a
-## common width -- 2.1 comes back as " 2.1" -- which in a sentence is a run of
-## spaces.
+## An ESTIMATE as a reader writes it: three significant figures, trailing
+## zeros kept, and a thousands separator from 1,000 up.
 #' @keywords internal
 #' @noRd
-ilm_fmt_sig <- function(v)
-  trimws(formatC(signif(v, 3), format = "fg", digits = 3, big.mark = ","))
+ilm_fmt_sig <- function(v) ilm_disp(v, "signif", 3L)$text
 
-## A probability as a share, with the ends said as such.
+## A COUNT: whole, with a thousands separator.
+#' @keywords internal
+#' @noRd
+ilm_fmt_count <- function(v) ilm_disp(v, "fixed", 0L)$text
+
+## A DATA VALUE, a point the data hold (a quartile of a predictor, say):
+## whole where it is a whole number, so a year of 2019 or an income of 19,234
+## reads as it was recorded, and three figures otherwise.
+#' @keywords internal
+#' @noRd
+ilm_fmt_data <- function(v)
+  ifelse(is.finite(v) & v == round(v), ilm_disp(v, "fixed", 0L)$text,
+         ilm_disp(v, "signif", 3L)$text)
+
+## A probability, an estimate, as a share: three figures, with the ends said
+## as such.
 #' @keywords internal
 #' @noRd
 ilm_fmt_pct <- function(p)
   ifelse(p < 0.005, "under 1%", ifelse(p > 0.995, "over 99%",
-                                       paste0(round(100 * p), "%")))
+                                       paste0(ilm_disp(100 * p, "signif", 3L)$text, "%")))
 
 ## ---- average marginal effects ----------------------------------------------
 
@@ -166,7 +186,7 @@ ilm_ame <- function(object, terms = NULL, eps = 1e-4,
   ## category it was, and ilm_interpret() then quoted that one number beside
   ## every category's coefficient.
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   ## with groups = "population" a single linear predictor is averaged by
   ## quadrature and a multinomial one by draws with a fixed seed, so every
@@ -286,12 +306,14 @@ ilm_avg_pred <- function(object, var, values, intervals = TRUE, eps = 1e-4,
   mf <- ilm_data(object)
   x <- mf[[var]]
   p1 <- suppressWarnings(stats::predict(object, newdata = mf[1L, , drop = FALSE],
-                                        type = "response"))
+                                        type = "response", groups = "typical"))
   cats <- if (is.matrix(p1) && ncol(p1) > 1L) colnames(p1) else NULL
   fn <- function(obj) {
     mu <- function(dd) {
+      ## a typical group's, as the sentences say (Craig's item 213 made each
+      ## row's own group predict()'s default)
       p <- suppressWarnings(stats::predict(obj, newdata = dd, type = "response",
-                                           per = ex))
+                                           groups = "typical", per = ex))
       if (!is.null(cats)) as.matrix(p)
       else if (is.matrix(p)) p[, ncol(p)] else as.numeric(p)
     }
@@ -398,6 +420,11 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
   prob <- identical(fam, "binomial")
   catg <- fam %in% c("multinomial", "ordinal", "ordinal_probit", "ordinal_cloglog")
   if (!(cont || prob || catg) || is.null(xv)) return(NULL)
+  ## a term is said here only when it is a variable the formula names: a
+  ## column such as poly(x, 2) is in the model frame, as a matrix, but it is
+  ## not a variable, and moving it moves nothing (ilm_ame()'s rule)
+  av <- all.vars(stats::delete.response(stats::terms(object)))
+  if (is.matrix(xv) || !vn %in% av) return(NULL)
   event <- if (prob) ilm_event_words(object, respname)
   if (prob && is.null(event)) return(NULL)
   num <- is.numeric(xv)
@@ -418,7 +445,7 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
                ilm_fmt_p(p), vn, if (is_causal) "affects" else "is associated with",
                respname)
   fmt <- if (cont) ilm_fmt_sig else ilm_fmt_pct
-  vlab <- if (num) ilm_fmt_sig(vals) else vals
+  vlab <- if (num) ilm_fmt_data(vals) else vals
   what <- if (prob) sprintf("the predicted probability that %s", event)
           else sprintf("predicted %s", respname)
   ci_note <- FALSE
@@ -426,9 +453,8 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     e <- ap$pred$estimate; dd <- ap$diff
     up <- dd$estimate >= 0
     sgn <- if (up) 1 else -1
-    ## percentage points to two figures, the interval with them
-    fnum <- if (prob) function(v) trimws(formatC(signif(v, 2), format = "fg", digits = 2))
-            else ilm_fmt_sig
+    ## percentage points, an estimate like any other, the interval with them
+    fnum <- ilm_fmt_sig
     sc <- if (prob) 100 else 1
     mag <- paste0(fnum(sc * abs(dd$estimate)), if (prob) " percentage points" else "")
     ci <- if (is.finite(dd$se)) {
@@ -643,7 +669,7 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
   ## ---- what was fitted -----------------------------------------------------
   hdr <- sprintf("%s %s model of %s, fitted to %s observations.",
                  ilm_cap(ilm_article(fam)), fam, deparse(object$formula[[2]]),
-                 if (is.na(n)) "an unknown number of" else format(n, big.mark = ","))
+                 if (is.na(n)) "an unknown number of" else ilm_fmt_count(n))
   ## the grouping terms only: a smooth is held as a random term too, and is
   ## not a grouping of the observations
   grp <- names(object$re)[vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE)]
@@ -701,6 +727,23 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     xv <- if (!is.null(object$model) && vn %in% names(object$model))
             object$model[[vn]] else NULL
     is_fac <- !is.null(xv) && !is.numeric(xv)
+    ## a separated level has no finite coefficient, so the term's effect is
+    ## not estimable and nothing is said of its size (ilm_separation.R)
+    sl <- object$separation$levels
+    if (!is.null(sl) && nrow(sl) && v %in% sl$term) {
+      s1 <- sl[sl$term == v, ]
+      ## against a separated REFERENCE level every comparison runs off with it
+      ref <- if (!is.null(xv) && !is.numeric(xv)) levels(factor(xv))[1] else NA_character_
+      rest <- if (!is.na(ref) && ref %in% s1$level)
+        sprintf("'%s' is the level every other is compared against, so none of the comparisons is estimable", ref)
+      else "the other levels' coefficients are estimated as usual"
+      lines <- c(lines, sprintf("%s: not estimable for %s. %s, so %s no finite estimate and neither size nor interval means anything; %s (see the separation check).",
+                                vn, ilm_and(sprintf("'%s'", s1$level)),
+                                ilm_and(sprintf("'%s' has %s", s1$level, s1$outcome)),
+                                if (nrow(s1) == 1L) "that level's coefficient has" else "those levels' coefficients have",
+                                rest))
+      next
+    }
     ## a plain variable is said in the response's units, over a change a
     ## reader can picture; anything else -- an interaction, a spline basis --
     ## by its coefficients, below
@@ -1025,9 +1068,9 @@ ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
   j <- object$jump
   sec <- list()
   sec$model <- sprintf(
-    "A regression discontinuity in %s at %s = %s, fitted locally on each side within a bandwidth of %s (%d observations below the cutoff, %d at or above).",
+    "A regression discontinuity in %s at %s = %s, fitted locally on each side within a bandwidth of %s (%s observations below the cutoff, %s at or above).",
     object$y, object$running, ilm_fmt(object$cutoff, digits),
-    ilm_fmt(object$h, 4), object$n_below, object$n_above)
+    ilm_fmt(object$h, 4), ilm_fmt_count(object$n_below), ilm_fmt_count(object$n_above))
   sec$effects <- sprintf(
     "At the cutoff, %s jumps by %s (95%% interval %s to %s, %s): %s. This is a local effect -- it applies to units near the cutoff and says nothing about units far from it.",
     object$y, ilm_fmt(j$estimate, digits), ilm_fmt(j$lower, digits),
@@ -1115,7 +1158,7 @@ ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
                  if (joint) sprintf("At %s times the assumed effect", ilm_fmt(e, digits))
                  else sprintf("At an effect of %s on the link scale", ilm_fmt(e, 3)),
                  paste(sprintf("%s with %s %s (%s to %s)", pct(z$power),
-                               format(z[[scol]]), who, pct(z$mc_lower),
+                               ilm_fmt_count(z[[scol]]), who, pct(z$mc_lower),
                                pct(z$mc_upper)), collapse = "; "))
     r <- if (is.null(pn)) NULL else pn[pn$effect == e, , drop = FALSE]
     if (!is.null(r) && nrow(r)) {
@@ -1125,16 +1168,16 @@ ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
         sprintf("The sizes tried do not bracket %s power, so the size that reaches it lies outside them.",
                 pct(target))
       else sprintf("Reaching %s power takes about %s %s%s.", pct(target),
-                   format(round(v[1])), who,
+                   ilm_fmt_count(round(v[1])), who,
                    if (all(is.finite(v[2:3])))
                      sprintf(" -- somewhere between %s and %s, given the Monte Carlo error",
-                             format(round(min(v[2:3]))), format(round(max(v[2:3]))))
+                             ilm_fmt_count(round(min(v[2:3]))), ilm_fmt_count(round(max(v[2:3]))))
                    else if (is.finite(v[2]))
                      sprintf(" -- at least %s given the Monte Carlo error, and the upper end of that range lies beyond the sizes tried",
-                             format(round(v[2])))
+                             ilm_fmt_count(round(v[2])))
                    else if (is.finite(v[3]))
                      sprintf(" -- at most %s given the Monte Carlo error, and the lower end lies below the sizes tried",
-                             format(round(v[3])))
+                             ilm_fmt_count(round(v[3])))
                    else ""))
     }
     lines <- c(lines, s)
@@ -1232,7 +1275,7 @@ ilm_interpret.ilm_profile <- function(object, causal = NULL, ame = FALSE,
   sec <- list()
   sec$model <- paste(
     sprintf("%s rows fell into %d clusters, found by %s on %d dimensions of a %s reduction of %s.",
-            format(n, big.mark = ","), k,
+            ilm_fmt_count(n), k,
             if (identical(cr$method, "hclust")) "hierarchical clustering" else "k-means",
             rr$ndim, meth, if (na) "which values are missing" else "the data"),
     if (stab == k) sprintf("All %d come back when the rows are resampled.", k)
@@ -1250,7 +1293,7 @@ ilm_interpret.ilm_profile <- function(object, causal = NULL, ame = FALSE,
   if (amb)
     dl <- c(dl, sprintf(
       "%s row%s sit%s between two clusters (silhouette below %s) and could belong to either.",
-      format(amb, big.mark = ","), if (amb == 1L) "" else "s", if (amb == 1L) "s" else "",
+      ilm_fmt_count(amb), if (amb == 1L) "" else "s", if (amb == 1L) "s" else "",
       format(cr$ambiguous_threshold)))
   vc <- object$var_contrib
   if (!is.null(vc)) {

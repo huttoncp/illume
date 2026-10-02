@@ -29,7 +29,8 @@ ilm_model_formula(
   zi_type = c("inflated", "hurdle"),
   design = NULL,
   reml = NULL,
-  boundary = c("hold", "avoid")
+  boundary = c("hold", "avoid"),
+  aliased = c("stop", "drop")
 )
 }
 \arguments{
@@ -186,16 +187,22 @@ A dispersion at its unbounded limit is held the same way whichever is
 chosen: a negative binomial's k, or a beta's precision phi, run off to
 infinity because the model's other terms carry all the variation. Such a
 fit is held when 1 / sqrt(k) (or phi) is below 1e-2 and the likelihood
-is flat beyond it, and says so: \code{fit$hessian_held} names
+is flat beyond it -- pushing the log dispersion further by 1.5, 3 and 6
+moves the objective by at most 0.05 each time -- and says so:
+\code{fit$hessian_held} names
 \code{"dispersion"}, the check \code{dispersion_limit} is BOUNDARY, and the fixed
 effects keep their standard errors -- for the negative binomial, exactly
 the Poisson model's, and \code{family = "poisson"} is the simpler equivalent.
 A gaussian residual SD at zero is the same edge at the other end: a
 correlation over time or a random effect with about one observation per
 cell or level has taken up all the noise. It is held when sigma is below
-1e-3 of the response's SD -- the line at which a random effect's SD is
-taken as zero -- and the likelihood is flat below it; the remedy is to
-coarsen the grid so that observations share a cell.
+0.2 of the response's SD and the likelihood is flat below it; the remedy
+is to coarsen the grid so that observations share a cell. A term already
+more than e^6 below its line is held by its value, without the pushes,
+whose differences that far out are the arithmetic's, not the data's. A
+push that LOWERS the objective by more than 0.05 means the fit stopped
+short of the limit: nothing is held, and the \code{optimizer} check FAILs and
+says so.
 
 Measured against \code{"hold"} on a three-category outcome with 60 groups of
 8, 400 datasets per condition: with a true between-group SD of 0.05,
@@ -212,6 +219,20 @@ but by 11\% when one outcome category was rare, where coverage fell from
 heavy-tailed as well. \code{"hold"} stays the default for that reason; the fit
 says when a boundary was reached under it, and names \code{"avoid"} as the
 alternative.}
+
+\item{aliased}{What to do when the fixed-effect columns are not all
+separable -- two covariates one a multiple of the other, or an
+interaction with an empty cell -- so that the model has no unique fit.
+\code{"stop"}, the default, stops before fitting and names the columns, the
+terms and any empty cells, so the model can be written without the
+overlap. \code{"drop"} drops each column that is a combination of earlier
+ones, as \code{lm()} and \code{lme4} do, fits the rest, and says which were dropped
+at fitting and in \code{summary()}; \code{fit$aliased} holds them. The model is the
+same, written with fewer columns, but a dropped coefficient has no
+estimate, and which column of a dependent set goes is a matter of their
+order in the formula. Where a smooth is involved the fit stops whichever
+is chosen: a smooth's unpenalised part has no column that can sensibly
+be dropped.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in
@@ -249,6 +270,8 @@ can mix them freely:
   y ~ x1 + time + (1 + time | subj)          random intercept and slope
   y ~ x1 + s(xs, k = 10) + (1 | subj)        penalised smooth of xs
   y ~ x1 + t2(lon, lat) + (1 | site)         2-D surface (spatial)
+  y ~ x1 + s(area, bs = "mrf", xt = list(nb = nb)) + (1 | area)
+                                             areal units (BYM form)
 }
 
 Two rules for smooth terms. Use \code{t2()} rather than \code{te()} for tensor
@@ -277,6 +300,48 @@ is what the centring is for. Read the intercept of a model with a smooth as
 a property of the sample, and take conclusions from the slopes and from
 \code{\link[=ilm_plot_model]{ilm_plot_model()}}'s effect curves.
 }
+\section{Areal units, and the BYM form}{
+
+Counts or measurements for areal units -- districts, counties, postcodes --
+are usually correlated with their neighbours'. The term for that is mgcv's
+Markov random field smooth, \code{s(area, bs = "mrf", xt = list(nb = nb))}, where
+\code{nb} is a list with one element per level of \code{area}, named by the levels,
+holding the indices of the units adjacent to it. It is an intrinsic
+conditional autoregression over the neighbour graph. Beside it, a random
+intercept \code{(1 | area)} gives each unit an unstructured effect of its own:
+the pair is the Besag-York-Mollie (BYM) form of disease mapping, which
+splits the between-unit variation into a spatially smooth part and noise.
+For a disease map, put the population at risk in the formula as
+\code{offset(log(expected))} and read each unit's relative risk from
+\code{predict(fit, newdata, groups = "fitted")}, which keeps the unit's own
+effects; the default, \code{"typical"}, sets them to zero. For points rather
+than areas, a smooth of the coordinates, \code{t2(x, y)}, plays the same part.
+\code{\link[=ilm_variogram]{ilm_variogram()}} with \code{coords} finds spatial structure a model leaves out
+and names these terms.
+}
+
+\section{Predictors in any units}{
+
+A predictor in dollars beside one in thousandths makes the fit's
+arithmetic badly conditioned, though the model is the same in any units:
+fits used to fail with undefined standard errors and advice pointing the
+wrong way. So the fit rescales a column of the fixed-effect design -- or
+of the zero-inflation and dispersion formulas -- whose standard deviation is
+below 0.01 or above 100, to unit standard deviation, fits there, and
+converts the estimates, their covariance and everything built from them
+back to your units by an exact map: the results are the ones you would get
+by rescaling by hand, to within the optimiser's tolerance. A column whose
+standard deviation is between 0.01 and 100 is already where the optimiser
+works well and is left exactly as it is, so a model whose columns all are
+is fitted exactly as it would be without rescaling. Left as they are too:
+offsets, which enter with a fixed coefficient of
+one; 0/1 indicators and constant columns, already well scaled; a smooth's
+penalised part (its unpenalised columns are rescaled like any other); and
+the covariate of a random slope, whose scale sits in the random-effect
+covariance -- if a fit with a random slope on a covariate in large units
+fails, \code{\link[=ilm_remedies]{ilm_remedies()}} names rescaling that covariate by hand first.
+}
+
 \section{Simple models get exact inference}{
 
 A gaussian model with no random or smooth terms is an ordinary linear model.
@@ -427,6 +492,13 @@ Chung, Y., Gelman, A., Rabe-Hesketh, S., Liu, J., & Dorie, V. (2015).
 Weakly informative prior for point estimation of covariance matrices in
 hierarchical models. \emph{Journal of Educational and Behavioral Statistics},
 40(2), 136--157.
+
+Besag, J., York, J., & Mollié, A. (1991). Bayesian image restoration, with
+two applications in spatial statistics. \emph{Annals of the Institute of
+Statistical Mathematics}, 43(1), 1--20.
+
+Wood, S. N. (2017). \emph{Generalized Additive Models: An Introduction with R}
+(2nd ed.). Chapman and Hall/CRC.
 }
 \seealso{
 \code{\link[=summary.ilm_model]{summary.ilm_model()}}, \code{\link[=ilm_anova]{ilm_anova()}}, \code{\link[=predict.ilm_model]{predict.ilm_model()}},

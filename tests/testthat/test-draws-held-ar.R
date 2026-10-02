@@ -87,14 +87,37 @@ stalled_fit <- function() {
 }
 
 test_that("a dispersion at its limit is held where the fit did not converge", {
+  ## This fit stalled short of a stationary point under R 4.4.3 / RTMB 1.9
+  ## and converged under R 4.6.1 / RTMB 2.0 (the stalled CI sigma in
+  ## studies/findings/flatness_calibration.md), so the stall is made here,
+  ## not found: the hold is called on the fit's own arguments with a slope
+  ## moved off its estimate. sigma is e^-7.4 or more below its line on every
+  ## build measured, past the floor, so it is held by its value either way.
+  got <- NULL
+  real <- ilm_hess_recover
+  local_mocked_bindings(ilm_hess_recover = function(obj, opt, sdr, cb, joint) {
+    if (is.null(got)) got <<- list(obj = obj, opt = opt, sdr = sdr, cb = cb, joint = joint)
+    real(obj, opt, sdr, cb, joint)
+  })
   f <- stalled_fit()
-  ck <- f$checks
-  expect_identical(ck$status[ck$check == "gradient"], "FAIL")
   expect_true("dispersion" %in% f$hessian_held)
+  expect_lt(got$cb$below[["dispersion"]], -ilm_hold_floor)
+  op <- got$opt; pn <- names(op$par)
+  i <- which(pn == "beta")[2L]; op$par[i] <- op$par[i] + 0.05
+  expect_gt(max(abs(got$obj$gr(op$par))), 1e-2)
+  s <- got$sdr; s$pdHess <- TRUE
+  r <- real(got$obj, op, s, got$cb, got$joint)
+  invisible(got$obj$fn(got$opt$par))
+  expect_identical(r$how, "boundary")
+  expect_identical(r$held, "dispersion")
+  expect_true(all(is.na(r$sdr$cov.fixed[pn == "logdisp", ])))
+  expect_true(all(is.finite(diag(r$sdr$cov.fixed)[pn != "logdisp"])))
+  ck <- f$checks
   ## what the checks say is true
   expect_match(ck$detail[ck$check == "dispersion_limit"], "held at its estimate",
                fixed = TRUE)
   ## the draws hold it, and say once that the fit did not converge
+  f$checks$status[f$checks$check %in% c("optimizer", "gradient")] <- "FAIL"
   expect_warning(dr <- ilm_draws(f, nsim = 200, seed = 1),
                  "did not reach a stationary point (optimizer and gradient checks FAIL)",
                  fixed = TRUE)

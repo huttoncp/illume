@@ -268,7 +268,7 @@ test_that("a population average over a walk spreads with the time since it began
   expect_equal(unname(predict(f, newdata = nd, groups = "population")[, 1]),
                exp(f$beta[1] + 0.5 * s2 * c(10, 48, 0, 4)), tolerance = 1e-10)
   ## the typical group is unaffected
-  expect_equal(unname(predict(f, newdata = nd)[, 1]), rep(exp(f$beta[1]), 4),
+  expect_equal(unname(predict(f, newdata = nd, groups = "typical")[, 1]), rep(exp(f$beta[1]), 4),
                tolerance = 1e-12)
   ## given as vectors, the walk cannot place new rows
   fv <- ilm_model(y ~ x, data = d, family = "poisson",

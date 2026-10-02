@@ -271,6 +271,10 @@ Dispersion model: ", deparse(o$disp_formula), "
                 if (is.null(fb)) "" else
                   sprintf("; %d coefficient(s) against the normal: %s",
                           length(fb$rows), fb$reason)))
+  ## columns dropped as aliased have no row above, so say which and why
+  if (!is.null(o$aliased))
+    writeLines(strwrap(sub("^the", "The", o$aliased$note), width = 78,
+                       indent = 1, exdent = 1))
   ## The thresholds are the intercepts of a cumulative link model, and the
   ## sign convention is the trap: the linear predictor is SUBTRACTED from
   ## them, so a positive coefficient pushes probability UP the scale. Reading
@@ -325,9 +329,16 @@ Dispersion model: ", deparse(o$disp_formula), "
     ni <- sum(bad$status == "INCONCLUSIVE")
     cat(sprintf("%d FAIL, %d WARN, %s%d inconclusive\n", nf, nw,
                 if (nb) sprintf("%d BOUNDARY, ", nb) else "", ni))
-    for (i in seq_len(min(4L, nrow(bad))))
+    ## A held limit is always shown, however many rows come before it: it
+    ## says which estimate is not one. The other rows fill the four places
+    ## left, in the table's order.
+    lim <- bad$status == "BOUNDARY" |
+      bad$check %in% c("dispersion_limit", "variance_boundary")
+    show <- sort(c(which(lim), utils::head(which(!lim), max(0L, 4L - sum(lim)))))
+    for (i in show)
       cat(sprintf("  [%s] %s: %s\n", bad$status[i], bad$check[i], bad$detail[i]))
-    if (nrow(bad) > 4L) cat(sprintf("  ... and %d more; see fit$checks\n", nrow(bad) - 4L))
+    if (nrow(bad) > length(show))
+      cat(sprintf("  ... and %d more; see fit$checks\n", nrow(bad) - length(show)))
     if (nf) cat("  >> FAIL means the standard errors above are not usable.\n")
     dl <- "dispersion" %in% o$boundary_terms
     if (!nf && nb) {
