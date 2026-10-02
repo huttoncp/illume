@@ -4,7 +4,7 @@ A gaussian model of y, fitted to 240 observations.
 ## effects
 poly(x, 2)1: very strong evidence that a higher poly(x, 2) is associated with a higher value of y (estimate 10.1, 95% interval 8.0 to 12.2, p < 0.001).
 poly(x, 2)2: moderate evidence that a higher poly(x, 2) is associated with a lower value of y (estimate -2.075, 95% interval -4.141 to -0.010, p = 0.0489).
-g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.07 for 'control' and 1.79 for 'treated': 0.725 higher for 'treated' (95% interval 0.455 to 0.995).
+g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.069 for 'control' and 1.794 for 'treated': 0.725 higher for 'treated' (95% interval 0.455 to 0.995).
 
 ## diagnostics
 All 5 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().

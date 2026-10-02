@@ -495,9 +495,11 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
   s <- sprintf("%s: %s (%s) that %s %s %s.", vn, sub(",$", "", ilm_evidence(p)),
                ilm_fmt_p(p), vn, if (is_causal) "affects" else "is associated with",
                respname)
-  ## Figures read together are written together (Craig's item 306): the
-  ## predictions a sentence lists are one group, an effect with its interval
-  ## another, each at its own decimals -- or at `digits`, when given.
+  ## Figures read together are written together (Craig's item 306): numbers
+  ## of one sentence on one scale that are compared with each other -- the
+  ## predictions, their difference and its interval -- are one group, at its
+  ## decimals or at `digits` when given; the values of the variable they are
+  ## made at keep their own.
   grp <- function(v) ilm_fmt_grp(v, digits)
   fmt <- if (cont) grp else function(v) ilm_fmt_pct_grp(v, digits)
   vlab <- if (num) ilm_fmt_data(vals) else vals
@@ -508,16 +510,27 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     e <- ap$pred$estimate; dd <- ap$diff
     up <- dd$estimate >= 0
     sgn <- if (up) 1 else -1
-    et <- fmt(e)
     ## the effect and its interval, in percentage points for a probability
     sc <- if (prob) 100 else 1
     lo <- if (is.finite(dd$se)) sgn * sc * c(dd$lower, dd$upper) else numeric(0)
     ci_note <- length(lo) > 0L && dd$lower <= 0 && dd$upper >= 0
     ## an interval on both sides of zero is said with its directions rather
     ## than as "0.186 lower (-0.306 to 0.678)"
-    mt <- grp(c(sc * abs(dd$estimate),
-                if (!length(lo)) NULL else if (ci_note) c(abs(min(lo)), max(lo))
-                else c(min(lo), max(lo))))
+    m <- c(sc * abs(dd$estimate),
+           if (!length(lo)) NULL else if (ci_note) c(abs(min(lo)), max(lo))
+           else c(min(lo), max(lo)))
+    ## two predictions are compared with their difference, so the three are
+    ## one group; three or more levels are listed without it
+    if (!num && length(vals) > 2L) m <- numeric(0)
+    ## a share said as an end ("over 99.9%") is a phrase, not a figure, and
+    ## takes no part in choosing the decimals
+    pe <- if (!prob) rep(NA_character_, length(e))
+          else if (is.null(digits)) ilm_pct_end(e) else ilm_pct_end_at(e, digits)
+    k <- is.na(pe)
+    g <- grp(c(sc * e[k], m))
+    et <- pe
+    et[k] <- paste0(g[seq_len(sum(k))], if (prob) "%" else "")
+    mt <- g[-seq_len(sum(k))]
     mag <- paste0(mt[1], if (prob) " percentage points" else "")
     ci <- if (!length(lo)) ""
           else if (ci_note) {
@@ -1052,10 +1065,11 @@ ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
   if (length(object$sets) > 1L && !is.null(object$effects)) {
     e <- object$effects
     sp <- diff(range(e$estimate))
-    rg <- ilm_fmt_grp(range(e$estimate), digits)
+    ## the span is the difference of its ends: one group
+    rg <- ilm_fmt_grp(c(sp, range(e$estimate)), digits)
     s$caveats <- c(sprintf(
       "%d different adjustment sets identify this effect and all were fitted; the estimates span %s (%s to %s). They target the same quantity, so agreement supports the graph and disagreement is worth more attention than any single number.",
-      length(object$sets), ilm_fmt_grp(sp, digits), rg[1], rg[2]),
+      length(object$sets), rg[1], rg[2], rg[3]),
       s$caveats)
   }
   if (lic)

@@ -2,8 +2,8 @@
 A gaussian model of y, fitted to 240 observations.
 
 ## effects
-x: very strong evidence (p < 0.001) that x affects y. Moving x across its middle half, from -0.871 to 0.678, raises predicted y from 0.93 to 1.83: by 0.903 (95% interval 0.718 to 1.088). That is 0.583 per unit of x.
-g2: very strong evidence (p < 0.001) that g2 affects y. Setting g2 to 'treated' rather than 'control' raises predicted y from 1.10 to 1.76: by 0.666 (95% interval 0.399 to 0.933).
+x: very strong evidence (p < 0.001) that x affects y. Moving x across its middle half, from -0.871 to 0.678, raises predicted y from 0.926 to 1.829: by 0.903 (95% interval 0.718 to 1.088). That is 0.583 per unit of x.
+g2: very strong evidence (p < 0.001) that g2 affects y. Setting g2 to 'treated' rather than 'control' raises predicted y from 1.095 to 1.762: by 0.666 (95% interval 0.399 to 0.933).
 h3: strong evidence (p = 0.00459) that h3 affects y. Predicted y is 1.54 for 'north', 1.56 for 'south' and 1.08 for 'west'.
 
 ## diagnostics

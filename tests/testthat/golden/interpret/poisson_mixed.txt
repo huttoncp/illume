@@ -2,8 +2,8 @@
 A poisson model of k, fitted to 240 observations. Observations are grouped by site, and that grouping is modelled, so the estimates below already allow for it. The model works on the log scale, so its coefficients are not in counts; the effects below are converted. They hold the random effect of site at zero -- a typical site -- rather than averaging over site; on the log scale the two are not the same.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with k. Across the middle half of x, predicted k is 1.16 at -0.871 against 2.00 at 0.678: 0.845 higher (95% interval 0.610 to 1.080). (Rate ratio 1.43 per unit of x.)
-g2: moderate evidence (p = 0.0317) that g2 is associated with k. Predicted k is 1.50 for 'control' and 1.86 for 'treated': 0.363 higher for 'treated' (95% interval 0.027 to 0.700). (Rate ratio 1.24 for 'treated' against 'control'.)
+x: very strong evidence (p < 0.001) that x is associated with k. Across the middle half of x, predicted k is 1.16 at -0.871 against 2.00 at 0.678: 0.85 higher (95% interval 0.61 to 1.08). (Rate ratio 1.43 per unit of x.)
+g2: moderate evidence (p = 0.0317) that g2 is associated with k. Predicted k is 1.501 for 'control' and 1.864 for 'treated': 0.363 higher for 'treated' (95% interval 0.027 to 0.700). (Rate ratio 1.24 for 'treated' against 'control'.)
 
 ## diagnostics
 All 11 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
