@@ -59,7 +59,8 @@ significant figures at a typical value, and for the smallest non-zero
 value to keep a digit, up to six. A number fixes that many decimal places
 for every estimate, interval and share in the sentences instead. Counts,
 whole-number data values and p-values keep their own rules either way,
-and so do a share's ends ("over 99.9\%", "under 0.1\%").}
+and so do a share's ends ("over 99.9\%", "under 0.1\%"). With \code{digits}
+given, the ends follow the decimals shown ("over 99.99\%" at two).}
 
 \item{target}{For a power analysis, the power a study is to reach.}
 }

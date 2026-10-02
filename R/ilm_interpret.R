@@ -718,7 +718,8 @@ ilm_scale_words <- function(fam) {
 #'   value to keep a digit, up to six. A number fixes that many decimal places
 #'   for every estimate, interval and share in the sentences instead. Counts,
 #'   whole-number data values and p-values keep their own rules either way,
-#'   and so do a share's ends ("over 99.9%", "under 0.1%").
+#'   and so do a share's ends ("over 99.9%", "under 0.1%"). With `digits`
+#'   given, the ends follow the decimals shown ("over 99.99%" at two).
 #' @param ... Unused.
 #' @return An object of class `"ilm_interpretation"`: a list of sections, which
 #'   `print()` renders as wrapped text.
