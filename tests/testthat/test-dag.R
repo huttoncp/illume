@@ -264,3 +264,66 @@ test_that("dag_test says why a claim was not tested", {
   expect_equal(r$verdict[k], "UNTESTED")
   expect_match(r$note[k], "nominal")
 })
+
+## ---- text as dagitty writes it ----------------------------------------------
+## dagitty.net writes a bounding box and each variable's position, dagitty's
+## curved arrow carries its own [pos=], and a name with a space is quoted.
+## The bounding box used to be read as a variable called bb="0,0,1,1, with
+## implications of its own; the other two stopped the read.
+
+test_that("a bounding box is a setting of the drawing, not a variable", {
+  g <- ilm_dag('dag {
+bb="0,0,1,1"
+x [exposure]
+y [outcome]
+z -> x
+z -> y
+x -> y
+}')
+  expect_setequal(g$nodes, c("x", "y", "z"))
+  expect_equal(ilm_adjust_sets(g), list("z"), ignore_attr = TRUE)
+  expect_equal(nrow(ilm_dag_implied(g)), 0L)
+})
+
+test_that("text as dagitty.net writes it, layout and curved arrow included, reads whole", {
+  txt <- 'dag {
+bb="0,0,1,1"
+"blood pressure" [outcome,pos="0.700,0.500"]
+age [exposure,pos="0.200,0.500"]
+z [pos="0.450,0.200"]
+age -> "blood pressure" [pos="0.450,0.650"]
+z -> "blood pressure"
+z -> age
+}'
+  g <- ilm_dag(txt)
+  expect_setequal(g$nodes, c("age", "blood pressure", "z"))
+  expect_identical(g$exposure, "age")
+  expect_identical(g$outcome, "blood pressure")
+  e <- paste(g$edges$from, g$edges$to, sep = " -> ")
+  expect_setequal(e, c("age -> blood pressure", "z -> blood pressure", "z -> age"))
+  expect_equal(ilm_adjust_sets(g), list("z"), ignore_attr = TRUE)
+  ## a quoted name with a space, in an arrow without settings too
+  g2 <- ilm_dag('dag { age -> "blood pressure" ; "blood pressure" [outcome] }')
+  expect_setequal(g2$nodes, c("age", "blood pressure"))
+})
+
+test_that("a dagitty object reads the same, with a layout or a curved arrow", {
+  skip_if_not_installed("dagitty")
+  d <- dagitty::dagitty('dag {
+"blood pressure" [outcome,pos="0.700,0.500"]
+age [exposure,pos="0.200,0.500"]
+z [pos="0.450,0.200"]
+age -> "blood pressure" [pos="0.450,0.650"]
+z -> "blood pressure"
+z -> age
+}')
+  g <- ilm_dag(d)
+  expect_setequal(g$nodes, c("age", "blood pressure", "z"))
+  expect_equal(nrow(g$edges), 3L)
+  ## coordinates set on the object: its variables carry pos=, and still read
+  d2 <- dagitty::dagitty("dag { x [exposure]; y [outcome]; z -> x; z -> y; x -> y }")
+  dagitty::coordinates(d2) <- list(x = c(x = 0, y = 1, z = 0.5), y = c(x = 0, y = 0, z = 1))
+  g2 <- ilm_dag(d2)
+  expect_setequal(g2$nodes, c("x", "y", "z"))
+  expect_equal(ilm_adjust_sets(g2), list("z"), ignore_attr = TRUE)
+})

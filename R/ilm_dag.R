@@ -109,6 +109,16 @@ ilm_dag_parse <- function(txt) {
   latent <- character(); expo <- character(); outc <- character()
 
   for (st in stm) {
+    ## A graph-level setting, written as name=value with no arrow or bracket:
+    ## dagitty.net writes its drawing's bounding box this way (bb="0,0,1,1").
+    ## It describes the picture, not a variable, so it is skipped -- read as
+    ## a node it became a variable called bb="0,0,1,1, with implications.
+    if (grepl("^[A-Za-z_][A-Za-z0-9_.]*\\s*=", st)) next
+    ## An edge's own settings, in brackets after it -- dagitty's curved arrow
+    ## is x -> y [pos="0.5,0.3"] -- say how to draw it, not what it is, so
+    ## they are dropped before the edge is read. (A variable's brackets are
+    ## read below: they carry exposure, outcome and latent.)
+    if (grepl("->|<-", st)) st <- trimws(gsub("\\[[^]]*\\]", "", st))
     if (grepl("<->", st, fixed = TRUE)) {
       ## a bidirected edge is an unobserved common cause; name it so the user
       ## can see it in the adjustment sets and in any error message
@@ -126,8 +136,10 @@ ilm_dag_parse <- function(txt) {
            "set follows from them: ", st, call. = FALSE)
 
     if (grepl("->|<-", st)) {
-      ## split on arrows but keep them, so a chain a -> b <- c reads correctly
-      tk <- regmatches(st, gregexpr("->|<-|[^\\s>< -]+", st, perl = TRUE))[[1]]
+      ## split on arrows but keep them, so a chain a -> b <- c reads correctly;
+      ## a quoted name is one token, spaces and all ("blood pressure")
+      tk <- regmatches(st, gregexpr('->|<-|"[^"]*"|\'[^\']*\'|[^\\s><"\' -]+', st,
+                                    perl = TRUE))[[1]]
       tk <- trimws(tk); tk <- tk[nzchar(tk)]
       ops <- tk[tk %in% c("->", "<-")]
       vs  <- ilm_dag_bare(tk[!tk %in% c("->", "<-")])

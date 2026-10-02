@@ -1,5 +1,11 @@
 # illume 0.0.8.9003
 
+* `ilm_dag()` reads a graph as dagitty.net and dagitty write it. The
+  drawing's bounding box (`bb="0,0,1,1"`) was read as a variable, so
+  `ilm_dag_implied()` listed independencies about a variable that does not
+  exist; it is now skipped. A curved arrow's own drawing setting
+  (`x -> y [pos="0.5,0.3"]`) and a quoted name with a space in an arrow
+  (`age -> "blood pressure"`) stopped the read; both now read.
 * A term at its limit is held by a rule that gives the same answer on every
   platform measured. A dispersion, a residual SD, or a random effect's or
   AR(1)'s SD past its line was held when one push of 3 towards its limit
