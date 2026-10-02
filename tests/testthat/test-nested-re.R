@@ -24,7 +24,7 @@ nested_data <- function(n = 600, seed = 1) {
 
 test_that("a nested bar fits at all", {
   d <- nested_data()
-  expect_silent(f <- ilm_model(y ~ x + (1 | sch / cls), data = d,
+  expect_silent(f <- ilm_model(reml = FALSE, y ~ x + (1 | sch / cls), data = d,
                                family = "gaussian",
                                verbose = FALSE))
   expect_s3_class(f, "ilm_model")
@@ -36,7 +36,7 @@ test_that("a nested bar fits at all", {
 test_that("it agrees with lme4 on the same nested model", {
   skip_if_not_installed("lme4")
   d <- nested_data()
-  f <- ilm_model(y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
   l <- lme4::lmer(y ~ x + (1 | sch / cls), data = d, REML = FALSE)
   expect_equal(unname(stats::coef(f)), unname(lme4::fixef(l)),
                tolerance = 1e-5)
@@ -50,9 +50,9 @@ test_that("the explicit form gives the same fit as the slash", {
   ## being handled differently from the thing it expands to
   skip_if_not_installed("lme4")
   d <- nested_data()
-  a <- ilm_model(y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
+  a <- ilm_model(reml = FALSE, y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
   d$cls_in_sch <- factor(paste(d$cls, d$sch, sep = ":"))
-  b <- ilm_model(y ~ x + (1 | sch) + (1 | cls_in_sch), data = d,
+  b <- ilm_model(reml = FALSE, y ~ x + (1 | sch) + (1 | cls_in_sch), data = d,
                  verbose = FALSE)
   expect_equal(unname(stats::coef(a)), unname(stats::coef(b)), tolerance = 1e-5)
 })
@@ -62,7 +62,7 @@ test_that("unused interaction levels are dropped", {
   ## including those that never occur -- each would otherwise claim a random
   ## effect that no row informs
   d <- nested_data()
-  f <- ilm_model(y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
   inner <- f$re[[grep(":", names(f$re))[1]]]
   expect_identical(length(unique(inner$group)), nlevels(droplevels(d$cls)))
   expect_lt(length(unique(inner$group)), nlevels(d$sch) * nlevels(d$cls))
@@ -75,7 +75,7 @@ test_that("three levels of nesting work", {
   d$cls <- factor(paste0(d$sch, "_c", sample(1:3, n, TRUE)))
   d$x <- rnorm(n)
   d$y <- 0.4 * d$x + rnorm(nlevels(d$sch), 0, .6)[as.integer(d$sch)] + rnorm(n)
-  expect_silent(f <- ilm_model(y ~ x + (1 | region / sch / cls), data = d,
+  expect_silent(f <- ilm_model(reml = FALSE, y ~ x + (1 | region / sch / cls), data = d,
                                family = "gaussian",
                                verbose = FALSE))
   expect_identical(length(f$re), 3L)
@@ -83,16 +83,16 @@ test_that("three levels of nesting work", {
 
 test_that("a grouping variable that really is missing still errors clearly", {
   d <- nested_data()
-  expect_error(ilm_model(y ~ x + (1 | sch / nope), data = d, verbose = FALSE),
+  expect_error(ilm_model(reml = FALSE, y ~ x + (1 | sch / nope), data = d, verbose = FALSE),
                "could not be built")
-  expect_error(ilm_model(y ~ x + (1 | sch / nope), data = d, verbose = FALSE),
+  expect_error(ilm_model(reml = FALSE, y ~ x + (1 | sch / nope), data = d, verbose = FALSE),
                "nope")                       # names the offending variable
 })
 
 test_that("the nested fit supports what any other fit supports", {
   ## the bug was in building the term, so everything downstream needs a look
   d <- nested_data()
-  f <- ilm_model(y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | sch / cls), data = d, verbose = FALSE)
   expect_s3_class(ilm_anova(f), "anova")
   expect_true(is.numeric(stats::predict(f)))
   expect_identical(nrow(ilm_coef_table(f)), 2L)

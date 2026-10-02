@@ -149,7 +149,7 @@ ilm_trends <- function(object, specs, var, at = NULL,
   gm <- g; gm[[var]] <- g[[var]] - h / 2
 
   tt <- stats::delete.response(stats::terms(object))
-  mmof <- function(z) ilm_drop_intercept(
+  mmof <- function(z) ilm_fit_cols(
     stats::model.matrix(tt, data = z, contrasts.arg = object$contrasts), object)
   ## the derivative of the model matrix with respect to `var`; exact for any
   ## term linear in it, and a good approximation for anything else

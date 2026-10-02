@@ -132,11 +132,13 @@
 #'   order. Taken from the columns of `cells` when it has them.
 #' @param thresholds For an ordinal outcome given by `coefs`, the `J - 1` cut
 #'   points on the latent scale, increasing.
-#' @param reml Plan for an analysis fitted by restricted maximum likelihood,
-#'   as `ilm_model(reml = TRUE)` fits one: every simulated study is then
-#'   refitted by REML. For a gaussian mixed model that is the analysis most
-#'   software reports, and its power is a little lower than that of the
-#'   maximum-likelihood fit, whose variance components run small.
+#' @param reml The analysis to plan for, as [ilm_model()]'s `reml` chooses
+#'   it: `NULL` (the default) plans for the analysis `ilm_model()` fits by
+#'   default -- REML for a gaussian mixed model, maximum likelihood for every
+#'   other -- and `TRUE` or `FALSE` for REML or maximum likelihood. Every
+#'   simulated study is refitted that way. A maximum-likelihood fit's
+#'   variance components run small, so its power is a little higher than
+#'   REML's; plan for the analysis you will run.
 #' @return An `"ilm_model"` that also carries class `"ilm_scaffold"`.
 #' @references Snijders, T. A. B. and Bosker, R. J. (2012). *Multilevel
 #'   Analysis*, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)
@@ -174,7 +176,7 @@ ilm_scaffold <- function(formula, design, n_unit, family = "gaussian",
                          re_sd = NULL, re_cor = NULL, icc = NULL,
                          within = NULL, contrasts = NULL, seed = 1L,
                          verbose = TRUE, categories = NULL,
-                         thresholds = NULL, reml = FALSE) {
+                         thresholds = NULL, reml = NULL) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   if (!inherits(formula, "formula"))
     stop("`formula` must be a formula, not ", class(formula)[1], call. = FALSE)
@@ -1086,7 +1088,7 @@ ilm_power_design <- function(formula, design, n_unit, family = "gaussian",
                              effect = NULL, sims = 200L, alpha = 0.05,
                              seed = 1L, progress = NULL, verbose = TRUE,
                              categories = NULL, thresholds = NULL,
-                             reml = FALSE) {
+                             reml = NULL) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit
   n_unit <- sort(unique(as.integer(n_unit)))
   if (any(is.na(n_unit)) || any(n_unit < 4L))

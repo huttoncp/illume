@@ -47,9 +47,9 @@ test_that("the interpretation names each effect on the response scale", {
   expect_match(txt, "[Oo]dds ratio")
   expect_match(txt, "percentage points")
   ## a factor is described level by level, in probabilities
-  expect_match(txt, "is [0-9]+% for 'a' and [0-9]+% for 'b'")
+  expect_match(txt, "is [0-9.]+% for 'a' and [0-9.]+% for 'b'")
   ## a numeric predictor over its middle half, with the predictions at both ends
-  expect_match(txt, "Across the middle half of x, the predicted probability that y is 1 is [0-9]+% at")
+  expect_match(txt, "Across the middle half of x, the predicted probability that y is 1 is [0-9.]+% at")
   ## and the output is deterministic
   expect_identical(capture.output(print(r)), capture.output(print(ilm_interpret(f))))
 })
@@ -243,7 +243,7 @@ test_that("a predictor in a multinomial model gets one verdict, in shares", {
   f <- ilm_model(k ~ x + h, data = d, family = "multinomial", verbose = FALSE)
   e <- ilm_interpret(f, ame = FALSE)$sections$effects
   expect_length(e, 2L)
-  expect_match(e[1], "the predicted share of 'a' is [0-9]+% against [0-9]+%")
+  expect_match(e[1], "the predicted share of 'a' is [0-9.]+% against [0-9.]+%")
   expect_match(e[2], "Predicted shares for 'u' against 'v'", fixed = TRUE)
 })
 
@@ -288,8 +288,10 @@ test_that("the numbers in the prose carry no padding", {
   ## 5 as "   5" -- which in a sentence is a run of spaces: "(95% interval
   ## 13 to  32)". Printing re-wraps the text and hid it; the strings
   ## themselves, which a report or a paste takes, carried it.
+  ## (and an estimate keeps its three figures, trailing zeros with them:
+  ## Craig's item 256)
   expect_identical(ilm_fmt_sig(c(5, 2.1, 287, 0.61, 1230, -3)),
-                   c("5", "2.1", "287", "0.61", "1,230", "-3"))
+                   c("5.00", "2.10", "287", "0.610", "1,230", "-3.00"))
   set.seed(1); n <- 300
   d <- data.frame(x = stats::runif(n, 0, 40))
   d$b <- stats::rbinom(n, 1, stats::plogis(-1 + 0.05 * d$x))
@@ -316,4 +318,43 @@ test_that("the few-groups caveat names the test that can run liberal", {
     expect_identical(grepl("ilm_denom_df()", cav, fixed = TRUE),
                      fam == "gaussian")
   }
+})
+
+test_that("a term that is not a variable of the formula is said by its coefficients", {
+  ## poly(x, 2) is in the model frame as a matrix, not a variable, and was said
+  ## to change the prediction by "0" over its middle half
+  set.seed(3)
+  d <- data.frame(x = rnorm(200)); d$y <- 1 + d$x - 0.5 * d$x^2 + rnorm(200)
+  f <- suppressMessages(ilm_model(y ~ poly(x, 2), data = d, family = "gaussian", verbose = FALSE))
+  s <- unclass(ilm_interpret(f, ame = FALSE))$sections$effects
+  expect_length(s, 2L)
+  expect_true(all(startsWith(s, "poly(x, 2)")))
+  expect_false(any(grepl("middle half", s)))
+})
+
+test_that("each number in the prose is written by what it is", {
+  ## an estimate: three figures, trailing zeros kept, never whole for being
+  ## whole (Craig's rulings 16 and 256), rounded half away from zero on the
+  ## value as written, not on its binary neighbour
+  expect_identical(ilm_fmt_sig(c(12.35, 51, 9.9951, 19234, 0.0125)),
+                   c("12.4", "51.0", "10.0", "19,200", "0.0125"))
+  expect_identical(ilm_fmt(c(2.675, 1.005), 2), c("2.68", "1.01"))
+  expect_identical(ilm_fmt_pct(c(0.2725, 109 / 400, 0.004, 0.996)),
+                   c("27.3%", "27.3%", "under 1%", "over 99%"))
+  ## large numbers, to the decimals asked for: no figure past the ones the
+  ## value has is rounded up (illumex's format_cases.csv, the same cases)
+  expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),
+                   c("4,878,897.650", "1,234,567.891"))
+  expect_identical(ilm_fmt(7195166.76, 5), "7,195,166.76000")
+  ## 95074673.368549898, written in hex as the shared cases file writes it:
+  ## a 17-figure decimal literal can parse to a neighbouring double on some
+  ## platforms (R on arm64 macOS reads decimals in double precision only)
+  expect_identical(ilm_fmt(0x1.6aae5c5796525p+26, 4), "95,074,673.3685")
+  ## a count: whole
+  expect_identical(ilm_fmt_count(c(40, 1234, 19234)), c("40", "1,234", "19,234"))
+  ## a data value: whole where it is a whole number, three figures otherwise
+  expect_identical(ilm_fmt_data(c(19234, 2019, 19234.5, 0.61, 42)),
+                   c("19,234", "2,019", "19,200", "0.610", "42"))
+  ## a p-value: three figures down to 0.001, as before
+  expect_identical(ilm_fmt_p(c(0.0125, 0.0004)[1]), "p = 0.0125")
 })

@@ -208,7 +208,8 @@ summarise_study <- function(dir, study) {
       rej <- ps[ps$what == "rejects", ]
       c("", paste0("**The ML arm** (addendum A1, pre-registered at 098929e before any of its ",
                    "fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, ",
-                   "fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. ",
+                   "fitted by maximum likelihood (reml = FALSE), which was ilm_model()'s default ",
+                   "when the study ran; REML is now the default for a gaussian mixed model. ",
                    fits_of(sm), " fits (", 24000 - fits_of(sm), " of 24,000 failed to fit). ",
                    "Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. ",
                    "Bold, df_s and held as above:"),
@@ -287,6 +288,94 @@ summarise_study <- function(dir, study) {
       "D2's intercept SD (an ICC of 0.3) and every arm's intercept of 1 were fixed in the",
       "script's header before any run. The default's scope was narrowed to linear",
       "mixed models (acf93c2) before the runs; every cell here is one.")
+  } else if (study == "reml_hold") {
+    ## The hold rule under REML, for a gaussian mixed model (item 249,
+    ## pre-registered in scripts/reml_hold.R): the literal verdicts first, then
+    ## the readings made after the run, marked as such and computed from the
+    ## files filed beside the summaries.
+    s <- read_all(dir, "^reml_hold_main_summary.csv$"); if (is.null(s)) return(NULL)
+    v <- read_all(dir, "^reml_hold_main_verdicts.csv$")
+    sf <- read_all(dir, "^reml_hold_fresh_summary.csv$")
+    vf <- read_all(dir, "^reml_hold_fresh_verdicts.csv$")
+    pr <- read_all(dir, "^reml_hold_h2_probe.csv$")
+    fp <- read_all(dir, "^reml_hold_failures_paired.csv$")
+    w <- function(h) ifelse(is.na(h), "NA", ifelse(h, "holds", "does not hold"))
+    arms <- c(H1 = "an intercept at zero", H2 = "a slope at zero",
+              H3 = "a correlation of one", H4 = "one of two crossed terms at zero")
+    tab <- function(s) data.frame(arm = s$arm, G = s$G, m = ifelse(is.na(s$m), "-", s$m),
+      held = s$held_zero, ratio_median = num(s$ratio_median), ratio_within = num(s$ratio_within, 2),
+      ratio_max = num(s$ratio_max, 2), cover_held = num(s$cover_held_s),
+      cover_reml = num(s$cover_reml_s), cover_ml = num(s$cover_ml_s),
+      reml_failed = s$reml_failed, ml_failed = s$ml_failed, stringsAsFactors = FALSE)
+    vt <- data.frame(verdict = v$verdict, main = w(v$holds),
+                     fresh = if (is.null(vf)) "-" else w(vf$holds),
+                     stringsAsFactors = FALSE)
+    vt$reading <- ifelse(vt$main == vt$fresh, vt$main, "unresolved")
+    h2 <- s[s$arm == "H2", ]; h1 <- s[s$arm %in% c("H1", "H4"), ]
+    probe <- if (!is.null(pr)) {
+      bnd <- function(est) {
+        held <- pr[[paste0(est, "_held")]] %in% TRUE
+        zero <- pr[[paste0(est, "_sd_slope")]] < 1e-3 * pmax(pr[[paste0(est, "_sd_int")]], 1e-8)
+        rat <- pr[[paste0(est, "_ratio")]][held]
+        c(held = sum(held), zero = sum(held & zero), med = stats::median(rat),
+          within = mean(abs(rat - 1) <= 0.03))
+      }
+      list(reml = bnd("reml"), ml = bnd("ml"))
+    }
+    fall <- if (!is.null(fp)) fp[fp$cell == "all", ]
+    g20 <- s[s$G == 20, ]
+    miss2 <- g20[abs(g20$cover_held_s - 0.95) > 2 * g20$mcse_held, ]
+    c(paste0("The hold rule (rule C: hold only the flat directions at a boundary) on the path ",
+             "Craig's item 249 makes the default: a gaussian mixed model fitted by REML. ",
+             "Four arms, ten cells, 1,000 replicates each and 500 on fresh seeds; each data set ",
+             "fitted by REML and by maximum likelihood, with the reduced model the boundary ",
+             "implies refitted by REML as the reference (lme4 for H3, not graded). held counts ",
+             "the REML fits held at the term that is zero in truth; ratio is rule C's SE of the ",
+             "effect over the reference's; cover is the Satterthwaite interval's coverage."),
+      "", "**The cells, main run:**", "", md_table(tab(s)),
+      if (!is.null(sf)) c("", "**Fresh seeds:**", "", md_table(tab(sf))),
+      "", "**The pre-registered verdicts:**", "", md_table(vt),
+      "", paste0("**Literal verdict, as pre-registered:** V1 ", vt$reading[1], ", V2 ",
+                 vt$reading[2], " and V3 ", vt$reading[3], ". The pre-registration sends a V1 or ",
+                 "V3 that does not hold to Craig with a proposal before the REML default ships for ",
+                 "fits held at a boundary (his item 262)."),
+      "", paste0("**Craig's ruling on item 262 (2026-10-01), on these verdicts and the readings ",
+                 "below:** the REML default ships as he ruled in item 249. The boundary at a ",
+                 "correlation of +/-1, whose reduced model is rank one, is open work for after ",
+                 "the release."),
+      "", paste0("**Readings, chosen after the run (post hoc, not verdicts).**"),
+      paste0("V1 fails in H2 only: its median ratios are ", paste(num(h2$ratio_median), collapse = ", "),
+             " with ", paste(num(h2$ratio_within, 2), collapse = ", "), " of held fits within 3%, ",
+             "while H1 and H4 are exact (medians ", paste(num(h1$ratio_median), collapse = ", "),
+             ", all within 3%)",
+             if (!is.null(probe)) paste0(". A probe of H2's first 40 replicates ",
+               "(scripts/reml_hold_h2_probe.R) finds every held fit stopped at a correlation of ",
+               "+/-1 with a slope SD above zero -- ", probe$reml[["held"]] - probe$reml[["zero"]], " of ",
+               probe$reml[["held"]], " under REML, ", probe$ml[["held"]] - probe$ml[["zero"]], " of ",
+               probe$ml[["held"]], " under maximum likelihood -- and none at a slope SD of zero. ",
+               "The reduced model that boundary implies is rank one, which illume has no ",
+               "structure for; the intercept-only refit the pre-registration took as H2's ",
+               "reference is the truth's reduced model, not the boundary's. Against it maximum ",
+               "likelihood is further off than REML (median ", num(probe$ml[["med"]]), " against ",
+               num(probe$reml[["med"]]), ", ", num(probe$ml[["within"]], 2), " against ",
+               num(probe$reml[["within"]], 2), " within 3%)") else "", "."),
+      paste0("V2: the held fits' coverage at G = 20 misses its band in ",
+             if (nrow(miss2)) paste(sprintf("%s (%s)", miss2$arm, num(miss2$cover_held_s)), collapse = ", ")
+             else "no cell", " in the main run. There rule C's SE equals the reduced refit's ",
+             "(median ratio 1.000), so the reduced model gives the same interval: the shortfall ",
+             "is in which fits hold -- those whose clusters happen to look alike -- not in rule C."),
+      if (!is.null(fall)) paste0("V3: no SE exceeds ", num(max(s$ratio_max, sf$ratio_max), 2),
+             " times its reference. REML's failures against maximum likelihood's on the same ",
+             "data, paired by exact McNemar (scripts/reml_hold_failures_paired.R): ",
+             paste(sprintf("%s run %d REML-only against %d ML-only, p = %s", fall$run,
+                           fall$reml_only, fall$ml_only, formatC(fall$p, format = "g", digits = 2)),
+                   collapse = "; "), " -- not shown different; the per-cell counts are 0 to ",
+             max(fp$reml_only[fp$cell != "all"], fp$ml_only[fp$cell != "all"]), "."),
+      "",
+      "CAVEATS that must travel with this result: the H2 reference was pre-registered as the",
+      "intercept-only refit, and the fits' own boundary is rank one; a rank-one boundary, at a",
+      "correlation of +/-1, is open work for after the release (Craig's ruling on item 262).",
+      "Every arm is gaussian; the REML default applies to gaussian mixed models only.")
   } else if (study == "power") {
     d <- read_all(dir, "^power_summary.csv$"); if (is.null(d)) return(NULL)
     nul <- d[d$delta == 0, c("cell", "n_wald", "rej_wald", "rej_lrt")]

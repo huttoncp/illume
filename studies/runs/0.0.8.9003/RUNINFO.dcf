@@ -1,7 +1,7 @@
 Version: 0.0.8.9003
 Date: 2026-09-28
 R: 4.4.3
-Studies: variance_draws, df_tables
+Studies: variance_draws, df_tables, reml_hold
 Date.df_tables: 2026-09-28
 Date.variance_draws: 2026-09-28
 Note: Arm B of item 78, pre-registered in studies/scripts/variance_draws.R
@@ -44,3 +44,15 @@ Note: The df tables study's ML arm (addendum A1), pre-registered in
  summary, verdicts and the pre-registered ML-against-REML table are filed
  here, with a paired McNemar reading chosen after it ran
  (scripts/df_tables_ml_paired.R); the per-fit tables stay on local disk.
+Date.reml_hold: 2026-09-29
+Note: The REML hold-rule study (item 249), pre-registered in
+ studies/scripts/reml_hold.R (f5fb8e1; addendum A1 f39bb1d, before any main
+ run: a smoke run on the pre-registered build found every table's df infinite,
+ because the df-tables branch's Satterthwaite tables were not yet merged; they
+ were (0d792a7) and the pinned library was built from f39bb1d). The main run
+ (1,000 replicates per cell, 10,000 data sets) and the fresh-seed run (500 per
+ cell) ran on 4 workers in that library, whose manifest did not change. Both
+ stopped at their final bind, on replicates whose fit failed outright; the
+ bind was fixed (983ce0d, a reporting fix) and rerun from the per-fit
+ checkpoints on one process, refitting nothing. The H2 probe and the paired
+ failure table were made after the run, with their scripts filed.

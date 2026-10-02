@@ -1,0 +1,13 @@
+## model
+An ordinal model of o, fitted to 240 observations. The model works on the cumulative logit scale, so its coefficients are not in percentage points of probability; the effects below are converted.
+
+## effects
+x: very strong evidence (p < 0.001) that x is associated with o. Across the middle half of x, from -0.871 to 0.678, the predicted share of 'low' is 55.1% against 27.2%, of 'mid' 21.4% against 22.6% and of 'high' 23.5% against 50.3%. (A cumulative odds ratio of 2.16 per unit of x: the odds of a higher category rather than a lower one, at every cut point.)
+g2: little evidence (p = 0.366) that g2 is associated with o. Predicted shares for 'control' against 'treated': 'low' 39.0% against 43.9%, 'mid' 20.8% against 20.6% and 'high' 40.2% against 35.5%. (A cumulative odds ratio of 0.793 for 'treated' against 'control': the odds of a higher category rather than a lower one, at every cut point.) The data are consistent with no effect -- not that there is none.
+
+## diagnostics
+All 6 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
+
+## caveats
+These are associations. Nothing here rules out a common cause of a predictor and the response, so an effect could differ in size or sign from what is reported. To say more you need a design that identifies one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+

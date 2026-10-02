@@ -135,6 +135,36 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #' groups, nearly confounded with the group variance, shows under maximum
 #' likelihood only. The line says so on a REML fit.
 #'
+#' @section REML or maximum likelihood: the defaults, and when to change them:
+#' A gaussian mixed model -- gaussian with an identity link, a grouping term or
+#' a correlation over time, and no zero part or censoring -- is fitted by REML
+#' by default; every other model by maximum likelihood. `print()` and
+#' `summary()` of a gaussian mixed model say which estimator it has and
+#' whether that was the default.
+#'
+#' Why REML there: maximum likelihood estimates the variance components as if
+#' the fixed effects were known, so with few groups it estimates them too
+#' small, and the standard errors, degrees of freedom and intervals built on
+#' them are too narrow. On 24,000 simulated fits of 6 to 20 groups, the
+#' Satterthwaite intervals of REML fits covered close to 95% in 11 of the 12
+#' designs with 10 or more groups; on the same data, maximum likelihood
+#' covered 0.902 to 0.934 in 6 of them, and a test of a between-group factor
+#' at a nominal 5% rejected 19% of the time with 6 groups against 7.8% for
+#' REML (`studies/findings/df_tables.md`).
+#'
+#' When to change it: set `reml = FALSE` to fit a gaussian mixed model by
+#' maximum likelihood -- to reproduce another program's ML fit, or to compare
+#' AIC or likelihoods between models that differ in their fixed effects. You do
+#' not need it for the comparisons illume makes itself: `ilm_anova(test =
+#' "LRT")`, [ilm_pb_lrt()] and McFadden's R-squared refit a REML fit by maximum
+#' likelihood for the comparison and say that they did, because a restricted
+#' likelihood belongs to contrasts orthogonal to the fixed design and two
+#' models with different fixed effects have restricted likelihoods of
+#' different data. Set `reml = TRUE` to ask for REML in another family.
+#' [ilm_dag_model()] fits a gaussian response by REML whether or not it has
+#' random terms, because there the graph fixed the adjustment set before any
+#' data were seen.
+#'
 #' @param formula A formula with random-effect bars and optional smooth terms.
 #' @param ... Arguments passed to the formula interface, listed below.
 #' @param family Response distribution: one of "gaussian", "binomial",
@@ -236,30 +266,17 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   random parameters. `NULL` (the default) switches it on when the model
 #'   contains smooths, which is when [predict.ilm_model()] needs it.
 #' @param na.action How to handle missing values; default [stats::na.omit()].
-#' @param reml Logical. Estimate the variance components by RESTRICTED maximum
-#'   likelihood instead of maximum likelihood. Defaults to `FALSE`, and the
-#'   reason is the order you work in: maximum likelihood is what lets you
-#'   compare fixed-effect structures, because a restricted likelihood belongs
-#'   to contrasts orthogonal to the design matrix and changing that matrix
-#'   changes which data it is the likelihood of. Settle the fixed effects under
-#'   the default, then refit with `reml = TRUE` for the estimates you report --
-#'   maximum likelihood biases the variance components downward, and with few
-#'   clusters that carries through to standard errors and to the degrees of
-#'   freedom from [ilm_denom_df()]. With few groups the difference is
-#'   measurable: in a study of 8 groups of 6, nominal 90% prediction intervals
-#'   for new groups, built from the fitted variance components, covered 0.903
-#'   with REML against 0.891 with maximum likelihood for a gaussian response,
-#'   and 0.892 against 0.872 for a Poisson one. Once set, any likelihood-ratio
-#'   test refuses
-#'   rather than quietly comparing things that are not comparable, and so does
-#'   [ilm_robust()], whose sandwich needs per-observation scores that a
-#'   restricted likelihood does not have. Available for every family, but exact
-#'   only for a gaussian response: for any other family it is an approximately
-#'   restricted likelihood, which reduces the downward bias without REML's
-#'   exact properties, and `fit$reml_exact` says which a fit has (see the
-#'   *Regression models* vignette). [ilm_dag_model()] defaults to `TRUE` for a
-#'   gaussian response, because there the graph fixed the adjustment set
-#'   before any data were seen.
+#' @param reml `NULL` (the default), `TRUE` or `FALSE`: estimate the variance
+#'   components by RESTRICTED maximum likelihood (REML) or by maximum
+#'   likelihood. `NULL` fits a gaussian mixed model by REML and every other
+#'   model by maximum likelihood; see "REML or maximum likelihood" for why and
+#'   when to change it. A gaussian mixed model's `print()` and `summary()` say
+#'   which it was fitted by, and whether that was the default. REML is
+#'   available for every family but exact only for a gaussian response: for
+#'   any other family it is an approximately restricted likelihood, which
+#'   reduces the downward bias without REML's exact properties, and
+#'   `fit$reml_exact` says which a fit has (see the *Regression models*
+#'   vignette).
 #' @param boundary What to do about a random-effect covariance at the edge of
 #'   its range -- a variance of zero, or a correlation of +/-1 -- where the
 #'   likelihood is flat and cannot say where in that direction the truth is.
@@ -313,6 +330,19 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   heavy-tailed as well. `"hold"` stays the default for that reason; the fit
 #'   says when a boundary was reached under it, and names `"avoid"` as the
 #'   alternative.
+#' @param aliased What to do when the fixed-effect columns are not all
+#'   separable -- two covariates one a multiple of the other, or an
+#'   interaction with an empty cell -- so that the model has no unique fit.
+#'   `"stop"`, the default, stops before fitting and names the columns, the
+#'   terms and any empty cells, so the model can be written without the
+#'   overlap. `"drop"` drops each column that is a combination of earlier
+#'   ones, as `lm()` and `lme4` do, fits the rest, and says which were dropped
+#'   at fitting and in `summary()`; `fit$aliased` holds them. The model is the
+#'   same, written with fewer columns, but a dropped coefficient has no
+#'   estimate, and which column of a dependent set goes is a matter of their
+#'   order in the formula. Where a smooth is involved the fit stops whichever
+#'   is chosen: a smooth's unpenalised part has no column that can sensibly
+#'   be dropped.
 #'
 #' @return An object of class `"ilm_model"`. Beyond the elements listed in
 #'   [ilm_fit()], a formula fit also stores `call`, `terms`, `xlev`,
@@ -478,9 +508,11 @@ ilm_model_formula <- function(formula, data, family = "auto",
                          censor = NULL, dispformula = NULL,
                          rp_df = 3L, rp_knots = NULL, ziformula = NULL,
                          zi_type = c("inflated", "hurdle"), design = NULL,
-                         reml = FALSE, boundary = c("hold", "avoid")) {
+                         reml = NULL, boundary = c("hold", "avoid"),
+                         aliased = c("stop", "drop")) {
   zi_type <- match.arg(zi_type)
   boundary <- match.arg(boundary)
+  aliased <- match.arg(aliased)
   ## A survey design supplies the weights, so taking them from both places
   ## would silently apply one and ignore the other.
   if (!is.null(design)) {
@@ -892,7 +924,17 @@ ilm_model_formula <- function(formula, data, family = "auto",
   ## full rank (ilm_alias.R): a dependence is named before the fit, not left
   ## to come back as a failed Hessian and standard errors of NaN
   alias <- ilm_alias_find(X, asgn, attr(mt, "term.labels"))
-  if (!is.null(alias)) stop(ilm_alias_message(alias, mf), call. = FALSE)
+  al_drop <- NULL
+  if (!is.null(alias)) {
+    ## asked for, and no smooth involved: drop the dependent columns, as lm()
+    ## and lme4 do, and say so (item 214)
+    if (identical(aliased, "drop") && !alias$smooth) {
+      al_drop <- list(columns = alias$dependent, note = ilm_alias_drop_note(alias))
+      kc <- !colnames(X) %in% alias$dependent
+      X <- X[, kc, drop = FALSE]; asgn <- asgn[kc]
+      message("ilm_model(): ", al_drop$note)
+    } else stop(ilm_alias_message(alias, mf, aliased), call. = FALSE)
+  }
 
   ## ---- random-effect bars -------------------------------------------------
   for (b in bars) {
@@ -998,6 +1040,14 @@ ilm_model_formula <- function(formula, data, family = "auto",
   }
   ## the offset, for the rows the frame kept: log exposure for a rate
   off <- if (length(off_terms)) stats::model.offset(mf) else NULL
+  ## REML by default for a gaussian mixed model, maximum likelihood for every
+  ## other (Craig's item 249); what was chosen, and whether the user chose it,
+  ## is kept for print() and summary() to say
+  reml_asked <- !is.null(reml)
+  if (reml_asked && !(is.logical(reml) && length(reml) == 1L && !is.na(reml)))
+    stop("`reml` must be TRUE, FALSE or NULL (the default: REML for a gaussian mixed ",
+         "model, maximum likelihood otherwise).", call. = FALSE)
+  if (!reml_asked) reml <- ilm_reml_default(fam, re_list, ar, Zzi, censor)
   ## Separation, from the data alone and before the fit: a level (or a cell
   ## of two factors) whose outcome takes no second value has no finite
   ## coefficient (see ilm_separation.R). Its flat-likelihood partner is read
@@ -1051,6 +1101,11 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fit$call      <- cl
   ## why the family was chosen, when it was chosen rather than given
   fit$family_inferred <- fam_why
+  fit$reml_by_default <- !reml_asked
+  if (isTRUE(verbose)) {
+    ew <- ilm_estimator_words(fit)
+    if (!is.null(ew)) message("ilm_model(): ", ew)
+  }
   fit$formula   <- formula
   fit$fixed_formula <- gp$pf
   fit$terms     <- mt
@@ -1075,6 +1130,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
   fit$term_labels <- attr(mt, "term.labels")
   ## Surv() read off the formula's left side: its counts, for summary()
   fit$surv_read   <- surv_read
+  ## the columns dropped as aliased, which every design rebuilt from the
+  ## terms drops too (ilm_fit_cols)
+  fit$aliased     <- al_drop
   fit$empty_levels <- empty_lv
   ## separation: the levels found before the fit, and the coefficients whose
   ## likelihood is flat where they stopped, in one check

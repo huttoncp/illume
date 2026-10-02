@@ -425,7 +425,7 @@ VarCorr.ilm_model <- function(x, sigma = 1, ...) ilm_varcorr(x)
 
 ## The variance parameters on their natural scale, from a fit or from a
 ## parameter vector in opt$par order. ONE set of transforms -- the numeric
-## builders, ilm_rho_from_raw() and ilm_disp_scale(), reached through
+## builders, ilm_rho_from_raw() and ilm_dispersion_scale(), reached through
 ## ilm_rebuild() here and through ilm_natural_draws() for many draws at once
 ## -- so the variance components at the estimate and those of any draw agree.
 #' @keywords internal

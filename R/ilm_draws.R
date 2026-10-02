@@ -398,7 +398,7 @@ ilm_natural_draws <- function(object, full) {
     v0 <- nat0$dispersion$value
     has_dm <- !is.null(object$Zd) || isTRUE(object$disp_mu)
     D <- if (object$family$n_disp > 0L && !has_dm && any(rn == "logdisp"))
-      ilm_disp_scale(object, full[rn == "logdisp", , drop = FALSE])
+      ilm_dispersion_scale(object, full[rn == "logdisp", , drop = FALSE])
     else if (has_dm)
       ## a modelled dispersion is summarised by its median over the rows,
       ## which takes the whole rebuilt fit, one draw at a time
