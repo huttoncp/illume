@@ -49,11 +49,24 @@ ilm_fmt_pct_grp <- function(p, digits = NULL) {
   e
 }
 
-## The ends of a share when the caller fixes the decimals, in this one place:
-## Craig's item 309 decides them. Until then, as without `digits`.
+## The ends of a share when the caller fixes the decimals, in this one place
+## (Craig's item 309): the ends follow the precision shown. A share that
+## would print as 100% or 0% at `digits` decimals reads "over" or "under"
+## the last value those decimals can show ("over 99.99%", "under 0.01%" at
+## two; "over 99%", "under 1%" at none). Exactly 0 and 1, as in
+## ilm_pct_end(), are not ends to soften. NA where the share is printed as a
+## number.
 #' @keywords internal
 #' @noRd
-ilm_pct_end_at <- function(p, digits) ilm_pct_end(p)
+ilm_pct_end_at <- function(p, digits) {
+  ## "fixed" only rounds; "decimals" would write a share that rounds to 0 in
+  ## scientific form, which is what this replaces
+  at <- function(v) ilm_disp(v, "fixed", digits)$text
+  shown <- at(100 * p)
+  ifelse(p != 1 & shown == at(100), paste0("over ", at(100 - 10^-digits), "%"),
+         ifelse(p != 0 & shown == at(0), paste0("under ", at(10^-digits), "%"),
+                NA_character_))
+}
 
 ## A number to `digits` decimals, zeros kept, where a caller asks for
 ## decimals rather than figures.

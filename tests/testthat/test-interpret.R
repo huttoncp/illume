@@ -347,6 +347,13 @@ test_that("each number in the prose is written by what it is", {
                    c("99.9%", "over 99.9%", "over 99.9%", "over 99.9%", "99.6%", "100%"))
   expect_identical(ilm_fmt_pct(c(0.001, 0.00099, 0.0004, 0)),
                    c("0.100%", "under 0.1%", "under 0.1%", "0%"))
+  ## with the decimals fixed (Craig's item 309) the ends follow the precision
+  ## shown: a share that would print as 100% or 0% reads over or under the
+  ## last value those decimals can show; exactly 1 and 0 still print
+  expect_identical(ilm_fmt_pct_grp(c(0.99994, 0.99996, 0.00006, 0.00004, 1, 0), 2),
+                   c("99.99%", "over 99.99%", "0.01%", "under 0.01%", "100.00%", "0.00%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.996, 0.994, 0.004), 0),
+                   c("over 99%", "99%", "under 1%"))
   ## large numbers, to the decimals asked for: no figure past the ones the
   ## value has is rounded up (illumex's format_cases.csv, the same cases)
   expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),

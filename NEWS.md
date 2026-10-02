@@ -10,7 +10,10 @@
   1.83" but "0.93 at -0.871 against 1.83". `digits`, which was 3 (2 for
   power), is now `NULL` by default; a number fixes that many decimals for
   every estimate, interval and share instead. Counts, whole-number data
-  values, p-values and a share's ends keep their own rules.
+  values and p-values keep their own rules. With `digits` given, a share's
+  ends follow the decimals shown: one that would print as 100% or 0% reads
+  "over" or "under" the last value those decimals can show ("over 99.99%"
+  and "under 0.01%" at two).
 * The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
   "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
   began at 0.995 and 0.005; between, it is printed to three figures. A share
