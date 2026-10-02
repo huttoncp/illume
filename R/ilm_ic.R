@@ -419,7 +419,13 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
   sc <- tryCatch(ilm_scores(model, groups = "fitted"),
                  error = function(e) c(log_score = NA_real_, brier = NA_real_,
                                        accuracy = NA_real_))
-  ll0 <- ilm_null_ll(model)
+  ## McFadden's R2 compares the model with an intercept-only one, which has
+  ## other fixed effects: under REML both are refitted by maximum likelihood
+  ## for it (Craig's item 249), and the note says so
+  mml <- if (isTRUE(model$reml)) suppressMessages(ilm_as_ml(model, "model_performance()"))
+         else model
+  ll0 <- ilm_null_ll(mml)
+  llr <- as.numeric(logLik(mml))
   out <- data.frame(
     AIC = AIC(model),
     AICc = -2 * as.numeric(ll) + 2 * df * n / max(1, n - df - 1),
@@ -427,7 +433,7 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
     BIC_groups = BIC(model, n = "groups"),
     logLik = as.numeric(ll),
     df = df,
-    R2_McFadden = if (is.na(ll0)) NA_real_ else 1 - as.numeric(ll) / ll0,
+    R2_McFadden = if (is.na(ll0)) NA_real_ else 1 - llr / ll0,
     Log_score = unname(sc["log_score"]),
     Brier = unname(sc["brier"]),
     Accuracy = unname(sc["accuracy"]))
@@ -435,7 +441,7 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
     message("Fit did not pass all checks; these indices describe an unreliable optimum.")
   attr(out, "r2_note") <- paste0(
     "R2_McFadden is relative to an intercept-only model with the same grouping random effects. Nakagawa R2 and ICC are omitted: a nominal multinomial has no distribution-specific residual variance to define them.",
-    if (isTRUE(model$reml)) " It is NA for this REML fit: restricted likelihoods of models with different fixed effects are not comparable. Refit with reml = FALSE for it." else "")
+    if (isTRUE(model$reml)) paste0(" This model was fitted by REML, and restricted likelihoods of models with different fixed effects are not comparable, so R2_McFadden comes from both models refitted by maximum likelihood. AIC, BIC and logLik are the REML fit's: compare them only between models with the same fixed effects.") else "")
   attr(out, "score_note") <- if (all(is.na(sc)))
     paste0("Log_score, Brier and Accuracy score predicted category ",
            "probabilities, so they are NA for this ", model$family$name,

@@ -12,8 +12,12 @@ ar12 <- function() data.frame(g = factor("1"), t = 1:12,
         4.8298, 5.9805, 5.5264, 6.7742))
 
 test_that("a correlation left at the edge is brought back to the true minimum", {
+  ## by maximum likelihood, where the study's series and its true minimum
+  ## were found (a gaussian model with a correlation over time is fitted by
+  ## REML by default, Craig's item 249)
   f <- suppressMessages(suppressWarnings(ilm_model(y ~ 1, data = ar12(), family = "gaussian",
-                                                   ar = ilm_ar1(~ t | g), verbose = FALSE)))
+                                                   ar = ilm_ar1(~ t | g), reml = FALSE,
+                                                   verbose = FALSE)))
   pe <- f$opt$par
   expect_lte(abs(pe[["rho_raw"]]), illume:::ilm_rho_floor)
   expect_equal(f$rho, -0.545, tolerance = 0.01)

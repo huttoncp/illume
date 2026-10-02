@@ -35,7 +35,9 @@ golden_interpret_cases <- function() {
   m <- function(f, data = d, ...) q(ilm_model(f, data = data, verbose = FALSE, ...))
   fits <- list(
     gaussian_fixed = m(y ~ x + g2 + h3, family = "gaussian"),
-    gaussian_mixed = m(y ~ x + z + h3 + (1 | site), family = "gaussian"),
+    ## maximum likelihood, as these sentences were written for (a gaussian
+    ## mixed model is fitted by REML by default, Craig's item 249)
+    gaussian_mixed = m(y ~ x + z + h3 + (1 | site), family = "gaussian", reml = FALSE),
     gaussian_interaction = m(y ~ x * g2 + z, family = "gaussian"),
     gaussian_poly = m(y ~ poly(x, 2) + g2, family = "gaussian"),
     gaussian_whole = m(yi ~ income, family = "gaussian"),
