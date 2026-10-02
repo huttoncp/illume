@@ -2,6 +2,14 @@
 
 ## illume 0.0.8.9003
 
+- Numbers in the prose are written in full up to 15 figures before the
+  point and, below 1, up to 6 decimals, and in R’s scientific notation
+  beyond, as R’s tables print it: an estimate of 0.00001 to three
+  figures is “1.00e-05” where it was “0.0000100”, and 1e20 is “1.00e+20”
+  where it was written out in full. The rule is illumex’s, in the
+  display file the two packages share, so illume now needs illumex
+  0.0.8.9003.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   writes each number by what it is. An estimate has three significant
   figures with its trailing zeros (1.10, 0.610, 42.0, and a share of
