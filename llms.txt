@@ -281,7 +281,9 @@ was found that way. None was found by reading the code, and none by the
 test suite.
 
 That is the standard the package asks to be judged by, and it is the
-same standard whoever wrote it. \## Standing on other people’s shoulders
+same standard whoever wrote it.
+
+## Standing on other people’s shoulders
 
 Almost nothing here is new mathematics. What `illume` mostly does is put
 existing methods behind one object with one vocabulary, and it can only
@@ -347,7 +349,9 @@ elucidate’s and it would be poor form to pretend otherwise.
 
 Where a method has a name attached to it in the documentation, that is
 deliberate. It should be possible to find out whose idea any part of
-this was. \## References
+this was.
+
+## References
 
 Kristensen, Nielsen, Berg, Skaug and Bell (2016). TMB: Automatic
 Differentiation and Laplace Approximation. *Journal of Statistical
