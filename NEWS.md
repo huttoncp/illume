@@ -1,13 +1,15 @@
 # illume 0.0.8.9003
 
-* `ilm_interpret()` writes numbers that are read together at the same
-  decimals: an estimate with its interval, the predictions a sentence
-  compares, every share in a sentence, each comparison of marginal means
-  with its interval. The decimals are chosen for each group from its scale
-  (illumex's rule, in the shared file), so a sentence no longer says
-  "0.903 higher (95% interval 0.718 to 1.09)" but "0.903 higher (95%
-  interval 0.718 to 1.088)", nor "predicted y is 0.926 at -0.871 against
-  1.83" but "0.93 at -0.871 against 1.83". `digits`, which was 3 (2 for
+* `ilm_interpret()` writes numbers that are compared with each other in a
+  sentence, on one scale, at the same decimals: two predictions with their
+  difference and its interval, every share in a sentence, an estimate with
+  its interval, each comparison of marginal means with its interval. The
+  decimals are chosen for each group from its scale (illumex's rule, in
+  the shared file), so "predicted y is 0.926 at -0.871 against 1.83 at
+  0.678: 0.903 higher (95% interval 0.718 to 1.09)" now reads "0.926 at
+  -0.871 against 1.829 at 0.678: 0.903 higher (95% interval 0.718 to
+  1.088)"; the values the predictions are made at keep their own
+  decimals. `digits`, which was 3 (2 for
   power), is now `NULL` by default; a number fixes that many decimals for
   every estimate, interval and share instead. Counts, whole-number data
   values and p-values keep their own rules. With `digits` given, a share's
