@@ -1,5 +1,19 @@
 # illume 0.0.8.9003
 
+* `ilm_interpret()` writes each number by what it is. An estimate has three
+  significant figures with its trailing zeros (1.10, 0.610, 42.0, and a
+  share of 25.2% where it said 25%; percentage points 41.5 where it said
+  41); a count is whole; a data value is whole where it is a whole number
+  (an income quartile of 35,215 where it said 35,200) and three figures
+  otherwise. Numbers are rounded half away from zero on the value as
+  written, so 2.675 to two decimals is 2.68 and 1.005 is 1.01, and long
+  numbers keep the figures they have (7195166.76 to five decimals is
+  7,195,166.76000). The rules are illumex's, in the file the two packages
+  share.
+* `ilm_interpret()` describes a term that is not a variable of the formula,
+  such as `poly(x, 2)`, by its coefficients. It used to treat it as a variable
+  and say that moving it "across the middle half" changed the prediction by
+  "0".
 * A term at its limit is held by a rule that gives the same answer on every
   platform measured. A dispersion, a residual SD, or a random effect's or
   AR(1)'s SD past its line was held when one push of 3 towards its limit

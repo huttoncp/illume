@@ -1,0 +1,9 @@
+## model
+1 comparison of marginal means, unadjusted, which suits comparisons chosen before the data were seen.
+
+## effects
+treated - control: a difference of 0.217 on the link scale (95% interval 0.019 to 0.415, p = 0.0317) -- moderate evidence.
+
+## caveats
+An interval that includes zero means the data are consistent with no difference -- not that there is none.
+
