@@ -1,9 +1,10 @@
 # illume 0.0.8.9003
 
-* A share that three figures would show as 100% but that is not exactly 1
-  reads "over 99.9%" in `ilm_interpret()`'s prose, where it read "over 99%"
-  from 99.5% up; between the two it is now printed. A share of exactly 1 or
-  0 prints as 100% or 0%, where it read "over 99%" or "under 1%".
+* The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
+  "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
+  began at 0.995 and 0.005; between, it is printed to three figures. A share
+  of exactly 1 or 0 prints as 100% or 0%, where it read "over 99%" or
+  "under 1%".
 * `ilm_interpret()` writes each number by what it is. An estimate has three
   significant figures with its trailing zeros (1.10, 0.610, 42.0, and a
   share of 25.2% where it said 25%; percentage points 41.5 where it said

@@ -81,16 +81,16 @@ ilm_fmt_data <- function(v)
          ilm_disp(v, "signif", 3L)$text)
 
 ## The ends of a share said in words, all in this one place (Craig's items
-## 260 and 303). A share that three figures would show as 100% but that is not
-## exactly 1 reads "over 99.9%": 0.9996 is not certain, and "100%" would say
-## it is. The lower end is item 303's, still open, and stays as it was. Exactly
-## 0 and 1 are not ends to soften: they print as 0% and 100%. NA where the
-## share is printed as a number.
+## 260 and 303). Above 0.999 three figures cannot tell a share from
+## certainty, so it reads "over 99.9%"; below 0.001 the figures would be
+## precision the estimate does not have ("0.0400%"), so it reads "under
+## 0.1%". Exactly 0 and 1 are not ends to soften: they print as 0% and 100%.
+## NA where the share is printed as a number.
 #' @keywords internal
 #' @noRd
 ilm_pct_end <- function(p)
-  ifelse(p != 1 & p >= 0.9995, "over 99.9%",
-         ifelse(p != 0 & p < 0.005, "under 1%", NA_character_))
+  ifelse(p != 1 & p > 0.999, "over 99.9%",
+         ifelse(p != 0 & p < 0.001, "under 0.1%", NA_character_))
 
 ## A probability, an estimate, as a share: three figures, with the ends said
 ## as such (ilm_pct_end()).
