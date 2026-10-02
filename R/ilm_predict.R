@@ -83,7 +83,7 @@ ilm_newX <- function(object, newdata, offset_at = NULL) {
   } else ilm_offset_need(object, newdata)
   mt <- stats::delete.response(object$terms)
   mf <- stats::model.frame(mt, newdata, xlev = object$xlev)
-  X  <- ilm_drop_intercept(
+  X  <- ilm_fit_cols(
     stats::model.matrix(mt, mf, contrasts.arg = object$contrasts), object)
   sd_list <- list()
   for (lab in names(object$smooths)) {

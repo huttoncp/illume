@@ -21,6 +21,12 @@
   began at 0.995 and 0.005; between, it is printed to three figures. A share
   of exactly 1 or 0 prints as 100% or 0%, where it read "over 99%" or
   "under 1%".
+* Numbers in the prose are written in full up to 15 figures before the
+  point and, below 1, up to 6 decimals, and in R's scientific notation
+  beyond, as R's tables print it: an estimate of 0.00001 to three figures
+  is "1.00e-05" where it was "0.0000100", and 1e20 is "1.00e+20" where it
+  was written out in full. The rule is illumex's, in the display file the
+  two packages share, so illume now needs illumex 0.0.8.9003.
 * `ilm_interpret()` writes each number by what it is. An estimate has three
   significant figures with its trailing zeros (1.10, 0.610, 42.0, and a
   share of 25.2% where it said 25%; percentage points 41.5 where it said
@@ -74,6 +80,14 @@
   elsewhere. The message names the columns, the terms and the fix -- for an
   empty cell, which cells. A numeric `by` beside its own main effect keeps
   its own message.
+* `ilm_model(aliased = "drop")` fits a model whose ordinary columns are not
+  all separable by dropping each column that is a combination of earlier
+  ones, as `lm()` and `lme4` do, and says which at fitting and in
+  `summary()`; `fit$aliased` holds them. Predictions, marginal means, trends
+  and `ilm_anova()` rebuild the design without them, and a term with no
+  column left is not tested, which the table's heading says. The default,
+  `"stop"`, is unchanged, and its message now names the option. Where a
+  smooth is involved the fit stops either way.
 * Predictors in any units. The fit rescales each column of the fixed-effect
   design, the zero part's and the dispersion model's to unit SD, fits there,
   and converts the estimates, covariance, joint precision and Hessian back to

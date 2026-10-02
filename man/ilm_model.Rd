@@ -29,7 +29,8 @@ ilm_model_formula(
   zi_type = c("inflated", "hurdle"),
   design = NULL,
   reml = FALSE,
-  boundary = c("hold", "avoid")
+  boundary = c("hold", "avoid"),
+  aliased = c("stop", "drop")
 )
 }
 \arguments{
@@ -231,6 +232,20 @@ but by 11\% when one outcome category was rare, where coverage fell from
 heavy-tailed as well. \code{"hold"} stays the default for that reason; the fit
 says when a boundary was reached under it, and names \code{"avoid"} as the
 alternative.}
+
+\item{aliased}{What to do when the fixed-effect columns are not all
+separable -- two covariates one a multiple of the other, or an
+interaction with an empty cell -- so that the model has no unique fit.
+\code{"stop"}, the default, stops before fitting and names the columns, the
+terms and any empty cells, so the model can be written without the
+overlap. \code{"drop"} drops each column that is a combination of earlier
+ones, as \code{lm()} and \code{lme4} do, fits the rest, and says which were dropped
+at fitting and in \code{summary()}; \code{fit$aliased} holds them. The model is the
+same, written with fewer columns, but a dropped coefficient has no
+estimate, and which column of a dependent set goes is a matter of their
+order in the formula. Where a smooth is involved the fit stops whichever
+is chosen: a smooth's unpenalised part has no column that can sensibly
+be dropped.}
 }
 \value{
 An object of class \code{"ilm_model"}. Beyond the elements listed in
