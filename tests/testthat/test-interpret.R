@@ -346,7 +346,10 @@ test_that("each number in the prose is written by what it is", {
   expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),
                    c("4,878,897.650", "1,234,567.891"))
   expect_identical(ilm_fmt(7195166.76, 5), "7,195,166.76000")
-  expect_identical(ilm_fmt(95074673.368549898, 4), "95,074,673.3685")
+  ## 95074673.368549898, written in hex as the shared cases file writes it:
+  ## a 17-figure decimal literal can parse to a neighbouring double on some
+  ## platforms (R on arm64 macOS reads decimals in double precision only)
+  expect_identical(ilm_fmt(0x1.6aae5c5796525p+26, 4), "95,074,673.3685")
   ## a count: whole
   expect_identical(ilm_fmt_count(c(40, 1234, 19234)), c("40", "1,234", "19,234"))
   ## a data value: whole where it is a whole number, three figures otherwise
