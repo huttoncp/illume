@@ -339,8 +339,12 @@ test_that("each number in the prose is written by what it is", {
   expect_identical(ilm_fmt_sig(c(12.35, 51, 9.9951, 19234, 0.0125)),
                    c("12.4", "51.0", "10.0", "19,200", "0.0125"))
   expect_identical(ilm_fmt(c(2.675, 1.005), 2), c("2.68", "1.01"))
-  expect_identical(ilm_fmt_pct(c(0.2725, 109 / 400, 0.004, 0.996)),
-                   c("27.3%", "27.3%", "under 1%", "over 99%"))
+  expect_identical(ilm_fmt_pct(c(0.2725, 109 / 400, 0.004)),
+                   c("27.3%", "27.3%", "under 1%"))
+  ## the top end (Craig's item 260): what three figures would show as 100%
+  ## but is not exactly 1 reads "over 99.9%"; exactly 1 and 0 are 100% and 0%
+  expect_identical(ilm_fmt_pct(c(0.9995, 0.99999, 0.99949, 0.996, 1, 0)),
+                   c("over 99.9%", "over 99.9%", "99.9%", "99.6%", "100%", "0%"))
   ## large numbers, to the decimals asked for: no figure past the ones the
   ## value has is rounded up (illumex's format_cases.csv, the same cases)
   expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),

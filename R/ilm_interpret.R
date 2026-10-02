@@ -80,13 +80,26 @@ ilm_fmt_data <- function(v)
   ifelse(is.finite(v) & v == round(v), ilm_disp(v, "fixed", 0L)$text,
          ilm_disp(v, "signif", 3L)$text)
 
-## A probability, an estimate, as a share: three figures, with the ends said
-## as such.
+## The ends of a share said in words, all in this one place (Craig's items
+## 260 and 303). A share that three figures would show as 100% but that is not
+## exactly 1 reads "over 99.9%": 0.9996 is not certain, and "100%" would say
+## it is. The lower end is item 303's, still open, and stays as it was. Exactly
+## 0 and 1 are not ends to soften: they print as 0% and 100%. NA where the
+## share is printed as a number.
 #' @keywords internal
 #' @noRd
-ilm_fmt_pct <- function(p)
-  ifelse(p < 0.005, "under 1%", ifelse(p > 0.995, "over 99%",
-                                       paste0(ilm_disp(100 * p, "signif", 3L)$text, "%")))
+ilm_pct_end <- function(p)
+  ifelse(p != 1 & p >= 0.9995, "over 99.9%",
+         ifelse(p != 0 & p < 0.005, "under 1%", NA_character_))
+
+## A probability, an estimate, as a share: three figures, with the ends said
+## as such (ilm_pct_end()).
+#' @keywords internal
+#' @noRd
+ilm_fmt_pct <- function(p) {
+  e <- ilm_pct_end(p)
+  ifelse(is.na(e), paste0(ilm_disp(100 * p, "signif", 3L)$text, "%"), e)
+}
 
 ## ---- average marginal effects ----------------------------------------------
 
