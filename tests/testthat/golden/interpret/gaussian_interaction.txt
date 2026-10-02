@@ -2,10 +2,10 @@
 A gaussian model of y, fitted to 240 observations.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.921 at -0.871 against 1.84 at 0.678: 0.922 higher (95% interval 0.732 to 1.11). Its effect varies with g2 (x:g2, below), so this is the average.
+x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.92 at -0.871 against 1.84 at 0.678: 0.922 higher (95% interval 0.732 to 1.113). Its effect varies with g2 (x:g2, below), so this is the average.
 g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.09 for 'control' and 1.78 for 'treated': 0.695 higher for 'treated' (95% interval 0.424 to 0.965). Its effect varies with x (x:g2, below), so this is the average.
-z: little evidence (p = 0.407) that z is associated with y. Across the middle half of z, predicted y is 1.36 at -0.764 against 1.43 at 0.431: 0.0720 higher (95% interval from 0.0988 lower to 0.243 higher). That is 0.0603 per unit of z. The interval includes zero, which means the data are consistent with no effect -- not that there is none.
-x:g2treated: little evidence that a higher x:g2 is associated with a lower value of y (estimate -0.0788, 95% interval -0.324 to 0.166, p = 0.526). The interval includes zero, which means the data are consistent with no effect -- not that there is none.
+z: little evidence (p = 0.407) that z is associated with y. Across the middle half of z, predicted y is 1.36 at -0.764 against 1.43 at 0.431: 0.0720 higher (95% interval from 0.0988 lower to 0.2429 higher). That is 0.0603 per unit of z. The interval includes zero, which means the data are consistent with no effect -- not that there is none.
+x:g2treated: little evidence that a higher x:g2 is associated with a lower value of y (estimate -0.079, 95% interval -0.324 to 0.166, p = 0.526). The interval includes zero, which means the data are consistent with no effect -- not that there is none.
 
 ## diagnostics
 All 5 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().

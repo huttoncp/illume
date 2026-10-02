@@ -2,7 +2,7 @@
 A poisson model of kt, fitted to 240 observations. The model works on the log scale, so its coefficients are not in counts; the effects below are converted.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with kt. Across the middle half of x, predicted kt is 0.989 at -0.871 against 1.58 at 0.678: 0.594 higher (95% interval 0.451 to 0.738). (Rate ratio 1.36 per unit of x.)
+x: very strong evidence (p < 0.001) that x is associated with kt. Across the middle half of x, predicted kt is 0.99 at -0.871 against 1.58 at 0.678: 0.594 higher (95% interval 0.451 to 0.738). (Rate ratio 1.36 per unit of x.)
 
 ## diagnostics
 All 6 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().

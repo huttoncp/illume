@@ -2,7 +2,7 @@
 A gaussian model of y, fitted to 240 observations. The gaussian family was read off the response (continuous values from -1.73 to 5.6) rather than specified; if that is not how y arises, refit with `family` set.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.919 at -0.871 against 1.83 at 0.678: 0.915 higher (95% interval 0.727 to 1.10). That is 0.591 per unit of x.
+x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.92 at -0.871 against 1.83 at 0.678: 0.915 higher (95% interval 0.727 to 1.103). That is 0.591 per unit of x.
 g2: very strong evidence (p < 0.001) that g2 is associated with y. Predicted y is 1.08 for 'control' and 1.78 for 'treated': 0.697 higher for 'treated' (95% interval 0.427 to 0.967).
 
 ## diagnostics

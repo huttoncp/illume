@@ -14,26 +14,26 @@
 \usage{
 ilm_interpret(object, ...)
 
-\method{ilm_interpret}{ilm_model}(object, causal = NULL, ame = TRUE, digits = 3, ...)
+\method{ilm_interpret}{ilm_model}(object, causal = NULL, ame = TRUE, digits = NULL, ...)
 
-\method{ilm_interpret}{ilm_dag_model}(object, causal = NULL, ame = TRUE, digits = 3, ...)
+\method{ilm_interpret}{ilm_dag_model}(object, causal = NULL, ame = TRUE, digits = NULL, ...)
 
-\method{ilm_interpret}{ilm_did}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+\method{ilm_interpret}{ilm_did}(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
-\method{ilm_interpret}{ilm_rdd}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+\method{ilm_interpret}{ilm_rdd}(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
 \method{ilm_interpret}{ilm_power}(
   object,
   causal = NULL,
   ame = FALSE,
-  digits = 2,
+  digits = NULL,
   target = 0.8,
   ...
 )
 
-\method{ilm_interpret}{ilm_contrast}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+\method{ilm_interpret}{ilm_contrast}(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
-\method{ilm_interpret}{ilm_profile}(object, causal = NULL, ame = FALSE, digits = 3, ...)
+\method{ilm_interpret}{ilm_profile}(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 }
 \arguments{
 \item{object}{An \code{\link[=ilm_model]{ilm_model()}}, \code{\link[=ilm_dag_model]{ilm_dag_model()}}, \code{\link[=ilm_did]{ilm_did()}} or
@@ -51,7 +51,15 @@ the design, which is what you want.}
 method. With \code{FALSE} the predictions are still reported, without them,
 which is quicker.}
 
-\item{digits}{Rounding.}
+\item{digits}{How many decimal places the sentences give their numbers.
+\code{NULL}, the default, chooses them for each group of numbers that belong
+together -- an estimate with its interval, a list of predicted values, a
+share with its interval -- from their scale: enough for three
+significant figures at a typical value, and for the smallest non-zero
+value to keep a digit, up to six. A number fixes that many decimal places
+for every estimate, interval and share in the sentences instead. Counts,
+whole-number data values and p-values keep their own rules either way,
+and so do a share's ends ("over 99.9\%", "under 0.1\%").}
 
 \item{target}{For a power analysis, the power a study is to reach.}
 }

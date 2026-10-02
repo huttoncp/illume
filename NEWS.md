@@ -1,5 +1,16 @@
 # illume 0.0.8.9003
 
+* `ilm_interpret()` writes numbers that are read together at the same
+  decimals: an estimate with its interval, the predictions a sentence
+  compares, every share in a sentence, each comparison of marginal means
+  with its interval. The decimals are chosen for each group from its scale
+  (illumex's rule, in the shared file), so a sentence no longer says
+  "0.903 higher (95% interval 0.718 to 1.09)" but "0.903 higher (95%
+  interval 0.718 to 1.088)", nor "predicted y is 0.926 at -0.871 against
+  1.83" but "0.93 at -0.871 against 1.83". `digits`, which was 3 (2 for
+  power), is now `NULL` by default; a number fixes that many decimals for
+  every estimate, interval and share instead. Counts, whole-number data
+  values, p-values and a share's ends keep their own rules.
 * The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
   "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
   began at 0.995 and 0.005; between, it is printed to three figures. A share
