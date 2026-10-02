@@ -208,7 +208,8 @@ summarise_study <- function(dir, study) {
       rej <- ps[ps$what == "rejects", ]
       c("", paste0("**The ML arm** (addendum A1, pre-registered at 098929e before any of its ",
                    "fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, ",
-                   "fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. ",
+                   "fitted by maximum likelihood (reml = FALSE), which was ilm_model()'s default ",
+                   "when the study ran; REML is now the default for a gaussian mixed model. ",
                    fits_of(sm), " fits (", 24000 - fits_of(sm), " of 24,000 failed to fit). ",
                    "Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. ",
                    "Bold, df_s and held as above:"),
