@@ -56,7 +56,7 @@ below a floor, at or above a ceiling, or both.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">y</span>, lower <span class="op">=</span> <span class="cn">NA</span>, upper <span class="op">=</span> <span class="cn">NA</span>, status <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">y</span>, lower <span class="op">=</span> <span class="cn">NA</span>, upper <span class="op">=</span> <span class="cn">NA</span>, censored <span class="op">=</span> <span class="cn">NULL</span>, event <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -75,9 +75,15 @@ below a floor, at or above a ceiling, or both.</p>
 <dd><p>Ceiling. Values at or above it are right-censored.</p></dd>
 
 
-<dt id="arg-status">status<a class="anchor" aria-label="anchor" href="#arg-status"></a></dt>
-<dd><p>Alternatively, codes given directly: <code>-1</code> left-censored, <code>0</code>
-observed, <code>1</code> right-censored.</p></dd>
+<dt id="arg-censored">censored<a class="anchor" aria-label="anchor" href="#arg-censored"></a></dt>
+<dd><p>Alternatively, the direction of censoring given directly:
+<code>-1</code> left-censored, <code>0</code> observed, <code>1</code> right-censored.</p></dd>
+
+
+<dt id="arg-event">event<a class="anchor" aria-label="anchor" href="#arg-event"></a></dt>
+<dd><p>Or an event indicator, in <code><a href="https://rdrr.io/pkg/survival/man/Surv.html" class="external-link">survival::Surv()</a></code>'s convention:
+<code>1</code> (or <code>TRUE</code>) when the value was observed, <code>0</code> (or <code>FALSE</code>) when it is
+right-censored. Give <code>censored</code> or <code>event</code>, not both.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -90,15 +96,39 @@ limits it was built from.</p>
     <p>Pass the result to <code>ilm_model(censor = )</code>. With <code>lower</code> or <code>upper</code> given, the
 codes are derived from the response, and the limits are carried along so that
 the simulation-based diagnostics can censor their replicates the same way.</p>
-<p><code>status</code> is for the case where the limits vary by observation and only the
-outcome is known – right-censored follow-up in a survival study, most
-commonly. Diagnostics then hold the censoring pattern fixed across
-replicates rather than re-drawing it, which is stated where it matters.</p>
+<p><code>censored</code> and <code>event</code> are for the case where the limits vary by
+observation and only the outcome is known – right-censored follow-up in a
+survival study, most commonly. Diagnostics then hold the censoring pattern
+fixed across replicates rather than re-drawing it, which is stated where it
+matters.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="two-codings-one-meaning">Two codings, one meaning<a class="anchor" aria-label="anchor" href="#two-codings-one-meaning"></a></h2>
+
+
+<p>The same data can be coded two opposite ways, and a fit given the wrong
+one does not look wrong: it is fitted to the wrong rows.</p><table class="table table"><tr><td></td><td><code>censored =</code></td><td><code>event =</code></td></tr><tr><td>says</td><td>the direction of censoring</td><td>whether the event was observed</td></tr><tr><td>an observed value</td><td><code>0</code></td><td><code>1</code></td></tr><tr><td>a value known only to be beyond it (right-censored)</td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>a value known only to be below it (left-censored)</td><td><code>-1</code></td><td>–</td></tr><tr><td>the convention of</td><td>this function</td><td><code><a href="https://rdrr.io/pkg/survival/man/Surv.html" class="external-link">survival::Surv()</a></code></td></tr></table><p>Give one or the other, never both. A <code>censored</code> vector of only 0s and 1s
+is said once a session, since it is most often an event indicator given to
+the wrong argument.</p>
+<p>For time-to-event data, <code><a href="ilm_surv.html">ilm_surv()</a></code> takes <code>event</code> in <code>Surv()</code>'s
+convention and also draws the censoring times the diagnostics need, and
+<code>ilm_model(Surv(time, event) ~ ...)</code> is read as exactly that.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="the-surv-trap">The Surv() trap<a class="anchor" aria-label="anchor" href="#the-surv-trap"></a></h2>
+
+
+<p><code>survival::Surv(time, status)</code> reads its second argument as an EVENT
+indicator: <code>1</code> means the event was observed. Passed here as <code>censored</code>,
+the same column means the opposite – every event becomes a censored row
+and every censored row an event. Use <code>event =</code> for that column, or
+<code><a href="ilm_surv.html">ilm_surv()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="ilm_model.html">ilm_model()</a></code>, <code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">illumex::ilm_describe()</a></code>, whose <code>p_zero</code> column is often the
-first sign of a floor.</p></div>
+    <div class="dont-index"><p><code><a href="ilm_surv.html">ilm_surv()</a></code> for time-to-event data; <code><a href="ilm_model.html">ilm_model()</a></code>;
+<code><a href="https://huttoncp.github.io/illumex/reference/ilm_describe.html">illumex::ilm_describe()</a></code>, whose <code>p_zero</code> column is often the first sign
+of a floor.</p></div>
     </div>
 
     <div class="section level2">
@@ -112,6 +142,27 @@ first sign of a floor.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -1  0 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  2  4 </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## the same three right-censored rows, coded both ways</span></span></span>
+<span class="r-in"><span><span class="va">t</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">9</span>, <span class="fl">12</span>, <span class="fl">3</span>, <span class="fl">20</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">t</span>, censored <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span>   <span class="co"># 1 = censored</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> censored codes 1 as right-censored (not observed); for an event indicator (1 = event observed, as in Surv) use event = or ilm_surv()</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> censoring: 3 observed, 0 left, 2 right (of 5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   limits not recorded; diagnostics hold the pattern fixed</span>
+<span class="r-in"><span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">t</span>, event <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span>      <span class="co"># 1 = event observed, as in Surv()</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> censoring: 3 observed, 0 left, 2 right (of 5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   limits not recorded; diagnostics hold the pattern fixed</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## the trap: an event indicator given as `censored` flips every row</span></span></span>
+<span class="r-in"><span><span class="va">st</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>                       <span class="co"># Surv()'s status, 1 = event</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">t</span>, censored <span class="op">=</span> <span class="va">st</span><span class="op">)</span><span class="op">)</span>          <span class="co"># wrong: the events are censored</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 3 </span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="fu">ilm_censor</span><span class="op">(</span><span class="va">t</span>, event <span class="op">=</span> <span class="va">st</span><span class="op">)</span><span class="op">)</span>             <span class="co"># right</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 2 </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
