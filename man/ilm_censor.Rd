@@ -5,7 +5,7 @@
 \alias{iml_censor}
 \title{Mark censored observations}
 \usage{
-ilm_censor(y, lower = NA, upper = NA, status = NULL)
+ilm_censor(y, lower = NA, upper = NA, censored = NULL, event = NULL)
 }
 \arguments{
 \item{y}{The response.}
@@ -14,8 +14,12 @@ ilm_censor(y, lower = NA, upper = NA, status = NULL)
 
 \item{upper}{Ceiling. Values at or above it are right-censored.}
 
-\item{status}{Alternatively, codes given directly: \code{-1} left-censored, \code{0}
-observed, \code{1} right-censored.}
+\item{censored}{Alternatively, the direction of censoring given directly:
+\code{-1} left-censored, \code{0} observed, \code{1} right-censored.}
+
+\item{event}{Or an event indicator, in \code{survival::Surv()}'s convention:
+\code{1} (or \code{TRUE}) when the value was observed, \code{0} (or \code{FALSE}) when it is
+right-censored. Give \code{censored} or \code{event}, not both.}
 }
 \value{
 An integer vector of codes, classed \code{"ilm_censor"}, carrying the
@@ -30,17 +34,60 @@ Pass the result to \code{ilm_model(censor = )}. With \code{lower} or \code{upper
 codes are derived from the response, and the limits are carried along so that
 the simulation-based diagnostics can censor their replicates the same way.
 
-\code{status} is for the case where the limits vary by observation and only the
-outcome is known -- right-censored follow-up in a survival study, most
-commonly. Diagnostics then hold the censoring pattern fixed across
-replicates rather than re-drawing it, which is stated where it matters.
+\code{censored} and \code{event} are for the case where the limits vary by
+observation and only the outcome is known -- right-censored follow-up in a
+survival study, most commonly. Diagnostics then hold the censoring pattern
+fixed across replicates rather than re-drawing it, which is stated where it
+matters.
 }
+\section{Two codings, one meaning}{
+
+The same data can be coded two opposite ways, and a fit given the wrong
+one does not look wrong: it is fitted to the wrong rows.\tabular{lll}{
+    \tab \verb{censored =} \tab \verb{event =} \cr
+   says \tab the direction of censoring \tab whether the event was observed \cr
+   an observed value \tab \code{0} \tab \code{1} \cr
+   a value known only to be beyond it (right-censored) \tab \code{1} \tab \code{0} \cr
+   a value known only to be below it (left-censored) \tab \code{-1} \tab -- \cr
+   the convention of \tab this function \tab \code{survival::Surv()} \cr
+}
+
+
+Give one or the other, never both. A \code{censored} vector of only 0s and 1s
+is said once a session, since it is most often an event indicator given to
+the wrong argument.
+
+For time-to-event data, \code{\link[=ilm_surv]{ilm_surv()}} takes \code{event} in \code{Surv()}'s
+convention and also draws the censoring times the diagnostics need, and
+\code{ilm_model(Surv(time, event) ~ ...)} is read as exactly that.
+}
+
+\section{The Surv() trap}{
+
+\code{survival::Surv(time, status)} reads its second argument as an EVENT
+indicator: \code{1} means the event was observed. Passed here as \code{censored},
+the same column means the opposite -- every event becomes a censored row
+and every censored row an event. Use \verb{event =} for that column, or
+\code{\link[=ilm_surv]{ilm_surv()}}.
+}
+
 \examples{
 y <- c(0, 0, 1.4, 2.9, 5, 5)
 ilm_censor(y, lower = 0, upper = 5)
 table(ilm_censor(y, lower = 0))
+
+## the same three right-censored rows, coded both ways
+t <- c(5, 9, 12, 3, 20)
+ilm_censor(t, censored = c(0, 1, 0, 0, 1))   # 1 = censored
+ilm_censor(t, event = c(1, 0, 1, 1, 0))      # 1 = event observed, as in Surv()
+
+## the trap: an event indicator given as `censored` flips every row
+st <- c(1, 0, 1, 1, 0)                       # Surv()'s status, 1 = event
+table(ilm_censor(t, censored = st))          # wrong: the events are censored
+table(ilm_censor(t, event = st))             # right
 }
 \seealso{
-\code{\link[=ilm_model]{ilm_model()}}, \code{\link[illumex:ilm_describe]{illumex::ilm_describe()}}, whose \code{p_zero} column is often the
-first sign of a floor.
+\code{\link[=ilm_surv]{ilm_surv()}} for time-to-event data; \code{\link[=ilm_model]{ilm_model()}};
+\code{\link[illumex:ilm_describe]{illumex::ilm_describe()}}, whose \code{p_zero} column is often the first sign
+of a floor.
 }

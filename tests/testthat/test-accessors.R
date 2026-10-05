@@ -27,10 +27,10 @@ test_that("fixef() reaches the method through nlme's and lme4's generic", {
   ## it used to be registered on a generic of illume's own, which neither
   ## package's fixef() dispatches to
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian", verbose = FALSE)
-  expect_equal(nlme::fixef(f), fixef.ilm_model(f))
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian", verbose = FALSE)
+  expect_equal(nlme::fixef(f), fixef.ilm_model(reml = FALSE, f))
   skip_if_not_installed("lme4")
-  expect_equal(lme4::fixef(f), fixef.ilm_model(f))
+  expect_equal(lme4::fixef(f), fixef.ilm_model(reml = FALSE, f))
 })
 
 test_that("ilm_normal_expect() is the quadrature predict() averages with", {
@@ -80,7 +80,7 @@ test_that("predict()'s population mean under a log link is exact at any spread",
   set.seed(4); n <- 200
   d <- data.frame(x = stats::rnorm(n), g = factor(rep(1:20, each = 10)))
   d$y <- stats::rpois(n, exp(0.2 + 0.3 * d$x + stats::rnorm(20, 0, 0.5)[d$g]))
-  f <- ilm_model(y ~ x + (1 | g), data = d, family = "poisson", verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "poisson", verbose = FALSE)
   nd <- data.frame(x = c(-1, 0, 1))
   eta <- as.vector(cbind(1, nd$x) %*% f$beta)
   for (s in c(0.5, 3, 12)) {
@@ -95,7 +95,7 @@ test_that("predict()'s population mean under a log link is exact at any spread",
 test_that("ilm_ranef() gives lme4's modes and condVar, labelled", {
   skip_if_not_installed("lme4")
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 + t | id), data = d, family = "gaussian",
                  verbose = FALSE)
   m <- lme4::lmer(y ~ x + (1 + t | id), data = d, REML = FALSE)
   r <- ilm_ranef(f)
@@ -165,7 +165,7 @@ test_that("each mode is the fit's own value at its row, by ML and by REML", {
 
 test_that("a correlation over time and a smooth get their own rows", {
   d <- acc_data()
-  f <- suppressMessages(ilm_model(y ~ x + (1 | id), data = d,
+  f <- suppressMessages(ilm_model(reml = FALSE, y ~ x + (1 | id), data = d,
                                   family = "gaussian",
                                   ar = ilm_rw1(~ t | id), verbose = FALSE))
   r <- ilm_ranef(f)
@@ -182,7 +182,7 @@ test_that("a correlation over time and a smooth get their own rows", {
   expect_identical(r$mode[ok], centre_by_name(f)[r$row[ok]])
   expect_identical(unique(w$factor), "id")
   ## a smooth's penalised coefficients
-  fs <- ilm_model(y ~ s(x) + (1 | id), data = d, family = "gaussian",
+  fs <- ilm_model(reml = FALSE, y ~ s(x) + (1 | id), data = d, family = "gaussian",
                   verbose = FALSE)
   rs <- ilm_ranef(fs)
   expect_true(all(c("smooth", "re") %in% rs$type))
@@ -193,7 +193,7 @@ test_that("a multinomial term is labelled by category", {
   set.seed(4)
   d <- data.frame(id = factor(rep(1:30, each = 8)), x = stats::rnorm(240))
   d$k <- factor(sample(c("a", "b", "c"), 240, TRUE))
-  f <- ilm_model(k ~ x + (1 | id), data = d, family = "multinomial",
+  f <- ilm_model(reml = FALSE, k ~ x + (1 | id), data = d, family = "multinomial",
                  verbose = FALSE)
   r <- ilm_ranef(f)
   expect_identical(unique(r$dim), c("a:(Intercept)", "b:(Intercept)"))
@@ -203,7 +203,7 @@ test_that("a multinomial term is labelled by category", {
 
 test_that("the labels survive a refit", {
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian", verbose = FALSE)
   g <- illume:::ilm_refit_like(f)
   expect_identical(levels(ilm_ranef(g)$level), levels(d$id))
   expect_identical(unique(ilm_ranef(g)$factor), "id")
@@ -212,7 +212,7 @@ test_that("the labels survive a refit", {
 test_that("ilm_varcorr() gives lme4's variance components", {
   skip_if_not_installed("lme4")
   d <- acc_data()
-  f <- ilm_model(y ~ x + (1 + t | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 + t | id), data = d, family = "gaussian",
                  verbose = FALSE)
   m <- lme4::lmer(y ~ x + (1 + t | id), data = d, REML = FALSE)
   v <- ilm_varcorr(f)
@@ -238,7 +238,7 @@ test_that("the variance components are the one transform a draw would get", {
   ## at the estimate, the same numbers from the fit and from its parameter
   ## vector run through ilm_rebuild() -- what a draw of them goes through
   d <- acc_data()
-  f <- suppressMessages(ilm_model(y ~ x + (1 + t | id), data = d,
+  f <- suppressMessages(ilm_model(reml = FALSE, y ~ x + (1 + t | id), data = d,
                                   family = "gaussian",
                                   ar = ilm_car1(~ t | id, verbose = FALSE),
                                   verbose = FALSE))
@@ -251,7 +251,7 @@ test_that("the variance components are the one transform a draw would get", {
   expect_identical(v$latent$type, "car1")
   expect_equal(v$latent$rho, f$rho)
   expect_identical(v$latent$meaning, attr(ilm_cells(f), "parameterisation"))
-  fr <- ilm_model(y ~ x, data = d, family = "gaussian",
+  fr <- ilm_model(reml = FALSE, y ~ x, data = d, family = "gaussian",
                   ar = ilm_rw1(~ t | id), verbose = FALSE)
   vr <- ilm_varcorr(fr)
   expect_equal(c(vr$latent$var_per_time), c(fr$Sigma$ar))

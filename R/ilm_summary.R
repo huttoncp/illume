@@ -146,6 +146,8 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
                 paste(o$ylevels, collapse = ", ")))
   else
     cat(sprintf(" Family: %s (%s link)\n", fam, o$family$link))
+  ew <- ilm_estimator_words(o)
+  if (!is.null(ew)) writeLines(strwrap(ew, width = 78, indent = 1, exdent = 1))
   ## a family chosen by family = "auto" says so, and on what evidence
   if (!is.null(o$family_inferred))
     writeLines(paste0("        inferred from the response (", o$family_inferred,
@@ -157,6 +159,17 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   if (fam == "binomial")
     writeLines(paste0("        ", ilm_bin_target(o)))
   if (!is.null(o$formula)) cat("Formula:", deparse(o$formula), "\n")
+  ## what was censored, said for every censored fit: the coding is easy to
+  ## get backwards, and the counts show at once which way it went
+  if (!is.null(o$surv_read))
+    cat(sprintf("Surv() read as right-censored: %d events, %d censored\n",
+                o$surv_read[["events"]], o$surv_read[["censored"]]))
+  if (!is.null(o$censor)) {
+    cc <- as.integer(o$censor)
+    cat(sprintf("Censoring: %d observed, %d right-censored%s\n", sum(cc == 0L),
+                sum(cc == 1L), if (any(cc == -1L))
+                  sprintf(", %d left-censored", sum(cc == -1L)) else ""))
+  }
   ll <- logLik(o); dev <- -2 * as.numeric(ll)
   nn <- if (!is.null(o$weights)) sum(o$weights) else nrow(o$X)
   cat(sprintf("\n     AIC      BIC   logLik deviance df.resid\n%8.1f %8.1f %8.1f %8.1f %8d\n",
@@ -491,6 +504,8 @@ print.ilm_model <- function(x, ...) {
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               flag))
   cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
+  ew <- ilm_estimator_words(x)
+  if (!is.null(ew)) writeLines(strwrap(ew, width = 78, indent = 2, exdent = 4))
   ilm_rows_print(x)
   invisible(x)
 }
@@ -501,4 +516,20 @@ print.ilm_model <- function(x, ...) {
 ilm_rows_print <- function(x) {
   rl <- ilm_rows_line(ilm_rows_used(x), always = FALSE)
   if (!is.null(rl)) writeLines(strwrap(rl, width = 78, indent = 2, exdent = 4))
+}
+
+## How a gaussian mixed model was fitted, and why, in one sentence (Craig's
+## item 249: REML is the default there, and a user should see which estimator
+## they have without looking it up). NULL for every other model, and for a fit
+## from before the default was recorded.
+#' @keywords internal
+#' @noRd
+ilm_estimator_words <- function(x) {
+  if (is.null(x$reml_by_default) || !ilm_satt_default(x)) return(NULL)
+  if (isTRUE(x$reml_by_default))
+    "Fitted by REML, the default for a gaussian mixed model; reml = FALSE fits by maximum likelihood."
+  else if (isTRUE(x$reml))
+    "Fitted by REML, as asked (reml = TRUE), which is the default for a gaussian mixed model."
+  else
+    "Fitted by maximum likelihood, as asked (reml = FALSE); a gaussian mixed model is fitted by REML by default."
 }

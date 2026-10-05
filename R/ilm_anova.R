@@ -342,7 +342,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
                         ncores = 1L, restarts = 2L, recode = TRUE,
                         df = "auto", statistic = c("F", "Chisq")) {
   test <- match.arg(test); statistic <- match.arg(statistic)
-  if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
+  if (test == "LRT") object <- ilm_as_ml(object, "ilm_anova(test = \"LRT\")")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
   type3 <- type %in% c("3", "III")

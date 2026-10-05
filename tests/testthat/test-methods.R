@@ -81,7 +81,7 @@ test_that("logLik agrees with lme4 and nlme, constants included", {
   b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
   d$y <- 0.5 + 0.8 * d$x + b + stats::rnorm(n, 0, 0.9)
 
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   l <- lme4::lmer(y ~ x + (1 | id), data = d, REML = FALSE)
   expect_equal(as.numeric(logLik(f)), as.numeric(logLik(l)), tolerance = 1e-4)
@@ -110,7 +110,7 @@ test_that("the latent AR process matches the marginal form nlme fits", {
   b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
   d$y <- 0.5 + 0.8 * d$x + b + 1.2 * u + stats::rnorm(n, 0, 0.6)
 
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                  ar = suppressWarnings(ilm_ar1(d$t, d$id)), verbose = FALSE)
   g <- nlme::lme(y ~ x, random = ~ 1 | id, data = d, method = "ML",
                  correlation = nlme::corExp(form = ~ t | id, nugget = TRUE),
@@ -133,9 +133,9 @@ test_that("AIC no longer rewards a model for carrying more latent values", {
   b <- stats::rnorm(ng, 0, 0.5)[as.integer(d$id)]
   d$y <- 0.5 + 0.8 * d$x + b + stats::rnorm(n, 0, 0.9)   # no autocorrelation
 
-  f0 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f0 <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                   verbose = FALSE)
-  f1 <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f1 <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                   ar = suppressWarnings(ilm_ar1(d$t, d$id)), verbose = FALSE)
   expect_gt(f1$n_integrated, f0$n_integrated)
   # a structure the data do not support must not look hugely better

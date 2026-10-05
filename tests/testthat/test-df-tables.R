@@ -18,7 +18,7 @@ tab_data <- function(ns = 12, nt = 4, seed = 42) {
 test_that("summary()'s coefficient table is lmerTest's: df, t and p", {
   skip_if_not_installed("lmerTest")
   d <- tab_data()
-  f <- q(ilm_model(y ~ grp + time + x + (1 | id), data = d, family = "gaussian",
+  f <- q(ilm_model(reml = FALSE, y ~ grp + time + x + (1 | id), data = d, family = "gaussian",
                    verbose = FALSE))
   m <- lmerTest::lmer(y ~ grp + time + x + (1 | id), data = d, REML = FALSE)
   ct <- ilm_coef_table(f)
@@ -37,7 +37,7 @@ test_that("summary()'s coefficient table is lmerTest's: df, t and p", {
 test_that("ilm_anova() gives F on Satterthwaite's denominator df, as lmerTest", {
   skip_if_not_installed("lmerTest")
   d <- tab_data()
-  f <- q(ilm_model(y ~ grp + time + x + (1 | id), data = d, family = "gaussian",
+  f <- q(ilm_model(reml = FALSE, y ~ grp + time + x + (1 | id), data = d, family = "gaussian",
                    verbose = FALSE))
   m <- lmerTest::lmer(y ~ grp + time + x + (1 | id), data = d, REML = FALSE)
   a <- ilm_anova(f)
@@ -57,7 +57,7 @@ test_that("ilm_anova() gives F on Satterthwaite's denominator df, as lmerTest", 
 
 test_that("a Type II test with a higher-order relative takes its df from the reduced fit", {
   d <- tab_data()
-  f <- q(ilm_model(y ~ grp * time + (1 | id), data = d, family = "gaussian",
+  f <- q(ilm_model(reml = FALSE, y ~ grp * time + (1 | id), data = d, family = "gaussian",
                    verbose = FALSE))
   a <- q(ilm_anova(f))
   expect_true(all(is.finite(a$DenDF)))
@@ -69,7 +69,7 @@ test_that("marginal means and their contrasts carry Satterthwaite's df, as emmea
   skip_if_not_installed("lmerTest")
   skip_if_not_installed("emmeans")
   d <- tab_data()
-  f <- q(ilm_model(y ~ grp + time + (1 | id), data = d, family = "gaussian",
+  f <- q(ilm_model(reml = FALSE, y ~ grp + time + (1 | id), data = d, family = "gaussian",
                    verbose = FALSE))
   m <- lmerTest::lmer(y ~ grp + time + (1 | id), data = d, REML = FALSE)
   em <- ilm_emmeans(f, "grp")
@@ -96,11 +96,11 @@ test_that("Kenward-Roger on request, and other families untouched", {
   expect_identical(names(ilm_anova(fr, df = "kenward-roger")),
                    c("NumDF", "DenDF", "F value", "Pr(>F)"))
   d$b <- rbinom(nrow(d), 1, 0.4)
-  fb <- q(ilm_model(b ~ grp + (1 | id), data = d, family = "binomial", verbose = FALSE))
+  fb <- q(ilm_model(reml = FALSE, b ~ grp + (1 | id), data = d, family = "binomial", verbose = FALSE))
   expect_identical(names(ilm_coef_table(fb)), c("Estimate", "Std. Error", "z value", "Pr(>|z|)"))
   expect_identical(names(ilm_anova(fb)), c("Df", "Chisq", "Pr(>Chisq)"))
   ## and a linear model keeps its exact t and F
-  fl <- q(ilm_model(y ~ grp + x, data = d, family = "gaussian", verbose = FALSE))
+  fl <- q(ilm_model(reml = FALSE, y ~ grp + x, data = d, family = "gaussian", verbose = FALSE))
   expect_identical(names(ilm_coef_table(fl)), c("Estimate", "Std. Error", "t value", "Pr(>|t|)"))
 })
 
@@ -108,7 +108,7 @@ test_that("a variance held at its boundary still gives finite df, or says why no
   set.seed(5)
   d <- data.frame(g = factor(rep(1:8, each = 5)), trt = rep(0:1, each = 20))
   d$y <- 1 + 0.5 * d$trt + rnorm(40)          # no cluster variance at all
-  f <- q(ilm_model(y ~ trt + (1 | g), data = d, family = "gaussian", verbose = FALSE))
+  f <- q(ilm_model(reml = FALSE, y ~ trt + (1 | g), data = d, family = "gaussian", verbose = FALSE))
   ct <- q(ilm_coef_table(f))
   expect_true("df" %in% names(ct))
   expect_true(all(is.finite(ct$df) | !is.null(attr(ct, "fallback"))))
