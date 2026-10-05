@@ -1,0 +1,13 @@
+## model
+A gaussian model of yi, fitted to 240 observations.
+
+## effects
+income: very strong evidence (p < 0.001) that income is associated with yi. Across the middle half of income, predicted yi is 26.6 at 35,215 against 34.8 at 71,849: 8.13 higher (95% interval 7.18 to 9.08). That is 0.000222 per unit of income.
+
+## diagnostics
+All 5 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
+
+## caveats
+These are associations. Nothing here rules out a common cause of a predictor and the response, so an effect could differ in size or sign from what is reported. To say more you need a design that identifies one: ilm_dag_model() with an adjustment set, ilm_did(), ilm_rdd().
+This model has no random or smooth terms, so its t and F tests are exact rather than large-sample approximations.
+

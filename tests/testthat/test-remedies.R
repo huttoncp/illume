@@ -104,8 +104,9 @@ test_that("a smooth shrunk to a straight line is replaced by the line, at the sa
   set.seed(3); n <- 300
   d <- data.frame(x = runif(n), site = factor(sample(20, n, TRUE)))
   d$y <- rnorm(n, 1 + 0.5 * d$x + rnorm(20, 0, 0.5)[d$site])
+  ## built under maximum likelihood, where this smooth is shrunk to its line
   f <- ilm_model(y ~ s(x, k = 6) + (1 | site), data = d, family = "gaussian",
-                 verbose = FALSE)
+                 reml = FALSE, verbose = FALSE)
   row <- f$checks$check == "smooth_shrinkage[s(x)]"
   expect_true(f$checks$status[row] %in% c("FAIL", "BOUNDARY"))
   ## the check no longer says to drop the term, which would drop the line too

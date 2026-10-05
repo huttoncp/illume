@@ -22,7 +22,7 @@ test_that("Satterthwaite matches lmerTest fitted the same way", {
                    list(12, 3, y ~ grp + time + (1 | id)),
                    list(20, 6, y ~ x + (1 | id)))) {
     d <- rm_data(cfg[[1]], cfg[[2]])
-    f <- ilm_model(cfg[[3]], data = d, family = "gaussian", verbose = FALSE)
+    f <- ilm_model(reml = FALSE, cfg[[3]], data = d, family = "gaussian", verbose = FALSE)
     m <- lmerTest::lmer(cfg[[3]], data = d, REML = FALSE)
     lt <- coef(summary(m))
     p <- length(f$beta)
@@ -37,7 +37,7 @@ test_that("Satterthwaite matches lmerTest fitted the same way", {
 test_that("a multi-row contrast reproduces lmerTest's F denominator", {
   skip_if_not_installed("lmerTest")
   d <- rm_data(30, 4)
-  f <- ilm_model(y ~ grp + time + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ grp + time + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   m <- lmerTest::lmer(y ~ grp + time + (1 | id), data = d, REML = FALSE)
   a <- anova(m, ddf = "Satterthwaite", type = 3)
@@ -54,7 +54,7 @@ test_that("with nothing integrated out the df is exact and auto finds it", {
   set.seed(1)
   d <- data.frame(x = rnorm(60), g = factor(rep(c("a", "b", "c"), 20)))
   d$y <- 0.5 * d$x + rnorm(60)
-  f <- ilm_model(y ~ x + g, data = d, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + g, data = d, family = "gaussian", verbose = FALSE)
   r <- ilm_denom_df(f, c(0, 1, 0, 0))
   expect_identical(r$method, "residual")
   expect_equal(r$df, nrow(d) - length(f$beta))
@@ -66,14 +66,14 @@ test_that("with nothing integrated out the df is exact and auto finds it", {
 
 test_that("asymptotic recovers the chi-square reference", {
   d <- rm_data(20, 4)
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   expect_identical(ilm_denom_df(f, c(0, 1), method = "asymptotic")$df, Inf)
 })
 
 test_that("auto is Satterthwaite for a gaussian mixed fit", {
   d <- rm_data(20, 4)
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   expect_identical(ilm_denom_df(f, c(0, 1))$method, "satterthwaite")
   expect_true(is.finite(ilm_denom_df(f, c(0, 1))$df))
@@ -82,7 +82,7 @@ test_that("auto is Satterthwaite for a gaussian mixed fit", {
 test_that("neither approximation is offered for a non-gaussian family", {
   d <- rm_data(20, 4)
   d$yb <- as.integer(d$y > stats::median(d$y))
-  f <- ilm_model(yb ~ x + (1 | id), data = d, family = "binomial",
+  f <- ilm_model(reml = FALSE, yb ~ x + (1 | id), data = d, family = "binomial",
                  verbose = FALSE)
   expect_error(ilm_denom_df(f, c(0, 1), method = "satterthwaite"),
                "LINEAR mixed models")
@@ -99,7 +99,7 @@ test_that("Kenward-Roger refuses where the covariance is not linear in theta", {
                   time = rep(seq_len(per), ncl))
   d$x <- rnorm(nrow(d))
   d$y <- 0.4 * d$x + rnorm(nrow(d))
-  f <- ilm_model(y ~ x, data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x, data = d, family = "gaussian",
                  ar = ilm_ar1(d$time, d$g, verbose = FALSE), verbose = FALSE)
   expect_error(ilm_denom_df(f, c(0, 1), method = "kenward-roger"),
                "AR\\(1\\)")
@@ -109,7 +109,7 @@ test_that("Kenward-Roger refuses where the covariance is not linear in theta", {
 
 test_that("a contrast of the wrong length is rejected", {
   d <- rm_data(20, 4)
-  f <- ilm_model(y ~ x + (1 | id), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   expect_error(ilm_denom_df(f, c(0, 1, 1)), "column")
 })
@@ -221,7 +221,7 @@ test_that("Kenward-Roger's t in ilm_trends() uses the adjusted covariance", {
 test_that("Kenward-Roger says why when it is not available", {
   d <- kr_data()
   ## by maximum likelihood: Kenward and Roger derived it for REML
-  fm <- ilm_model(y ~ x + t + trt + (1 | id), data = d, family = "gaussian",
+  fm <- ilm_model(reml = FALSE, y ~ x + t + trt + (1 | id), data = d, family = "gaussian",
                   verbose = FALSE)
   expect_error(ilm_denom_df(fm, c(0, 1, 0, 0), method = "kenward-roger"),
                "reml = TRUE")

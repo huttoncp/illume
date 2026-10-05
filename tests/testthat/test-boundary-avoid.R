@@ -41,7 +41,7 @@ test_that("the estimate is the maximum of the likelihood plus half log|Sigma|", 
   u0 <- rnorm(m, 0, 0.6); u1 <- rnorm(m, 0, 0.05)
   d$y <- 2 + 0.4 * d$t + u0[as.integer(d$g)] + u1[as.integer(d$g)] * d$t +
     rnorm(nrow(d), 0, 0.8)
-  f <- ilm_model(y ~ t + (1 + t | g), data = d, family = "gaussian",
+  f <- ilm_model(reml = FALSE, y ~ t + (1 + t | g), data = d, family = "gaussian",
                  boundary = "avoid", verbose = FALSE)
   V <- f$Sigma[[1]][1, 1] * f$Sigma_d[["g"]]
   negpl <- function(p) {
@@ -66,9 +66,9 @@ test_that("the estimate is the maximum of the likelihood plus half log|Sigma|", 
 
 test_that("logLik() is the likelihood of the data, not the penalised objective", {
   d <- bnd_data(4)                               # the site variance is zero
-  fh <- suppressMessages(ilm_model(y ~ x + g + (1 | site), data = d,
+  fh <- suppressMessages(ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d,
                                    family = "multinomial", verbose = FALSE))
-  fa <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+  fa <- ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d, family = "multinomial",
                   boundary = "avoid", verbose = FALSE)
   expect_identical(fa$boundary, "avoid")
   expect_true(is.finite(fa$re_penalty) && fa$re_penalty != 0)
@@ -87,13 +87,13 @@ test_that("logLik() is the likelihood of the data, not the penalised objective",
 
 test_that("a boundary fit names the penalty with its cost, and a penalised fit does not", {
   d <- bnd_data(4)
-  expect_message(ilm_model(y ~ x + g + (1 | site), data = d,
+  expect_message(ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d,
                            family = "multinomial", verbose = FALSE),
                  "boundary = \"avoid\"", fixed = TRUE)
-  expect_message(ilm_model(y ~ x + g + (1 | site), data = d,
+  expect_message(ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d,
                            family = "multinomial", verbose = FALSE),
                  "further from zero", fixed = TRUE)
-  expect_no_message(ilm_model(y ~ x + g + (1 | site), data = d,
+  expect_no_message(ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d,
                               family = "multinomial", boundary = "avoid",
                               verbose = FALSE),
                     message = "edge of its range")
@@ -111,7 +111,7 @@ test_that("refits keep the penalty", {
   ## envelope and reduced model would have compared a penalised fit with an
   ## unpenalised one
   d <- bnd_data(4)
-  fa <- ilm_model(y ~ x + g + (1 | site), data = d, family = "multinomial",
+  fa <- ilm_model(reml = FALSE, y ~ x + g + (1 | site), data = d, family = "multinomial",
                   boundary = "avoid", verbose = FALSE)
   expect_identical(ilm_refit_stub(fa)$boundary, "avoid")
   fr <- ilm_refit_like(fa)

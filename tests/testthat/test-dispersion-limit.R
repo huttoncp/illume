@@ -15,9 +15,12 @@ dl_counts <- function(seed) {
   d$y <- stats::rnbinom(nrow(d), size = 5, mu = exp(0.5 + 0.3 * d$x + lat))
   d
 }
+## by maximum likelihood, as the item-269 studies these cases come from
+## were fitted (a gaussian model with a grouping term is fitted by REML by
+## default, Craig's item 249; for the counts it changes nothing)
 dl_fit <- function(d, family = "nbinom")
   suppressWarnings(ilm_model(y ~ x + (1 | g), data = d, family = family,
-                             ar = ilm_ar1(~ t | g), verbose = FALSE))
+                             ar = ilm_ar1(~ t | g), reml = FALSE, verbose = FALSE))
 
 test_that("a negative binomial whose k ran to infinity holds k", {
   d <- dl_counts(5)

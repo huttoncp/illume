@@ -34,15 +34,40 @@ test_that("REML reproduces lme4's restricted fit", {
   }
 })
 
-test_that("maximum likelihood stays the default", {
+test_that("a gaussian mixed model is fitted by REML by default, and says so (item 249)", {
   skip_if_not_installed("lme4")
   d <- reml_data(30, 4)
   f <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
-  expect_false(isTRUE(f$reml))
-  m <- lme4::lmer(y ~ grp + x + (1 | id), data = d, REML = FALSE)
+  expect_true(isTRUE(f$reml))
+  expect_true(isTRUE(f$reml_by_default))
+  m <- lme4::lmer(y ~ grp + x + (1 | id), data = d, REML = TRUE)
   expect_equal(sqrt(unname(f$Sigma[[1]][1, 1])),
                as.data.frame(lme4::VarCorr(m))$sdcor[1], tolerance = 1e-5)
+  ## print() and summary() say how it was fitted and why
+  expect_output(print(f), "Fitted by REML, the default for a gaussian mixed model")
+  expect_output(print(summary(f)), "Fitted by REML, the default for a gaussian mixed model")
+  expect_message(ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                           verbose = TRUE), "Fitted by REML, the default")
+  ## reml = FALSE gives maximum likelihood, the old default, exactly
+  fm <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                  reml = FALSE, verbose = FALSE)
+  expect_false(isTRUE(fm$reml))
+  ml <- lme4::lmer(y ~ grp + x + (1 | id), data = d, REML = FALSE)
+  expect_equal(sqrt(unname(fm$Sigma[[1]][1, 1])),
+               as.data.frame(lme4::VarCorr(ml))$sdcor[1], tolerance = 1e-5)
+  expect_output(print(fm), "Fitted by maximum likelihood, as asked")
+  fr <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                  reml = TRUE, verbose = FALSE)
+  expect_output(print(fr), "Fitted by REML, as asked")
+  ## every other model keeps maximum likelihood, and says nothing new
+  d$k <- stats::rpois(nrow(d), 2)
+  fp <- ilm_model(k ~ grp + x + (1 | id), data = d, family = "poisson", verbose = FALSE)
+  expect_false(isTRUE(fp$reml))
+  expect_false(any(grepl("Fitted by", capture.output(print(fp)))))
+  fl <- ilm_model(y ~ grp + x, data = d, family = "gaussian", verbose = FALSE)
+  expect_false(isTRUE(fl$reml))
+  expect_error(ilm_model(y ~ x + (1 | id), data = d, reml = "yes"), "TRUE, FALSE or NULL")
 })
 
 test_that("Satterthwaite on a REML fit matches lmerTest on a REML fit", {
@@ -73,14 +98,19 @@ test_that("REML on a fixed-effects gaussian model IS the n - p divisor", {
                tolerance = 1e-7)
 })
 
-test_that("a likelihood-ratio test on a REML fit is refused, not fudged", {
+test_that("a likelihood-ratio test on a REML fit refits by ML and says so, not fudged", {
   d <- reml_data(20, 4)
   f <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
                  reml = TRUE, verbose = FALSE)
-  expect_error(ilm_anova(f, test = "LRT"), "REML")
-  expect_error(ilm_anova(f, test = "LRT"), "reml = FALSE")
-  expect_error(ilm_pb_lrt(f, "grp", B = 2L), "REML")
-  ## a Wald test compares nothing across structures and stays available
+  fm <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                  reml = FALSE, verbose = FALSE)
+  ## the comparison is made on maximum likelihood, and the message says so
+  expect_message(a <- ilm_anova(f, test = "LRT"), "refitted by maximum likelihood")
+  expect_equal(a, suppressMessages(ilm_anova(fm, test = "LRT")), tolerance = 1e-6)
+  expect_message(ilm_pb_lrt(f, "grp", B = 2L, verbose = FALSE), "refitted by maximum likelihood")
+  ## the fit passed in is unchanged
+  expect_true(isTRUE(f$reml))
+  ## a Wald test compares nothing across structures and stays on the REML fit
   expect_s3_class(ilm_anova(f), "data.frame")
 })
 

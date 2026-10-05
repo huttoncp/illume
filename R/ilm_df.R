@@ -43,34 +43,6 @@
 ## approximating it.
 ## ---------------------------------------------------------------------------
 
-#' Stop a likelihood comparison that REML makes meaningless
-#'
-#' A restricted likelihood is the likelihood of contrasts orthogonal to `X`.
-#' Change `X` and it is a likelihood of different data, so two REML fits with
-#' different fixed effects have nothing comparable about them -- their
-#' difference is not a likelihood ratio and its reference is not chi-square.
-#' The same applies to AIC and to any bootstrap built on the ratio.
-#'
-#' This is not a numerical nicety. The comparison runs perfectly happily and
-#' returns a number, which is why it has to be refused rather than warned
-#' about.
-#'
-#' @param object A fitted `"ilm_model"` object.
-#' @param what What the caller was trying to do, named in the message.
-#' @return `TRUE`, invisibly, or an error.
-#' @keywords internal
-#' @noRd
-ilm_stop_reml_lrt <- function(object, what = "a likelihood-ratio test") {
-  if (!isTRUE(object$reml)) return(invisible(TRUE))
-  stop(what, " compares likelihoods across different fixed-effect structures, ",
-       "and this model was fitted by REML. A restricted likelihood belongs to ",
-       "contrasts orthogonal to the design matrix, so changing the fixed ",
-       "effects changes which data it is the likelihood of and the two are ",
-       "not comparable. Refit with `reml = FALSE` to compare fixed effects, ",
-       "then switch back once the structure is settled -- or use a Wald test, ",
-       "which is valid under REML.", call. = FALSE)
-}
-
 #' Which parameters are fixed effects, and which are variance components
 #'
 #' The optimiser works on one vector holding both. Everything here needs to
@@ -734,4 +706,43 @@ ilm_table_ddf <- function(object, L, df = "auto", parts = NULL, gr = NULL) {
   }
   r <- ilm_df_satt(object, L, gr = gr)
   list(df = as.numeric(r$df), scale = 1, method = r$method, reason = r$reason)
+}
+
+## ---- REML by default, and ML where a comparison needs it (Craig's item 249) ---
+##
+## A gaussian mixed model is fitted by REML unless the user says otherwise,
+## and every other model by maximum likelihood. The scope is the Satterthwaite
+## tables' (ilm_satt_default()): gaussian with an identity link, a grouping
+## term or a correlation over time integrated out, and a likelihood gaussian
+## throughout -- no zero part, no censored rows. That is where REML is exact
+## and where the tables it goes with were validated
+## (studies/findings/df_tables.md). Decided before the fit, from what
+## ilm_model() is about to fit.
+#' @keywords internal
+#' @noRd
+ilm_reml_default <- function(fam, re_list, ar = NULL, Zzi = NULL, censor = NULL) {
+  if (is.null(fam) || !identical(fam$name, "gaussian") || !identical(fam$link, "identity"))
+    return(FALSE)
+  if (!is.null(Zzi) || !is.null(censor)) return(FALSE)
+  grp <- vapply(re_list, function(e) is.null(e$basis), TRUE)
+  any(grp) || !is.null(ar)
+}
+
+## A likelihood-ratio comparison of fixed effects needs maximum likelihood: a
+## restricted likelihood belongs to contrasts orthogonal to the fixed design,
+## so two models with different fixed effects have restricted likelihoods of
+## different data. A REML fit is refitted by ML for the comparison, and the
+## caller's `what` says so; the fit passed in is not changed.
+#' @keywords internal
+#' @noRd
+ilm_as_ml <- function(object, what) {
+  if (!isTRUE(object$reml)) return(object)
+  o <- object; o$reml <- FALSE
+  r <- ilm_refit_y(o, object$y)
+  if (!is.null(r$call)) r$call$reml <- FALSE
+  r$reml_by_default <- FALSE
+  message(what, ": refitted by maximum likelihood for the comparison, since the model ",
+          "was fitted by REML and restricted likelihoods are not comparable across ",
+          "fixed effects. The fit you passed in, and its REML estimates, are unchanged.")
+  r
 }

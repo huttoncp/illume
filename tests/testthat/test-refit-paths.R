@@ -57,16 +57,23 @@ test_that("a likelihood-ratio test of a zero-inflated model keeps its zero part"
 })
 
 test_that("McFadden's R-squared is not formed from restricted likelihoods", {
+  ## a restricted likelihood of the intercept-only model is of other data, so
+  ## under REML -- the default for this model since item 249 -- both models are
+  ## refitted by maximum likelihood for it, and the note says so
   skip_if_not_installed("performance")
   set.seed(3); n <- 200
   d <- data.frame(x = rnorm(n), id = factor(sample(10, n, TRUE)))
   d$y <- 0.5 * d$x + rnorm(10)[d$id] + rnorm(n)
-  ml <- ilm_model(y ~ x + (1 | id), data = d, verbose = FALSE)
+  ml <- ilm_model(y ~ x + (1 | id), data = d, reml = FALSE, verbose = FALSE)
   rl <- ilm_model(y ~ x + (1 | id), data = d, reml = TRUE, verbose = FALSE)
-  expect_true(is.finite(model_performance.ilm_model(ml, verbose = FALSE)$R2_McFadden))
+  r2_ml <- model_performance.ilm_model(ml, verbose = FALSE)$R2_McFadden
+  expect_true(is.finite(r2_ml))
   pr <- model_performance.ilm_model(rl, verbose = FALSE)
-  expect_true(is.na(pr$R2_McFadden))
-  expect_match(attr(pr, "r2_note"), "reml = FALSE", fixed = TRUE)
+  expect_equal(pr$R2_McFadden, r2_ml, tolerance = 1e-6)
+  expect_match(attr(pr, "r2_note"), "refitted by maximum likelihood", fixed = TRUE)
+  ## the REML fit's own AIC is reported, with the caution about comparing it
+  expect_equal(pr$AIC, stats::AIC(rl))
+  expect_match(attr(pr, "r2_note"), "same fixed effects", fixed = TRUE)
 })
 
 test_that("fit indices work for every family, scoring only what can be scored", {

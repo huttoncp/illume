@@ -18,7 +18,7 @@ test_that("sigma short of zero is held below 0.2 of sd(y)", {
   d <- expand.grid(t = seq_len(12), g = factor(seq_len(20)))
   d$y <- unlist(lapply(seq_len(20), function(i) ar_series(12, 0.5, 1))) +
     stats::rnorm(nrow(d), 0, 0.1)
-  f <- q(ilm_model(y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
+  f <- q(ilm_model(reml = FALSE, y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
                    verbose = FALSE))
   expect_lt(exp(f$opt$par[["logdisp"]]) / sd(d$y), 0.2)
   expect_true("dispersion" %in% f$hessian_held)
@@ -31,7 +31,7 @@ test_that("a gaussian AR(1) SD short of zero is held below 0.1 of sd(y)", {
   set.seed(1269247)
   d <- data.frame(g = factor("s1"), t = seq_len(12))
   d$y <- 5 + ar_series(12, 0.7, 0.8) + stats::rnorm(12, 0, 0.5)
-  f <- q(ilm_model(y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
+  f <- q(ilm_model(reml = FALSE, y ~ 1, data = d, family = "gaussian", ar = ilm_ar1(~ t | g),
                    verbose = FALSE))
   expect_true("ar" %in% f$hessian_held)
   expect_false("dispersion" %in% f$hessian_held)
@@ -48,12 +48,12 @@ test_that("a random-intercept SD's line is relative to sd(y) for gaussian", {
   lat <- stats::rnorm(5, 0, 0.1)[d$g]
   d$x <- stats::rnorm(nrow(d))
   d$y <- 0.5 + 0.3 * d$x + lat + stats::rnorm(nrow(d), 0, 0.5)
-  f1 <- q(ilm_model(y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE))
+  f1 <- q(ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE))
   expect_true("g" %in% f1$hessian_held)
   ## the same data in units 1,000 times smaller: the likelihood's flatness
   ## is the same, and so is the hold; an absolute line would have missed it
   d2 <- d; d2$y <- 1000 * d$y
-  f2 <- q(ilm_model(y ~ x + (1 | g), data = d2, family = "gaussian", verbose = FALSE))
+  f2 <- q(ilm_model(reml = FALSE, y ~ x + (1 | g), data = d2, family = "gaussian", verbose = FALSE))
   expect_true("g" %in% f2$hessian_held)
   for (f in list(f1, f2)) {
     vb <- ck_of(f, "variance_boundary")
@@ -73,7 +73,7 @@ test_that("a held random intercept is at zero in variance_boundary (Poisson, bes
   lat <- ar + stats::rnorm(G, 0, 0.3)[d$g]
   d$x <- stats::rnorm(nrow(d))
   d$y <- stats::rpois(nrow(d), exp(log(3) + 0.3 * d$x + lat))
-  f <- q(ilm_model(y ~ x + (1 | g), data = d, family = "poisson",
+  f <- q(ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "poisson",
                    ar = ilm_ar1(~ t | g), verbose = FALSE))
   expect_true("g" %in% f$hessian_held)
   vb <- ck_of(f, "variance_boundary")
