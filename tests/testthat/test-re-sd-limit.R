@@ -23,7 +23,7 @@ test_that("an intercept SD stopped short of zero on a flat likelihood is held", 
   ## (ilm_ar1() warns of one observation per cell as it is built, which is
   ## the design here, not what is tested)
   expect_message(f <- suppressWarnings(
-    ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+    ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "gaussian",
               ar = ilm_ar1(~ t | g), verbose = FALSE)),
     "edge of its range")
   sd_g <- sqrt(ilm_varcorr(f)$re$g[1, 1])
@@ -36,7 +36,7 @@ test_that("an intercept SD stopped short of zero on a flat likelihood is held", 
   expect_true(all(th == th[1]))
   expect_true(all(is.finite(dr$natural$re$g)))
   ## the fixed effects are the model without the term's, near enough
-  f0 <- suppressWarnings(ilm_model(y ~ x, data = d, family = "gaussian",
+  f0 <- suppressWarnings(ilm_model(reml = FALSE, y ~ x, data = d, family = "gaussian",
                                    ar = ilm_ar1(~ t | g), verbose = FALSE))
   expect_equal(sqrt(diag(vcov(f)))[["x"]], sqrt(diag(vcov(f0)))[["x"]],
                tolerance = 0.02)
@@ -47,7 +47,7 @@ test_that("a small SD the data do support is left alone", {
   set.seed(11)
   d <- data.frame(g = factor(rep(1:30, each = 10)), x = stats::rnorm(300))
   d$y <- 0.5 + 0.3 * d$x + stats::rnorm(30, 0, 0.3)[d$g] + stats::rnorm(300, 0, 0.5)
-  f <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
+  f <- ilm_model(reml = FALSE, y ~ x + (1 | g), data = d, family = "gaussian", verbose = FALSE)
   expect_false("g" %in% f$hessian_held)
   expect_length(f$boundary_terms, 0L)
 })

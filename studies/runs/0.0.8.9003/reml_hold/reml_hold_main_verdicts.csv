@@ -1,0 +1,4 @@
+"verdict","holds"
+"V1: rule C's SE / the reduced refit's, held fits: median within [0.99, 1.01], 95% within [0.97, 1.03], in every H1, H2, H4 cell",FALSE
+"V2: Satterthwaite coverage of REML held fits calibrated in every cell with G = 20",FALSE
+"V3: no REML SE above 10 times its reference, and REML fails no more often than ML in any cell",FALSE

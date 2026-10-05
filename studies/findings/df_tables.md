@@ -119,7 +119,7 @@ At G = 6, z was as close to 0.95 as Satterthwaite or closer in 0 of 6 D1 and D2 
 Satterthwaite's df were undefined (NaN, infinite or below 1) in 4 fits of 11998; a table warned of a fallback to z in 3; 0 stopped with an error.
 The pre-registered trigger for a proposal before the default ships for held fits -- Satterthwaite uncalibrated in D3's held fits where Kenward-Roger is calibrated -- is met at: no cell.
 
-**The ML arm** (addendum A1, pre-registered at 098929e before any of its fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, fitted by maximum likelihood (reml = FALSE), which is ilm_model()'s default. 23999 fits (1 of 24,000 failed to fit). Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. Bold, df_s and held as above:
+**The ML arm** (addendum A1, pre-registered at 098929e before any of its fits): the same 24 cells on the main run's seeds, 1,000 replicates per cell, fitted by maximum likelihood (reml = FALSE), which was ilm_model()'s default when the study ran; REML is now the default for a gaussian mixed model. 23999 fits (1 of 24,000 failed to fit). Kenward-Roger is derived for REML and refuses an ML fit, so it has no column. Bold, df_s and held as above:
 
 | arm | G | m | icc | fits | held | z | satterthwaite | df_s |
 |---|---|---|---|---|---|---|---|---|

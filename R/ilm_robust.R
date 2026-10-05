@@ -53,6 +53,19 @@
 #' @keywords internal
 #' @noRd
 ilm_estfun <- function(object) {
+  ## A model with random effects is refused first: that is the reason that
+  ## holds whatever the estimator, and since a gaussian mixed model is fitted
+  ## by REML by default (Craig's item 249), the REML refusal below would
+  ## otherwise be the one such a user sees -- and its advice, refit by maximum
+  ## likelihood, would only lead to this one.
+  if (length(object$re))
+    stop("this model has random effects, so the within-cluster correlation is ",
+         "already in the likelihood and a cluster's score is not the sum of ",
+         "its rows' scores. A sandwich is for when you do NOT want to model ",
+         "that correlation: fit the same mean structure without the random ",
+         "effect and cluster on the same grouping, or keep this model and ",
+         "trust it. ilm_check_variance() and ilm_variogram() say whether the ",
+         "variance structure is holding up.", call. = FALSE)
   ## Under REML the fixed effects were integrated out, so what the objective
   ## scores is a restricted likelihood of contrasts orthogonal to X -- not the
   ## per-observation contribution to a coefficient, which is what a sandwich
@@ -62,14 +75,6 @@ ilm_estfun <- function(object) {
          "integrated out, so a coefficient has no per-observation score for a ",
          "sandwich to sum. Refit with `reml = FALSE` for cluster-robust ",
          "standard errors.", call. = FALSE)
-  if (length(object$re))
-    stop("this model has random effects, so the within-cluster correlation is ",
-         "already in the likelihood and a cluster's score is not the sum of ",
-         "its rows' scores. A sandwich is for when you do NOT want to model ",
-         "that correlation: fit the same mean structure without the random ",
-         "effect and cluster on the same grouping, or keep this model and ",
-         "trust it. ilm_check_variance() and ilm_variogram() say whether the ",
-         "variance structure is holding up.", call. = FALSE)
   if (object$C > 1L)
     stop("a multinomial fit has one score per category dimension and no single ",
          "linear predictor to differentiate along; cluster-robust standard ",

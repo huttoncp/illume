@@ -1,5 +1,37 @@
 # illume 0.0.8.9003
 
+* **A gaussian mixed model is now fitted by REML by default.** `reml`
+  defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
+  grouping term or a correlation over time, no zero part or censoring -- and
+  maximum likelihood for every other model, as before. Maximum likelihood
+  estimates the variance components as if the fixed effects were known, so
+  with few groups it estimates them too small, and the standard errors and
+  intervals built on them come out too narrow. On 24,000 simulated fits of 6
+  to 20 groups, REML's Satterthwaite intervals covered close to 95% in 11 of
+  the 12 designs with 10 or more groups; on the same data, maximum likelihood
+  covered 0.902 to 0.934 in 6 of them, and a 5% test of a between-group
+  factor rejected 19% of the time with 6 groups against REML's 7.8%
+  (`studies/findings/df_tables.md`). What you will see:
+  - a gaussian mixed model's `print()`, `summary()` and verbose fit say how
+    it was fitted and why: "Fitted by REML, the default for a gaussian mixed
+    model; reml = FALSE fits by maximum likelihood";
+  - its estimates change: the variance components come out larger, and the
+    fixed effects' standard errors and intervals wider, most with few groups;
+    the fixed effects themselves change little, and not at all in a balanced
+    design;
+  - comparisons of models with different fixed effects need maximum
+    likelihood, so `ilm_anova(test = "LRT")`, `ilm_pb_lrt()` and McFadden's
+    R-squared refit a REML fit by maximum likelihood and say so, where they
+    used to refuse a REML fit; AIC, BIC and `logLik()` are the REML fit's,
+    to compare only between models with the same fixed effects;
+  - `reml = FALSE` gives the old fit exactly. `ilm_model()`'s help has a
+    section on the defaults and when to change them.
+* Numbers in the prose are written in full up to 15 figures before the
+  point and, below 1, up to 6 decimals, and in R's scientific notation
+  beyond, as R's tables print it: an estimate of 0.00001 to three figures
+  is "1.00e-05" where it was "0.0000100", and 1e20 is "1.00e+20" where it
+  was written out in full. The rule is illumex's, in the display file the
+  two packages share, so illume now needs illumex 0.0.8.9003.
 * The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
   "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
   began at 0.995 and 0.005; between, it is printed to three figures. A share
@@ -58,6 +90,14 @@
   elsewhere. The message names the columns, the terms and the fix -- for an
   empty cell, which cells. A numeric `by` beside its own main effect keeps
   its own message.
+* `ilm_model(aliased = "drop")` fits a model whose ordinary columns are not
+  all separable by dropping each column that is a combination of earlier
+  ones, as `lm()` and `lme4` do, and says which at fitting and in
+  `summary()`; `fit$aliased` holds them. Predictions, marginal means, trends
+  and `ilm_anova()` rebuild the design without them, and a term with no
+  column left is not tested, which the table's heading says. The default,
+  `"stop"`, is unchanged, and its message now names the option. Where a
+  smooth is involved the fit stops either way.
 * Predictors in any units. The fit rescales each column of the fixed-effect
   design, the zero part's and the dispersion model's to unit SD, fits there,
   and converts the estimates, covariance, joint precision and Hessian back to
@@ -130,19 +170,10 @@
   gaussian fit. Other families, linear models, and censored or dispersion
   models with nothing integrated out are unchanged. On a small between-cluster design the
   z test's p for a between-cluster effect was too small.
-  **The validated path is REML.** The study behind the default
-  (`studies/findings/df_tables.md`) fitted every model with `reml = TRUE`.
-  A default fit is by maximum likelihood, and its Satterthwaite df come from
-  the ML variance estimates, which are smaller with few clusters. On 6
-  clusters, one between-cluster slope had df 6.0 and SE 0.36 by ML, against
-  4.0 and 0.44 by REML. An arm fitted by maximum likelihood on the same
-  data (pre-registered as A1) did not support that path: Satterthwaite's
-  intervals missed 95% in 6 of the 12 designs with 10 or more clusters
-  (0.902 to 0.934), against 1 under REML; with 6 clusters of 20 at an ICC
-  of 0.3 they covered 0.893 against REML's 0.961, and with 6 clusters a 5%
-  test of a between-cluster factor rejected 19.0% of the time against 7.8%.
-  Until REML is the default for these models, fit with `reml = TRUE` for
-  the tables the study supports.
+  The study behind the default (`studies/findings/df_tables.md`) fitted
+  every model by REML, and an arm by maximum likelihood on the same data
+  found the ML path's intervals too narrow; REML is now the default for these
+  models (the first entry above).
 * Remedies named that did not exist. `ilm_aov_ez()`, when sphericity fails,
   pointed at `ilm_model(..., re_struct = "us")`, which stops -- `re_struct`
   is a list by term, and "us" is already its default -- and so did the ANOVA

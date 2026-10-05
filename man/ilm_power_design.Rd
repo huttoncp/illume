@@ -27,7 +27,7 @@ ilm_power_design(
   verbose = TRUE,
   categories = NULL,
   thresholds = NULL,
-  reml = FALSE
+  reml = NULL
 )
 }
 \arguments{
@@ -97,11 +97,13 @@ order. Taken from the columns of \code{cells} when it has them.}
 \item{thresholds}{For an ordinal outcome given by \code{coefs}, the \code{J - 1} cut
 points on the latent scale, increasing.}
 
-\item{reml}{Plan for an analysis fitted by restricted maximum likelihood,
-as \code{ilm_model(reml = TRUE)} fits one: every simulated study is then
-refitted by REML. For a gaussian mixed model that is the analysis most
-software reports, and its power is a little lower than that of the
-maximum-likelihood fit, whose variance components run small.}
+\item{reml}{The analysis to plan for, as \code{\link[=ilm_model]{ilm_model()}}'s \code{reml} chooses
+it: \code{NULL} (the default) plans for the analysis \code{ilm_model()} fits by
+default -- REML for a gaussian mixed model, maximum likelihood for every
+other -- and \code{TRUE} or \code{FALSE} for REML or maximum likelihood. Every
+simulated study is refitted that way. A maximum-likelihood fit's
+variance components run small, so its power is a little higher than
+REML's; plan for the analysis you will run.}
 }
 \value{
 An \code{\link[=ilm_power]{ilm_power()}} result, with an extra \code{n_unit} column.

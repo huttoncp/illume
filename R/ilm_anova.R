@@ -248,7 +248,7 @@ ilm_recode_sum <- function(object, which) {
       ## measured there rather than at an arbitrary origin
       mf[[v]] <- mf[[v]] - mean(mf[[v]], na.rm = TRUE)
   }
-  Xn <- try(ilm_drop_intercept(
+  Xn <- try(ilm_fit_cols(
     stats::model.matrix(object$terms, mf, contrasts.arg = ctr),
     object), silent = TRUE)
   if (inherits(Xn, "try-error") || ncol(Xn) != ncol(object$X)) return(NULL)
@@ -342,7 +342,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
                         ncores = 1L, restarts = 2L, recode = TRUE,
                         df = "auto", statistic = c("F", "Chisq")) {
   test <- match.arg(test); statistic <- match.arg(statistic)
-  if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
+  if (test == "LRT") object <- ilm_as_ml(object, "ilm_anova(test = \"LRT\")")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
   type3 <- type %in% c("3", "III")
@@ -382,6 +382,10 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
       ilm_warn_type3_coding(labs, object$contrasts, object$model)
   }
   rel <- lapply(seq_len(nt), function(j) ilm_relatives_of(mt, j))
+  ## a term whose every column was dropped as aliased (ilm_model(aliased =
+  ## "drop")) has nothing to test: no row, and the heading says so
+  gone <- which(vapply(seq_len(nt), function(j)
+    !any(!is.na(object$assign) & object$assign == j), TRUE))
   if (type3) rel <- lapply(rel, function(z) integer(0))   # III conditions on all
 
   ## ---- assemble the refits needed, de-duplicated ---------------------------
@@ -389,7 +393,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   key <- function(s) paste(sort(unique(s)), collapse = ",")
   add_need <- function(s) { k <- key(s); if (!k %in% names(need)) need[[k]] <<- s; k }
   keyM1 <- keyM0 <- character(nt)
-  for (j in seq_len(nt)) {
+  for (j in setdiff(seq_len(nt), gone)) {
     if (test == "LRT") {
       keyM1[j] <- if (length(rel[[j]])) add_need(rel[[j]]) else ""
       keyM0[j] <- add_need(c(rel[[j]], j))
@@ -420,6 +424,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   b_full <- coef(object); V_full <- suppressWarnings(vcov(object))
 
   rows <- lapply(seq_len(nt), function(j) {
+    if (j %in% gone) return(NULL)
     ncol_j <- sum(!is.na(object$assign) & object$assign == j)
     nd <- ncol_j * object$C
     ## a gaussian mixed model: F on the term's own denominator df, from the
@@ -510,6 +515,10 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
     else NULL,
     if (test == "LRT")
       "LRT: random structure held fixed across models, so the Laplace error largely cancels."
+    else NULL,
+    if (length(gone))
+      sprintf("Not tested, every column dropped as aliased: %s",
+              paste(labs[gone], collapse = ", "))
     else NULL)
   class(out) <- c("anova", "data.frame")
   out

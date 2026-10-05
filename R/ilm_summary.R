@@ -146,6 +146,8 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
                 paste(o$ylevels, collapse = ", ")))
   else
     cat(sprintf(" Family: %s (%s link)\n", fam, o$family$link))
+  ew <- ilm_estimator_words(o)
+  if (!is.null(ew)) writeLines(strwrap(ew, width = 78, indent = 1, exdent = 1))
   ## a family chosen by family = "auto" says so, and on what evidence
   if (!is.null(o$family_inferred))
     writeLines(paste0("        inferred from the response (", o$family_inferred,
@@ -269,6 +271,10 @@ Dispersion model: ", deparse(o$disp_formula), "
                 if (is.null(fb)) "" else
                   sprintf("; %d coefficient(s) against the normal: %s",
                           length(fb$rows), fb$reason)))
+  ## columns dropped as aliased have no row above, so say which and why
+  if (!is.null(o$aliased))
+    writeLines(strwrap(sub("^the", "The", o$aliased$note), width = 78,
+                       indent = 1, exdent = 1))
   ## The thresholds are the intercepts of a cumulative link model, and the
   ## sign convention is the trap: the linear predictor is SUBTRACTED from
   ## them, so a positive coefficient pushes probability UP the scale. Reading
@@ -487,6 +493,8 @@ print.ilm_model <- function(x, ...) {
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               flag))
   cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
+  ew <- ilm_estimator_words(x)
+  if (!is.null(ew)) writeLines(strwrap(ew, width = 78, indent = 2, exdent = 4))
   ilm_rows_print(x)
   invisible(x)
 }
@@ -497,4 +505,20 @@ print.ilm_model <- function(x, ...) {
 ilm_rows_print <- function(x) {
   rl <- ilm_rows_line(ilm_rows_used(x), always = FALSE)
   if (!is.null(rl)) writeLines(strwrap(rl, width = 78, indent = 2, exdent = 4))
+}
+
+## How a gaussian mixed model was fitted, and why, in one sentence (Craig's
+## item 249: REML is the default there, and a user should see which estimator
+## they have without looking it up). NULL for every other model, and for a fit
+## from before the default was recorded.
+#' @keywords internal
+#' @noRd
+ilm_estimator_words <- function(x) {
+  if (is.null(x$reml_by_default) || !ilm_satt_default(x)) return(NULL)
+  if (isTRUE(x$reml_by_default))
+    "Fitted by REML, the default for a gaussian mixed model; reml = FALSE fits by maximum likelihood."
+  else if (isTRUE(x$reml))
+    "Fitted by REML, as asked (reml = TRUE), which is the default for a gaussian mixed model."
+  else
+    "Fitted by maximum likelihood, as asked (reml = FALSE); a gaussian mixed model is fitted by REML by default."
 }

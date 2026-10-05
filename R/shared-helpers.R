@@ -359,6 +359,17 @@ ilm_disp_digits <- function(x, d) {
       fix <- hi | lo
       M[fix] <- ilm_disp_mantissa(a[fix], 14 - ei[fix])
     }
+    ## and one too high just below one: log10(999999999999999) is 15, and
+    ## the mantissa formed a place too low rounds up to exactly 10^14,
+    ## inside the range, with a figure lost. Where M is 10^14, the place
+    ## below is tried, and kept when it holds the value to 15 figures.
+    edge <- which(M == 1e14)
+    if (length(edge)) {
+      M2 <- ilm_disp_mantissa(a[edge], 15 - ei[edge])
+      low <- M2 < 1e15
+      ei[edge[low]] <- ei[edge[low]] - 1
+      M[edge[low]] <- M2[low]
+    }
     j <- (14 - ei) - d[i]
     Q <- M
     DQ <- 14 - ei                         # j <= 0: every figure is kept
@@ -462,6 +473,104 @@ ilm_disp_text <- function(z, d, big_mark = ",", drop_zeros = FALSE) {
   out
 }
 
+## Scientific notation in R's form (Craig's item 290): the figures of z (as
+## ilm_disp_signif_digits() gives them) as a mantissa, one figure before the
+## point, and the power of ten with its sign and at least two digits --
+## 1.23e+300, 5.05e-08, 4.9e-324. Zeros at the mantissa's end are kept unless
+## `drop_zeros`, and with none left the point goes too (1e+15).
+#' @keywords internal
+#' @noRd
+ilm_disp_sci <- function(z, drop_zeros = FALSE) {
+  n <- length(z$q)
+  out <- rep(NA_character_, n)
+  for (k in which(!is.na(z$q))) {
+    if (z$q[k] == 0) {
+      out[k] <- "0"
+      next
+    }
+    s <- sprintf("%.0f", z$q[k])
+    p <- nchar(s) - 1 - z$dq[k]
+    frac <- substr(s, 2, nchar(s))
+    if (drop_zeros) frac <- sub("0+$", "", frac)
+    out[k] <- paste0(if (z$neg[k]) "-", substr(s, 1, 1),
+                     if (nzchar(frac)) paste0(".", frac),
+                     "e", if (p < 0) "-" else "+", sprintf("%02d", abs(p)))
+  }
+  out
+}
+
+## Which values of z are written in scientific notation (item 290): those
+## that, rounded, have 16 or more figures before the point (1e15 and up),
+## or, with `small`, a value under 1 whose text would need more than 6
+## decimals, counting the zeros kept at its end (0.0001 to 3 figures,
+## "0.000100", is written in full; 0.00001, "1.00e-05", is not). A value
+## of 1 or more is never written in scientific notation for its decimals:
+## pi to 10 figures is 3.141592654. Between, a number is written in full.
+#' @keywords internal
+#' @noRd
+ilm_disp_far <- function(z, small = TRUE) {
+  far <- rep(FALSE, length(z$q))
+  k <- which(!is.na(z$q) & z$q != 0)
+  if (length(k)) {
+    p <- nchar(sprintf("%.0f", z$q[k])) - 1 - z$dq[k]
+    far[k] <- p >= 15 | (small & p < 0 & z$dq[k] > 6)
+  }
+  far
+}
+
+## `d` decimals as the text shows them, the declared decimals at any size
+## below 1e15 (rounded), and 7 figures in scientific notation from 1e15 up
+## (item 290)
+#' @keywords internal
+#' @noRd
+ilm_disp_fixed_text <- function(v, d, big_mark = ",") {
+  z <- ilm_disp_digits(v, d)
+  s <- ilm_disp_text(z, d, big_mark)
+  far <- ilm_disp_far(z, small = FALSE)
+  if (any(far)) s[far] <- ilm_disp_sci(ilm_disp_signif_digits(v[far], 7), drop_zeros = TRUE)
+  s
+}
+
+## The decimals a group of numbers is written at together (Craig's item
+## 306): an estimate with its interval, a list of predicted values -- the
+## caller decides what belongs together. A value that will be written in
+## scientific notation sets nothing: one needing more than 6 decimals to
+## show a figure, or one of 1e15 or more (item 290). Over the rest, none
+## when every finite non-zero value is whole (or none is left); otherwise
+## enough for `sig` figures at their median size, and for the smallest to
+## show a figure, at most 6.
+#' @keywords internal
+#' @noRd
+ilm_disp_group_decimals <- function(x, sig = 3L) {
+  a <- abs(x[is.finite(x) & x != 0])
+  a <- a[!ilm_disp_group_far(a)]
+  if (!length(a) || all(a == round(a))) return(0L)
+  d <- max(0, sig - 1 - floor(log10(stats::median(a))), -floor(log10(min(a))))
+  as.integer(min(d, 6))
+}
+
+## A group's value set aside for scientific notation (item 306): non-zero,
+## and needing more than 6 decimals to show a figure, or 1e15 or more
+#' @keywords internal
+#' @noRd
+ilm_disp_group_far <- function(v) {
+  a <- abs(v)
+  is.finite(a) & a != 0 & (a >= 1e15 | -floor(log10(a)) > 6)
+}
+
+## A group's values at its decimals (item 306), each by the shared
+## rounding. A value set aside (ilm_disp_group_far()), or a non-zero one
+## the decimals would show as zero, is written in scientific notation at 3
+## figures (item 290).
+#' @keywords internal
+#' @noRd
+ilm_disp_group_text <- function(v, d, big_mark = ",") {
+  s <- ilm_disp_text(ilm_disp_digits(v, d), d, big_mark)
+  far <- ilm_disp_group_far(v) | (v != 0 & !grepl("[1-9]", s))
+  if (any(far)) s[far] <- ilm_disp_sci(ilm_disp_signif_digits(v[far], 3))
+  s
+}
+
 ## A quantity as a statement shows it, and the rule it was shown by.
 ## Returns list(text, rule, digits): `text` a character vector the length of
 ## `x`, NA where `x` is NA; `rule` and `digits` the rule applied (`digits`
@@ -483,6 +592,21 @@ ilm_disp_text <- function(z, d, big_mark = ",", drop_zeros = FALSE) {
 ##             stretch, and with `end = TRUE` its last minute, "02:59"
 ##   "ordinal" a day of the month (1 to 31) in English, "1st", "22nd",
 ##             "28th"
+##   "decimals" `x` a group read together -- an estimate with its interval,
+##             a list of predicted values -- every value at the group's
+##             decimals, ilm_disp_group_decimals(x), or at `digits` when
+##             given (Craig's item 306). A value needing more than 6
+##             decimals to show a figure, or of 1e15 or more, is in
+##             scientific notation at 3 figures and sets nothing; so is a
+##             non-zero value the decimals would show as zero. The one rule
+##             whose text depends on the other values
+## A number is written in full with at most 15 figures before the point
+## and, below 1, at most 6 decimals, after rounding, and in R's scientific
+## notation beyond, as R's tables print it (Craig's item 290): "signif"
+## with its `digits` figures (1.23e+300, 1.00e-05), "fixed" and "percent"
+## only from 1e15, with 7 figures and no zeros at the end, R's default
+## print (1.234568e+20) -- their declared decimals hold however small the
+## value.
 ## Thousands are grouped from 1,000 up ("1,230"), the family's rule. Only
 ## quantities come through here: a year, an identifier or a code that happens
 ## to be numeric is data, written as it is ("2024", never "2,024").
@@ -494,13 +618,19 @@ ilm_disp_text <- function(z, d, big_mark = ",", drop_zeros = FALSE) {
 ## printing the rounded number.
 #' @keywords internal
 #' @noRd
-ilm_disp <- function(x, rule = c("signif", "fixed", "percent", "p", "clock", "ordinal"),
+ilm_disp <- function(x, rule = c("signif", "fixed", "percent", "p", "clock", "ordinal",
+                                 "decimals"),
                      digits = NULL, big_mark = ",", end = FALSE, trailing_zeros = TRUE) {
   rule <- match.arg(rule)
   if (rule %in% c("signif", "fixed", "percent") &&
       (is.null(digits) || length(digits) != 1L || digits < 0))
     stop("ilm_disp(): the \"", rule, "\" rule needs `digits`", call. = FALSE)
   x <- as.numeric(x)
+  if (rule == "decimals") {
+    if (!is.null(digits) && (length(digits) != 1L || digits < 0))
+      stop("ilm_disp(): the \"decimals\" rule takes one `digits`, or none", call. = FALSE)
+    digits <- digits %||% ilm_disp_group_decimals(x)
+  }
   fin <- is.finite(x)
   txt <- rep(NA_character_, length(x))
   txt[!is.na(x) & !fin] <- ifelse(x[!is.na(x) & !fin] > 0, "Inf", "-Inf")
@@ -509,15 +639,20 @@ ilm_disp <- function(x, rule = c("signif", "fixed", "percent", "p", "clock", "or
     txt[fin] <- switch(rule,
       signif = {
         z <- ilm_disp_signif_digits(v, digits)
-        ilm_disp_text(z, pmax(0, z$dq), big_mark, drop_zeros = !isTRUE(trailing_zeros))
+        drop <- !isTRUE(trailing_zeros)
+        s <- ilm_disp_text(z, pmax(0, z$dq), big_mark, drop_zeros = drop)
+        far <- ilm_disp_far(z)
+        s[far] <- ilm_disp_sci(lapply(z, `[`, far), drop)
+        s
       },
-      fixed = ilm_disp_text(ilm_disp_digits(v, digits), digits, big_mark),
-      percent = paste0(ilm_disp_text(ilm_disp_digits(100 * v, digits), digits, big_mark), "%"),
+      fixed = ilm_disp_fixed_text(v, digits, big_mark),
+      percent = paste0(ilm_disp_fixed_text(100 * v, digits, big_mark), "%"),
       p = {
         z <- ilm_disp_signif_digits(v, 3)
         ifelse(v < 0.001, "< 0.001", ilm_disp_text(z, pmax(0, z$dq), "", drop_zeros = TRUE))
       },
       clock = sprintf(if (isTRUE(end)) "%02d:59" else "%02d:00", as.integer(round(v))),
+      decimals = ilm_disp_group_text(v, digits, big_mark),
       ordinal = {
         d <- as.integer(round(v))
         paste0(d, ifelse(d %% 100 %in% 11:13, "th",
@@ -525,7 +660,7 @@ ilm_disp <- function(x, rule = c("signif", "fixed", "percent", "p", "clock", "or
       })
   }
   c(list(text = txt, rule = rule),
-    if (rule %in% c("signif", "fixed", "percent")) list(digits = as.integer(digits)),
+    if (rule %in% c("signif", "fixed", "percent", "decimals")) list(digits = as.integer(digits)),
     if (rule == "clock" && isTRUE(end)) list(end = TRUE),
     if (rule == "signif" && !isTRUE(trailing_zeros)) list(trailing_zeros = FALSE))
 }

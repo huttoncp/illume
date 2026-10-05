@@ -12,9 +12,9 @@
 ##
 ## Aliasing that involves a smooth always stops: there is no sensible column
 ## of a smooth's null space to drop. For ordinary columns -- two collinear
-## covariates, an interaction with an empty cell -- stopping and dropping
-## the redundant column as lm() does are both defensible; that choice is
-## Craig's (item 214), and this returns what either needs.
+## covariates, an interaction with an empty cell -- the fit stops by default,
+## and ilm_model(aliased = "drop") drops the dependent columns as lm() and
+## lme4 do, saying which (Craig's ruling, item 214).
 
 ## The column -> term map: a formula term's label, "(Intercept)", or the
 ## smooth whose null space the column is.
@@ -77,17 +77,38 @@ ilm_alias_empty_cells <- function(mf, term) {
   paste0(rownames(tb)[z[, 1]], ":", colnames(tb)[z[, 2]])
 }
 
-## The message. One sentence per dependent column, then the fix.
+## One clause per dependent column.
 #' @keywords internal
 #' @noRd
-ilm_alias_message <- function(al, mf) {
-  lines <- vapply(al$groups, function(g) {
+ilm_alias_lines <- function(al) {
+  unique(vapply(al$groups, function(g) {
     if (g$zero) sprintf("%s is zero in every row", g$said)
     else sprintf("%s is a linear combination of %s", g$said,
                  if (length(g$with_said)) ilm_and(unique(utils::head(g$with_said, 6)))
                  else "the other columns")
-  }, "")
-  lines <- unique(lines)
+  }, ""))
+}
+
+## What is said when the dependent columns are dropped, at fitting and in
+## summary().
+#' @keywords internal
+#' @noRd
+ilm_alias_drop_note <- function(al) {
+  n <- length(al$dependent)
+  paste0("the fixed-effect columns were not all separable, so ", n,
+         if (n == 1L) " column was" else " columns were",
+         " dropped as aliased, as aliased = \"drop\" asks: ",
+         paste(ilm_alias_lines(al), collapse = "; "),
+         ". The model is the same, written with fewer columns; ",
+         if (n == 1L) "the dropped coefficient has" else "the dropped coefficients have",
+         " no estimate.")
+}
+
+## The message. One sentence per dependent column, then the fix.
+#' @keywords internal
+#' @noRd
+ilm_alias_message <- function(al, mf, aliased = "stop") {
+  lines <- ilm_alias_lines(al)
   terms <- unique(unlist(lapply(al$groups, `[[`, "terms")))
   cells <- unique(unlist(lapply(terms, function(tt) ilm_alias_empty_cells(mf, tt))))
   fix <- if (al$smooth && all(vapply(al$groups, `[[`, TRUE, "all_smooth")))
@@ -108,7 +129,15 @@ ilm_alias_message <- function(al, mf) {
   else
     paste0("Drop one of the terms involved (", ilm_and(sprintf("`%s`", terms)),
            "), or rewrite them so they no longer overlap")
+  ## the other way out, where there is one
+  alt <- if (al$smooth) {
+    if (identical(aliased, "drop"))
+      paste0(" aliased = \"drop\" does not apply: a smooth's unpenalised part ",
+             "has no column that can sensibly be dropped.") else ""
+  } else paste0(" Or set aliased = \"drop\" to drop the dependent ",
+                if (length(al$dependent) == 1L) "column" else "columns",
+                ", as lm() does.")
   paste0("The model's fixed-effect columns are not all separable, so it has ",
          "no unique fit (every standard error would come out NaN): ",
-         paste(lines, collapse = "; "), ". ", fix, ".")
+         paste(lines, collapse = "; "), ". ", fix, ".", alt)
 }

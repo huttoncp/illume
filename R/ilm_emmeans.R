@@ -244,7 +244,7 @@ ilm_emmeans <- function(object, specs, at = NULL,
   ## the model matrix of the grid, built with the FIT's terms and contrasts so
   ## the columns line up with the coefficients
   tt <- stats::delete.response(stats::terms(object))
-  mmg <- ilm_drop_intercept(
+  mmg <- ilm_fit_cols(
     stats::model.matrix(tt, data = g, contrasts.arg = object$contrasts), object)
   b <- stats::coef(object)
   ## a multinomial fit has one coefficient per column PER CATEGORY
