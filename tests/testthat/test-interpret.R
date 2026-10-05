@@ -354,6 +354,13 @@ test_that("each number in the prose is written by what it is", {
                    c("99.99%", "over 99.99%", "0.01%", "under 0.01%", "100.00%", "0.00%"))
   expect_identical(ilm_fmt_pct_grp(c(0.996, 0.994, 0.004), 0),
                    c("over 99%", "99%", "under 1%"))
+  ## a small share in the middle of the range takes its group's decimals
+  ## (item 306): alone it has three figures, beside 25% one decimal, among
+  ## shares of a few percent two, and the ends are still said in words
+  expect_identical(ilm_fmt_pct_grp(0.004), "0.400%")
+  expect_identical(ilm_fmt_pct_grp(c(0.25, 0.004)), c("25.0%", "0.4%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.004, 0.0123, 0.031)), c("0.40%", "1.23%", "3.10%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.004, 0.0005)), c("0.400%", "under 0.1%"))
   ## large numbers, to the decimals asked for: no figure past the ones the
   ## value has is rounded up (illumex's format_cases.csv, the same cases)
   expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),
