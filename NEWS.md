@@ -26,6 +26,21 @@
     to compare only between models with the same fixed effects;
   - `reml = FALSE` gives the old fit exactly. `ilm_model()`'s help has a
     section on the defaults and when to change them.
+* `ilm_censor()`'s `status` argument is renamed `censored`: `-1`
+  left-censored, `0` observed, `1` right-censored -- the direction of
+  censoring. `event =` is its alternative in `survival::Surv()`'s
+  convention, `1` when the event was observed; the two code the same data
+  oppositely, and giving both stops. A `censored` of only 0s and 1s is said
+  once a session, since that is what an event indicator given to the wrong
+  argument looks like. The help sets the two codings side by side, with the
+  `Surv()` trap shown.
+* `Surv(time, event)` on the left of a formula is read as right-censored
+  follow-up and fitted exactly as `time ~ ...` with
+  `censor = ilm_surv(time, event)`; `summary()` says
+  "Surv() read as right-censored: n events, m censored". Left-censored,
+  interval-censored and start-stop `Surv()` stop and name what to use.
+* `summary()` of every censored fit says how many rows were observed and how
+  many right- or left-censored.
 * Numbers in the prose are written in full up to 15 figures before the
   point and, below 1, up to 6 decimals, and in R's scientific notation
   beyond, as R's tables print it: an estimate of 0.00001 to three figures

@@ -35,37 +35,104 @@
 #' codes are derived from the response, and the limits are carried along so that
 #' the simulation-based diagnostics can censor their replicates the same way.
 #'
-#' `status` is for the case where the limits vary by observation and only the
-#' outcome is known -- right-censored follow-up in a survival study, most
-#' commonly. Diagnostics then hold the censoring pattern fixed across
-#' replicates rather than re-drawing it, which is stated where it matters.
+#' `censored` and `event` are for the case where the limits vary by
+#' observation and only the outcome is known -- right-censored follow-up in a
+#' survival study, most commonly. Diagnostics then hold the censoring pattern
+#' fixed across replicates rather than re-drawing it, which is stated where it
+#' matters.
+#'
+#' @section Two codings, one meaning:
+#' The same data can be coded two opposite ways, and a fit given the wrong
+#' one does not look wrong: it is fitted to the wrong rows.
+#'
+#' | | `censored =` | `event =` |
+#' |---|---|---|
+#' | says | the direction of censoring | whether the event was observed |
+#' | an observed value | `0` | `1` |
+#' | a value known only to be beyond it (right-censored) | `1` | `0` |
+#' | a value known only to be below it (left-censored) | `-1` | -- |
+#' | the convention of | this function | `survival::Surv()` |
+#'
+#' Give one or the other, never both. A `censored` vector of only 0s and 1s
+#' is said once a session, since it is most often an event indicator given to
+#' the wrong argument.
+#'
+#' For time-to-event data, [ilm_surv()] takes `event` in `Surv()`'s
+#' convention and also draws the censoring times the diagnostics need, and
+#' `ilm_model(Surv(time, event) ~ ...)` is read as exactly that.
+#'
+#' @section The Surv() trap:
+#' `survival::Surv(time, status)` reads its second argument as an EVENT
+#' indicator: `1` means the event was observed. Passed here as `censored`,
+#' the same column means the opposite -- every event becomes a censored row
+#' and every censored row an event. Use `event =` for that column, or
+#' [ilm_surv()].
 #'
 #' @param y The response.
 #' @param lower Floor. Values at or below it are left-censored.
 #' @param upper Ceiling. Values at or above it are right-censored.
-#' @param status Alternatively, codes given directly: `-1` left-censored, `0`
-#'   observed, `1` right-censored.
+#' @param censored Alternatively, the direction of censoring given directly:
+#'   `-1` left-censored, `0` observed, `1` right-censored.
+#' @param event Or an event indicator, in `survival::Surv()`'s convention:
+#'   `1` (or `TRUE`) when the value was observed, `0` (or `FALSE`) when it is
+#'   right-censored. Give `censored` or `event`, not both.
 #' @return An integer vector of codes, classed `"ilm_censor"`, carrying the
 #'   limits it was built from.
-#' @seealso [ilm_model()], [illumex::ilm_describe()], whose `p_zero` column is often the
-#'   first sign of a floor.
+#' @seealso [ilm_surv()] for time-to-event data; [ilm_model()];
+#'   [illumex::ilm_describe()], whose `p_zero` column is often the first sign
+#'   of a floor.
 #' @examples
 #' y <- c(0, 0, 1.4, 2.9, 5, 5)
 #' ilm_censor(y, lower = 0, upper = 5)
 #' table(ilm_censor(y, lower = 0))
+#'
+#' ## the same three right-censored rows, coded both ways
+#' t <- c(5, 9, 12, 3, 20)
+#' ilm_censor(t, censored = c(0, 1, 0, 0, 1))   # 1 = censored
+#' ilm_censor(t, event = c(1, 0, 1, 1, 0))      # 1 = event observed, as in Surv()
+#'
+#' ## the trap: an event indicator given as `censored` flips every row
+#' st <- c(1, 0, 1, 1, 0)                       # Surv()'s status, 1 = event
+#' table(ilm_censor(t, censored = st))          # wrong: the events are censored
+#' table(ilm_censor(t, event = st))             # right
 #' @export
-ilm_censor <- function(y, lower = NA, upper = NA, status = NULL) {
-  if (!is.null(status)) {
-    s <- suppressWarnings(as.integer(status))
+ilm_censor <- function(y, lower = NA, upper = NA, censored = NULL, event = NULL) {
+  if (!is.null(censored) && !is.null(event))
+    stop("give `censored` or `event`, not both. They code the same thing ",
+         "oppositely: `censored` is the direction of censoring (-1 left, 0 ",
+         "observed, 1 right), `event` is Surv()'s event indicator (1 = event ",
+         "observed, 0 = right-censored).", call. = FALSE)
+  if (!is.null(event)) {
+    e <- if (is.logical(event)) as.integer(event) else suppressWarnings(as.integer(event))
+    if (length(e) != length(y))
+      stop("`event` has ", length(e), " values but `y` has ", length(y),
+           call. = FALSE)
+    if (anyNA(e) || !all(e %in% c(0L, 1L)))
+      stop("`event` must be 1 (the event was observed) or 0 (right-censored). ",
+           "Values seen: ", paste(utils::head(sort(unique(event)), 5), collapse = ", "),
+           ". For left-censored values, give `censored` with -1.", call. = FALSE)
+    return(structure(1L - e, lower = NA_real_, upper = NA_real_,
+                     class = "ilm_censor"))
+  }
+  if (!is.null(censored)) {
+    s <- suppressWarnings(as.integer(censored))
     if (length(s) != length(y))
-      stop("`status` has ", length(s), " values but `y` has ", length(y),
+      stop("`censored` has ", length(s), " values but `y` has ", length(y),
            call. = FALSE)
     if (anyNA(s) || !all(s %in% c(-1L, 0L, 1L)))
-      stop("`status` must be -1 (left-censored), 0 (observed) or 1 ",
+      stop("`censored` must be -1 (left-censored), 0 (observed) or 1 ",
            "(right-censored). Values seen: ",
-           paste(utils::head(sort(unique(status)), 5), collapse = ", "),
-           ". For survival follow-up where 1 means the event was observed, ",
-           "pass status = 1 - event.", call. = FALSE)
+           paste(utils::head(sort(unique(censored)), 5), collapse = ", "),
+           ". For an event indicator, where 1 means the event was observed ",
+           "(Surv()'s convention), give it as `event =` instead, or use ",
+           "ilm_surv(time, event) for time-to-event data.", call. = FALSE)
+    ## only 0s and 1s is also what an event indicator looks like, coded the
+    ## other way round -- said once a session
+    if (all(s %in% c(0L, 1L)) && is.null(ilm_censor_said$binary)) {
+      ilm_censor_said$binary <- TRUE
+      message("censored codes 1 as right-censored (not observed); for an event ",
+              "indicator (1 = event observed, as in Surv) use event = or ilm_surv()")
+    }
     return(structure(s, lower = NA_real_, upper = NA_real_,
                      class = "ilm_censor"))
   }
@@ -76,8 +143,8 @@ ilm_censor <- function(y, lower = NA, upper = NA, status = NULL) {
   lower <- suppressWarnings(as.numeric(lower)[1])
   upper <- suppressWarnings(as.numeric(upper)[1])
   if (is.na(lower) && is.na(upper))
-    stop("give `lower`, `upper` or `status`: ilm_censor() needs to know what ",
-         "makes an observation censored.", call. = FALSE)
+    stop("give `lower`, `upper`, `censored` or `event`: ilm_censor() needs to ",
+         "know what makes an observation censored.", call. = FALSE)
   if (!is.na(lower) && !is.na(upper) && lower >= upper)
     stop("`lower` (", lower, ") must be below `upper` (", upper, ")",
          call. = FALSE)
@@ -87,6 +154,74 @@ ilm_censor <- function(y, lower = NA, upper = NA, status = NULL) {
             "s" else "", " given, so nothing is censored and the fit will be ",
             "the same as without `censor`.", call. = FALSE)
   structure(s, lower = lower, upper = upper, class = "ilm_censor")
+}
+
+## What has been said once this session (ilm_censor()'s note on a 0/1
+## `censored`).
+ilm_censor_said <- new.env(parent = emptyenv())
+
+## Surv() on the left of a formula, read as what it says: right-censored
+## follow-up, fitted as ilm_surv() fits it. NULL when the left side is not a
+## Surv() call; otherwise the formula with the time as its response, and the
+## event expression, which the caller puts in the model frame so that a row
+## dropped there is dropped from both. Every other kind of Surv() stops, with
+## what to use instead.
+#' @keywords internal
+#' @noRd
+ilm_surv_lhs <- function(formula) {
+  if (!inherits(formula, "formula") || length(formula) != 3L) return(NULL)
+  lhs <- formula[[2]]
+  if (!is.call(lhs)) return(NULL)
+  fn <- lhs[[1]]
+  if (!(identical(fn, quote(Surv)) ||
+        (is.call(fn) && identical(fn[[1]], quote(`::`)) && identical(fn[[3]], quote(Surv)))))
+    return(NULL)
+  a <- as.list(lhs)[-1]
+  nm <- names(a); if (is.null(nm)) nm <- rep("", length(a))
+  type <- if ("type" %in% nm) tryCatch(as.character(eval(a[["type"]])), error = function(e) "?")
+          else NULL
+  a <- a[nm != "type"]; nm <- nm[nm != "type"]
+  pos <- a[nm == ""]
+  tm <- if ("time" %in% nm) a[["time"]] else if (length(pos)) pos[[1]] else NULL
+  rest <- if ("time" %in% nm) pos else pos[-1]
+  ev <- if ("event" %in% nm) a[["event"]] else if (length(rest) == 1L) rest[[1]] else NULL
+  has_t2 <- "time2" %in% nm || length(rest) >= 2L
+  other <- setdiff(nm[nzchar(nm)], c("time", "event"))
+  if (!is.null(type) && !identical(type, "right") || has_t2 || length(other)) {
+    kind <- if (!is.null(type) && !identical(type, "right")) type
+            else if (has_t2) "counting" else paste(other, collapse = ", ")
+    stop("Surv() on the left of the formula is read only as right-censored ",
+         "follow-up, Surv(time, event); this one is ",
+         switch(kind,
+           left = paste0("left-censored. Give the response as the formula's left ",
+                         "side and the censoring as `censor = ilm_censor(y, ",
+                         "censored = )`, with -1 for a left-censored value"),
+           interval = , interval2 = paste0("interval-censored, which illume does ",
+                         "not fit: a value known only to lie in an interval needs ",
+                         "both ends, and survival::survreg() fits it"),
+           counting = paste0("in start-stop (counting process) form, which illume does ",
+                         "not fit: time-varying covariates need survival::coxph()"),
+           paste0("given `", kind, "`, which illume does not read: write ",
+                  "Surv(time, event), or give the response and ",
+                  "`censor = ilm_surv(time, event)`")),
+         ".", call. = FALSE)
+  }
+  if (is.null(tm) || is.null(ev))
+    stop("Surv() on the left of the formula needs a time and an event: ",
+         "Surv(time, event), with event 1 when it was observed.", call. = FALSE)
+  f <- formula
+  f[[2]] <- tm
+  list(formula = f, time = tm, event = ev)
+}
+
+## The event column Surv() was given, as ilm_surv() takes it: Surv() also
+## accepts TRUE/FALSE and 1/2 (2 = the event).
+#' @keywords internal
+#' @noRd
+ilm_surv_event <- function(e) {
+  if (is.logical(e)) return(as.integer(e))
+  en <- suppressWarnings(as.numeric(e))
+  if (length(en) && all(en %in% c(1, 2)) && any(en == 2)) en - 1 else en
 }
 
 ## Derive the codes from a response and a pair of limits. Used on the observed
