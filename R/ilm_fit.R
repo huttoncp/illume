@@ -3478,10 +3478,13 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
                  ## For an exact model the residual SD is reported on the
                  ## unbiased (n - p) scale, so it agrees with lm() and with
                  ## the rescaled standard errors.  Elsewhere it is the
-                 ## maximum likelihood estimate.
+                 ## maximum likelihood estimate. REML's estimate is already
+                 ## on that scale -- restricting the likelihood is what
+                 ## divides by n - p -- and correcting it again made it
+                 ## 0.9916 where lm() gives 0.9232, as vcov() already knew.
                  dispersion = if (fam$n_disp > 0L && !has_dm) {
                    d <- exp(pe[pn == "logdisp"])
-                   if (exact_df) d <- d * sqrt(N / (N - p))
+                   if (exact_df && !reml) d <- d * sqrt(N / (N - p))
                    stats::setNames(d, fam$disp_names)
                  } else if (has_dm) {
                    ## the dispersion is no longer one number; report the value

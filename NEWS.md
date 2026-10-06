@@ -39,6 +39,11 @@
   it holds, where its model used to fail and leave random starting draws in
   place without a word (pooled 0.53 against 0.98; now 0.90). An imputation
   model that still cannot be fitted is named in a warning.
+* **A REML fit with no random terms reports `lm()`'s residual SD.** REML's
+  estimate is already on the n - p scale, and it was corrected a second
+  time, as maximum likelihood's is: 0.9916 where `lm()` gives 0.9232. Its
+  standard errors were right. `ilm_dag_model()` fits by REML, so its
+  residual SD was overstated with it.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
