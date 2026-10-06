@@ -1,5 +1,14 @@
 # illume 0.0.8.9003
 
+* **An F test of several coefficients in a gaussian mixed model now takes
+  its denominator degrees of freedom by lmerTest's rule.** A direction of the
+  contrasts with 2 or fewer degrees of freedom used to be dropped, and with
+  none left the test was taken as a chi-square, on infinite degrees of
+  freedom: the most liberal answer exactly where the data say least. With 4
+  clusters and a 3-level between-cluster factor, the Type III test gave
+  p = 0.002 where lmerTest gives 0.14 on 2 degrees of freedom. Now: one
+  direction's own df; their mean if all are equal; 2 if any is 2 or fewer;
+  otherwise 2E/(E - q) over all q directions.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and

@@ -372,14 +372,27 @@ ilm_df_satt <- function(object, L, h = 1e-5, gr = NULL) {
   P <- t(ev$vectors[, keep, drop = FALSE])       # rows are the new contrasts
   Lr <- P %*% L
   nus <- vapply(seq_len(nrow(Lr)), function(m) nu_of(Lr[m, ]), numeric(1))
-  nus <- nus[is.finite(nus) & nus > 2]
+  nus <- nus[is.finite(nus)]
   if (!length(nus))
-    return(fell(paste("no direction of the contrasts has a Satterthwaite df",
-                      "above 2")))
-  E <- sum(nus / (nus - 2))
-  qq <- length(nus)
-  df <- if (E > qq) 2 * E / (E - qq) else Inf
-  list(df = df, method = "satterthwaite", V = NULL)
+    return(fell("no direction of the contrasts has a Satterthwaite df"))
+  list(df = ilm_fc_ddf(nus), method = "satterthwaite", V = NULL)
+}
+
+## The Fai-Cornelius denominator df from the directions' own df, by
+## lmerTest's rule (its get_Fstat_ddf()): one direction's own; their mean if
+## all are equal; 2 if any is 2 or less; otherwise 2E / (E - q) with E the
+## sum of nu / (nu - 2) over all q of them. Directions at or below 2 used to
+## be dropped, and with none left the df became Inf -- the most liberal
+## answer where the data say least: 4 clusters and a 3-level factor tested
+## at p = 0.002, where lmerTest's df of 2 give 0.14.
+#' @keywords internal
+#' @noRd
+ilm_fc_ddf <- function(nu, tol = 1e-8) {
+  if (length(nu) == 1L) return(nu)
+  if (all(abs(diff(nu)) < tol)) return(mean(nu))
+  if (any(nu <= 2)) return(2)
+  E <- sum(nu / (nu - 2))
+  2 * E / (E - length(nu))
 }
 
 #' Kenward-Roger degrees of freedom and adjusted covariance
