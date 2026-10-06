@@ -44,6 +44,12 @@
   time, as maximum likelihood's is: 0.9916 where `lm()` gives 0.9232. Its
   standard errors were right. `ilm_dag_model()` fits by REML, so its
   residual SD was overstated with it.
+* **`ilm_power()` keeps each row's offset.** A resampled study took its rows
+  of the design but not of the offset, so every study of a size other than
+  the data's failed, and one of the same size was refitted without its
+  exposure: for a Poisson rate whose true power is 1.00, power came out
+  incomputable at n = 100 and 0.40 at n = 200, the refitted intercept -5.18
+  where the truth is -2.00.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
