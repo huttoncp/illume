@@ -482,7 +482,7 @@ print.ilm_model <- function(x, ...) {
     cat(sprintf("ilm_model fit: %d ORDERED categories, %d obs, %d fixed + %d threshold%s%s\n",
                 x$J, nrow(x$X), ncol(x$X), length(x$zeta),
                 if (length(x$zeta) == 1L) "" else "s", flag))
-    cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective,
+    cat(sprintf("  logLik %.2f | AIC %.1f\n", as.numeric(logLik(x)),
                 suppressWarnings(AIC(x))))
     ilm_rows_print(x)
     return(invisible(x))
@@ -503,7 +503,7 @@ print.ilm_model <- function(x, ...) {
                 sprintf(" + %d %s", length(x$zi_gamma),
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               flag))
-  cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
+  cat(sprintf("  logLik %.2f | AIC %.1f\n", as.numeric(logLik(x)), suppressWarnings(AIC(x))))
   ew <- ilm_estimator_words(x)
   if (!is.null(ew)) writeLines(strwrap(ew, width = 78, indent = 2, exdent = 4))
   ilm_rows_print(x)

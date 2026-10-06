@@ -9,6 +9,18 @@
   p = 0.002 where lmerTest gives 0.14 on 2 degrees of freedom. Now: one
   direction's own df; their mean if all are equal; 2 if any is 2 or fewer;
   otherwise 2E/(E - q) over all q directions.
+* **Every log-likelihood a result is built from now comes from `logLik()`.**
+  The optimiser's objective leaves out the latent values' constant and
+  includes any boundary penalty, and three results used it as the
+  likelihood:
+  - McFadden's R-squared of a mixed model compared the objective of the
+    null model with the full model's `logLik()`: -0.17 where lme4 gives
+    0.096;
+  - `print()` showed the objective as "logLik": -838.73 for a model whose
+    `logLik()`, and lme4's, is -871.81;
+  - likelihood-ratio tests under `boundary = "avoid"`, in `ilm_anova()` and
+    `ilm_pb_lrt()`, kept the penalty in: 13.99 where the log-likelihoods
+    give 13.90.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
