@@ -1,5 +1,16 @@
 # illume 0.0.8.9003
 
+* **A fit whose fixed-effect standard errors cannot be computed now fails its
+  Hessian check and reports them as NaN, rather than passing with standard
+  errors of 0.** When a random-effect covariance sat at its boundary and was
+  held, the check judged only the variances it could compute, and `vcov()`
+  set every one it could not to 0. A fixed effect whose variance had failed
+  was then reported with a standard error of exactly 0 in a fit graded ok,
+  with the check line saying its standard errors were usable. Measured on a
+  random slope on income in dollars: 27 of 100 such fits. Holding a term
+  means zero uncertainty for the held covariance directions only, as before.
+  A held fit whose fixed effects are fine is unchanged. Under REML the fixed
+  effects' own covariance is judged the same way.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and

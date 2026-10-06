@@ -122,7 +122,15 @@ vcov.ilm_model <- function(object, full = FALSE, ...) {
   ## A term held at its boundary is known, for everything computed from this
   ## matrix: zero uncertainty, which is what holding it means, rather than the
   ## NA that records it in the fit and would poison a delta method downstream.
-  if (length(object$hessian_held)) V[!is.finite(V)] <- 0
+  ## Only the held rows and columns: a fixed effect whose variance could not
+  ## be formed stays NaN, where zeroing it reported a standard error of 0.
+  if (length(object$hessian_held)) {
+    if (is.null(object$hessian_dirs)) V[!is.finite(V)] <- 0   # a fit saved before the directions were kept
+    else {
+      hr <- ilm_held_rows(object$hessian_dirs, nrow(V))
+      V[outer(hr, hr, "|") & !is.finite(V)] <- 0
+    }
+  }
   ## Maximum likelihood divides the residual sum of squares by n; an ordinary
   ## linear model divides by n - p.  Rescaling by n / (n - p) makes the
   ## covariance, and therefore the standard errors, agree exactly with lm().
