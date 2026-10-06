@@ -270,8 +270,8 @@
   intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
   and hurdle models were out of scope, though `ziformula` fits both; it now
   points there. Found through an external report.
-* **`predict()` gives each row its own group's prediction by default**
-  (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
+* **`predict()` gives each row its own group's prediction by default**:
+  `groups = "fitted"`, as lme4's `predict()` does. A row
   whose group the fit has not seen, or `newdata` without the grouping
   columns, is an error that names `groups = "typical"` (every random effect
   at zero, the old default) and `groups = "population"` (the average over
