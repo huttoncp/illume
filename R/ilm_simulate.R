@@ -110,7 +110,8 @@ ilm_re_list_of <- function(fit) {
 #'
 #'   Each dataset draws new random effects, and a new path of any correlation
 #'   over time, from their fitted distributions: it is a new sample of groups,
-#'   not the fitted groups again.
+#'   not the fitted groups again. A smooth is part of the fitted mean and is
+#'   held at its fitted curve.
 #'
 #'   A censored response is censored as the data were. A survival time is the
 #'   smaller of the drawn event time and the subject's censoring time: the
@@ -139,6 +140,19 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
     for (k in seq_len(K)) {
       e <- fit$re[[k]]; nl <- fit$nlk[k]; d <- fit$dk[k]; w <- fit$wk[k]
       isrr <- identical(fit$re_struct[[k]]$type, "rr")
+      ## A smooth is part of the fitted mean, not a sample of groups: its
+      ## penalised coefficients are held at their fitted values, as power
+      ## simulation already holds them. Drawn afresh from the penalty's
+      ## prior, the simulated data kept only the smooth's straight-line part
+      ## (fitting 2 sin(x), the mean of 500 simulations ran opposite to the
+      ## fit, correlation -0.79), and every bootstrap built on them simulated
+      ## the wrong model.
+      if (e$kind == "basis") {
+        ctb <- e$basis %*% ilm_Bhat_term(fit, k)
+        if (isrr) ctb <- ctb %*% t(fit$Lambda[[k]])
+        eta <- eta + ctb
+        next
+      }
       Ad <- if (d > 1L) t(chol(fit$Sigma_d[[nms[k]]])) else matrix(1, 1, 1)
       Bc <- if (isrr) diag(1, w) else ilm_msqrt(fit$Sigma[[k]])
       B <- matrix(0, nl * d, w)
@@ -146,17 +160,11 @@ ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
         Bg <- Ad %*% matrix(rnorm(d * w), d, w) %*% Bc      # d x w
         for (i in seq_len(d)) B[(i - 1L) * nl + g, ] <- Bg[i, ]
       }
-      if (e$kind == "basis") {
-        ctb <- e$basis %*% B
+      for (i in seq_len(d)) {
+        Bi <- B[((i - 1L) * nl + 1L):(i * nl), , drop = FALSE]
+        ctb <- Bi[e$group, , drop = FALSE]
         if (isrr) ctb <- ctb %*% t(fit$Lambda[[k]])
-        eta <- eta + ctb
-      } else {
-        for (i in seq_len(d)) {
-          Bi <- B[((i - 1L) * nl + 1L):(i * nl), , drop = FALSE]
-          ctb <- Bi[e$group, , drop = FALSE]
-          if (isrr) ctb <- ctb %*% t(fit$Lambda[[k]])
-          eta <- eta + e$Z[, i] * ctb
-        }
+        eta <- eta + e$Z[, i] * ctb
       }
     }
     if (!is.null(fit$ar)) {

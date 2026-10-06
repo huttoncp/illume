@@ -21,6 +21,15 @@
   - likelihood-ratio tests under `boundary = "avoid"`, in `ilm_anova()` and
     `ilm_pb_lrt()`, kept the penalty in: 13.99 where the log-likelihoods
     give 13.90.
+* **`ilm_simulate()` holds a smooth at its fitted curve.** A smooth's
+  penalised coefficients were drawn afresh from the penalty's prior, so the
+  simulated data kept only the smooth's straight-line part: fitting
+  2 sin(x), the mean of 500 simulations ran opposite to the fit (correlation
+  -0.79), and a Poisson smooth fitted at a mean of 3.5 simulated a mean of
+  31. Everything built on simulation simulated the wrong model with it --
+  parametric bootstraps through `ilm_refit()`, `ilm_pb_lrt()` and
+  `ilm_consistency()`. Random effects of groups are still drawn afresh, as a
+  new sample of groups.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and

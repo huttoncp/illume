@@ -23,7 +23,8 @@ as an integer matrix for the multinomial.
 
 Each dataset draws new random effects, and a new path of any correlation
 over time, from their fitted distributions: it is a new sample of groups,
-not the fitted groups again.
+not the fitted groups again. A smooth is part of the fitted mean and is
+held at its fitted curve.
 
 A censored response is censored as the data were. A survival time is the
 smaller of the drawn event time and the subject's censoring time: the
