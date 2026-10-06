@@ -50,6 +50,16 @@
   exposure: for a Poisson rate whose true power is 1.00, power came out
   incomputable at n = 100 and 0.40 at n = 200, the refitted intercept -5.18
   where the truth is -2.00.
+* **A slope-only random effect, `(0 + x | g)`, is a slope on new rows too.**
+  A random term with one column was read as an intercept wherever the bar
+  was evaluated afresh, so its effect was applied whatever a row's x:
+  - `predict(newdata = )` gave 1.47, -0.59 and 0.82 where lme4 gives 1.06,
+    2.97 and 1.03, and differed from `predict()` on the same rows;
+  - the population average of a Poisson model at x = 2 was 1.85 where the
+    exact value is 8.39;
+  - `ilm_matrices()` gave the term's design as 1 rather than x;
+  - a power scaffold with a slope-only term simulated a random intercept.
+  The same was true of `(1 | g) + (0 + x | g)`.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
