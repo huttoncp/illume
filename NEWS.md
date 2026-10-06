@@ -30,6 +30,15 @@
   parametric bootstraps through `ilm_refit()`, `ilm_pb_lrt()` and
   `ilm_consistency()`. Random effects of groups are still drawn afresh, as a
   new sample of groups.
+* **`ilm_impute()` keeps an imputed column's type and values.** A binary or
+  categorical draw was written into a numeric 0/1, logical or character
+  column as its factor codes: a 0/1 column came back holding 2s, a logical
+  one as integers, a character one with new categories "1", "2" and "3";
+  the pooled coefficient of an imputed binary was 0.53 against 1.02 on the
+  full data (now 0.98). A binary coded 1/2 is modelled as the two categories
+  it holds, where its model used to fail and leave random starting draws in
+  place without a word (pooled 0.53 against 0.98; now 0.90). An imputation
+  model that still cannot be fitted is named in a warning.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
