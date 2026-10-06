@@ -60,6 +60,17 @@
   - `ilm_matrices()` gave the term's design as 1 rather than x;
   - a power scaffold with a slope-only term simulated a random intercept.
   The same was true of `(1 | g) + (0 + x | g)`.
+* **`ilm_did()` takes `treat_time` in the time column's own values.** A
+  character, factor or `Date` time was worked on as the codes 1, 2, ... of
+  its periods, and `treat_time` was compared with those codes: a character
+  year `"2005"` started the treatment at the wrong period without a word
+  (ATT 0.746 with `$treat_time` 3, where the answer is 0.725), and `2005`
+  or a `Date` stopped with a misleading "not separable" error. `treat_time`
+  is now looked up among the time's values (`2005` and `"2005"` both match a
+  character year), a value that is not a period is refused with the values it
+  could be, and so is one that leaves no period before it or none from it on.
+  The reported start, `$treat_time` and `$first_treat` are on the time's own
+  scale.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and

@@ -48,6 +48,37 @@ ilm_did_binary <- function(v, nm) {
   as.integer(v)
 }
 
+## `treat_time` on the scale ilm_did() works on. A numeric time is compared
+## directly. Any other time (character, factor, Date) is worked on as the codes
+## of its ordered values, so treat_time is looked up among those values and its
+## code returned: comparing it with the codes themselves put a character
+## "2005" after code 3 and so started the treatment at the wrong period.
+#' @keywords internal
+#' @noRd
+ilm_did_treat_code <- function(treat_time, tv, tvals, time) {
+  if (length(treat_time) != 1L || is.na(treat_time))
+    stop("`treat_time` must be a single period; it has length ",
+         length(treat_time), call. = FALSE)
+  if (is.null(tvals)) {
+    if (!is.numeric(treat_time))
+      stop("`treat_time` must be a number, as `", time, "` is; it is ",
+           class(treat_time)[1], call. = FALSE)
+    k <- treat_time; tu <- sort(unique(tv))
+  } else {
+    k <- match(as.character(treat_time), as.character(tvals))
+    if (is.na(k))
+      stop("`treat_time` = ", format(treat_time), " is not one of `", time,
+           "`'s values (", paste(utils::head(format(tvals), 6), collapse = ", "),
+           if (length(tvals) > 6L) ", ..." else "", ")", call. = FALSE)
+    tu <- seq_along(tvals)
+  }
+  if (!any(tu < k) || !any(tu >= k))
+    stop("`treat_time` = ", format(treat_time), " leaves no period ",
+         if (!any(tu >= k)) "at or after it" else "before it",
+         ", so there is no change to compare", call. = FALSE)
+  k
+}
+
 #' Difference in differences
 #'
 #' Estimates the effect of a treatment that switches on for some units at some
@@ -116,7 +147,11 @@ ilm_did_binary <- function(v, nm) {
 #'   given.
 #' @param post Column marking periods after treatment starts. Omit when
 #'   `treat_time` or `treatment` is given.
-#' @param treat_time First treated period, when `post` is not supplied.
+#' @param treat_time First treated period, when `post` is not supplied: one of
+#'   `time`'s own values. A number for a numeric time; for any other time, a
+#'   value matching one of its values, so `2005` or `"2005"` for a character
+#'   year and a `Date` (or `"2004-01-01"`) for a `Date`. Periods are ordered as
+#'   `time` orders: a factor by its levels, anything else by sorting.
 #' @param treatment Per-row treatment indicator, as an alternative to
 #'   `treated` and `post`. Staggered timing is detected from it.
 #' @param covariates Further columns for the mean structure. These must be
@@ -130,7 +165,8 @@ ilm_did_binary <- function(v, nm) {
 #' @param verbose Narrate each step.
 #' @param ... Passed to [ilm_model()].
 #' @return An object of class `"ilm_did"`: `att`, `fit`, `parallel`, `event`
-#'   and the settings used.
+#'   and the settings used. `treat_time` and `first_treat` are on `time`'s own
+#'   scale.
 #' @references
 #' Bertrand, M., Duflo, E. and Mullainathan, S. (2004). How much should we
 #' trust differences-in-differences estimates? Quarterly Journal of Economics
@@ -167,6 +203,12 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
   tv <- d[[time]]
   tnum <- if (is.numeric(tv)) tv else as.integer(factor(tv))
   d$.time_num <- tnum
+  ## a non-numeric time is worked on as the codes 1, 2, ... of its ordered
+  ## values; tvals turns a code back into the time's own value, so that
+  ## treat_time is matched, and the start reported, on the user's scale
+  tvals <- if (is.numeric(tv)) NULL else if (is.factor(tv)) levels(droplevels(tv))
+           else sort(unique(tv))
+  tlab <- function(k) if (is.null(tvals)) k else tvals[k]
 
   say("== difference in differences ==")
   say("[1/5] design")
@@ -195,7 +237,8 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
            "together with `post` or `treat_time`", call. = FALSE)
     d$.treated <- ilm_did_binary(d[[treated]], treated)
     if (!is.null(post)) d$.post <- ilm_did_binary(d[[post]], post)
-    else if (!is.null(treat_time)) d$.post <- as.integer(d$.time_num >= treat_time)
+    else if (!is.null(treat_time))
+      d$.post <- as.integer(d$.time_num >= ilm_did_treat_code(treat_time, tv, tvals, time))
     else stop("give `post` or `treat_time` alongside `treated`", call. = FALSE)
     tt0 <- suppressWarnings(min(d$.time_num[d$.post == 1L]))
     d$.treat <- d$.treated * d$.post
@@ -206,7 +249,7 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
   nco <- length(unique(d[[unit]][d$.treated == 0L]))
   say("  ", nlevels(d[[unit]]), " units over ", nper, " periods: ",
       ntr, " treated, ", nco, " control")
-  say("  treatment starts at ", time, " = ", tt0)
+  say("  treatment starts at ", time, " = ", format(tlab(tt0)))
   if (!ntr || !nco)
     stop("difference in differences needs both treated and control units; ",
          "found ", ntr, " treated and ", nco, " control", call. = FALSE)
@@ -357,9 +400,11 @@ ilm_did <- function(data, y, unit, time, treated = NULL, post = NULL,
 
   structure(list(att = att, fit = fit, parallel = par_res, event = ev,
                  y = y, unit = unit, time = time, family = fam,
-                 treat_time = tt0, n_pre = npre, n_treated = ntr,
+                 treat_time = tlab(tt0), n_pre = npre, n_treated = ntr,
                  n_control = nco, staggered = staggered,
-                 first_treat = first_treat, ar = !is.null(arspec),
+                 first_treat = if (is.null(first_treat) || is.null(tvals)) first_treat
+                               else stats::setNames(tlab(first_treat), names(first_treat)),
+                 ar = !is.null(arspec),
                  data = d),
             class = "ilm_did")
 }
