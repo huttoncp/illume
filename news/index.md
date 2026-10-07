@@ -66,6 +66,13 @@
   display file the two packages share, so illume now needs illumex
   0.0.8.9003.
 
+- The ends of a share in
+  [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)’s
+  prose: above 0.999 it reads “over 99.9%” and below 0.001 “under 0.1%”,
+  where “over 99%” and “under 1%” began at 0.995 and 0.005; between, it
+  is printed to three figures. A share of exactly 1 or 0 prints as 100%
+  or 0%, where it read “over 99%” or “under 1%”.
+
 - [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
   writes each number by what it is. An estimate has three significant
   figures with its trailing zeros (1.10, 0.610, 42.0, and a share of
