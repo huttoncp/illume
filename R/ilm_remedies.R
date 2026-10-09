@@ -15,17 +15,41 @@
 ##               zero removed, a covariance of lower rank, a dispersion or
 ##               zero part, a penalty that keeps a covariance off its edge,
 ##               REML in place of ML
-## Remedies can also come from another package's diagnostics, through
-## ilm_remedy_table(); they are applied the same way, and the tiers mean the
-## same thing there.
 ##   estimand    a change to what the fixed effects estimate, or to what their
 ##               standard errors account for: a random effect whose variance
 ##               is not zero removed, categories merged, levels pooled
+## Remedies can also come from another package's diagnostics, through
+## ilm_remedy_table(); they are applied the same way, and the tiers mean the
+## same thing there.
 ## The tier is for whoever decides which remedies may be tried without being
-## asked: the person running the analysis (NEXT-SESSION, item 3).
-## ilm_apply_remedy() applies whichever remedy it is given.
+## asked: the person running the analysis. ilm_apply_remedy() applies
+## whichever remedy it is given.
+##
+## Each remedy also has a KEY, `kind/target`, which names the change itself
+## and not the check that asked for it: one remedy often answers several
+## checks, and an id is renumbered whenever tables are combined or a
+## standalone check is included. A script that applies "drop/g" applies the
+## same remedy under the next version or another combination, or stops. The
+## target is the term as the fit names it -- as its checks name it -- since a
+## nested (1 | a/b) is two terms from one written bar. A change that can be
+## read off its arguments alone takes its key from them (ilm_rem_args_key()),
+## so the same change has the same key whichever package lists it.
+##
+## The generics, c(), print() and the table's assembly are illumex's, shared
+## with its data checks; illume supplies the methods for a fitted model.
 
 ilm_rem_tiers <- c("numerical", "structural", "estimand")
+
+## what print() says under a model's table, and in place of a change for a
+## remedy made by hand
+ilm_rem_tier_note <- paste0(
+  "Refit with one by ilm_apply_remedy(fit, <this list>, id or key). ",
+  "Numerical is the same model fitted harder; structural changes the ",
+  "random-effect or variance structure, or how the variances are ",
+  "estimated, and not what the fixed effects mean; ",
+  "estimand changes what they estimate or what their standard errors ",
+  "account for, so apply one of those only by choice.")
+ilm_rem_by_hand <- "by hand: not something a refit can do"
 
 ## the checks that have a rule below, by the name before any `[term]`
 ilm_rem_known <- c("category_counts", "weights_type", "re_levels",
@@ -35,13 +59,46 @@ ilm_rem_known <- c("category_counts", "weights_type", "re_levels",
                    "rho_boundary", "dispersion_limit", "parameter_aliasing",
                    "separation")
 
-## one remedy: its tier, what it does in words, and the ilm_model() arguments
-## that make it -- NULL when it has to be done by hand
+## one remedy: its tier, what it does in words, the ilm_model() arguments
+## that make it -- NULL when it has to be done by hand -- and its key, which
+## a change read off its arguments need not be given
 #' @keywords internal
 #' @noRd
-ilm_rem <- function(tier, remedy, args = NULL) {
+ilm_rem <- function(tier, remedy, args = NULL, key = NULL) {
   if (!tier %in% ilm_rem_tiers) stop("internal: unknown remedy tier ", tier)
-  list(tier = tier, remedy = remedy, args = args)
+  if (is.null(key)) key <- ilm_rem_args_key(args)
+  if (is.null(key)) stop("internal: a remedy without a key: ", remedy)
+  list(tier = tier, remedy = remedy, args = args, key = key)
+}
+
+## The key of a change that says what it is by its arguments alone, or NULL.
+## illume's own rules and another package's table both key these changes
+## here, so c() lists a change both name once, as it did when changes were
+## matched by their text.
+#' @keywords internal
+#' @noRd
+ilm_rem_args_key <- function(args) {
+  if (is.null(args) || !length(args)) return(NULL)
+  nm <- sort(names(args))
+  one <- function(v) is.character(v) && length(v) == 1L && !is.na(v)
+  rhs <- function(f) paste(deparse(f[[length(f)]], width.cutoff = 500L), collapse = " ")
+  if (identical(nm, "restarts")) return(illumex::ilm_remedy_key("restarts", "optimiser"))
+  if (identical(nm, "boundary") && one(args$boundary))
+    return(illumex::ilm_remedy_key("boundary", args$boundary))
+  if (identical(nm, "family") && one(args$family))
+    return(illumex::ilm_remedy_key("family", args$family))
+  if (identical(nm, "reml") && is.logical(args$reml))
+    return(illumex::ilm_remedy_key("reml", if (isTRUE(args$reml)) "on" else "off"))
+  if (identical(nm, "dispformula") && inherits(args$dispformula, "formula"))
+    return(illumex::ilm_remedy_key("disp", rhs(args$dispformula)))
+  if (all(nm %in% c("ziformula", "zi_type")) && inherits(args$ziformula, "formula")) {
+    ty <- if (is.null(args$zi_type)) "inflated" else args$zi_type
+    r <- rhs(args$ziformula)
+    return(illumex::ilm_remedy_key("zi", ty, if (r != "1") r))
+  }
+  if (identical(nm, "ar") && is.null(args$ar))
+    return(illumex::ilm_remedy_key("drop", "ar"))
+  NULL
 }
 
 ## ---- reading the fit ----------------------------------------------------------
@@ -208,7 +265,8 @@ ilm_rem_drop <- function(fit, term) {
     sprintf("drop '%s': its variance is estimated at zero, so the fixed effects are the same without it and their standard errors barely move. Keep it instead if the design calls for it -- repeated measures, say -- since a zero estimate is not evidence of no clustering", term)
   else sprintf("drop '%s' from the model. Its variance is not zero, so the standard errors stop accounting for the grouping, and for a non-gaussian response the fixed effects change meaning", term)
   ilm_rem(if (at_zero) "structural" else "estimand", why,
-          if (is.null(fo)) NULL else list(formula = fo))
+          if (is.null(fo)) NULL else list(formula = fo),
+          illumex::ilm_remedy_key("drop", term))
 }
 
 ## keep a grouping term's intercept and remove its random slopes, which is no
@@ -228,7 +286,8 @@ ilm_rem_noslope <- function(fit, term) {
     sprintf("remove the random slope of '%s' and keep its random intercept: the slope variance is estimated at zero, so the fit is the same without it", term)
   else sprintf("remove the random slope of '%s' and keep its random intercept. The slope variance is not zero, so the standard error of the fixed slope then understates its uncertainty", term)
   list(ilm_rem(if (at_zero) "structural" else "estimand", why,
-               if (is.null(fo)) NULL else list(formula = fo)))
+               if (is.null(fo)) NULL else list(formula = fo),
+               illumex::ilm_remedy_key("noslope", term)))
 }
 
 #' @keywords internal
@@ -238,7 +297,8 @@ ilm_rem_dcor <- function(fit, term) {
   if (fit$re[[term]]$d < 2L || isFALSE(s$d_cor)) return(list())
   list(ilm_rem("structural",
     sprintf("drop the correlation between the intercept and the slope of '%s' (d_cor = FALSE), keeping both variances", term),
-    list(re_struct = ilm_rem_struct(fit, term, list(d_cor = FALSE)))))
+    list(re_struct = ilm_rem_struct(fit, term, list(d_cor = FALSE))),
+    illumex::ilm_remedy_key("nocor", term)))
 }
 
 #' @keywords internal
@@ -246,7 +306,7 @@ ilm_rem_dcor <- function(fit, term) {
 ilm_rem_pool <- function(term)
   ilm_rem("estimand", sprintf(
     "pool levels of '%s' that belong together, so that each level carries more observations; the grouping then means something different, so choose the pooling by what the levels are",
-    term))
+    term), key = illumex::ilm_remedy_key("pool", term))
 
 ## ---- the rules -----------------------------------------------------------------
 
@@ -262,7 +322,7 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
   if (!base %in% ilm_rem_known)
     ## a check this file does not know yet: its own words, done by hand, and
     ## never tried without being asked
-    return(list(ilm_rem("estimand", suggestion)))
+    return(list(ilm_rem("estimand", suggestion, key = illumex::ilm_remedy_key("advice", check))))
   switch(base,
 
   category_counts = {
@@ -271,7 +331,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     k <- which.min(tabc)
     list(ilm_rem("estimand", sprintf(
       "merge the rarest category, '%s' (%g of %g), with another before refitting. The model then describes a different outcome, so choose the merge by what the categories mean",
-      fit$ylevels[k], tabc[k], sum(tabc))))
+      fit$ylevels[k], tabc[k], sum(tabc)),
+      key = illumex::ilm_remedy_key("merge_category", fit$ylevels[k])))
   },
 
   weights_type = list(ilm_rem("estimand", paste0(
@@ -280,7 +341,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     "ilm_design(weights = , ids = , strata = ) and read the standard errors ",
     "from ilm_svy_coef() -- which needs the clusters and strata, which only ",
     "you know",
-    if (length(ilm_rem_groups(fit))) ", and refuses a model with random effects" else ""))),
+    if (length(ilm_rem_groups(fit))) ", and refuses a model with random effects" else ""),
+    key = illumex::ilm_remedy_key("weights", "declare"))),
 
   re_levels = {
     e <- fit$re[[term]]; s <- fit$re_struct[[term]]; out <- list()
@@ -289,13 +351,15 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
       out <- list(ilm_rem("structural", sprintf(
         "give '%s' a reduced-rank category covariance, rr(%d): %d parameters instead of %d",
         term, r, ilm_nrr(C, r), ilm_str_npar(s, C)),
-        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = r)))))
+        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = r))),
+        illumex::ilm_remedy_key("rank", term, r)))
     } else if (C >= 2L && isTRUE(s$rank > 1L)) {
       r <- max(1L, min(s$rank - 1L, ilm_rec_rank(C, e$nl)))
       out <- list(ilm_rem("structural", sprintf(
         "lower the rank of the category covariance of '%s' from %d to %d",
         term, s$rank, r),
-        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = r)))))
+        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = r))),
+        illumex::ilm_remedy_key("rank", term, r)))
     }
     c(out, ilm_rem_dcor(fit, term), ilm_rem_noslope(fit, term),
       list(ilm_rem_pool(term), ilm_rem_drop(fit, term)))
@@ -306,7 +370,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
   latent_budget = {
     lat <- ilm_rem_latent(fit); big <- names(lat)[which.max(lat)]
     if (identical(big, "ar")) list(
-      ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value"),
+      ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value",
+              key = illumex::ilm_remedy_key("coarsen", "ar")),
       ilm_rem("estimand", "drop the AR term: the correlation over time is then not modelled, and the standard errors stop accounting for it",
               list(ar = NULL)))
     else {
@@ -318,21 +383,25 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
         out <- list(ilm_rem("structural", sprintf(
           "give '%s', the term with the most latent values, a category covariance of rank %d (rr(%d)), which cuts its latent values from %d to %d",
           big, keep, keep, as.integer(lat[[big]]), as.integer(e$nl * e$d * keep)),
-          list(re_struct = ilm_rem_struct(fit, big, list(type = "rr", rank = keep)))))
+          list(re_struct = ilm_rem_struct(fit, big, list(type = "rr", rank = keep))),
+          illumex::ilm_remedy_key("rank", big, keep)))
       if (identical(e$kind, "basis"))
         c(out, list(ilm_rem("structural", sprintf(
-          "lower the basis dimension k of the smooth '%s', which has the most latent values", big))))
+          "lower the basis dimension k of the smooth '%s', which has the most latent values", big),
+          key = illumex::ilm_remedy_key("basis", big))))
       else c(out, ilm_rem_noslope(fit, big),
              list(ilm_rem_pool(big), ilm_rem_drop(fit, big)))
     }
   },
 
   obs_per_ar_latent = list(
-    ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value"),
+    ilm_rem("structural", "coarsen the time grid given to the AR term, so that several observations share each latent value",
+            key = illumex::ilm_remedy_key("coarsen", "ar")),
     ## s(time) describes the past and does not forecast: beyond the data a
     ## smooth runs on its last slope, where a correlated process reverts,
     ## so it is offered as a description only
-    ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts")),
+    ilm_rem("estimand", "to DESCRIBE the past only, not to forecast: replace the AR term with a smooth of time, s(time), plus a random slope on time for the group -- a trend and each group's departure from it in place of a correlated process. Beyond the data a smooth runs on at its last slope, so do not use it for forecasts",
+            key = illumex::ilm_remedy_key("smooth_time", "ar"))),
 
   ## where every start broke down, more restarts from the same place is
   ## advice the fit has already taken
@@ -342,7 +411,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
 
   gradient = c(ilm_rem_rescale(fit),
     if (!isTRUE(fit$opt$all_starts)) list(ilm_rem_restarts(fit)),
-    list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
+    list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term",
+                 key = illumex::ilm_remedy_key("simplify", "random_effects")))),
 
   hessian = if (status == "BOUNDARY") {
     held <- intersect(fit$hessian_held, ilm_rem_groups(fit))
@@ -355,7 +425,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
                   function(h) ilm_rem_drop(fit, h)),
            ilm_rem_avoid(fit))
   } else c(ilm_rem_rescale(fit), list(ilm_rem_restarts(fit)), ilm_rem_avoid(fit),
-           list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term"))),
+           list(ilm_rem("structural", "simplify the random-effect structure; the other checks that are not OK name the term",
+                 key = illumex::ilm_remedy_key("simplify", "random_effects")))),
 
   variance_boundary = {
     zero <- Filter(function(h) ilm_rem_at_zero(fit, h), ilm_rem_groups(fit))
@@ -381,15 +452,17 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
       fo <- ilm_rem_formula(fit, term, v)
       list(ilm_rem("structural", sprintf(
         "replace '%s' with %s: the smooth was shrunk to a straight line in %s, so this is the same fit with one parameter fewer",
-        term, v, v), if (is.null(fo)) NULL else list(formula = fo)))
+        term, v, v), if (is.null(fo)) NULL else list(formula = fo),
+        illumex::ilm_remedy_key("linear", term)))
     } else if (!is.null(t) && identical(nx, 0L)) {
       fo <- ilm_rem_formula(fit, term)
       list(ilm_rem("structural", sprintf(
         "drop '%s': it was shrunk to nothing and has no unpenalised part, so this is the same fit without it",
-        term), if (is.null(fo)) NULL else list(formula = fo)))
+        term), if (is.null(fo)) NULL else list(formula = fo),
+        illumex::ilm_remedy_key("drop", term)))
     } else list(ilm_rem("structural", sprintf(
       "replace the smooth that '%s' belongs to with its unpenalised part, the only part of it these data support",
-      term)))
+      term), key = illumex::ilm_remedy_key("unpenalised", term)))
   },
 
   sigma_rank = {
@@ -404,7 +477,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
         term, eff, eff, ilm_str_label(s),
         if (cur - eff > 1L) "directions" else "direction",
         if (cur - eff > 1L) "have" else "has"),
-        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = eff))))),
+        list(re_struct = ilm_rem_struct(fit, term, list(type = "rr", rank = eff))),
+        illumex::ilm_remedy_key("rank", term, eff))),
       ilm_rem_avoid(fit))
   },
 
@@ -427,10 +501,11 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
   else list(ilm_rem("structural", paste0(
       "look at the term absorbing the variation: coarsen a correlation over ",
       "time to a grid several observations share, or drop a random effect ",
-      "with one observation per level"))),
+      "with one observation per level"), key = illumex::ilm_remedy_key("inspect", "dispersion"))),
 
   rho_boundary = list(
-    ilm_rem("structural", "coarsen the time grid given to the AR term, so that neighbouring observations share a latent value"),
+    ilm_rem("structural", "coarsen the time grid given to the AR term, so that neighbouring observations share a latent value",
+            key = illumex::ilm_remedy_key("coarsen", "ar")),
     ilm_rem("estimand", "drop the AR term: the correlation over time is then not modelled, and the standard errors stop accounting for it",
             list(ar = NULL))),
 
@@ -441,10 +516,13 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
       ilm_rem("estimand", if (!is.null(lv))
         sprintf("merge '%s' with a neighbouring level of %s, or drop its rows: the level whose outcome does not vary then has a coefficient that can be estimated, or none",
                 lv$level, lv$term)
-        else "merge the level whose outcome does not vary with a neighbouring one, or drop its rows"),
+        else "merge the level whose outcome does not vary with a neighbouring one, or drop its rows",
+        key = if (!is.null(lv)) illumex::ilm_remedy_key("merge_level", lv$term, lv$level)
+              else illumex::ilm_remedy_key("merge_level", "separated")),
       ilm_rem("structural", if (!is.null(lv))
         sprintf("remove %s from the model, if its effect is not the question", lv$term)
-        else "remove the term whose coefficient runs off, if its effect is not the question"))
+        else "remove the term whose coefficient runs off, if its effect is not the question",
+        key = illumex::ilm_remedy_key("remove", if (!is.null(lv)) lv$term else "separated")))
   },
 
   parameter_aliasing = {
@@ -453,7 +531,8 @@ ilm_rem_rules <- function(fit, check, status, detail = "", suggestion = "") {
     pair <- if (grepl("\\(.*<->.*\\)$", detail)) sub("^[^(]*\\((.*)\\)$", "\\1", detail) else ""
     list(ilm_rem("structural", paste0(
       "remove one of the two terms whose parameters these data cannot separate",
-      if (nzchar(pair)) paste0(" (", pair, ")") else "")))
+      if (nzchar(pair)) paste0(" (", pair, ")") else ""),
+      key = illumex::ilm_remedy_key("unalias", if (nzchar(pair)) pair else "terms")))
   })
 }
 
@@ -479,9 +558,11 @@ ilm_rem_standalone <- function(fit, which, res) {
       "refit as a negative binomial, family = \"nbinom\", whose variance can exceed its mean: the coefficients keep their meaning, and the standard errors take the extra variation into account",
       list(family = "nbinom"))),
     if (identical(fam, "binomial")) list(ilm_rem("structural",
-      "with several trials per row, add a random effect for each row -- a row identifier as a grouping factor, (1 | row) -- to take up variation between rows")),
+      "with several trials per row, add a random effect for each row -- a row identifier as a grouping factor, (1 | row) -- to take up variation between rows",
+      key = illumex::ilm_remedy_key("row_effect", "rows"))),
     list(ilm_rem("estimand",
-      "look for a predictor the model leaves out, which makes a response look more variable than its family allows; ilm_check_omitted() tests candidates"))),
+      "look for a predictor the model leaves out, which makes a response look more variable than its family allows; ilm_check_omitted() tests candidates",
+      key = illumex::ilm_remedy_key("omitted", "predictor")))),
 
   zeros = if (is.null(fit$Zzi)) list(
     ilm_rem("structural",
@@ -492,9 +573,11 @@ ilm_rem_standalone <- function(fit, which, res) {
       list(ziformula = stats::as.formula("~ 1", env = environment(fit$formula)),
            zi_type = "hurdle")),
     ilm_rem("structural",
-      "let the excess-zero probability depend on a predictor thought to drive it: ziformula = ~ x"))
+      "let the excess-zero probability depend on a predictor thought to drive it: ziformula = ~ x",
+      key = illumex::ilm_remedy_key("zi", "predictor")))
   else list(ilm_rem("structural",
-    "let the zero part depend on a predictor thought to drive the excess: a ziformula with that predictor in it")),
+    "let the zero part depend on a predictor thought to drive the excess: a ziformula with that predictor in it",
+    key = illumex::ilm_remedy_key("zi", "predictor"))),
 
   variance = {
     out <- list()
@@ -506,14 +589,16 @@ ilm_rem_standalone <- function(fit, which, res) {
         "refit as a negative binomial, family = \"nbinom\", whose variance grows faster than its mean",
         list(family = "nbinom")))
       else list(ilm_rem("structural",
-        "use a family whose variance grows with its mean")))
+        "use a family whose variance grows with its mean",
+        key = illumex::ilm_remedy_key("family", "variance"))))
     if (isTRUE(res$p_ratio < 0.05)) {
       col <- if (is.null(res$by)) NA_character_ else res$by
       out <- c(out, if (has_disp && !is.na(col)) list(ilm_rem("structural",
         sprintf("give each level of %s its own spread, dispformula = ~ %s", col, ilm_bq(col)),
         list(dispformula = disp_add(ilm_bq(col)))))
       else list(ilm_rem("structural",
-        "give each group its own spread, with a dispersion formula in the variable that defines the groups")))
+        "give each group its own spread, with a dispersion formula in the variable that defines the groups",
+        key = illumex::ilm_remedy_key("disp", "groups"))))
     }
     out
   })
@@ -567,23 +652,33 @@ ilm_rem_change <- function(args) {
 #' what they mean -- and those have no `change`. A remedy is a candidate, not
 #' a cure: refit, and read the checks of the new fit.
 #'
-#' `ilm_remedies()` is a generic. Another package whose diagnostics name
-#' remedies that are refits of an illume model gives its own results a
-#' method, built with [ilm_remedy_table()], and [ilm_apply_remedy()] applies
-#' them as it applies these.
+#' @section Keys:
+#' Each remedy also has a `key`, `kind/target`, naming the change itself:
+#' `"drop/g"` removes the grouping term `g`, `"family/nbinom"` refits as a
+#' negative binomial, `"rank/g:2"` gives `g` a category covariance of rank 2.
+#' The target is the term as the fit's checks name it. The `id` numbers the
+#' rows of one table and changes when tables are combined with `c()` or a
+#' standalone check is included; the key does not, so a script that gives
+#' [ilm_apply_remedy()] a key makes the same remedy in another session, or
+#' stops if the fit no longer calls for it.
 #'
-#' @param object A fitted `"ilm_model"` object, or a result whose package
-#'   gives `ilm_remedies()` a method.
+#' `ilm_remedies()` is a generic, shared with 'illumex', whose data checks
+#' list remedies to data in the same table. Another package whose
+#' diagnostics name remedies that are refits of an illume model gives its
+#' own results a method, built with [ilm_remedy_table()], and
+#' [ilm_apply_remedy()] applies them as it applies these.
+#'
+#' @param object A fitted `"ilm_model"` object.
 #' @param dispersion,zeros,variance Optional results of
 #'   [ilm_check_dispersion()], [ilm_check_zeros()] and
 #'   [ilm_check_variance()] run on `object`, whose remedies are then listed
 #'   too.
-#' @param ... Arguments for methods.
+#' @param ... Unused.
 #' @return A data frame of class `"ilm_remedies"`, one row per remedy, with
-#'   `id`, the `check` (or checks) it answers and its `status`, the `tier`,
-#'   the `remedy` in words, and the `change`: the [ilm_model()] arguments that
-#'   make it, as code, or `""` when it is made by hand. An empty data frame
-#'   when every check is OK.
+#'   `id`, `key`, the `check` (or checks) it answers and its `status`, the
+#'   `tier`, the `remedy` in words, and the `change`: the [ilm_model()]
+#'   arguments that make it, as code, or `""` when it is made by hand. An
+#'   empty data frame when every check is OK.
 #' @seealso [ilm_apply_remedy()] to refit with one, [summary.ilm_model()] for
 #'   the checks themselves, [ilm_remedy_table()] for remedies from another
 #'   package's diagnostics.
@@ -596,18 +691,7 @@ ilm_rem_change <- function(args) {
 #' d$y <- 1 + 0.5 * d$x + d$e - ave(d$e, d$g)
 #' f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 #' ilm_remedies(f)
-#' @export
-ilm_remedies <- function(object, ...) UseMethod("ilm_remedies")
-
-#' @rdname ilm_remedies
-#' @export
-ilm_remedies.default <- function(object, ...)
-  stop("`object` must be a fitted ilm_model object, or a result whose ",
-       "package gives ilm_remedies() a method, not ", class(object)[1], ".",
-       call. = FALSE)
-
-#' @rdname ilm_remedies
-#' @export
+#' @exportS3Method illumex::ilm_remedies
 ilm_remedies.ilm_model <- function(object, dispersion = NULL, zeros = NULL,
                                    variance = NULL, ...) {
   rows <- list()
@@ -632,54 +716,20 @@ ilm_remedies.ilm_model <- function(object, dispersion = NULL, zeros = NULL,
   ilm_rem_assemble(object, rows)
 }
 
-## The table from its rows -- each a list of check, status, tier, remedy and
-## args -- for ilm_remedies() and ilm_remedy_table() alike, so a remedy from
-## another package is listed, merged, ordered and tied to its fit exactly as
-## illume's own are.
+## The table from its rows -- each a list of check, status, tier, remedy,
+## key and args -- for ilm_remedies() and ilm_remedy_table() alike, through
+## illumex's assembly, so a remedy from another package is listed, merged,
+## ordered and tied to its fit exactly as illume's own are.
 #' @keywords internal
 #' @noRd
-ilm_rem_assemble <- function(object, rows, fit_id = ilm_rem_id(object)) {
-  if (length(rows)) {
-    tab <- data.frame(
-      check  = vapply(rows, `[[`, "", "check"),
-      status = vapply(rows, `[[`, "", "status"),
-      tier   = vapply(rows, `[[`, "", "tier"),
-      remedy = vapply(rows, `[[`, "", "remedy"),
-      change = vapply(rows, function(r) ilm_rem_change(r$args), ""),
-      stringsAsFactors = FALSE)
-    args <- lapply(rows, `[[`, "args")
-    ## One remedy answering several checks is listed once: more restarts for
-    ## the optimiser and the gradient, the penalty for every term at its edge.
-    ## A check named twice -- two lists of the same fit combined -- is named
-    ## once, and a change two sources put in different tiers takes the more
-    ## cautious: the tier says what may be tried without asking.
-    key <- ifelse(nzchar(tab$change), tab$change, tab$remedy)
-    first <- !duplicated(key)
-    for (k in which(first)) {
-      same <- which(key == key[k])
-      ck <- unlist(strsplit(tab$check[same], ", ", fixed = TRUE))
-      st <- unlist(strsplit(tab$status[same], ", ", fixed = TRUE))
-      keep <- !duplicated(ck)
-      tab$check[k] <- paste(ck[keep], collapse = ", ")
-      tab$status[k] <- paste(st[keep], collapse = ", ")
-      tab$tier[k] <- ilm_rem_tiers[max(match(tab$tier[same], ilm_rem_tiers))]
-    }
-    tab <- tab[first, , drop = FALSE]; args <- args[first]
-    o <- order(match(tab$tier, ilm_rem_tiers), seq_len(nrow(tab)))
-    tab <- tab[o, , drop = FALSE]; args <- args[o]
-  } else {
-    tab <- data.frame(check = character(0), status = character(0),
-                      tier = character(0), remedy = character(0),
-                      change = character(0), stringsAsFactors = FALSE)
-    args <- list()
-  }
-  tab <- cbind(id = seq_len(nrow(tab)), tab)
-  rownames(tab) <- NULL
-  ## keyed by id, not position: a subset of the rows keeps the attribute
-  ## whole, and must not hand row 3's remedy the arguments of row 1
-  names(args) <- as.character(tab$id)
-  structure(tab, class = c("ilm_remedies", "data.frame"), args = args,
-            fit_id = fit_id)
+ilm_rem_assemble <- function(object, rows) {
+  rows <- lapply(rows, function(r)
+    list(check = r$check, status = r$status, tier = r$tier, remedy = r$remedy,
+         key = r$key, change = ilm_rem_change(r$args), payload = r$args))
+  illumex::ilm_remedy_assemble(rows, target_id = ilm_rem_id(object),
+                               tiers = ilm_rem_tiers,
+                               tier_note = ilm_rem_tier_note,
+                               by_hand = ilm_rem_by_hand)
 }
 
 ## what a check can say when it names a remedy: an OK check names none
@@ -711,6 +761,9 @@ ilm_rem_statuses <- c("WARN", "FAIL", "BOUNDARY", "INCONCLUSIVE")
 #' make. List it by hand, with `args = NULL` for its row, or leave it to the
 #' package's own output.
 #'
+#' `ilm_remedy_table()` is a generic, shared with 'illumex'; this is its
+#' method for a fitted model.
+#'
 #' @param object The fitted `"ilm_model"` the remedies would refit.
 #' @param check Character: the name of the check each remedy answers. Not one
 #'   of the fit's own checks, nor an `ilm_check_` name -- those are
@@ -726,6 +779,14 @@ ilm_rem_statuses <- c("WARN", "FAIL", "BOUNDARY", "INCONCLUSIVE")
 #'   hand. `NULL` makes every row by hand. The data and `verbose` are not
 #'   arguments a remedy sets. A formula is evaluated where the model's own
 #'   formula was written, so names in it mean what they mean there.
+#' @param key Optional character, one per row: each remedy's key, `kind/target`
+#'   as [illumex::ilm_remedy_key()] builds it. By default a change that says
+#'   what it is by its arguments -- a family, a zero part, a dispersion
+#'   formula -- takes the key illume gives the same change, so `c()` lists
+#'   it once; any other refit takes `"change/"` and its change, and a remedy
+#'   made by hand takes `"by_hand/"` and its check, numbered when one check
+#'   has several.
+#' @param ... Unused.
 #' @return A data frame of class `"ilm_remedies"`, as from [ilm_remedies()].
 #' @seealso [ilm_remedies()], [ilm_apply_remedy()].
 #' @examples
@@ -739,12 +800,15 @@ ilm_rem_statuses <- c("WARN", "FAIL", "BOUNDARY", "INCONCLUSIVE")
 #'   remedy = "the intervals are too narrow: refit as a negative binomial",
 #'   args = list(list(family = "nbinom")))
 #' rem
-#' f2 <- ilm_apply_remedy(f, rem, 1)
-#' @export
-ilm_remedy_table <- function(object, check, status, tier, remedy, args = NULL) {
-  if (!inherits(object, "ilm_model"))
-    stop("`object` must be the fitted ilm_model object the remedies would ",
-         "refit, not ", class(object)[1], ".", call. = FALSE)
+#' f2 <- ilm_apply_remedy(f, rem, "family/nbinom")
+#'
+#' ## one list, illume's remedies and the other package's together: tables
+#' ## for the same fit combine with c(), numbered afresh, a change several
+#' ## lists name listed once
+#' c(ilm_remedies(f), rem)
+#' @exportS3Method illumex::ilm_remedy_table
+ilm_remedy_table.ilm_model <- function(object, check, status, tier, remedy,
+                                       args = NULL, key = NULL, ...) {
   txt <- list(check = check, status = status, tier = tier, remedy = remedy)
   for (nm in names(txt)) {
     v <- txt[[nm]]
@@ -777,6 +841,10 @@ ilm_remedy_table <- function(object, check, status, tier, remedy, args = NULL) {
     stop("`check` names a check of illume's own (", paste(unique(bad), collapse = ", "),
          "): its remedies come from ilm_remedies(). Name the check that ",
          "found the problem.", call. = FALSE)
+  if (!is.null(key) && (!is.character(key) || length(key) != n || anyNA(key) ||
+                        !all(grepl("^[^/]+/.+", key))))
+    stop("`key` must be character, one per remedy, each `kind/target` as ",
+         "ilm_remedy_key() builds it -- or NULL to have them made.", call. = FALSE)
 
   if (is.null(args)) args <- vector("list", n)
   if (!is.list(args) || length(args) != n)
@@ -803,78 +871,21 @@ ilm_remedy_table <- function(object, check, status, tier, remedy, args = NULL) {
       if (inherits(a[[k]], "formula") && !is.null(env)) environment(a[[k]]) <- env
     args[[i]] <- a
   }
+  if (is.null(key)) {
+    hand <- vapply(args, is.null, TRUE)
+    nth <- ave(seq_len(n), check, hand, FUN = seq_along)
+    many <- ave(seq_len(n), check, hand, FUN = length) > 1L
+    key <- vapply(seq_len(n), function(i) {
+      if (hand[i])
+        return(illumex::ilm_remedy_key("by_hand", check[i], if (many[i]) nth[i]))
+      ilm_rem_args_key(args[[i]]) %||%
+        illumex::ilm_remedy_key("change", ilm_rem_change(args[[i]]))
+    }, "")
+  }
   rows <- lapply(seq_len(n), function(i)
     list(check = check[i], status = status[i], tier = tier[i],
-         remedy = remedy[i], args = args[[i]]))
+         remedy = remedy[i], args = args[[i]], key = key[i]))
   ilm_rem_assemble(object, rows)
-}
-
-#' @rdname ilm_remedy_table
-#' @details `c()` combines remedy tables for the same fit -- illume's own
-#'   and other packages' -- into one list, numbered afresh: a change several
-#'   lists name is listed once, with every check that named it, and the
-#'   remedies are ordered by tier as in each list alone. Where two lists put
-#'   one change in different tiers it takes the more cautious. Tables for
-#'   different fits are not combined.
-#' @param ... For `c()`: remedy tables for the same fit, from
-#'   [ilm_remedies()] or `ilm_remedy_table()`.
-#' @examples
-#' ## one list, illume's remedies and the other package's together
-#' c(ilm_remedies(f), rem)
-#' @export
-c.ilm_remedies <- function(...) {
-  tabs <- list(...)
-  tabs <- tabs[!vapply(tabs, is.null, TRUE)]
-  if (!all(vapply(tabs, inherits, TRUE, "ilm_remedies")))
-    stop("only remedy tables, from ilm_remedies() or ilm_remedy_table(), ",
-         "can be combined.", call. = FALSE)
-  ids <- lapply(tabs, attr, "fit_id")
-  if (any(vapply(ids, is.null, TRUE)) ||
-      any(vapply(tabs, function(t) is.null(attr(t, "args")), TRUE)))
-    stop("a remedy table has lost what ties it to its fit, as a subset of it ",
-         "does. Combine the whole tables.", call. = FALSE)
-  if (length(unique(ids)) > 1L)
-    stop("these remedy tables were listed for different fits, and only one ",
-         "fit's remedies can be combined.", call. = FALSE)
-  rows <- list()
-  for (t in tabs) {
-    a <- attr(t, "args")
-    for (i in seq_len(nrow(t)))
-      rows[[length(rows) + 1L]] <- list(
-        check = t$check[i], status = t$status[i], tier = t$tier[i],
-        remedy = t$remedy[i], args = a[[as.character(t$id[i])]])
-  }
-  ilm_rem_assemble(NULL, rows, fit_id = ids[[1L]])
-}
-
-#' @rdname ilm_remedies
-#' @param x An `"ilm_remedies"` object.
-#' @param ... Unused.
-#' @export
-print.ilm_remedies <- function(x, ...) {
-  ## a subset of the columns keeps the class but not what this layout reads,
-  ## and printed as blank headers; it is a plain table, so print it as one
-  if (!all(c("id", "check", "status", "tier", "remedy", "change") %in% names(x)))
-    return(NextMethod())
-  if (!nrow(x)) {
-    cat("No remedies: every check is OK.\n")
-    return(invisible(x))
-  }
-  cat(sprintf("%d remed%s\n\n", nrow(x), if (nrow(x) == 1L) "y" else "ies"))
-  for (i in seq_len(nrow(x))) {
-    cat(sprintf("[%d] %s -- %s (%s)\n", x$id[i], x$tier[i], x$check[i], x$status[i]))
-    cat(ilm_wrap(x$remedy[i], indent = "    "), "\n", sep = "")
-    cat(if (nzchar(x$change[i])) paste0("    change: ", x$change[i])
-        else "    by hand: not something a refit can do", "\n\n", sep = "")
-  }
-  cat(ilm_wrap(paste0(
-    "Refit with one by ilm_apply_remedy(fit, <this list>, id). Numerical is ",
-    "the same model fitted harder; structural changes the ",
-    "random-effect or variance structure, or how the variances are ",
-    "estimated, and not what the fixed effects mean; ",
-    "estimand changes what they estimate or what their standard errors ",
-    "account for, so apply one of those only by choice.")), "\n", sep = "")
-  invisible(x)
 }
 
 #' Refit a model with one of its remedies
@@ -890,14 +901,20 @@ print.ilm_remedies <- function(x, ...) {
 #' would; pass `data` when they are not there, e.g. when the model was fitted
 #' inside a function from a formula written outside it.
 #'
+#' `ilm_apply_remedy()` is a generic, shared with 'illumex', which applies
+#' remedies to data; this is its method for a fitted model.
+#'
 #' @param object A fitted `"ilm_model"` object, from the formula interface.
 #' @param remedies The list from [ilm_remedies()] for `object` that the
 #'   remedy was chosen from -- whether illume's own, or another package's
-#'   built with [ilm_remedy_table()]. Required rather than recomputed, so the remedy
-#'   made is always the one that was read -- a list that includes the
+#'   built with [ilm_remedy_table()]. Required rather than recomputed, so the
+#'   remedy made is always the one that was read.
+#' @param which The remedy to make: its `id` in `remedies`, or its `key`.
+#'   An id numbers the rows of this one list, and a list that includes the
 #'   standalone checks numbers its remedies differently from one that does
-#'   not.
-#' @param which The `id` of the remedy to make.
+#'   not; a key names the change itself, so a script that gives one makes
+#'   the same remedy, or stops if the list no longer has it. Spaces in a key
+#'   are ignored.
 #' @param data The data the model was fitted to, when it cannot be found.
 #' @param verbose Logical. Print the new fit's checks as it is fitted.
 #' @param reason Optional: why this remedy is being made, in a sentence --
@@ -905,9 +922,10 @@ print.ilm_remedies <- function(x, ...) {
 #'   reviewer asked for the simpler model". It is kept in the new fit's
 #'   `remedy_log` beside the remedy, so the record of how the model was
 #'   reached says why each change was made as well as what it was.
+#' @param ... Unused.
 #' @return The refitted model. Its `remedy_log` holds every remedy applied
-#'   to reach it, in order: the check, status, tier, remedy and change, and
-#'   the `reason` given for it (`NA` where none was).
+#'   to reach it, in order: the key, check, status, tier, remedy and change,
+#'   and the `reason` given for it (`NA` where none was).
 #' @seealso [ilm_remedies()].
 #' @examples
 #' set.seed(1)
@@ -917,15 +935,12 @@ print.ilm_remedies <- function(x, ...) {
 #' f <- ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE)
 #' rem <- ilm_remedies(f)
 #' rem
-#' f2 <- ilm_apply_remedy(f, rem, 1,
+#' f2 <- ilm_apply_remedy(f, rem, "drop/g",
 #'                        reason = "the groups were not expected to differ")
 #' f2$remedy_log
-#' @export
-ilm_apply_remedy <- function(object, remedies, which, data = NULL,
-                             verbose = FALSE, reason = NULL) {
-  if (!inherits(object, "ilm_model"))
-    stop("`object` must be a fitted ilm_model object, not ", class(object)[1],
-         call. = FALSE)
+#' @exportS3Method illumex::ilm_apply_remedy
+ilm_apply_remedy.ilm_model <- function(object, remedies, which, data = NULL,
+                                       verbose = FALSE, reason = NULL, ...) {
   if (!is.null(reason)) {
     if (!is.character(reason) || length(reason) != 1L || is.na(reason) ||
         !nzchar(trimws(reason)))
@@ -941,24 +956,22 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
   if (!inherits(remedies, "ilm_remedies"))
     stop("`remedies` must come from ilm_remedies() or ilm_remedy_table().",
          call. = FALSE)
-  if (is.null(attr(remedies, "fit_id")) || is.null(attr(remedies, "args")))
+  if (is.null(attr(remedies, "target_id")) || is.null(attr(remedies, "payload")))
     stop("`remedies` has lost what ties it to its fit, as a subset of it ",
          "does. Pass the whole list from ilm_remedies() and choose with ",
          "`which`.", call. = FALSE)
-  if (!identical(attr(remedies, "fit_id"), ilm_rem_id(object)))
+  if (!identical(attr(remedies, "target_id"), ilm_rem_id(object)))
     stop("`remedies` was listed for a different fit. List them for this one ",
          "with ilm_remedies().", call. = FALSE)
   if (!nrow(remedies))
     stop("there is nothing to remedy: every check of this fit is OK.",
          call. = FALSE)
-  if (length(which) != 1L || is.na(match(which, remedies$id)))
-    stop("`which` must be one of the remedy ids: ",
-         paste(remedies$id, collapse = ", "), ".", call. = FALSE)
-  i <- match(which, remedies$id)
-  args <- attr(remedies, "args")[[as.character(which)]]
+  i <- illumex::ilm_remedy_find(remedies, which)
+  id <- remedies$id[i]
+  args <- attr(remedies, "payload")[[as.character(id)]]
   if (is.null(args))
-    stop("remedy ", which, " is made by hand, not by a refit: ",
-         remedies$remedy[i], ".", call. = FALSE)
+    stop("remedy ", id, " (", remedies$key[i], ") is made by hand, not by a ",
+         "refit: ", remedies$remedy[i], ".", call. = FALSE)
 
   env0 <- environment(object$formula)
   if (is.null(env0)) env0 <- parent.frame()
@@ -990,10 +1003,13 @@ ilm_apply_remedy <- function(object, remedies, which, data = NULL,
   ## remedy find the data where this one did
   fit$call$data <- cl$data
   fit$call$verbose <- cl$verbose
-  ## a log from before reasons were kept has no column for them
+  ## a log from before reasons, or keys, were kept has no column for them
   old <- object$remedy_log
   if (!is.null(old) && is.null(old$reason)) old$reason <- NA_character_
+  if (!is.null(old) && is.null(old$key)) old$key <- NA_character_
+  if (!is.null(old)) old <- old[c("key", setdiff(names(old), "key"))]
   fit$remedy_log <- rbind(old, data.frame(
+    key = remedies$key[i],
     check = remedies$check[i], status = remedies$status[i],
     tier = remedies$tier[i], remedy = remedies$remedy[i],
     change = remedies$change[i],
@@ -1050,7 +1066,8 @@ ilm_rem_rescale <- function(fit) {
     out[[length(out) + 1L]] <- ilm_rem("numerical", sprintf(
       "rescale %s by hand -- its SD is %s; %s it by %s so it is near 1. The fit rescales its fixed-effect columns itself, but not the covariate of a random slope, whose scale sits in the random-effect covariance",
       v, formatC(sdv, format = "g", digits = 3), if (k > 1) "divide" else "multiply",
-      formatC(if (k > 1) k else 1 / k, format = "g", digits = 3)))
+      formatC(if (k > 1) k else 1 / k, format = "g", digits = 3)),
+      key = illumex::ilm_remedy_key("rescale", v))
   }
   out
 }
