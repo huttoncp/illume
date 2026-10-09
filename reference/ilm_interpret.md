@@ -11,32 +11,32 @@ reporting to people who will not read a coefficient table.
 ilm_interpret(object, ...)
 
 # S3 method for class 'ilm_model'
-ilm_interpret(object, causal = NULL, ame = TRUE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = TRUE, digits = NULL, ...)
 
 # S3 method for class 'ilm_dag_model'
-ilm_interpret(object, causal = NULL, ame = TRUE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = TRUE, digits = NULL, ...)
 
 # S3 method for class 'ilm_did'
-ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
 # S3 method for class 'ilm_rdd'
-ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
 # S3 method for class 'ilm_power'
 ilm_interpret(
   object,
   causal = NULL,
   ame = FALSE,
-  digits = 2,
+  digits = NULL,
   target = 0.8,
   ...
 )
 
 # S3 method for class 'ilm_contrast'
-ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 
 # S3 method for class 'ilm_profile'
-ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
+ilm_interpret(object, causal = NULL, ame = FALSE, digits = NULL, ...)
 ```
 
 ## Arguments
@@ -78,7 +78,16 @@ ilm_interpret(object, causal = NULL, ame = FALSE, digits = 3, ...)
 
 - digits:
 
-  Rounding.
+  How many decimal places the sentences give their numbers. `NULL`, the
+  default, chooses them for each group of numbers that belong together –
+  an estimate with its interval, a list of predicted values, a share
+  with its interval – from their scale: enough for three significant
+  figures at a typical value, and for the smallest non-zero value to
+  keep a digit, up to six. A number fixes that many decimal places for
+  every estimate, interval and share in the sentences instead. Counts,
+  whole-number data values and p-values keep their own rules either way,
+  and so do a share's ends ("over 99.9%", "under 0.1%"). With `digits`
+  given, the ends follow the decimals shown ("over 99.99%" at two).
 
 - target:
 
@@ -152,11 +161,11 @@ ilm_interpret(fit, ame = FALSE)
 #> 
 #> What it says
 #>   x: very strong evidence (p < 0.001) that x is associated with y. Across
-#>   the middle half of x, predicted y is 0.0787 at -0.590 against 0.644 at
+#>   the middle half of x, predicted y is 0.079 at -0.590 against 0.644 at
 #>   0.667: 0.565 higher. That is 0.450 per unit of x.
 #> 
 #>   g: very strong evidence (p < 0.001) that g is associated with y.
-#>   Predicted y is -0.0988 for 'a' and 0.793 for 'b': 0.892 higher for 'b'.
+#>   Predicted y is -0.099 for 'a' and 0.793 for 'b': 0.892 higher for 'b'.
 #> 
 #> What the checks found
 #>   All 5 fitting checks passed: the optimiser converged, the gradient is at

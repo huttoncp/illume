@@ -252,8 +252,8 @@ ilm_interpret(fit, ame = FALSE)
 #> What it says
 #>   treatment: very strong evidence (p < 0.001) that treatment affects
 #>   recovery. Moving treatment across its middle half, from 0 to 1, raises
-#>   predicted recovery from -0.0269 to 1.22: by 1.25. That is 1.25 per unit
-#>   of treatment.
+#>   predicted recovery from -0.03 to 1.22: by 1.25. That is 1.25 per unit of
+#>   treatment.
 #> 
 #>   Adjusted for severity, to close the back-door paths the graph identifies.
 #>   Its coefficient is not its effect on recovery and is not interpreted
