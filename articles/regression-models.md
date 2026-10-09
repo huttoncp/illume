@@ -94,7 +94,7 @@ fit <- ilm_model(y ~ x1 + grp + (1 | subj), data = dd,
                  family = "multinomial", verbose = FALSE)
 fit
 #> ilm_model fit: 3 categories (multinomial), 800 obs, 8 fixed + 3 covariance parameters
-#>   logLik -549.45 | AIC 1267.9
+#>   logLik -622.97 | AIC 1267.9
 ```
 
 ## Reading the output

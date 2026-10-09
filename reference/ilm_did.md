@@ -57,7 +57,11 @@ ilm_did(
 
 - treat_time:
 
-  First treated period, when `post` is not supplied.
+  First treated period, when `post` is not supplied: one of `time`'s own
+  values. A number for a numeric time; for any other time, a value
+  matching one of its values, so `2005` or `"2005"` for a character year
+  and a `Date` (or `"2004-01-01"`) for a `Date`. Periods are ordered as
+  `time` orders: a factor by its levels, anything else by sorting.
 
 - treatment:
 
@@ -96,7 +100,8 @@ ilm_did(
 ## Value
 
 An object of class `"ilm_did"`: `att`, `fit`, `parallel`, `event` and
-the settings used.
+the settings used. `treat_time` and `first_treat` are on `time`'s own
+scale.
 
 ## What identifies the estimate
 

@@ -111,7 +111,11 @@ given.</p></dd>
 
 
 <dt id="arg-treat-time">treat_time<a class="anchor" aria-label="anchor" href="#arg-treat-time"></a></dt>
-<dd><p>First treated period, when <code>post</code> is not supplied.</p></dd>
+<dd><p>First treated period, when <code>post</code> is not supplied: one of
+<code>time</code>'s own values. A number for a numeric time; for any other time, a
+value matching one of its values, so <code>2005</code> or <code>"2005"</code> for a character
+year and a <code>Date</code> (or <code>"2004-01-01"</code>) for a <code>Date</code>. Periods are ordered as
+<code>time</code> orders: a factor by its levels, anything else by sorting.</p></dd>
 
 
 <dt id="arg-treatment">treatment<a class="anchor" aria-label="anchor" href="#arg-treatment"></a></dt>
@@ -150,7 +154,8 @@ staggered. Off by default, and see the section above.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>"ilm_did"</code>: <code>att</code>, <code>fit</code>, <code>parallel</code>, <code>event</code>
-and the settings used.</p>
+and the settings used. <code>treat_time</code> and <code>first_treat</code> are on <code>time</code>'s own
+scale.</p>
     </div>
     <div class="section level2">
     <h2 id="what-identifies-the-estimate">What identifies the estimate<a class="anchor" aria-label="anchor" href="#what-identifies-the-estimate"></a></h2>

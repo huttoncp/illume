@@ -87,7 +87,8 @@ survival one. For a multinomial or ordinal outcome it holds category codes,
 as an integer matrix for the multinomial.</p>
 <p>Each dataset draws new random effects, and a new path of any correlation
 over time, from their fitted distributions: it is a new sample of groups,
-not the fitted groups again.</p>
+not the fitted groups again. A smooth is part of the fitted mean and is
+held at its fitted curve.</p>
 <p>A censored response is censored as the data were. A survival time is the
 smaller of the drawn event time and the subject's censoring time: the
 observed time for a subject who was censored, and for one who had the
