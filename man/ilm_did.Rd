@@ -37,7 +37,11 @@ given.}
 \item{post}{Column marking periods after treatment starts. Omit when
 \code{treat_time} or \code{treatment} is given.}
 
-\item{treat_time}{First treated period, when \code{post} is not supplied.}
+\item{treat_time}{First treated period, when \code{post} is not supplied: one of
+\code{time}'s own values. A number for a numeric time; for any other time, a
+value matching one of its values, so \code{2005} or \code{"2005"} for a character
+year and a \code{Date} (or \code{"2004-01-01"}) for a \code{Date}. Periods are ordered as
+\code{time} orders: a factor by its levels, anything else by sorting.}
 
 \item{treatment}{Per-row treatment indicator, as an alternative to
 \code{treated} and \code{post}. Staggered timing is detected from it.}
@@ -60,7 +64,8 @@ staggered. Off by default, and see the section above.}
 }
 \value{
 An object of class \code{"ilm_did"}: \code{att}, \code{fit}, \code{parallel}, \code{event}
-and the settings used.
+and the settings used. \code{treat_time} and \code{first_treat} are on \code{time}'s own
+scale.
 }
 \description{
 Estimates the effect of a treatment that switches on for some units at some

@@ -324,6 +324,11 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
   miss_idx <- lapply(inc, function(v) which(is.na(data[[v]])))
   names(miss_idx) <- inc
 
+  ## the imputation models that could not be fitted, by variable: their rows
+  ## keep the previous cycle's values (at first, random observed ones), and
+  ## that is said rather than left silent
+  failed <- stats::setNames(integer(length(inc)), inc)
+
   one_imputation <- function(i) {
     cur <- data
     ## start from a random observed value, so the first cycle has something to
@@ -350,17 +355,23 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
         if (nrow(tr) < 10L) next
         form <- stats::reformulate(ilm_bq(rhs), response = as.name(v))
         environment(form) <- environment()
+        ## a categorical variable is modelled as the categories it holds,
+        ## however it is stored: a binary coded 1/2 is a binomial outcome
+        ## too, where the model of the number failed and left the starting
+        ## draws in place
+        if (fams[[v]] %in% c("binomial", "multinomial") && !is.factor(tr[[v]]))
+          tr[[v]] <- factor(tr[[v]])
         fit <- tryCatch(suppressWarnings(
                  ilm_model(form, data = tr, family = fams[[v]],
                            verbose = FALSE)), error = function(e) NULL)
-        if (is.null(fit)) next
+        if (is.null(fit)) { failed[v] <<- failed[v] + 1L; next }
         nd <- cur[mi, rhs, drop = FALSE]
         dr <- tryCatch(ilm_imp_draw(fit, nd, fams[[v]], tr[[v]]),
                        error = function(e) NULL)
-        if (is.null(dr) || length(dr) != length(mi) || anyNA(dr)) next
-        if (is.factor(cur[[v]]) && !is.factor(dr))
-          dr <- factor(levels(cur[[v]])[dr + 1L], levels = levels(cur[[v]]))
-        cur[[v]][mi] <- dr
+        if (is.null(dr) || length(dr) != length(mi) || anyNA(dr)) {
+          failed[v] <<- failed[v] + 1L; next
+        }
+        cur[[v]][mi] <- ilm_imp_as(dr, cur[[v]])
       }
     }
     cur
@@ -458,6 +469,16 @@ ilm_impute <- function(data, m = 20L, predictors = NULL, exclude = NULL,
   imps <- vector("list", m)
   for (i in seq_len(m)) { imps[[i]] <- one_imputation(i); pb$tick(i) }
   pb$done()
+  if (any(failed > 0L)) {
+    bad <- failed[failed > 0L]
+    warning("the imputation model for ", ilm_and(sprintf("`%s` (%d of %d passes)",
+            names(bad), bad, m * maxit)), " could not be fitted, so ",
+            if (length(bad) == 1L) "its" else "their",
+            " missing values keep the previous pass's draws -- at first, ",
+            "random observed values that ignore every other variable. Check ",
+            "the variable's coding and the predictors, or impute it another way.",
+            call. = FALSE)
+  }
   if (isTRUE(single)) return(imps[[1]])
   structure(list(imputations = imps, m = m, incomplete = inc, data = data,
                  families = fams[inc], maxit = maxit, method = "fcs"),
@@ -764,4 +785,24 @@ ilm_glrm_draw <- function(fit, data, which_cols) {
     }
   }
   out
+}
+
+## A drawn value in the type of the column it fills. A binomial or
+## multinomial draw comes back as a factor of the categories (or as 0/1
+## codes); assigned as it was into a numeric 0/1, logical or character
+## column it became the factor's integer codes -- a 0/1 column came back
+## holding 2s, a character column gained "1", "2" and "3".
+#' @keywords internal
+#' @noRd
+ilm_imp_as <- function(dr, col) {
+  if (is.factor(col)) {
+    if (!is.factor(dr)) dr <- levels(col)[dr + 1L]
+    return(factor(as.character(dr), levels = levels(col)))
+  }
+  if (is.factor(dr)) dr <- as.character(dr)
+  if (is.logical(col)) return(as.logical(dr))
+  if (is.character(col)) return(as.character(dr))
+  if (is.integer(col)) return(as.integer(as.numeric(dr)))
+  if (is.numeric(col)) return(as.numeric(dr))
+  dr
 }

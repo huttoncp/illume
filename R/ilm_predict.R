@@ -196,7 +196,14 @@ ilm_re_factors <- function(object, k) {
 #' @keywords internal
 #' @noRd
 ilm_re_design <- function(object, k, data, d) {
-  if (d == 1L) return(matrix(1, nrow(data), 1L))
+  ## a one-column term is an intercept only when its fitted column is all
+  ## ones: (0 + x | g) has one column too, and taking it for an intercept
+  ## put a slope's effect on every new row whatever its x (new-data
+  ## predictions 1.47 where lme4 gives 1.06, a Poisson population mean of
+  ## 1.85 where the exact one is 8.39)
+  Zf <- object$re[[k]]$Z
+  if (d == 1L && (is.null(Zf) || all(Zf[, 1L] == 1)))
+    return(matrix(1, nrow(data), 1L))
   gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
   j <- match(k, gk)
   b <- if (is.na(j)) NULL else object$bars[[j]]

@@ -373,7 +373,10 @@ ilm_null_ll <- function(object, restarts = 1L) {
   f <- try(ilm_refit_like(stub, X = object$X[, keep, drop = FALSE],
                           keep = keep, restarts = restarts), silent = TRUE)
   if (inherits(f, "try-error") || f$opt$convergence != 0) return(NA_real_)
-  -f$opt$objective
+  ## logLik(), not the objective: the objective leaves out the latent
+  ## values' constant and includes any boundary penalty, so against the full
+  ## model's logLik() it gave an R-squared of -0.17 where lme4 gives 0.096
+  as.numeric(logLik(f))
 }
 
 #' Fit indices for a fitted model

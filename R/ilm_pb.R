@@ -80,7 +80,8 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
 
   t0 <- proc.time()[3]
   f0 <- ilm_refit_drop(object, j, restarts = 2L)
-  lr_obs <- 2 * ((-object$opt$objective) - (-f0$opt$objective))
+  ## from logLik(), which takes any boundary penalty back out of the objective
+  lr_obs <- 2 * (as.numeric(logLik(object)) - as.numeric(logLik(f0)))
   if (lr_obs < 0) warning("observed LR is negative: a refit did not converge", call. = FALSE)
 
   ## simulate under the NULL
@@ -106,7 +107,7 @@ ilm_pb_lrt <- function(object, term, B = 200L, ncores = 1L, seed = 1L,
                                              restarts = restarts)),
              silent = TRUE)
     if (inherits(z, "try-error") || z$opt$convergence != 0) return(NA_real_)
-    2 * ((-a$opt$objective) - (-z$opt$objective))
+    2 * (as.numeric(logLik(a)) - as.numeric(logLik(z)))
   }
   lr_null <- unlist(ilm_lapply(cl, seq_len(B), one))
   ok <- is.finite(lr_null) & lr_null >= 0
