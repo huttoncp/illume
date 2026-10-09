@@ -104,7 +104,7 @@ f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 L <- c(0, 1)                      # the slope on income
 ilm_denom_df(f, L)
 #> $df
-#> [1] 281.3156
+#> [1] 281.3152
 #> 
 #> $method
 #> [1] "satterthwaite"
