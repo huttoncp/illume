@@ -339,8 +339,28 @@ test_that("each number in the prose is written by what it is", {
   expect_identical(ilm_fmt_sig(c(12.35, 51, 9.9951, 19234, 0.0125)),
                    c("12.4", "51.0", "10.0", "19,200", "0.0125"))
   expect_identical(ilm_fmt(c(2.675, 1.005), 2), c("2.68", "1.01"))
-  expect_identical(ilm_fmt_pct(c(0.2725, 109 / 400, 0.004, 0.996)),
-                   c("27.3%", "27.3%", "under 1%", "over 99%"))
+  expect_identical(ilm_fmt_pct(c(0.2725, 109 / 400, 0.004)),
+                   c("27.3%", "27.3%", "0.400%"))
+  ## the ends (Craig's items 260 and 303): over 0.999 reads "over 99.9%",
+  ## under 0.001 "under 0.1%"; exactly 1 and 0 are 100% and 0%
+  expect_identical(ilm_fmt_pct(c(0.999, 0.9991, 0.9995, 0.99999, 0.996, 1)),
+                   c("99.9%", "over 99.9%", "over 99.9%", "over 99.9%", "99.6%", "100%"))
+  expect_identical(ilm_fmt_pct(c(0.001, 0.00099, 0.0004, 0)),
+                   c("0.100%", "under 0.1%", "under 0.1%", "0%"))
+  ## with the decimals fixed (Craig's item 309) the ends follow the precision
+  ## shown: a share that would print as 100% or 0% reads over or under the
+  ## last value those decimals can show; exactly 1 and 0 still print
+  expect_identical(ilm_fmt_pct_grp(c(0.99994, 0.99996, 0.00006, 0.00004, 1, 0), 2),
+                   c("99.99%", "over 99.99%", "0.01%", "under 0.01%", "100.00%", "0.00%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.996, 0.994, 0.004), 0),
+                   c("over 99%", "99%", "under 1%"))
+  ## a small share in the middle of the range takes its group's decimals
+  ## (item 306): alone it has three figures, beside 25% one decimal, among
+  ## shares of a few percent two, and the ends are still said in words
+  expect_identical(ilm_fmt_pct_grp(0.004), "0.400%")
+  expect_identical(ilm_fmt_pct_grp(c(0.25, 0.004)), c("25.0%", "0.4%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.004, 0.0123, 0.031)), c("0.40%", "1.23%", "3.10%"))
+  expect_identical(ilm_fmt_pct_grp(c(0.004, 0.0005)), c("0.400%", "under 0.1%"))
   ## large numbers, to the decimals asked for: no figure past the ones the
   ## value has is rounded up (illumex's format_cases.csv, the same cases)
   expect_identical(ilm_fmt(c(4878897.65, 1234567.891), 3),

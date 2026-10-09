@@ -2,8 +2,8 @@
 A multinomial model of m3, fitted to 240 observations. The model works on the logit scale, so its coefficients are not in percentage points of probability; the effects below are converted.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with m3. Across the middle half of x, from -0.871 to 0.678, the predicted share of 'a' is 52.5% against 14.9%, of 'b' 42.9% against 71.3% and of 'c' 4.64% against 13.8%.
-g2: little evidence (p = 0.61) that g2 is associated with m3. Predicted shares for 'control' against 'treated': 'a' 33.9% against 35.5%, 'b' 57.8% against 52.7% and 'c' 8.32% against 11.7%. The data are consistent with no effect -- not that there is none.
+x: very strong evidence (p < 0.001) that x is associated with m3. Across the middle half of x, from -0.871 to 0.678, the predicted share of 'a' is 52.5% against 14.9%, of 'b' 42.9% against 71.3% and of 'c' 4.6% against 13.8%.
+g2: little evidence (p = 0.61) that g2 is associated with m3. Predicted shares for 'control' against 'treated': 'a' 33.9% against 35.5%, 'b' 57.8% against 52.7% and 'c' 8.3% against 11.7%. The data are consistent with no effect -- not that there is none.
 
 ## diagnostics
 WARN -- category_counts: smallest category n = 24 of 240 total (J = 3). Sparse outcome category. What to do: collapse rare categories, or expect unstable category-specific effects.

@@ -2,8 +2,8 @@
 A gaussian model of y, fitted to 240 observations. Observations are grouped by site, and that grouping is modelled, so the estimates below already allow for it.
 
 ## effects
-x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.904 at -0.871 against 1.85 at 0.678: 0.945 higher (95% interval 0.757 to 1.13). That is 0.611 per unit of x.
-z: little evidence (p = 0.243) that z is associated with y. Across the middle half of z, predicted y is 1.34 at -0.764 against 1.45 at 0.431: 0.103 higher (95% interval from 0.0695 lower to 0.275 higher). That is 0.0860 per unit of z. The interval includes zero, which means the data are consistent with no effect -- not that there is none.
+x: very strong evidence (p < 0.001) that x is associated with y. Across the middle half of x, predicted y is 0.904 at -0.871 against 1.849 at 0.678: 0.945 higher (95% interval 0.757 to 1.134). That is 0.611 per unit of x.
+z: little evidence (p = 0.243) that z is associated with y. Across the middle half of z, predicted y is 1.344 at -0.764 against 1.447 at 0.431: 0.103 higher (95% interval from 0.070 lower to 0.275 higher). That is 0.0860 per unit of z. The interval includes zero, which means the data are consistent with no effect -- not that there is none.
 h3: strong evidence (p = 0.00144) that h3 is associated with y. Predicted y is 1.59 for 'north', 1.55 for 'south' and 1.04 for 'west'.
 
 ## diagnostics
