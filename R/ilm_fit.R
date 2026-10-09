@@ -1023,13 +1023,18 @@ ilm_postcheck <- function(opt, obj, sdr, C, has_ar, pre, Sig, Sigd, re_struct, k
     if (g > 1e-3) "not at a stationary point" else "",
     if (g > 1e-3) sugg_restart else "")
   pd <- isTRUE(sdr$pdHess)
-  ## a held term's rows are NA by design, so only the rest is judged
+  ## A held term's rows are NA by design, so they are not judged; every other
+  ## parameter is, the fixed effects included. Judging only what was finite
+  ## let a fixed effect whose variance could not be formed pass as though it
+  ## were held, and vcov() then reported its SE as 0. Under REML the fixed
+  ## effects' covariance is Vb, outside sdr, and is judged with the rest.
   cfd <- diag(sdr$cov.fixed)
-  judged <- if (length(held)) is.finite(cfd) else rep(TRUE, length(cfd))
-  anyNaN <- any(!is.finite(cfd[judged])) || any(cfd[judged] <= 0)
+  judged <- !ilm_held_rows(hess$dirs, length(cfd))
+  vd <- c(cfd[judged], if (!is.null(Vb)) diag(as.matrix(Vb)))
+  anyNaN <- any(!is.finite(vd)) || any(vd <= 0)
   lb <- pre$status[pre$check == "latent_budget"]
   held_cov <- setdiff(held, "dispersion")
-  if (identical(how, "reduced")) {
+  if (identical(how, "reduced") && !anyNaN) {
     ## every outer parameter held at its boundary (see ilm_hess_recover()):
     ## never a clean pass, since group-level results assume no variation
     hq <- paste(sQuote(held, FALSE), collapse = ", ")
@@ -2110,11 +2115,29 @@ ilm_schur_vb <- function(Hbb, Hbu = NULL, Huu = NULL) {
 }
 
 ## Whether the FIXED effects of a fit carry usable standard errors: a positive
-## definite Hessian, or a boundary term held at its estimate.
+## definite Hessian, or a boundary term held at its estimate -- and in either
+## case every fixed effect with a finite, positive variance. A held term does
+## not make usable a fixed effect whose variance could not be formed.
 #' @keywords internal
 #' @noRd
-ilm_fixed_usable <- function(object)
-  isTRUE(object$sdr$pdHess) || length(object$hessian_held) > 0L
+ilm_fixed_usable <- function(object) {
+  if (!(isTRUE(object$sdr$pdHess) || length(object$hessian_held) > 0L)) return(FALSE)
+  k <- seq_len(ilm_n_fixed(object))
+  v <- diag(as.matrix(object$sdr$cov.fixed))[k]
+  all(is.finite(v)) && all(v > 0)
+}
+
+## The parameters held at their boundary: those along a held direction, as
+## held_sdr() marks them NA (`dirs`, the held directions as columns in the
+## coordinates of the parameter vector). A covariance with more rows than
+## `dirs` -- a REML fit's, with the fixed effects put in front -- has them
+## at the end. FALSE everywhere when nothing is held.
+#' @keywords internal
+#' @noRd
+ilm_held_rows <- function(dirs, n) {
+  if (is.null(dirs) || !NROW(dirs) || NROW(dirs) > n) return(rep(FALSE, n))
+  c(rep(FALSE, n - NROW(dirs)), rowSums(as.matrix(dirs)^2) > 1e-2)
+}
 
 #' Print a table of checks
 #'
