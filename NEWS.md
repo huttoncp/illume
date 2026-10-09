@@ -1,5 +1,7 @@
 # illume 0.0.8.9003
 
+* illume is now licensed under the GPL (version 2 or later). Versions
+  released before this change remain available under the MIT licence.
 * **An F test of several coefficients in a gaussian mixed model now takes
   its denominator degrees of freedom by lmerTest's rule.** A direction of the
   contrasts with 2 or fewer degrees of freedom used to be dropped, and with
