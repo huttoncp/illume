@@ -3,7 +3,7 @@ A binomial model of yb, fitted to 240 observations. Observations are grouped by 
 
 ## effects
 x: very strong evidence (p < 0.001) that x is associated with yb. Across the middle half of x, the predicted probability that yb is 1 is 25.2% at -0.871 against 66.7% at 0.678: 41.5 percentage points higher (95% interval 30.9 to 52.1). (Odds ratio 3.24 per unit of x.)
-g2: moderate evidence (p = 0.0445) that g2 is associated with yb. The predicted probability that yb is 1 is 41.6% for 'control' and 53.0% for 'treated': 11.3 percentage points higher for 'treated' (95% interval 0.325 to 22.3). (Odds ratio 1.85 for 'treated' against 'control'.)
+g2: moderate evidence (p = 0.0445) that g2 is associated with yb. The predicted probability that yb is 1 is 41.6% for 'control' and 53.0% for 'treated': 11.3 percentage points higher for 'treated' (95% interval 0.3 to 22.3). (Odds ratio 1.85 for 'treated' against 'control'.)
 
 ## diagnostics
 WARN -- variance_boundary: smallest random-effect SD across grouping terms = 5.74e-05. A random-effect variance has collapsed to zero. What to do: drop that term if the design does not call for it; if it does -- repeated measures, say -- keep it; or refit with boundary = "avoid", which keeps it off the boundary with a small penalty -- it is then assumed nonzero rather than estimated at zero, so do not test whether it is zero, and it comes out larger, with the fixed effects of a binary or categorical outcome a little further from zero.

@@ -30,6 +30,44 @@
 ## value is whole where it is a whole number, and to three figures otherwise
 ## (ilm_fmt_data()), as illumex shows them.
 
+## A group of figures read together -- an estimate with its interval, the
+## predictions a sentence lists -- written together (Craig's item 306): at
+## the group's decimals by the shared rule (ilm_disp(, "decimals")), or at
+## `digits` decimals when the caller gives them.
+#' @keywords internal
+#' @noRd
+ilm_fmt_grp <- function(v, digits = NULL) ilm_disp(v, "decimals", digits)$text
+
+## A group of shares, as percentages at the group's decimals (or `digits`),
+## with the ends said in words.
+#' @keywords internal
+#' @noRd
+ilm_fmt_pct_grp <- function(p, digits = NULL) {
+  e <- if (is.null(digits)) ilm_pct_end(p) else ilm_pct_end_at(p, digits)
+  i <- is.na(e)
+  if (any(i)) e[i] <- paste0(ilm_disp(100 * p[i], "decimals", digits)$text, "%")
+  e
+}
+
+## The ends of a share when the caller fixes the decimals, in this one place
+## (Craig's item 309): the ends follow the precision shown. A share that
+## would print as 100% or 0% at `digits` decimals reads "over" or "under"
+## the last value those decimals can show ("over 99.99%", "under 0.01%" at
+## two; "over 99%", "under 1%" at none). Exactly 0 and 1, as in
+## ilm_pct_end(), are not ends to soften. NA where the share is printed as a
+## number.
+#' @keywords internal
+#' @noRd
+ilm_pct_end_at <- function(p, digits) {
+  ## "fixed" only rounds; "decimals" would write a share that rounds to 0 in
+  ## scientific form, which is what this replaces
+  at <- function(v) ilm_disp(v, "fixed", digits)$text
+  shown <- at(100 * p)
+  ifelse(p != 1 & shown == at(100), paste0("over ", at(100 - 10^-digits), "%"),
+         ifelse(p != 0 & shown == at(0), paste0("under ", at(10^-digits), "%"),
+                NA_character_))
+}
+
 ## A number to `digits` decimals, zeros kept, where a caller asks for
 ## decimals rather than figures.
 #' @keywords internal
@@ -80,13 +118,26 @@ ilm_fmt_data <- function(v)
   ifelse(is.finite(v) & v == round(v), ilm_disp(v, "fixed", 0L)$text,
          ilm_disp(v, "signif", 3L)$text)
 
-## A probability, an estimate, as a share: three figures, with the ends said
-## as such.
+## The ends of a share said in words, all in this one place (Craig's items
+## 260 and 303). Above 0.999 three figures cannot tell a share from
+## certainty, so it reads "over 99.9%"; below 0.001 the figures would be
+## precision the estimate does not have ("0.0400%"), so it reads "under
+## 0.1%". Exactly 0 and 1 are not ends to soften: they print as 0% and 100%.
+## NA where the share is printed as a number.
 #' @keywords internal
 #' @noRd
-ilm_fmt_pct <- function(p)
-  ifelse(p < 0.005, "under 1%", ifelse(p > 0.995, "over 99%",
-                                       paste0(ilm_disp(100 * p, "signif", 3L)$text, "%")))
+ilm_pct_end <- function(p)
+  ifelse(p != 1 & p > 0.999, "over 99.9%",
+         ifelse(p != 0 & p < 0.001, "under 0.1%", NA_character_))
+
+## A probability, an estimate, as a share: three figures, with the ends said
+## as such (ilm_pct_end()).
+#' @keywords internal
+#' @noRd
+ilm_fmt_pct <- function(p) {
+  e <- ilm_pct_end(p)
+  ifelse(is.na(e), paste0(ilm_disp(100 * p, "signif", 3L)$text, "%"), e)
+}
 
 ## ---- average marginal effects ----------------------------------------------
 
@@ -415,7 +466,7 @@ ilm_event_words <- function(object, respname) {
 #' @keywords internal
 #' @noRd
 ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
-                             intervals, inter = character(0)) {
+                             intervals, inter = character(0), digits = NULL) {
   cont <- fam %in% c("gaussian", "poisson", "nbinom", "beta")
   prob <- identical(fam, "binomial")
   catg <- fam %in% c("multinomial", "ordinal", "ordinal_probit", "ordinal_cloglog")
@@ -444,7 +495,13 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
   s <- sprintf("%s: %s (%s) that %s %s %s.", vn, sub(",$", "", ilm_evidence(p)),
                ilm_fmt_p(p), vn, if (is_causal) "affects" else "is associated with",
                respname)
-  fmt <- if (cont) ilm_fmt_sig else ilm_fmt_pct
+  ## Figures read together are written together (Craig's item 306): numbers
+  ## of one sentence on one scale that are compared with each other -- the
+  ## predictions, their difference and its interval -- are one group, at its
+  ## decimals or at `digits` when given; the values of the variable they are
+  ## made at keep their own.
+  grp <- function(v) ilm_fmt_grp(v, digits)
+  fmt <- if (cont) grp else function(v) ilm_fmt_pct_grp(v, digits)
   vlab <- if (num) ilm_fmt_data(vals) else vals
   what <- if (prob) sprintf("the predicted probability that %s", event)
           else sprintf("predicted %s", respname)
@@ -453,40 +510,52 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     e <- ap$pred$estimate; dd <- ap$diff
     up <- dd$estimate >= 0
     sgn <- if (up) 1 else -1
-    ## percentage points, an estimate like any other, the interval with them
-    fnum <- ilm_fmt_sig
+    ## the effect and its interval, in percentage points for a probability
     sc <- if (prob) 100 else 1
-    mag <- paste0(fnum(sc * abs(dd$estimate)), if (prob) " percentage points" else "")
-    ci <- if (is.finite(dd$se)) {
-      lo <- sgn * sc * c(dd$lower, dd$upper)
-      ci_note <- dd$lower <= 0 && dd$upper >= 0
-      ## an interval on both sides of zero, said with its directions rather
-      ## than as "0.186 lower (-0.306 to 0.678)"
-      if (ci_note) {
-        dn <- if (up) c("lower", "higher") else c("higher", "lower")
-        sprintf(" (95%% interval from %s %s to %s %s)", fnum(abs(min(lo))), dn[1],
-                fnum(max(lo)), dn[2])
-      } else sprintf(" (95%% interval %s to %s)", fnum(min(lo)), fnum(max(lo)))
-    } else ""
+    lo <- if (is.finite(dd$se)) sgn * sc * c(dd$lower, dd$upper) else numeric(0)
+    ci_note <- length(lo) > 0L && dd$lower <= 0 && dd$upper >= 0
+    ## an interval on both sides of zero is said with its directions rather
+    ## than as "0.186 lower (-0.306 to 0.678)"
+    m <- c(sc * abs(dd$estimate),
+           if (!length(lo)) NULL else if (ci_note) c(abs(min(lo)), max(lo))
+           else c(min(lo), max(lo)))
+    ## two predictions are compared with their difference, so the three are
+    ## one group; three or more levels are listed without it
+    if (!num && length(vals) > 2L) m <- numeric(0)
+    ## a share said as an end ("over 99.9%") is a phrase, not a figure, and
+    ## takes no part in choosing the decimals
+    pe <- if (!prob) rep(NA_character_, length(e))
+          else if (is.null(digits)) ilm_pct_end(e) else ilm_pct_end_at(e, digits)
+    k <- is.na(pe)
+    g <- grp(c(sc * e[k], m))
+    et <- pe
+    et[k] <- paste0(g[seq_len(sum(k))], if (prob) "%" else "")
+    mt <- g[-seq_len(sum(k))]
+    mag <- paste0(mt[1], if (prob) " percentage points" else "")
+    ci <- if (!length(lo)) ""
+          else if (ci_note) {
+            dn <- if (up) c("lower", "higher") else c("higher", "lower")
+            sprintf(" (95%% interval from %s %s to %s %s)", mt[2], dn[1], mt[3], dn[2])
+          } else sprintf(" (95%% interval %s to %s)", mt[2], mt[3])
     if (num && !is_causal)
       body <- sprintf("Across the %s of %s, %s is %s at %s against %s at %s: %s %s%s.",
-                      span, vn, what, fmt(e[1]), vlab[1], fmt(e[2]), vlab[2], mag,
+                      span, vn, what, et[1], vlab[1], et[2], vlab[2], mag,
                       if (up) "higher" else "lower", ci)
     else if (num)
       body <- sprintf("Moving %s across its %s, from %s to %s, %s %s from %s to %s: by %s%s.",
                       vn, span, vlab[1], vlab[2], if (up) "raises" else "lowers", what,
-                      fmt(e[1]), fmt(e[2]), mag, ci)
+                      et[1], et[2], mag, ci)
     else if (length(vals) == 2L && !is_causal)
       body <- sprintf("%s is %s for '%s' and %s for '%s': %s %s for '%s'%s.",
-                      ilm_cap(what), fmt(e[1]), vals[1], fmt(e[2]), vals[2], mag,
+                      ilm_cap(what), et[1], vals[1], et[2], vals[2], mag,
                       if (up) "higher" else "lower", vals[2], ci)
     else if (length(vals) == 2L)
       body <- sprintf("Setting %s to '%s' rather than '%s' %s %s from %s to %s: by %s%s.",
                       vn, vals[2], vals[1], if (up) "raises" else "lowers", what,
-                      fmt(e[1]), fmt(e[2]), mag, ci)
+                      et[1], et[2], mag, ci)
     else {
       body <- sprintf("%s is %s.", ilm_cap(what),
-                      ilm_and(sprintf("%s for '%s'", fmt(e), vals)))
+                      ilm_and(sprintf("%s for '%s'", et, vals)))
       ## three or more levels: no interval is shown, so none may be spoken
       ## of below -- the verdict there is the joint test of every level, and
       ## the last-against-first interval was never the statement's to make
@@ -495,28 +564,30 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
   } else {
     pr <- ap$pred
     ks <- ap$cats
-    per <- function(k) pr$estimate[pr$category == k]
+    ## every share the sentence gives is one group
+    st <- fmt(pr$estimate)
+    per <- function(k) st[pr$category == k]
     if (num && !is_causal)
       body <- sprintf("Across the %s of %s, from %s to %s, the predicted share %s.",
                       span, vn, vlab[1], vlab[2],
                       ilm_and(sprintf("of '%s' %s%s against %s", ks,
                                       c("is ", rep("", length(ks) - 1L)),
-                                      vapply(ks, function(k) fmt(per(k)[1]), ""),
-                                      vapply(ks, function(k) fmt(per(k)[2]), ""))))
+                                      vapply(ks, function(k) per(k)[1], ""),
+                                      vapply(ks, function(k) per(k)[2], ""))))
     else if (num)
       body <- sprintf("Moving %s across its %s, from %s to %s, changes the predicted shares: %s.",
                       vn, span, vlab[1], vlab[2],
                       ilm_and(sprintf("'%s' from %s to %s", ks,
-                                      vapply(ks, function(k) fmt(per(k)[1]), ""),
-                                      vapply(ks, function(k) fmt(per(k)[2]), ""))))
+                                      vapply(ks, function(k) per(k)[1], ""),
+                                      vapply(ks, function(k) per(k)[2], ""))))
     else if (length(vals) == 2L)
       body <- sprintf("Predicted shares for '%s' against '%s': %s.", vals[1], vals[2],
                       ilm_and(sprintf("'%s' %s", ks, vapply(ks, function(k)
-                        paste(fmt(per(k)), collapse = " against "), ""))))
+                        paste(per(k), collapse = " against "), ""))))
     else {
       ## a list of levels inside a list of categories: semicolons between
       ## the categories, so the two cannot be confused
-      it <- sprintf("'%s' %s", ks, vapply(ks, function(k) ilm_and(fmt(per(k))), ""))
+      it <- sprintf("'%s' %s", ks, vapply(ks, function(k) ilm_and(per(k)), ""))
       body <- sprintf("Predicted shares for %s, in that order: %s.",
                       ilm_and(sprintf("'%s'", vals)),
                       paste0(paste(it[-length(it)], collapse = "; "), "; and ",
@@ -531,17 +602,18 @@ ilm_effect_prose <- function(object, vn, xv, idx, fam, respname, is_causal,
     s <- paste(s, sprintf("Its effect varies with %s (%s, below), so this is the average.",
                           ilm_and(others), ilm_and(inter)))
   }
-  ## the per-unit figure some readers want, once, after the comparison
+  ## the per-unit figure some readers want, once, after the comparison: a
+  ## group of its own
   if (length(idx) == 1L && !length(inter)) {
     b <- stats::coef(object)[idx]
     per_what <- if (num) sprintf("per unit of %s", vn)
                 else sprintf("for '%s' against '%s'", vals[2], vals[1])
     s <- paste0(s, switch(fam,
-      gaussian = if (num) sprintf(" That is %s %s.", ilm_fmt_sig(b), per_what) else "",
-      binomial = sprintf(" (Odds ratio %s %s.)", ilm_fmt_sig(exp(b)), per_what),
-      poisson = , nbinom = sprintf(" (Rate ratio %s %s.)", ilm_fmt_sig(exp(b)), per_what),
+      gaussian = if (num) sprintf(" That is %s %s.", grp(b), per_what) else "",
+      binomial = sprintf(" (Odds ratio %s %s.)", grp(exp(b)), per_what),
+      poisson = , nbinom = sprintf(" (Rate ratio %s %s.)", grp(exp(b)), per_what),
       ordinal = sprintf(" (A cumulative odds ratio of %s %s: the odds of a higher category rather than a lower one, at every cut point.)",
-                        ilm_fmt_sig(exp(b)), per_what),
+                        grp(exp(b)), per_what),
       ""))
   }
   if (is.finite(p) && p >= 0.05)
@@ -638,7 +710,16 @@ ilm_scale_words <- function(fam) {
 #' @param ame Give the effects intervals on the response scale, by the delta
 #'   method. With `FALSE` the predictions are still reported, without them,
 #'   which is quicker.
-#' @param digits Rounding.
+#' @param digits How many decimal places the sentences give their numbers.
+#'   `NULL`, the default, chooses them for each group of numbers that belong
+#'   together -- an estimate with its interval, a list of predicted values, a
+#'   share with its interval -- from their scale: enough for three
+#'   significant figures at a typical value, and for the smallest non-zero
+#'   value to keep a digit, up to six. A number fixes that many decimal places
+#'   for every estimate, interval and share in the sentences instead. Counts,
+#'   whole-number data values and p-values keep their own rules either way,
+#'   and so do a share's ends ("over 99.9%", "under 0.1%"). With `digits`
+#'   given, the ends follow the decimals shown ("over 99.99%" at two).
 #' @param ... Unused.
 #' @return An object of class `"ilm_interpretation"`: a list of sections, which
 #'   `print()` renders as wrapped text.
@@ -655,7 +736,7 @@ ilm_interpret <- function(object, ...) UseMethod("ilm_interpret")
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
-                                    digits = 3, ...) {
+                                    digits = NULL, ...) {
   fam <- if (!is.null(object$family)) object$family$name else "gaussian"
   sw <- ilm_scale_words(fam)
   is_causal <- isTRUE(causal)
@@ -751,7 +832,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
     inter <- Filter(function(tt) tt != v &&
                       vn %in% ilm_unbq(strsplit(tt, ":", fixed = TRUE)[[1]]), fixed)
     said <- tryCatch(ilm_effect_prose(object, vn, xv, idx, fam, respname,
-                                      is_causal, isTRUE(ame), inter = unlist(inter)),
+                                      is_causal, isTRUE(ame), inter = unlist(inter),
+                                      digits = digits),
                      error = function(e) NULL)
     if (!is.null(said)) { lines <- c(lines, said); next }
     for (cc in seq_along(cats)) for (i in k) {
@@ -759,6 +841,8 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
       nm <- rownames(ct)[ii]
       est <- ct[ii, 1]; se <- ct[ii, 2]; p <- ilm_ct_p(ct)[ii]
       lo <- est - critv[ii] * se; hi <- est + critv[ii] * se
+      ## an estimate with its interval: one group (item 306)
+      eg <- ilm_fmt_grp(c(est, lo, hi), digits)
       ev <- ilm_evidence(p)
       ## the level this coefficient stands for, when the term is a factor --
       ## read off the DESIGN column, since a multinomial coefficient's own
@@ -774,21 +858,21 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
         sprintf("%s: %s that %s %s %s odds of %s, relative to the average of the categories (estimate %s, 95%% interval %s to %s, %s).",
                 nm, ev, subj, link_word,
                 if (est >= 0) "higher" else "lower", sQuote(cats[cc], FALSE),
-                ilm_fmt_sig(est), ilm_fmt_sig(lo), ilm_fmt_sig(hi), ilm_fmt_p(p))
+                eg[1], eg[2], eg[3], ilm_fmt_p(p))
       else
         sprintf("%s: %s that %s %s a %s %s of %s (estimate %s, 95%% interval %s to %s, %s).",
                 nm, ev, subj, link_word,
                 if (est >= 0) "higher" else "lower",
                 if (isTRUE(object$ordinal)) "category" else "value", respname,
-                ilm_fmt_sig(est), ilm_fmt_sig(lo), ilm_fmt_sig(hi), ilm_fmt_p(p))
+                eg[1], eg[2], eg[3], ilm_fmt_p(p))
       ## and what it means where the response lives
       if (!is.null(sw$ratio) && fam %in% c("binomial", "poisson", "nbinom"))
         s <- paste(s, sprintf("On the %s scale that is %s.", sw$ratio,
-                              ilm_fmt(exp(est), digits)))
+                              ilm_fmt_grp(exp(est), digits)))
       if (identical(fam, "ordinal"))
         s <- paste(s, sprintf(
           "As a cumulative odds ratio that is %s: the odds of being in a higher category rather than a lower one, at every cut point, are multiplied by it.",
-          ilm_fmt(exp(est), digits)))
+          ilm_fmt_grp(exp(est), digits)))
       if (!is.null(am)) {
         ## match on the term AND the level, not on a name prefix: a vectorised
         ## grepl here silently used only the first level and dropped the rest
@@ -805,16 +889,16 @@ ilm_interpret.ilm_model <- function(object, causal = NULL, ame = TRUE,
         if (length(j) == 1L && is.finite(am$estimate[j])) {
           sc <- if (fam %in% c("binomial", "multinomial") || !is.null(catj))
             100 else 1
+          ## the average effect with its interval: one group
+          ag <- ilm_fmt_grp(c(abs(am$estimate[j]), min(am$lower[j], am$upper[j]),
+                              max(am$lower[j], am$upper[j])) * sc, digits)
           s <- paste(s, sprintf(
             "%s: %s %s%s on average (%s to %s).",
             if (is.null(catj)) "In the units of the response"
             else sprintf("In the probability of %s%s", sQuote(catj, FALSE),
                          if (multi) "" else ", the highest category"),
             if (am$estimate[j] >= 0) "an increase of" else "a decrease of",
-            ilm_fmt(abs(am$estimate[j]) * sc, digits),
-            if (sc == 100) " percentage points" else "",
-            ilm_fmt(min(am$lower[j], am$upper[j]) * sc, digits),
-            ilm_fmt(max(am$lower[j], am$upper[j]) * sc, digits)))
+            ag[1], if (sc == 100) " percentage points" else "", ag[2], ag[3]))
         }
       }
       if (p >= 0.05)
@@ -923,7 +1007,7 @@ ilm_cap <- function(s) {
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
-                                        digits = 3, ...) {
+                                        digits = NULL, ...) {
   if (!isTRUE(object$identified)) {
     return(structure(list(sections = list(
       model = sprintf(
@@ -982,10 +1066,11 @@ ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
   if (length(object$sets) > 1L && !is.null(object$effects)) {
     e <- object$effects
     sp <- diff(range(e$estimate))
+    ## the span is the difference of its ends: one group
+    rg <- ilm_fmt_grp(c(sp, range(e$estimate)), digits)
     s$caveats <- c(sprintf(
       "%d different adjustment sets identify this effect and all were fitted; the estimates span %s (%s to %s). They target the same quantity, so agreement supports the graph and disagreement is worth more attention than any single number.",
-      length(object$sets), ilm_fmt(sp, digits),
-      ilm_fmt(min(e$estimate), digits), ilm_fmt(max(e$estimate), digits)),
+      length(object$sets), rg[1], rg[2], rg[3]),
       s$caveats)
   }
   if (lic)
@@ -1000,8 +1085,9 @@ ilm_interpret.ilm_dag_model <- function(object, causal = NULL, ame = TRUE,
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_did <- function(object, causal = NULL, ame = FALSE,
-                                  digits = 3, ...) {
+                                  digits = NULL, ...) {
   a <- object$att
+  ag <- ilm_fmt_grp(c(a$estimate, a$lower, a$upper), digits)
   sec <- list()
   sec$model <- sprintf(
     "A difference-in-differences comparison of %s across %d treated and %d control units, with treatment starting at %s = %s. Each unit's own level is modelled, so the estimate is a change relative to the control group's change rather than a level difference.",
@@ -1009,18 +1095,17 @@ ilm_interpret.ilm_did <- function(object, causal = NULL, ame = FALSE,
   sec$effects <- sprintf(
     "The treatment %s a change of %s in %s (95%% interval %s to %s, %s): %s.",
     if (is.null(causal) || isTRUE(causal)) "produced" else "is associated with",
-    ilm_fmt(a$estimate, digits), object$y, ilm_fmt(a$lower, digits),
-    ilm_fmt(a$upper, digits), ilm_fmt_p(a$p_value),
+    ag[1], object$y, ag[2], ag[3], ilm_fmt_p(a$p_value),
     ilm_evidence(a$p_value))
   dl <- character()
   if (!is.null(object$parallel)) {
     st <- object$parallel$status
     dl <- c(dl, switch(st,
       OK = sprintf("Parallel trends holds as far as it can be checked: over %d pre-treatment periods the two groups' slopes differed by %s, which is not distinguishable from zero (%s). That supports the design without proving it, since the assumption concerns a period that never happened.",
-                   object$parallel$n_pre, ilm_fmt(object$parallel$diff_slope, digits),
+                   object$parallel$n_pre, ilm_fmt_grp(object$parallel$diff_slope, digits),
                    ilm_fmt_p(object$parallel$p_value)),
       FAIL = sprintf("Parallel trends FAILS: the groups' pre-treatment slopes differed by %s (%s). They were already diverging before the treatment, so part of the estimate above is that divergence continuing rather than an effect. The estimate should not be read as a treatment effect until this is addressed.",
-                     ilm_fmt(object$parallel$diff_slope, digits),
+                     ilm_fmt_grp(object$parallel$diff_slope, digits),
                      ilm_fmt_p(object$parallel$p_value)),
       UNTESTED = sprintf("Parallel trends could NOT be checked: there %s only %d pre-treatment period%s. The assumption is doing all the work and no part of it has been verified.",
                          if (object$parallel$n_pre == 1L) "is" else "are",
@@ -1064,17 +1149,17 @@ ilm_interpret.ilm_did <- function(object, causal = NULL, ame = FALSE,
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
-                                  digits = 3, ...) {
+                                  digits = NULL, ...) {
   j <- object$jump
+  jg <- ilm_fmt_grp(c(j$estimate, j$lower, j$upper), digits)
   sec <- list()
   sec$model <- sprintf(
     "A regression discontinuity in %s at %s = %s, fitted locally on each side within a bandwidth of %s (%s observations below the cutoff, %s at or above).",
-    object$y, object$running, ilm_fmt(object$cutoff, digits),
-    ilm_fmt(object$h, 4), ilm_fmt_count(object$n_below), ilm_fmt_count(object$n_above))
+    object$y, object$running, ilm_fmt_data(object$cutoff),
+    ilm_fmt_grp(object$h, digits), ilm_fmt_count(object$n_below), ilm_fmt_count(object$n_above))
   sec$effects <- sprintf(
     "At the cutoff, %s jumps by %s (95%% interval %s to %s, %s): %s. This is a local effect -- it applies to units near the cutoff and says nothing about units far from it.",
-    object$y, ilm_fmt(j$estimate, digits), ilm_fmt(j$lower, digits),
-    ilm_fmt(j$upper, digits), ilm_fmt_p(j$p_value),
+    object$y, jg[1], jg[2], jg[3], ilm_fmt_p(j$p_value),
     ilm_evidence(j$p_value))
   dl <- character()
   dl <- c(dl, switch(object$density$status,
@@ -1098,10 +1183,11 @@ ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
   }
   if (!is.null(object$bandwidth)) {
     bw <- object$bandwidth
+    bg <- ilm_fmt_grp(range(bw$estimate), digits)
     dl <- c(dl, sprintf(
       "Across bandwidths from %sx to %sx the estimate runs %s to %s, and the interval %s zero throughout.",
-      ilm_fmt(min(bw$multiplier), 2), ilm_fmt(max(bw$multiplier), 2),
-      ilm_fmt(min(bw$estimate), digits), ilm_fmt(max(bw$estimate), digits),
+      ilm_fmt_data(min(bw$multiplier)), ilm_fmt_data(max(bw$multiplier)),
+      bg[1], bg[2],
       if (all(bw$lower > 0) || all(bw$upper < 0)) "excludes" else "does not consistently exclude"))
   }
   sec$diagnostics <- dl
@@ -1127,7 +1213,7 @@ ilm_interpret.ilm_rdd <- function(object, causal = NULL, ame = FALSE,
 #' @param target For a power analysis, the power a study is to reach.
 #' @export
 ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
-                                    digits = 2, target = 0.8, ...) {
+                                    digits = NULL, target = 0.8, ...) {
   d <- as.data.frame(object); class(d) <- "data.frame"
   unit <- attr(object, "unit")
   scol <- if (!is.null(d$n_unit)) "n_unit" else "n"
@@ -1135,7 +1221,7 @@ ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
     paste0(unit, "s") else "observations"
   test <- attr(object, "test"); if (is.null(test)) test <- "Wald z"
   joint <- identical(attr(object, "effect_scale"), "multiple")
-  pct <- function(v) paste0(ilm_fmt(100 * v, 0), "%")
+  pct <- function(v) ilm_fmt_pct_grp(v, digits)
   sec <- list()
   sec$model <- paste(
     sprintf("Power for %s, estimated by simulating %d studies at each size and analysing each the way the analysis will be: %s, at a two-sided level of %s.",
@@ -1155,11 +1241,15 @@ ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
   for (e in unique(d$effect)) {
     z <- d[d$effect == e, , drop = FALSE]; z <- z[order(z[[scol]]), , drop = FALSE]
     s <- sprintf("%s, the chance of detecting it is %s.",
-                 if (joint) sprintf("At %s times the assumed effect", ilm_fmt(e, digits))
-                 else sprintf("At an effect of %s on the link scale", ilm_fmt(e, 3)),
-                 paste(sprintf("%s with %s %s (%s to %s)", pct(z$power),
-                               ilm_fmt_count(z[[scol]]), who, pct(z$mc_lower),
-                               pct(z$mc_upper)), collapse = "; "))
+                 if (joint) sprintf("At %s times the assumed effect", ilm_fmt_data(e))
+                 else sprintf("At an effect of %s on the link scale", ilm_fmt_data(e)),
+                 {
+                   ## each size's power with its Monte Carlo interval, all one group
+                   pg <- matrix(pct(c(z$power, z$mc_lower, z$mc_upper)), ncol = 3L)
+                   paste(sprintf("%s with %s %s (%s to %s)", pg[, 1],
+                                 ilm_fmt_count(z[[scol]]), who, pg[, 2], pg[, 3]),
+                         collapse = "; ")
+                 })
     r <- if (is.null(pn)) NULL else pn[pn$effect == e, , drop = FALSE]
     if (!is.null(r) && nrow(r)) {
       v <- if (!is.null(r$n_unit)) c(r$n_unit, r$n_unit_lower, r$n_unit_upper)
@@ -1216,7 +1306,7 @@ ilm_interpret.ilm_power <- function(object, causal = NULL, ame = FALSE,
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
-                                       digits = 3, ...) {
+                                       digits = NULL, ...) {
   d <- as.data.frame(object); class(d) <- "data.frame"
   adj <- d$adjust[1L]; lev <- attr(object, "level"); if (is.null(lev)) lev <- 0.95
   fam <- attr(object, "family"); if (is.null(fam)) fam <- "gaussian"
@@ -1236,9 +1326,12 @@ ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
                       nrow(d), paste0(100 * lev, "%")),
       bonferroni = "adjusted by Bonferroni, which is conservative",
       "unadjusted, which suits comparisons chosen before the data were seen"))
+  ## each comparison's sentence, its estimate with its interval, is a group
+  dg <- matrix(vapply(seq_len(nrow(d)), function(i)
+    ilm_fmt_grp(sc * c(d$estimate[i], d$lower[i], d$upper[i]), digits), character(3)),
+    ncol = 3L, byrow = TRUE)
   sec$effects <- sprintf("%s: a difference of %s%s (%s%% interval %s to %s, %s) -- %s.",
-    d$contrast, ilm_fmt(sc * d$estimate, digits), unit, 100 * lev,
-    ilm_fmt(sc * d$lower, digits), ilm_fmt(sc * d$upper, digits),
+    d$contrast, dg[, 1], unit, 100 * lev, dg[, 2], dg[, 3],
     vapply(d$p_adj, ilm_fmt_p, "", prefix = if (adj == "none") "p" else "adjusted p"),
     ## the graded phrase is written for the middle of a sentence
     sub(",$", "", vapply(d$p_adj, ilm_evidence, "")))
@@ -1265,7 +1358,7 @@ ilm_interpret.ilm_contrast <- function(object, causal = NULL, ame = FALSE,
 #' @rdname ilm_interpret
 #' @export
 ilm_interpret.ilm_profile <- function(object, causal = NULL, ame = FALSE,
-                                      digits = 3, ...) {
+                                      digits = NULL, ...) {
   cr <- object$cluster; rr <- object$reduce; ct <- cr$clusters
   na <- inherits(object, "ilm_profile_na")
   k <- nrow(ct); n <- nrow(cr$ind_cluster)

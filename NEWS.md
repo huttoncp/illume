@@ -71,6 +71,17 @@
   could be, and so is one that leaves no period before it or none from it on.
   The reported start, `$treat_time` and `$first_treat` are on the time's own
   scale.
+* **A fit whose fixed-effect standard errors cannot be computed now fails its
+  Hessian check and reports them as NaN, rather than passing with standard
+  errors of 0.** When a random-effect covariance sat at its boundary and was
+  held, the check judged only the variances it could compute, and `vcov()`
+  set every one it could not to 0. A fixed effect whose variance had failed
+  was then reported with a standard error of exactly 0 in a fit graded ok,
+  with the check line saying its standard errors were usable. Measured on a
+  random slope on income in dollars: 27 of 100 such fits. Holding a term
+  means zero uncertainty for the held covariance directions only, as before.
+  A held fit whose fixed effects are fine is unchanged. Under REML the fixed
+  effects' own covariance is judged the same way.
 * **A gaussian mixed model is now fitted by REML by default.** `reml`
   defaults to `NULL`: REML for a gaussian mixed model -- an identity link, a
   grouping term or a correlation over time, no zero part or censoring -- and
@@ -112,6 +123,27 @@
   interval-censored and start-stop `Surv()` stop and name what to use.
 * `summary()` of every censored fit says how many rows were observed and how
   many right- or left-censored.
+* `ilm_interpret()` writes numbers that are compared with each other in a
+  sentence, on one scale, at the same decimals: two predictions with their
+  difference and its interval, every share in a sentence, an estimate with
+  its interval, each comparison of marginal means with its interval. The
+  decimals are chosen for each group from its scale (illumex's rule, in
+  the shared file), so "predicted y is 0.926 at -0.871 against 1.83 at
+  0.678: 0.903 higher (95% interval 0.718 to 1.09)" now reads "0.926 at
+  -0.871 against 1.829 at 0.678: 0.903 higher (95% interval 0.718 to
+  1.088)"; the values the predictions are made at keep their own
+  decimals. `digits`, which was 3 (2 for
+  power), is now `NULL` by default; a number fixes that many decimals for
+  every estimate, interval and share instead. Counts, whole-number data
+  values and p-values keep their own rules. With `digits` given, a share's
+  ends follow the decimals shown: one that would print as 100% or 0% reads
+  "over" or "under" the last value those decimals can show ("over 99.99%"
+  and "under 0.01%" at two).
+* The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
+  "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
+  began at 0.995 and 0.005; between, it is printed to three figures. A share
+  of exactly 1 or 0 prints as 100% or 0%, where it read "over 99%" or
+  "under 1%".
 * Numbers in the prose are written in full up to 15 figures before the
   point and, below 1, up to 6 decimals, and in R's scientific notation
   beyond, as R's tables print it: an estimate of 0.00001 to three figures
