@@ -239,3 +239,40 @@ test_that("Kenward-Roger says why when it is not available", {
   expect_error(ilm_denom_df(fw, c(0, 1), method = "kenward-roger"),
                "frequency weights")
 })
+
+## Fai-Cornelius for several rows by lmerTest's rule (review finding 2.1):
+## a direction with a df of 2 or less makes the denominator df 2, where it
+## used to be dropped -- and with none left, Inf: the most liberal answer
+## exactly where the data say least.
+test_that("the several-row df follow lmerTest's rule, including a df at or below 2", {
+  expect_identical(illume:::ilm_fc_ddf(7.5), 7.5)
+  expect_equal(illume:::ilm_fc_ddf(c(12, 12 + 1e-10)), 12)
+  expect_identical(illume:::ilm_fc_ddf(c(0.99, 32.3)), 2)
+  expect_identical(illume:::ilm_fc_ddf(c(1.5, 1.8)), 2)
+  nu <- c(5, 9, 30); E <- sum(nu / (nu - 2))
+  expect_equal(illume:::ilm_fc_ddf(nu), 2 * E / (E - 3))
+  skip_if_not_installed("lmerTest")
+  gf <- get0("get_Fstat_ddf", envir = asNamespace("lmerTest"), inherits = FALSE)
+  if (!is.null(gf))
+    for (v in list(c(0.99, 32.3), c(5, 9, 30), c(3.2, 3.2), c(40, 2.5, 11)))
+      expect_equal(illume:::ilm_fc_ddf(v), gf(v), tolerance = 1e-10)
+})
+
+test_that("a between-cluster factor on four clusters is tested on 2 df, as lmerTest does", {
+  skip_if_not_installed("lmerTest")
+  set.seed(8)
+  nc <- 4; per <- 12
+  d <- data.frame(cl = factor(rep(1:nc, each = per)))
+  d$A <- factor(c("a1", "a1", "a2", "a3")[as.integer(d$cl)])
+  d$x <- stats::rnorm(nrow(d))
+  u <- stats::rnorm(nc, sd = 1)
+  d$y <- 1 + 0.3 * d$x + 0.6 * (d$A == "a2") + u[d$cl] + stats::rnorm(nrow(d))
+  f <- ilm_model(y ~ A + x + (1 | cl), data = d, family = "gaussian", verbose = FALSE)
+  m <- lmerTest::lmer(y ~ A + x + (1 | cl), data = d, REML = TRUE)
+  a <- suppressMessages(ilm_anova(f, type = 3))
+  r <- stats::anova(m, type = 3)
+  expect_equal(a["A", "DenDF"], r["A", "DenDF"], tolerance = 1e-6)
+  expect_equal(a["A", "DenDF"], 2)
+  expect_equal(a["A", "Pr(>F)"], r["A", "Pr(>F)"], tolerance = 1e-4)
+  expect_gt(a["A", "Pr(>F)"], 0.1)
+})

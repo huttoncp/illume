@@ -220,3 +220,27 @@ test_that("a REML fit's random effects are read as random effects", {
   expect_equal(unname(predict(fr, newdata = nd)[, 1]),
                as.numeric(stats::predict(g, newdata = nd)), tolerance = 1e-3)
 })
+
+## A REML fit with nothing integrated out is lm() exactly: its residual SD is
+## already on the n - p scale, and was corrected a second time (review 4.7):
+## 0.9916 where lm() gives 0.9232.
+test_that("a REML fit with no random terms reports lm()'s residual SD and SEs", {
+  set.seed(1); n <- 30
+  d <- data.frame(x1 = stats::rnorm(n), x2 = stats::rnorm(n), x3 = stats::rnorm(n))
+  d$y <- 1 + d$x1 + stats::rnorm(n)
+  l <- stats::lm(y ~ x1 + x2 + x3, d)
+  f1 <- ilm_model(y ~ x1 + x2 + x3, data = d, family = "gaussian", reml = TRUE, verbose = FALSE)
+  f0 <- ilm_model(y ~ x1 + x2 + x3, data = d, family = "gaussian", reml = FALSE, verbose = FALSE)
+  expect_true(isTRUE(f1$exact_df))
+  expect_equal(unname(f1$dispersion), summary(l)$sigma, tolerance = 1e-6)
+  expect_equal(unname(f0$dispersion), summary(l)$sigma, tolerance = 1e-6)
+  expect_equal(unname(sqrt(diag(vcov(f1)))), unname(sqrt(diag(vcov(l)))), tolerance = 1e-6)
+  ## ilm_dag_model() fits by REML, so its residual SD is lm()'s too
+  set.seed(1); n <- 25
+  z <- stats::rnorm(n); x <- 0.5 * z + stats::rnorm(n); y <- 0.4 * x + 0.6 * z + stats::rnorm(n)
+  dd <- data.frame(x = x, y = y, z = z)
+  g <- ilm_dag("dag { x [exposure] ; y [outcome] ; z -> x -> y ; z -> y }")
+  m <- ilm_dag_model(g, dd, verbose = FALSE)
+  expect_equal(unname(m$fits[[1]]$dispersion), summary(stats::lm(y ~ x + z, dd))$sigma,
+               tolerance = 1e-6)
+})

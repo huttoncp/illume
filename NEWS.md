@@ -1,5 +1,76 @@
 # illume 0.0.8.9003
 
+* **An F test of several coefficients in a gaussian mixed model now takes
+  its denominator degrees of freedom by lmerTest's rule.** A direction of the
+  contrasts with 2 or fewer degrees of freedom used to be dropped, and with
+  none left the test was taken as a chi-square, on infinite degrees of
+  freedom: the most liberal answer exactly where the data say least. With 4
+  clusters and a 3-level between-cluster factor, the Type III test gave
+  p = 0.002 where lmerTest gives 0.14 on 2 degrees of freedom. Now: one
+  direction's own df; their mean if all are equal; 2 if any is 2 or fewer;
+  otherwise 2E/(E - q) over all q directions.
+* **Every log-likelihood a result is built from now comes from `logLik()`.**
+  The optimiser's objective leaves out the latent values' constant and
+  includes any boundary penalty, and three results used it as the
+  likelihood:
+  - McFadden's R-squared of a mixed model compared the objective of the
+    null model with the full model's `logLik()`: -0.17 where lme4 gives
+    0.096;
+  - `print()` showed the objective as "logLik": -838.73 for a model whose
+    `logLik()`, and lme4's, is -871.81;
+  - likelihood-ratio tests under `boundary = "avoid"`, in `ilm_anova()` and
+    `ilm_pb_lrt()`, kept the penalty in: 13.99 where the log-likelihoods
+    give 13.90.
+* **`ilm_simulate()` holds a smooth at its fitted curve.** A smooth's
+  penalised coefficients were drawn afresh from the penalty's prior, so the
+  simulated data kept only the smooth's straight-line part: fitting
+  2 sin(x), the mean of 500 simulations ran opposite to the fit (correlation
+  -0.79), and a Poisson smooth fitted at a mean of 3.5 simulated a mean of
+  31. Everything built on simulation simulated the wrong model with it --
+  parametric bootstraps through `ilm_refit()`, `ilm_pb_lrt()` and
+  `ilm_consistency()`. Random effects of groups are still drawn afresh, as a
+  new sample of groups.
+* **`ilm_impute()` keeps an imputed column's type and values.** A binary or
+  categorical draw was written into a numeric 0/1, logical or character
+  column as its factor codes: a 0/1 column came back holding 2s, a logical
+  one as integers, a character one with new categories "1", "2" and "3";
+  the pooled coefficient of an imputed binary was 0.53 against 1.02 on the
+  full data (now 0.98). A binary coded 1/2 is modelled as the two categories
+  it holds, where its model used to fail and leave random starting draws in
+  place without a word (pooled 0.53 against 0.98; now 0.90). An imputation
+  model that still cannot be fitted is named in a warning.
+* **A REML fit with no random terms reports `lm()`'s residual SD.** REML's
+  estimate is already on the n - p scale, and it was corrected a second
+  time, as maximum likelihood's is: 0.9916 where `lm()` gives 0.9232. Its
+  standard errors were right. `ilm_dag_model()` fits by REML, so its
+  residual SD was overstated with it.
+* **`ilm_power()` keeps each row's offset.** A resampled study took its rows
+  of the design but not of the offset, so every study of a size other than
+  the data's failed, and one of the same size was refitted without its
+  exposure: for a Poisson rate whose true power is 1.00, power came out
+  incomputable at n = 100 and 0.40 at n = 200, the refitted intercept -5.18
+  where the truth is -2.00.
+* **A slope-only random effect, `(0 + x | g)`, is a slope on new rows too.**
+  A random term with one column was read as an intercept wherever the bar
+  was evaluated afresh, so its effect was applied whatever a row's x:
+  - `predict(newdata = )` gave 1.47, -0.59 and 0.82 where lme4 gives 1.06,
+    2.97 and 1.03, and differed from `predict()` on the same rows;
+  - the population average of a Poisson model at x = 2 was 1.85 where the
+    exact value is 8.39;
+  - `ilm_matrices()` gave the term's design as 1 rather than x;
+  - a power scaffold with a slope-only term simulated a random intercept.
+  The same was true of `(1 | g) + (0 + x | g)`.
+* **`ilm_did()` takes `treat_time` in the time column's own values.** A
+  character, factor or `Date` time was worked on as the codes 1, 2, ... of
+  its periods, and `treat_time` was compared with those codes: a character
+  year `"2005"` started the treatment at the wrong period without a word
+  (ATT 0.746 with `$treat_time` 3, where the answer is 0.725), and `2005`
+  or a `Date` stopped with a misleading "not separable" error. `treat_time`
+  is now looked up among the time's values (`2005` and `"2005"` both match a
+  character year), a value that is not a period is refused with the values it
+  could be, and so is one that leaves no period before it or none from it on.
+  The reported start, `$treat_time` and `$first_treat` are on the time's own
+  scale.
 * **A fit whose fixed-effect standard errors cannot be computed now fails its
   Hessian check and reports them as NaN, rather than passing with standard
   errors of 0.** When a random-effect covariance sat at its boundary and was
@@ -231,8 +302,8 @@
   intercept; the vignette shows it. `ilm_family()`'s help said zero-inflation
   and hurdle models were out of scope, though `ziformula` fits both; it now
   points there. Found through an external report.
-* **`predict()` gives each row its own group's prediction by default**
-  (Craig's item 213): `groups = "fitted"`, as lme4's `predict()` does. A row
+* **`predict()` gives each row its own group's prediction by default**:
+  `groups = "fitted"`, as lme4's `predict()` does. A row
   whose group the fit has not seen, or `newdata` without the grouping
   columns, is an error that names `groups = "typical"` (every random effect
   at zero, the old default) and `groups = "population"` (the average over

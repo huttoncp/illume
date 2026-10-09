@@ -86,7 +86,7 @@ ilm_refit_drop <- function(object, drop_terms, restarts = 2L) {
 ilm_drop_summary <- function(object, drop_terms, restarts = 2L, ddf = NULL) {
   f <- try(ilm_refit_drop(object, drop_terms, restarts), silent = TRUE)
   if (inherits(f, "try-error")) return(NULL)
-  out <- list(ll = -f$opt$objective, conv = f$opt$convergence, pd = isTRUE(f$sdr$pdHess),
+  out <- list(ll = as.numeric(logLik(f)), conv = f$opt$convergence, pd = isTRUE(f$sdr$pdHess),
        b = setNames(f$opt$par, f$pnames)[seq_len(ncol(f$X) * f$C)],
        V = tryCatch(f$sdr$cov.fixed[seq_len(ncol(f$X) * f$C),
                                     seq_len(ncol(f$X) * f$C), drop = FALSE],
@@ -420,7 +420,8 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
              else NULL
   fell <- character(0)
 
-  ll_full <- -object$opt$objective
+  ## logLik(), which takes any boundary penalty back out of the objective
+  ll_full <- as.numeric(logLik(object))
   b_full <- coef(object); V_full <- suppressWarnings(vcov(object))
 
   rows <- lapply(seq_len(nt), function(j) {

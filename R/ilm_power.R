@@ -191,6 +191,10 @@ ilm_power_stub <- function(st, rows, copy, nested, ar_nested) {
   s$X <- st$X[rows, , drop = FALSE]
   s$y <- st$y[rows]
   if (!is.null(st$weights)) s$weights <- st$weights[rows]
+  ## the offset belongs to its row, as the weights do: left at the fitted
+  ## rows' length, every resampled study of another size failed, and one
+  ## of the same size refitted without its exposure
+  if (!is.null(st$offset)) s$offset <- st$offset[rows]
   if (!is.null(st$Zd))  s$Zd  <- keep_attr(st$Zd)
   if (!is.null(st$Zzi)) s$Zzi <- keep_attr(st$Zzi)
   if (!is.null(st$censor)) s$censor <- ilm_censor_rows(st$censor, rows)
@@ -290,6 +294,8 @@ ilm_power_eta_stub <- function(object, s, B) {
   ## of the model enters through the simulator, not the linear predictor
   if (!is.null(object$rp)) keep <- keep[-object$rp$cols]
   eta <- s$X[, keep, drop = FALSE] %*% B[keep, , drop = FALSE]
+  ## the exposure of each row, which the fitted coefficients are per unit of
+  if (!is.null(s$offset)) eta <- eta + s$offset
   for (k in seq_along(object$re)) {
     e <- s$re[[k]]
     if (identical(e$kind, "basis")) {
