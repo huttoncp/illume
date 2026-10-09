@@ -41,17 +41,33 @@
   interval-censored and start-stop `Surv()` stop and name what to use.
 * `summary()` of every censored fit says how many rows were observed and how
   many right- or left-censored.
+* `ilm_interpret()` writes numbers that are compared with each other in a
+  sentence, on one scale, at the same decimals: two predictions with their
+  difference and its interval, every share in a sentence, an estimate with
+  its interval, each comparison of marginal means with its interval. The
+  decimals are chosen for each group from its scale (illumex's rule, in
+  the shared file), so "predicted y is 0.926 at -0.871 against 1.83 at
+  0.678: 0.903 higher (95% interval 0.718 to 1.09)" now reads "0.926 at
+  -0.871 against 1.829 at 0.678: 0.903 higher (95% interval 0.718 to
+  1.088)"; the values the predictions are made at keep their own
+  decimals. `digits`, which was 3 (2 for
+  power), is now `NULL` by default; a number fixes that many decimals for
+  every estimate, interval and share instead. Counts, whole-number data
+  values and p-values keep their own rules. With `digits` given, a share's
+  ends follow the decimals shown: one that would print as 100% or 0% reads
+  "over" or "under" the last value those decimals can show ("over 99.99%"
+  and "under 0.01%" at two).
+* The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
+  "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
+  began at 0.995 and 0.005; between, it is printed to three figures. A share
+  of exactly 1 or 0 prints as 100% or 0%, where it read "over 99%" or
+  "under 1%".
 * Numbers in the prose are written in full up to 15 figures before the
   point and, below 1, up to 6 decimals, and in R's scientific notation
   beyond, as R's tables print it: an estimate of 0.00001 to three figures
   is "1.00e-05" where it was "0.0000100", and 1e20 is "1.00e+20" where it
   was written out in full. The rule is illumex's, in the display file the
   two packages share, so illume now needs illumex 0.0.8.9003.
-* The ends of a share in `ilm_interpret()`'s prose: above 0.999 it reads
-  "over 99.9%" and below 0.001 "under 0.1%", where "over 99%" and "under 1%"
-  began at 0.995 and 0.005; between, it is printed to three figures. A share
-  of exactly 1 or 0 prints as 100% or 0%, where it read "over 99%" or
-  "under 1%".
 * `ilm_interpret()` writes each number by what it is. An estimate has three
   significant figures with its trailing zeros (1.10, 0.610, 42.0, and a
   share of 25.2% where it said 25%; percentage points 41.5 where it said

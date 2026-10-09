@@ -4,7 +4,7 @@ A binomial model of yb, fitted to 240 observations. The model works on the logit
 ## effects
 x: very strong evidence (p < 0.001) that x is associated with yb. Across the middle half of x, the predicted probability that yb is 1 is 25.2% at -0.871 against 66.7% at 0.678: 41.5 percentage points higher. (Odds ratio 3.24 per unit of x.)
 g2: moderate evidence (p = 0.0437) that g2 is associated with yb. The predicted probability that yb is 1 is 41.6% for 'control' and 53.0% for 'treated': 11.4 percentage points higher for 'treated'. (Odds ratio 1.85 for 'treated' against 'control'.)
-z: little evidence (p = 0.821) that z is associated with yb. Across the middle half of z, the predicted probability that yb is 1 is 47.1% at -0.764 against 46.3% at 0.431: 0.777 percentage points lower. (Odds ratio 0.965 per unit of z.) The data are consistent with no effect -- not that there is none.
+z: little evidence (p = 0.821) that z is associated with yb. Across the middle half of z, the predicted probability that yb is 1 is 47.1% at -0.764 against 46.3% at 0.431: 0.8 percentage points lower. (Odds ratio 0.965 per unit of z.) The data are consistent with no effect -- not that there is none.
 
 ## diagnostics
 All 6 fitting checks passed: the optimiser converged, the gradient is at zero and the information matrix is usable. These say the fit is sound, not that the model is right -- for that, run ilm_appraise().
