@@ -317,7 +317,8 @@ section 5.4.
 
 ## License
 
-MIT. See `LICENSE`.
+GPL (>= 2): the GNU General Public License, version 2 or later. Versions
+released before this change remain available under the MIT licence.
 
 ## Contributing
 
