@@ -15,6 +15,8 @@
   for a fitted model are registered on them. illume still exports them, so
   `illume::ilm_remedies()` works as before, and attaching both packages
   masks nothing. illume now requires illumex 0.0.8.9004 or later.
+* illume is now licensed under the GPL (version 2 or later). Versions
+  released before this change remain available under the MIT licence.
 * **An F test of several coefficients in a gaussian mixed model now takes
   its denominator degrees of freedom by lmerTest's rule.** A direction of the
   contrasts with 2 or fewer degrees of freedom used to be dropped, and with
