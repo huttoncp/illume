@@ -20,6 +20,16 @@ sits.
 
 library(illume)
 #> Loading required package: illumex
+#> Registered S3 methods overwritten by 'illume':
+#>   method             from   
+#>   c.ilm_remedies     illumex
+#>   print.ilm_remedies illumex
+#> 
+#> Attaching package: 'illume'
+#> The following objects are masked from 'package:illumex':
+#> 
+#>     ilm_apply_remedy, ilm_remedies, ilm_remedy_table, iml_apply_remedy,
+#>     iml_remedies, iml_remedy_table
 ```
 
 ## Why a multinomial mixed model is fitted this way

@@ -2,7 +2,7 @@
 
 ## Authors
 
-- **Craig Hutton**. Author, maintainer.
+- **Craig Hutton**. Author, maintainer, copyright holder.
 
 ## Citation
 
