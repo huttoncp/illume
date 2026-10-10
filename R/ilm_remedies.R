@@ -873,8 +873,8 @@ ilm_remedy_table.ilm_model <- function(object, check, status, tier, remedy,
   }
   if (is.null(key)) {
     hand <- vapply(args, is.null, TRUE)
-    nth <- ave(seq_len(n), check, hand, FUN = seq_along)
-    many <- ave(seq_len(n), check, hand, FUN = length) > 1L
+    nth <- stats::ave(seq_len(n), check, hand, FUN = seq_along)
+    many <- stats::ave(seq_len(n), check, hand, FUN = length) > 1L
     key <- vapply(seq_len(n), function(i) {
       if (hand[i])
         return(illumex::ilm_remedy_key("by_hand", check[i], if (many[i]) nth[i]))
