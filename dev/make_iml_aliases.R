@@ -12,6 +12,11 @@
 ns <- readLines("NAMESPACE")
 ex <- grep("^export\\(ilm_", ns, value = TRUE)
 ex <- sort(sub("^export\\((.*)\\)$", "\\1", ex))
+## A function illume re-exports from illumex -- the remedy generics -- has
+## its alias there, re-exported beside it.
+imp <- grep("^importFrom\\(illumex,", ns, value = TRUE)
+imp <- sub("^importFrom\\(illumex,(.*)\\)$", "\\1", imp)
+ex <- setdiff(ex, imp)
 
 ## The Rd FILE each function is documented in, read from the \alias lines.
 ## Several functions share a page (ilm_plot_reduce_na is on ilm_plot_reduce's),

@@ -79,7 +79,7 @@ reference:
   desc: >
     Each check reports whether an assumption is consistent with the data, and names a remedy that exists in this package when it is not.
   contents:
-  - ilm_apply_remedy
+  - ilm_apply_remedy.ilm_model
   - ilm_appraise
   - ilm_binned_residuals
   - ilm_calibration
@@ -94,8 +94,8 @@ reference:
   - ilm_check_zeros
   - ilm_consistency
   - ilm_re_mahalanobis
-  - ilm_remedies
-  - ilm_remedy_table
+  - ilm_remedies.ilm_model
+  - ilm_remedy_table.ilm_model
   - ilm_rqr
   - ilm_rqr_test
   - ilm_scores
@@ -195,3 +195,4 @@ reference:
   contents:
   - print.ilm_censor
   - print.ilm_cor
+  - reexports

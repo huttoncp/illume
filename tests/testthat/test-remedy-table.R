@@ -17,8 +17,10 @@ nb_fit <- function() {
 
 test_that("ilm_remedies() dispatches, and says what it needs otherwise", {
   f <- nb_fit()
+  ## the generic is illumex's, and so is the message for an object no
+  ## package gives a method
   expect_error(ilm_remedies(data.frame(a = 1)),
-               "a result whose package gives ilm_remedies\\(\\) a method")
+               "there are no remedies for an object of class data.frame")
   ## a package's own result, with its own method
   diag <- structure(list(fit = f), class = "fake_calibration")
   ilm_remedies.fake_calibration <- function(object, ...)
@@ -81,7 +83,7 @@ test_that("a formula in a remedy means what the model's own formula means", {
   mk <- function() list(list(ziformula = ~ x))
   rem <- ilm_remedy_table(f, "zero_check", "WARN", "structural",
                           "add a zero part", args = mk())
-  expect_identical(environment(attr(rem, "args")[["1"]]$ziformula),
+  expect_identical(environment(attr(rem, "payload")[["1"]]$ziformula),
                    environment(f$formula))
 })
 
@@ -95,7 +97,7 @@ test_that("a table illume could not refit correctly is refused when built", {
     do.call(ilm_remedy_table, c(list(f), a))
   }
   expect_error(ilm_remedy_table(lm(1 ~ 1), "a", "WARN", "numerical", "b"),
-               "fitted ilm_model object")
+               "lm")
   expect_error(one(status = c("FAIL", "WARN")), "one entry per remedy")
   expect_error(one(status = "OK"), "a check that is OK names no remedy")
   expect_error(one(tier = "cosmetic"), "`tier` must be one of")
@@ -169,6 +171,6 @@ test_that("c() refuses tables it cannot combine", {
   expect_error(c(ext, data.frame(a = 1)), "only remedy tables")
   ## a subset of the rows keeps its tie, and its remedies are listed once
   expect_identical(nrow(c(ext, ext[1, ])), nrow(ext))
-  lost <- ext; attr(lost, "fit_id") <- NULL
-  expect_error(c(ext, lost), "lost what ties it to its fit")
+  lost <- ext; attr(lost, "target_id") <- NULL
+  expect_error(c(ext, lost), "lost what ties it to its target")
 })

@@ -192,7 +192,7 @@ test_that("the standalone checks' remedies are written out and applied", {
   rem <- ilm_remedies(f, dispersion = dsp)
   hit <- which(rem$change == "family = \"nbinom\"")
   expect_length(hit, 1L)
-  expect_output(print(rem), "ilm_apply_remedy(fit, <this list>, id)", fixed = TRUE)
+  expect_output(print(rem), "ilm_apply_remedy(fit, <this list>, id or key)", fixed = TRUE)
   f2 <- suppressMessages(ilm_apply_remedy(f, rem, rem$id[hit]))
   expect_identical(f2$family$name, "nbinom")
 
