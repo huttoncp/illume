@@ -239,3 +239,58 @@ test_that("Kenward-Roger says why when it is not available", {
   expect_error(ilm_denom_df(fw, c(0, 1), method = "kenward-roger"),
                "frequency weights")
 })
+
+## Fai and Cornelius (1996, p. 369) define the several-row denominator df
+## only when every direction has more than 2 df, and give no value otherwise.
+## Where a direction has 2 or fewer, the df and the p-value are NA, with the
+## reason -- never 2, and never the chi-square fallback, the most liberal
+## answer where the data say least. (The formula itself is tested in
+## test-fc-ddf-sources.R.)
+test_that("a several-row df with a direction at or below 2 is NA with the reason", {
+  why <- "Fai and Cornelius's approximation is undefined when a direction has 2 or fewer df"
+  for (v in list(c(0.99, 32.3), c(1.5, 1.8), c(40, 2, 11))) {
+    d <- illume:::ilm_fc_ddf(v)
+    expect_true(is.na(d))
+    expect_identical(attr(d, "reason"), why)
+  }
+  nu <- c(5, 9, 30); E <- sum(nu / (nu - 2))
+  expect_equal(illume:::ilm_fc_ddf(nu), 2 * E / (E - 3), tolerance = 1e-12)
+})
+
+test_that("one direction gets its own df however the hypothesis is written", {
+  set.seed(9)
+  d <- data.frame(cl = factor(rep(1:6, each = 8)))
+  d$x <- stats::rnorm(nrow(d)); d$z <- stats::rnorm(nrow(d))
+  d$y <- 1 + 0.4 * d$x + stats::rnorm(6)[d$cl] + stats::rnorm(nrow(d))
+  f <- ilm_model(y ~ x + z + (1 | cl), data = d, family = "gaussian",
+                 verbose = FALSE)
+  p <- length(coef(f))
+  l <- replace(numeric(p), 2, 1)
+  one <- illume:::ilm_df_satt(f, matrix(l, 1))
+  two <- illume:::ilm_df_satt(f, rbind(l, 2 * l))   # collinear: one direction
+  expect_true(is.finite(one$df))
+  expect_equal(two$df, one$df, tolerance = 1e-8)
+})
+
+test_that("a between-cluster factor on four clusters gets no df, and says why", {
+  set.seed(8)
+  nc <- 4; per <- 12
+  d <- data.frame(cl = factor(rep(1:nc, each = per)))
+  d$A <- factor(c("a1", "a1", "a2", "a3")[as.integer(d$cl)])
+  d$x <- stats::rnorm(nrow(d))
+  u <- stats::rnorm(nc, sd = 1)
+  d$y <- 1 + 0.3 * d$x + 0.6 * (d$A == "a2") + u[d$cl] + stats::rnorm(nrow(d))
+  f <- ilm_model(y ~ A + x + (1 | cl), data = d, family = "gaussian", verbose = FALSE)
+  a <- suppressMessages(ilm_anova(f, type = 3))
+  # A's two directions each have at most 2 df (4 clusters, 3 levels)
+  expect_true(is.na(a["A", "DenDF"]))
+  expect_true(is.na(a["A", "Pr(>F)"]))
+  expect_true(is.finite(a["A", "F value"]))
+  # the within-cluster covariate still gets its own df and p-value
+  expect_true(is.finite(a["x", "DenDF"]))
+  expect_true(is.finite(a["x", "Pr(>F)"]))
+  h <- paste(attr(a, "heading"), collapse = " ")
+  expect_match(h, "no denominator df for A", fixed = TRUE)
+  expect_match(h, "undefined when a direction has 2 or fewer df", fixed = TRUE)
+  expect_match(h, "kenward-roger", fixed = TRUE)
+})

@@ -315,7 +315,11 @@ ilm_recode_sum <- function(object, which) {
 #'   of freedom of each F: `"auto"` (Satterthwaite's, as `lmerTest` reports),
 #'   `"satterthwaite"`, `"kenward-roger"` (their df and scaled F, on their
 #'   adjusted covariance; REML fits) or `"asymptotic"`. Other fits are
-#'   unaffected.
+#'   unaffected. For a term of several columns, Satterthwaite's df combines
+#'   the columns' own df by Fai and Cornelius (1996), which is defined only
+#'   when each has more than 2 df; otherwise the term's `DenDF` and p-value
+#'   are `NA` and the table's heading says why. Kenward-Roger's df, or testing
+#'   fewer contrasts at once, may give one.
 #' @param statistic `"F"` (the default) or `"Chisq"`. For a gaussian mixed
 #'   model's Wald tests, `"F"` gives an F test on the denominator df above and
 #'   `"Chisq"` the large-sample chi-square the table gave before; with few
@@ -414,7 +418,7 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
   kr_full <- if (fin && identical(dmeth, "kenward-roger")) ilm_kr_parts(object) else NULL
   gr_full <- if (fin && !identical(dmeth, "kenward-roger")) ilm_vbeta_grad(object, NULL)
              else NULL
-  fell <- character(0)
+  fell <- character(0); undef <- character(0)
 
   ll_full <- -object$opt$objective
   b_full <- coef(object); V_full <- suppressWarnings(vcov(object))
@@ -435,7 +439,12 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
       if (is.null(ft) || !is.finite(ft$F))
         return(data.frame(NumDF = nd, DenDF = NA_real_, `F value` = NA_real_,
                           `Pr(>F)` = NA_real_, row.names = labs[j], check.names = FALSE))
-      if (!is.finite(ft$den)) fell <<- c(fell, labs[j])
+      ## NA: the df approximation is undefined for this term, so its df and
+      ## p-value stay NA with the reason, rather than falling back to the
+      ## chi-square (the most liberal answer where the data say least)
+      if (is.na(ft$den))
+        undef <<- c(undef, sprintf("%s (%s)", labs[j], ft$reason))
+      else if (!is.finite(ft$den)) fell <<- c(fell, labs[j])
       return(data.frame(NumDF = ft$num, DenDF = ft$den, `F value` = ft$F,
                         `Pr(>F)` = stats::pf(ft$F, ft$num, ft$den, lower.tail = FALSE),
                         row.names = labs[j], check.names = FALSE))
@@ -497,8 +506,17 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
       sprintf("Denominator df: %s%s", if (identical(dmeth, "kenward-roger"))
                 "Kenward-Roger's, with their scaled F on the adjusted covariance"
               else "Satterthwaite's (Fai and Cornelius for several columns), as lmerTest",
-              if (length(fell)) sprintf("; %s tested against the chi-square, as the df could not be formed",
-                                         paste(fell, collapse = ", ")) else "")
+              paste0(
+                if (length(fell)) sprintf("; %s tested against the chi-square, as the df could not be formed",
+                                          paste(fell, collapse = ", ")) else "",
+                if (length(undef)) sprintf(paste0(
+                  "; no denominator df for %s, so DenDF and the p-value are NA: ",
+                  "a direction with 2 or fewer df makes the combined ",
+                  "approximation undefined (Fai and Cornelius 1996, p. 369). ",
+                  "Either test the term's directions one at a time, each on ",
+                  "its own df (their eq. 4.1), or use Kenward-Roger's df, ",
+                  "df = \"kenward-roger\" (Kenward and Roger 1997; REML fits)"),
+                  paste(undef, collapse = "; ")) else ""))
     else NULL,
     if (object$C > 1L)
       sprintf("Response: %s   (%d categories, %d contrast dimensions)",

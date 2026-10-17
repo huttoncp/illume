@@ -399,15 +399,98 @@ ilm_df_satt <- function(object, L, h = 1e-5, gr = NULL) {
   if (!any(keep)) return(fell("the contrasts have no variance"))
   P <- t(ev$vectors[, keep, drop = FALSE])       # rows are the new contrasts
   Lr <- P %*% L
-  nus <- vapply(seq_len(nrow(Lr)), function(m) nu_of(Lr[m, ]), numeric(1))
-  nus <- nus[is.finite(nus) & nus > 2]
+  nus <- lapply(seq_len(nrow(Lr)), function(m) nu_of(Lr[m, ]))
+  ## A direction whose variance moves with no estimated variance component
+  ## has no uncertainty in that variance: its df is infinite, as the one-row
+  ## branch's fallback treats it, and it stays in the count of directions.
+  ## Only a direction with no variance at all is left out.
+  novar <- vapply(nus, function(v)
+    identical(attr(v, "reason"), "the contrast has no variance"), TRUE)
+  nus <- vapply(nus[!novar], function(v) if (is.na(v)) Inf else as.numeric(v),
+                numeric(1))
   if (!length(nus))
-    return(fell(paste("no direction of the contrasts has a Satterthwaite df",
-                      "above 2")))
-  E <- sum(nus / (nus - 2))
-  qq <- length(nus)
-  df <- if (E > qq) 2 * E / (E - qq) else Inf
+    return(fell("no direction of the contrasts has a Satterthwaite df"))
+  df <- ilm_fc_ddf(nus)
+  if (is.na(df))
+    return(list(df = NA_real_, method = "satterthwaite", V = NULL,
+                reason = attr(df, "reason")))
   list(df = df, method = "satterthwaite", V = NULL)
+}
+
+## The one-moment denominator df of Fai and Cornelius (1996), for an F test
+## of q >= 1 contrasts at once. `nu` holds the Satterthwaite (Giesbrecht-
+## Burns) df of the q orthogonal directions of the hypothesis.
+##
+## Source: Fai, A. H.-T. and Cornelius, P. L. (1996). Approximate F-tests of
+## multiple degree of freedom hypotheses in generalized least squares
+## analyses of unbalanced split-plot experiments. J. Statist. Comput. Simul.
+## 54, 363-378.
+##  - p. 368, eq. (4.1): after rotating by an orthogonal P, the Wald
+##    statistic is Q = sum over the q directions of t_{nu_m}^2.
+##  - p. 368, eq. (4.2): treating each t_{nu_m} as a Student t with nu_m df,
+##    E_Q = sum_{m=1}^{q} nu_m / (nu_m - 2).
+##  - p. 369: each nu_m is that direction's own Satterthwaite df, "provided
+##    that nu_m > 2"; matching (1/q) E_Q = nu / (nu - 2) gives
+##        nu_GB1 = 2 E_Q / (E_Q - q),
+##    and F = Q / q is referred to F(q, nu_GB1).
+## The paper gives no value when some nu_m <= 2. Choices the paper does not
+## make are marked [OURS] below.
+##
+## Returns one number, the denominator df, or NA_real_ with an attribute
+## `reason` when the approximation is undefined.
+#' @keywords internal
+#' @noRd
+ilm_fc_ddf <- function(nu, tol = 1e-8) {
+  ## 1. Input check [OURS]: an empty vector or a missing df is a bug in the
+  ## caller, which removes such directions before calling.
+  if (!length(nu) || anyNA(nu))
+    stop("internal: ilm_fc_ddf() needs a non-empty vector of df",
+         call. = FALSE)
+
+  q <- length(nu)
+
+  ## 3. One direction [OURS, an identity]: with E = nu / (nu - 2),
+  ## 2E / (E - 1) = nu, so nu_GB1 = nu_1 exactly. This comes before the
+  ## undefined case below: with one direction eq. (4.2) is not used, so the
+  ## direction's own df is returned whatever its size.
+  if (q == 1L) return(nu[[1L]])
+
+  ## 2. Undefined case, two or more directions: the source requires
+  ## nu_m > 2 (p. 369), which is needed only to combine directions through
+  ## eq. (4.2), and gives no value otherwise. We return NA with the reason;
+  ## we NEVER return 2, and never an infinite df here.
+  if (any(nu <= 2))
+    return(structure(NA_real_, reason = paste0(
+      "Fai and Cornelius's approximation is undefined when a direction ",
+      "has 2 or fewer df")))
+
+  ## 4. Equal df [OURS]: the formula gives exactly nu when all nu_m equal nu
+  ## (the same identity, q times); returning the mean directly avoids
+  ## rounding. Only when every df is finite: with an infinite df the
+  ## spread Inf - x is not a small number (and Inf - Inf is NaN), so the
+  ## comparison is meaningless; step 5 handles those.
+  if (all(is.finite(nu)) && max(nu) - min(nu) <= tol * max(nu))
+    return(mean(nu))
+
+  ## 5. Infinite df [OURS, the limit]: nu_m / (nu_m - 2) -> 1 as
+  ## nu_m -> Inf, so such a direction contributes 1 to E_Q. If every nu_m is
+  ## Inf, the result is Inf.
+  inf <- is.infinite(nu)
+  if (all(inf)) return(Inf)
+  terms <- rep(1, q)
+  terms[!inf] <- nu[!inf] / (nu[!inf] - 2)
+  ## the excess of each term over 1, with an Inf direction contributing 0
+  excess <- numeric(q)
+  excess[!inf] <- 2 / (nu[!inf] - 2)
+
+  ## 6. The formula, p. 369: nu_GB1 = 2 E_Q / (E_Q - q). The denominator is
+  ## computed as E_Q - q = sum_m 2 / (nu_m - 2), using the identity
+  ## nu / (nu - 2) - 1 = 2 / (nu - 2). It is exact, and it avoids overflow
+  ## and cancellation (subtracting q from a sum that is nearly q when the df
+  ## are very large). With every nu_m > 2 each term exceeds 1, so E_Q > q and
+  ## the result is finite and positive; no further rule is needed.
+  E_Q <- sum(terms)
+  2 * E_Q / sum(excess)
 }
 
 #' Kenward-Roger degrees of freedom and adjusted covariance

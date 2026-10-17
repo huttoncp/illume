@@ -1,5 +1,22 @@
 # illume 0.0.8.9003
 
+* **A term's Satterthwaite F has no denominator df where Fai and Cornelius's
+  approximation is undefined, and says so.** For a term of several columns
+  the denominator df combines each column direction's own df by Fai and
+  Cornelius (1996), which is defined only when every direction has more than
+  2 df. Where several directions are combined and one has 2 or fewer,
+  `ilm_anova()` now reports the term's `DenDF` and p-value as `NA`, and its
+  heading says why in plain words and offers two remedies: testing the
+  directions one at a time, each on its own df, or Kenward-Roger's df. A
+  term whose contrasts reduce to a single direction keeps that direction's
+  own df, however the hypothesis is written. Previously such a direction
+  was dropped, and with none left the term was tested as a chi-square on
+  infinite df: the most liberal answer exactly where the data say least. A
+  between-cluster factor with three levels on four clusters is the typical
+  case. A direction whose variance moves with no estimated variance
+  component now counts as one with infinite df, rather than being left out
+  of the combination. The function is rewritten from the paper, and very
+  large df no longer overflow.
 * A model whose fixed-effect columns are not all separable stops before the
   fit and says why. The whole fixed design is checked for rank, a smooth's
   unpenalised columns with it: `s(x, by = z) + s(w, by = z)`, whose
