@@ -280,7 +280,9 @@ test_that("a between-cluster factor on four clusters gets no df, and says why", 
   d$x <- stats::rnorm(nrow(d))
   u <- stats::rnorm(nc, sd = 1)
   d$y <- 1 + 0.3 * d$x + 0.6 * (d$A == "a2") + u[d$cl] + stats::rnorm(nrow(d))
-  f <- ilm_model(y ~ A + x + (1 | cl), data = d, family = "gaussian", verbose = FALSE)
+  ## fitted by REML explicitly, whatever the default fit is
+  f <- ilm_model(y ~ A + x + (1 | cl), data = d, family = "gaussian",
+                 reml = TRUE, verbose = FALSE)
   a <- suppressMessages(ilm_anova(f, type = 3))
   # A's two directions each have at most 2 df (4 clusters, 3 levels)
   expect_true(is.na(a["A", "DenDF"]))
