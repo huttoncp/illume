@@ -173,6 +173,12 @@ mildly conservative, and erring wide is the right direction for a method
 whose job is to stop intervals being too narrow.
 }
 
+\section{Copyright}{
+
+The low-rank route may include code adapted from the missMDA package
+(Husson and Josse; GPL (>= 2)).
+}
+
 \examples{
 set.seed(1); n <- 200
 d <- data.frame(x = rnorm(n), z = rnorm(n))

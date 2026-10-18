@@ -1,5 +1,7 @@
 # illume 0.0.8.9003
 
+* illume is now licensed under the GNU General Public License, version 2
+  or later (`GPL (>= 2)`).
 * **A term's Satterthwaite F has no denominator df where Fai and Cornelius's
   approximation is undefined, and says so.** For a term of several columns
   the denominator df combines each column direction's own df by Fai and

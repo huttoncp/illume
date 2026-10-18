@@ -68,3 +68,10 @@ By participating you agree to abide by the [code of conduct](CODE_OF_CONDUCT.md)
 ## Questions
 
 Open an issue. There is no mailing list.
+
+## Licence of contributions
+
+Contributions are accepted under the package's licence, GPL (>= 2). Please
+sign off each commit (`git commit -s`), which certifies the Developer
+Certificate of Origin (https://developercertificate.org/) for that
+contribution. No contributor licence agreement is needed.

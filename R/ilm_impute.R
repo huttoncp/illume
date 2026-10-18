@@ -1,3 +1,5 @@
+## Copyright notice: the low-rank route may include code adapted from
+## missMDA (GPL (>= 2); copyright Francois Husson and Julie Josse).
 ## ---------------------------------------------------------------------------
 ## Multiple imputation by chained equations, using ilm_model() as the engine.
 ##
@@ -240,6 +242,9 @@ ilm_imp_draw <- function(fit, newdata, fam, yobs) {
 #' Values in Multivariate Data Analysis. Journal of Statistical Software 70(1).
 #' The low-rank route follows their multiple imputation PCA: a regularised
 #' iterative fit, bootstrapped so the imputations differ, then pooled.
+#' @section Copyright:
+#' The low-rank route may include code adapted from the missMDA package
+#' (Husson and Josse; GPL (>= 2)).
 #' @examples
 #' set.seed(1); n <- 200
 #' d <- data.frame(x = rnorm(n), z = rnorm(n))

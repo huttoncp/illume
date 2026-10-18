@@ -231,6 +231,10 @@ ilm_kr_max_n <- 4000L
 #' Halekoh, U., & Hojsgaard, S. (2014). A Kenward-Roger approximation and
 #' parametric bootstrap methods for tests in linear mixed models: the R
 #' package pbkrtest. *Journal of Statistical Software*, 59(9), 1--30.
+#' @section Copyright:
+#' The Kenward-Roger code may include code adapted from the pbkrtest package
+#' (Halekoh and Hojsgaard; GPL (>= 2)), and its generalised inverse may
+#' follow `MASS::ginv()` (Venables and Ripley; GPL-2 | GPL-3).
 #' @seealso [ilm_anova()], [ilm_emmeans()], [ilm_pb_lrt()].
 #' @examples
 #' set.seed(1)
@@ -493,6 +497,11 @@ ilm_fc_ddf <- function(nu, tol = 1e-8) {
   2 * E_Q / sum(excess)
 }
 
+## Copyright notice: the Kenward-Roger functions below (ilm_df_kr(),
+## ilm_kr_parts(), ilm_kr_ftest(), ilm_kr_ginv()) may include code adapted
+## from pbkrtest (GPL (>= 2); copyright Ulrich Halekoh and Soren Hojsgaard),
+## and ilm_kr_ginv()'s generalised inverse may follow MASS::ginv() (MASS,
+## GPL-2 | GPL-3; copyright Brian Ripley and Bill Venables).
 #' Kenward-Roger degrees of freedom and adjusted covariance
 #'
 #' Only reached when [ilm_kr_applicable()] has agreed. The adjusted

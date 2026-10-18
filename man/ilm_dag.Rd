@@ -37,6 +37,12 @@ A bidirected edge \verb{X <-> Y} states that something unobserved causes both, s
 it is stored as an unobserved node with an arrow into each. That keeps one
 representation -- a DAG, possibly with unobserved nodes -- rather than two.
 }
+\section{Copyright}{
+
+These graph functions may include code adapted from the dagitty package
+(Textor, van der Zander and Ankan; GPL-2).
+}
+
 \examples{
 g <- ilm_dag("dag {
   smoking [exposure]

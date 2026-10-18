@@ -91,6 +91,11 @@
 #' a <- ilm_aov_ez("id", "score", d, between = "grp", within = "time",
 #'                 verbose = FALSE)
 #' a
+#' @section Copyright:
+#' The sphericity statistics adapt code from the car package (Fox,
+#' Weisberg and Price; GPL (>= 2)) and from R's `stats::mauchly.test()`;
+#' generalized eta squared follows the afex package (Singmann, Bolker,
+#' Westfall, Aust and Ben-Shachar; GPL (>= 2)).
 #' @export
 ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
                        covariate = NULL, observed = NULL,
@@ -204,6 +209,9 @@ ilm_aov_ez <- function(id, dv, data, between = NULL, within = NULL,
   tab <- do.call(rbind, rows); rownames(tab) <- NULL
 
   ## ---- generalized eta squared -------------------------------------------
+  ## Copyright notice: this block follows afex's generalized eta squared
+  ## (afex, GPL (>= 2); copyright Henrik Singmann, Ben Bolker, Jake Westfall,
+  ## Frederik Aust and Mattan S. Ben-Shachar).
   ## SS / (SS + sum of the DISTINCT error sums of squares + the SS of any
   ## measured variable, less its own when it is the effect being sized).
   ## Olejnik and Algina (2003); the form is afex's.
