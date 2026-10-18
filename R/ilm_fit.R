@@ -2270,8 +2270,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
          call. = FALSE)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Integrating the fixed effects out under a flat prior is available for any
-  ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-
-  ## c(randomArg, "beta")`. What differs is how much it delivers. For a linear
+  ## family: the fixed effects are simply added to the parameters the Laplace
+  ## approximation integrates over. What differs is how much it delivers. For a linear
   ## model the integral is exact and the result is textbook REML, unbiased with
   ## the n - p divisor. For anything else the Laplace approximation to that
   ## integral is itself an approximation, so what comes out is an
