@@ -1,7 +1,8 @@
 # illume 0.0.8.9003
 
 * illume is now licensed under the GNU General Public License, version 2
-  or later (`GPL (>= 2)`).
+  (`GPL-2`). It is version 2 only for now because the causal-graph
+  functions may include code adapted from dagitty, which is GPL-2 only.
 * **A term's Satterthwaite F has no denominator df where Fai and Cornelius's
   approximation is undefined, and says so.** For a term of several columns
   the denominator df combines each column direction's own df by Fai and

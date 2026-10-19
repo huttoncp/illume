@@ -317,8 +317,9 @@ section 5.4.
 
 ## License
 
-GPL (>= 2): the GNU General Public License, version 2 or (at your option)
-any later version.
+GPL-2: the GNU General Public License, version 2. It is version 2 only for
+now because the causal-graph functions may include code adapted from
+[dagitty](https://CRAN.R-project.org/package=dagitty), which is GPL-2 only.
 
 ## Acknowledgements
 

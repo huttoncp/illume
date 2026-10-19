@@ -73,7 +73,7 @@ Description: A frequentist regression workflow built around inference rather
     penalised quasi-likelihood. Methods of Kristensen, Nielsen, Berg, Skaug and
     Bell (2016) <doi:10.18637/jss.v070.i05> and Halekoh and Hojsgaard (2014)
     <doi:10.18637/jss.v059.i09>.
-License: GPL (>= 2)
+License: GPL-2
 Encoding: UTF-8
 Language: en-GB
 Roxygen: list(markdown = TRUE)
