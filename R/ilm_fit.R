@@ -483,8 +483,9 @@ ilm_norm_re <- function(re_list, N) lapply(re_list, function(e) {
 #'   [predict.ilm_model()] needs it to rebuild the basis at new covariate values).
 #' @references
 #' Wood, S. N. (2017). *Generalized Additive Models: An Introduction with R*,
-#' 2nd ed. Chapman & Hall/CRC. Section 5.4 develops the mixed-model
-#' representation of penalised smoothers.
+#' 2nd ed. Chapman & Hall/CRC. Section 5.8 (p. 239) gives the mixed-model
+#' representation of penalised smoothers; section 5.4.2's parameterisation
+#' supplies its matrices.
 #'
 #' Wood, S. N. (2003). Thin plate regression splines. *Journal of the Royal
 #' Statistical Society, Series B*, 65(1), 95--114.
