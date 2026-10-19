@@ -161,6 +161,60 @@ test_that("a random slope at a variance of zero keeps the uncertainty of what is
   expect_true(all(r >= 0.999 & r < 1.05))
 })
 
+## Where on a flat ridge the optimiser stops is not a property of the data.
+## Here it runs the slope's log-Cholesky diagonal to -10.5, a correlation of
+## 1; on one CI platform it stopped short of a correlation of 0.999, the line
+## a term of several dimensions used to be held past, and the fit had no
+## usable standard errors. So the stop is forced at points along the ridge --
+## every nlminb call the fit makes has that diagonal pinned by equal bounds,
+## the real optimiser wrapped, not replaced -- from a correlation of 0.994 (a
+## diagonal of -4.5) to past the line (-6.5, -10). Each is held, with the
+## same standard errors.
+slope_pinned <- function(target) function(start, objective, gradient = NULL,
+                                          hessian = NULL, ..., lower = -Inf,
+                                          upper = Inf) {
+  j <- which(names(start) == "theta")[3]
+  lo <- rep_len(lower, length(start)); up <- rep_len(upper, length(start))
+  lo[j] <- up[j] <- target; start[j] <- target
+  stats::nlminb(start, objective, gradient, hessian, ..., lower = lo, upper = up)
+}
+
+test_that("a random slope stopped anywhere on its flat ridge is held", {
+  set.seed(21); n <- 480
+  d <- data.frame(g = factor(rep(1:60, each = 8)), x = rnorm(n))
+  d$y <- rbinom(n, 1, plogis(-0.3 + 0.5 * d$x + rnorm(60)[d$g]))
+  f0 <- suppressMessages(ilm_model(y ~ x + (1 | g), data = d, verbose = FALSE))
+  for (t in c(-4.5, -5, -5.4, -6.5, -10)) {
+    f <- with_mocked_bindings(
+      suppressMessages(ilm_model(y ~ x + (1 + x | g), data = d, verbose = FALSE)),
+      nlminb = slope_pinned(t))
+    at <- sprintf("the slope's log-Cholesky diagonal pinned at %g", t)
+    expect_equal(f$hessian_how, "boundary", info = at)
+    expect_equal(f$hessian_held, "g", info = at)
+    expect_true(f$ok, info = at)
+    r <- sqrt(diag(vcov(f))) / sqrt(diag(vcov(f0)))
+    expect_true(all(r >= 0.999 & r < 1.05), info = at)
+  }
+})
+
+test_that("a curved term of several dimensions is tested and not held", {
+  ## a correlation of 0.995 on 400 groups of 25: the slope's Cholesky
+  ## diagonal is under the line, so the term is tested, and pushing it 3
+  ## lower moves the objective by about 0.04 -- curved, so nothing is held
+  set.seed(5); ng <- 400; per <- 25; n <- ng * per
+  d <- data.frame(g = factor(rep(seq_len(ng), each = per)), x = rnorm(n))
+  z0 <- rnorm(ng); z1 <- 0.995 * z0 + sqrt(1 - 0.995^2) * rnorm(ng)
+  d$y <- rbinom(n, 1, plogis(-0.3 + 0.5 * d$x + z0[d$g] + z1[d$g] * d$x))
+  f <- suppressMessages(ilm_model(y ~ x + (1 + x | g), data = d, verbose = FALSE))
+  pn <- names(f$opt$par)
+  cb <- illume:::ilm_cov_blocks(f$re, f$Sigma, f$Sigma_d, f$ty, f$rk, f$dk,
+                                f$toff, f$ar, f$opt$par, pn)
+  expect_true("g" %in% cb$maybe)
+  expect_false("g" %in% f$hessian_held)
+  expect_true(f$hessian_how %in% c("tmb", "recomputed"))
+  expect_true(f$ok)
+})
+
 test_that("a correlation taken past the floor is brought back to it", {
   ## put the optimiser where RTMB 2.0 took it: a log-Cholesky diagonal of -18,
   ## where the objective is noise

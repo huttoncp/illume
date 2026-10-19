@@ -3,6 +3,19 @@
 * illume is now licensed under the GNU General Public License, version 2
   (`GPL-2`). It is version 2 only for now because the causal-graph
   functions may include code adapted from dagitty, which is GPL-2 only.
+* **A random-effect term of several dimensions is held at its boundary
+  wherever on the flat ridge the optimiser stops.** A covariance of two or
+  more dimensions -- an intercept and a slope, or several categories -- was
+  held only past fixed lines (a correlation of 0.999, for one), and the
+  likelihood can be flat well inside them, so the same data could be held on
+  one platform and not on another. Such a term is now tested the way a
+  single standard deviation already was: when the smallest diagonal of its
+  Cholesky factor is under 0.1 of its largest SD, and pushing it toward the
+  boundary moves the objective by at most 1e-3, its flat directions are
+  held. On the boundary study's 5,100 fits this held 64 terms the fixed lines
+  missed, every one at its boundary by that test, and no new term that is
+  not. The 64 fits' standard errors moved by a median factor of 0.998 (0.90
+  to 1.03), and one whose checks had failed now passes them.
 * **A term's Satterthwaite F has no denominator df where Fai and Cornelius's
   approximation is undefined, and says so.** For a term of several columns
   the denominator df combines each column direction's own df by Fai and
