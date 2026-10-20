@@ -71,6 +71,13 @@ family the small-sample problem is a different one and neither answers it;
 and is the remedy there.
 }
 
+\section{Copyright}{
+
+The Kenward-Roger code may include code adapted from the pbkrtest package
+(Halekoh and Hojsgaard; GPL (>= 2)), and its generalised inverse may
+follow \code{MASS::ginv()} (Venables and Ripley; GPL-2 | GPL-3).
+}
+
 \examples{
 set.seed(1)
 d <- ilm_sim(n_id = 25)

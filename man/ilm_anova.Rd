@@ -40,7 +40,11 @@ never modified either way.}
 of freedom of each F: \code{"auto"} (Satterthwaite's, as \code{lmerTest} reports),
 \code{"satterthwaite"}, \code{"kenward-roger"} (their df and scaled F, on their
 adjusted covariance; REML fits) or \code{"asymptotic"}. Other fits are
-unaffected.}
+unaffected. For a term of several columns, Satterthwaite's df combines
+the columns' own df by Fai and Cornelius (1996), which is defined only
+when each has more than 2 df; otherwise the term's \code{DenDF} and p-value
+are \code{NA} and the table's heading says why. Kenward-Roger's df, or testing
+fewer contrasts at once, may give one.}
 
 \item{statistic}{\code{"F"} (the default) or \code{"Chisq"}. For a gaussian mixed
 model's Wald tests, \code{"F"} gives an F test on the denominator df above and

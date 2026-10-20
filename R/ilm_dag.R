@@ -1,3 +1,6 @@
+## Copyright notice: these graph functions may include code adapted from
+## dagitty (GPL-2; copyright Johannes Textor, Benito van der Zander and
+## Ankur Ankan).
 ## ---------------------------------------------------------------------------
 ## Causal graphs: the structure, the adjustment sets it licenses, and the
 ## conditional independencies it claims.
@@ -50,6 +53,9 @@
 #'   genotype -> cancer
 #' }")
 #' g
+#' @section Copyright:
+#' These graph functions may include code adapted from the dagitty package
+#' (Textor, van der Zander and Ankan; GPL-2).
 #' @export
 ilm_dag <- function(x, exposure = NULL, outcome = NULL, latent = NULL) {
   g <- if (inherits(x, "ilm_dag")) x

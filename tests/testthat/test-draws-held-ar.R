@@ -73,6 +73,20 @@ test_that("an AR block held for its correlation, with an identified SD, keeps it
 ## recomputed covariance is refused off a stationary point, so the flagged
 ## dispersion was not held, and its draws, from an SE of 14 on the log scale,
 ## reached e^42 -- while the checks said it was held.
+##
+## Where the optimiser stops on this flat likelihood is not a property of the
+## data: under RTMB 1.9 it stopped short, under RTMB 2.0 it converges
+## (gradient 3e-6), and the test failed on CI. So the stop is forced: every
+## nlminb call the fit makes is capped at 11 iterations -- the real
+## optimiser, wrapped, not replaced. There the gradient off the held
+## dispersion is about 0.11 (FAIL above 1e-2), and sigma about 0.03 of sd(y),
+## past its line of 0.2 and flat beyond it, under RTMB 1.9 and 2.0 alike; caps
+## of 10 to 14 give the same verdicts.
+nlminb_capped <- function(k) function(start, objective, gradient = NULL,
+                                     hessian = NULL, ..., control = list()) {
+  control$iter.max <- k
+  stats::nlminb(start, objective, gradient, hessian, ..., control = control)
+}
 stalled_fit <- function() {
   set.seed(1293099)
   G <- 20L
@@ -81,9 +95,11 @@ stalled_fit <- function() {
     as.numeric(stats::arima.sim(list(ar = 0.7), 12, sd = 0.8 * sqrt(1 - 0.49)))))
   d$x <- stats::rnorm(nrow(d))
   d$y <- 1 + 0.3 * d$x + stats::rnorm(G, 0, 0.5)[d$g] + lat + stats::rnorm(nrow(d), 0, 0)
-  suppressMessages(suppressWarnings(
-    ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
-              ar = ilm_ar1(~ t | g), verbose = FALSE)))
+  with_mocked_bindings(
+    suppressMessages(suppressWarnings(
+      ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+                ar = ilm_ar1(~ t | g), verbose = FALSE))),
+    nlminb = nlminb_capped(11L))
 }
 
 test_that("a dispersion at its limit is held where the fit did not converge", {

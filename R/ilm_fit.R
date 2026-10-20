@@ -483,8 +483,9 @@ ilm_norm_re <- function(re_list, N) lapply(re_list, function(e) {
 #'   [predict.ilm_model()] needs it to rebuild the basis at new covariate values).
 #' @references
 #' Wood, S. N. (2017). *Generalized Additive Models: An Introduction with R*,
-#' 2nd ed. Chapman & Hall/CRC. Section 5.4 develops the mixed-model
-#' representation of penalised smoothers.
+#' 2nd ed. Chapman & Hall/CRC. Section 5.8 (p. 239) gives the mixed-model
+#' representation of penalised smoothers; section 5.4.2's parameterisation
+#' supplies its matrices.
 #'
 #' Wood, S. N. (2003). Thin plate regression splines. *Journal of the Royal
 #' Statistical Society, Series B*, 65(1), 95--114.
@@ -1329,6 +1330,7 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
                            fam = NULL, ysd = NA_real_) {
   it <- which(pn == "theta")
   blocks <- list(); flagged <- character(0); maybe <- character(0)
+  mpush <- list()
   for (k in seq_along(re)) {
     nm <- names(re)[k]
     blocks[[nm]] <- it[(toff[k] + 1L):toff[k + 1L]]
@@ -1352,6 +1354,13 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
              isTRUE(if (identical(fam$name, "gaussian") && is.finite(ysd))
                       sdv / ysd < ilm_re_sd_limit else sdv < ilm_re_sd_limit))
       maybe <- c(maybe, nm)
+    ## a term of several dimensions with a Cholesky diagonal under the wider
+    ## line is a candidate too, its push along that diagonal (ilm_re_flat)
+    else if (!identical(re[[k]]$kind, "basis") && (length(sdv) > 1L || dk[k] > 1L)) {
+      j <- ilm_cov_push(pe[blocks[[nm]]], blocks[[nm]], ty[k], nrow(S), dk[k],
+                        S, Sigd[[nm]])
+      if (!is.null(j)) { maybe <- c(maybe, nm); mpush[[nm]] <- j }
+    }
   }
   if (!is.null(ar)) {
     blocks[["ar"]] <- which(pn %in% c("lchol_ar", "rho_raw"))
@@ -1394,7 +1403,7 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
     keep <- setdiff(keep, id)
   }
   list(blocks = blocks, flagged = flagged, keep = keep, maybe = maybe,
-       force = character(0))
+       force = character(0), mpush = mpush)
 }
 
 ## WHERE A DISPERSION IS AT ITS LIMIT. A negative binomial is a Poisson whose
@@ -1502,6 +1511,73 @@ ilm_disp_flat <- function(obj, par, pn, cb, side = 1L) {
 ilm_re_sd_limit <- 0.1
 ilm_re_flat_tol <- ilm_disp_flat_tol
 
+## A TERM OF SEVERAL DIMENSIONS SHORT OF ITS BOUNDARY. A covariance of two or
+## more dimensions -- an intercept and a slope, or several categories -- was
+## taken to be at its boundary only past fixed lines (ilm_cov_blocks()), and
+## the likelihood can be flat well inside them, so where on that flat ridge
+## the optimiser stopped decided whether the term was held. A binomial random
+## intercept and slope whose correlation runs to 1 is held past a correlation
+## of 0.999, yet the objective moves by under 1e-3 from a correlation of 0.994
+## up: stopped there, it got TMB's Hessian with the flat direction in it, and
+## on one CI platform no usable standard errors at all. Such a term is now a
+## candidate when the smallest diagonal of a Cholesky factor of its
+## covariance -- the part of a dimension that the ones before it do not
+## explain -- is under ilm_re_chol_limit of that factor's largest SD, and it
+## is held when pushing that diagonal's log 3 lower moves the objective by at
+## most ilm_re_flat_tol: the single SD's rule, along the direction that leads
+## to the boundary. Unlike a single SD it is not held whatever its curvature:
+## only its flat directions are, as for a term past the fixed lines
+## (ilm_hess_recover()). Measured on the boundary study's designs
+## (studies/scripts/boundary_se.R), 5,100 fits: 64 terms the fixed lines
+## missed are held, and in every one the model with that diagonal pinned at
+## the boundary fits as well, within 1e-3; the 12 holds the fixed lines made
+## where it does not are unchanged, and none is added. The newly held fits'
+## standard errors moved by a median factor of 0.998 (0.90 to 1.03).
+ilm_re_chol_limit <- 0.1
+
+## The parameter whose push toward the boundary is the flatness test for a
+## term of several dimensions: among its Cholesky factors' free log
+## diagonals, the smallest relative to its factor's largest SD, if under
+## ilm_re_chol_limit. NULL otherwise, and for a reduced-rank term, whose
+## rank is the user's.
+#' @keywords internal
+#' @noRd
+ilm_cov_push <- function(th, idx, tyk, C, dk, S, Sd) {
+  if (identical(tyk, "rr")) return(NULL)
+  pos <- integer(0); rel <- numeric(0)
+  ## the category factor: ilm_mkL() fills a lower triangle column by column,
+  ## its diagonal on the log scale; ilm_mkD() is all diagonal
+  np <- if (identical(tyk, "diag")) C else ilm_ncov(C)
+  if (C > 1L) {
+    dg <- if (identical(tyk, "diag")) seq_len(C) else {
+      k <- 0L; out <- integer(0)
+      for (j in seq_len(C)) for (i in j:C) { k <- k + 1L; if (i == j) out <- c(out, k) }
+      out
+    }
+    pos <- c(pos, dg)
+    rel <- c(rel, exp(th[dg]) / sqrt(max(diag(S))))
+  }
+  ## the within-group factor: ilm_mkLd() fixes its [1, 1] at 1
+  if (dk > 1L && !is.null(Sd)) {
+    nd <- length(th) - np
+    dcor <- nd == ilm_ncov(dk) - 1L
+    dg <- if (!dcor) seq_len(dk - 1L) else {
+      k <- 0L; out <- integer(0)
+      for (j in seq_len(dk)) for (i in j:dk) {
+        if (i == 1L && j == 1L) next
+        k <- k + 1L; if (i == j) out <- c(out, k)
+      }
+      out
+    }
+    pos <- c(pos, np + dg)
+    rel <- c(rel, exp(th[np + dg]) / sqrt(max(diag(Sd))))
+  }
+  ok <- is.finite(rel)
+  if (!any(ok)) return(NULL)
+  m <- which(ok)[which.min(rel[ok])]
+  if (rel[m] < ilm_re_chol_limit) idx[pos[m]] else NULL
+}
+
 #' @keywords internal
 #' @noRd
 ilm_re_flat <- function(obj, par, cb) {
@@ -1509,14 +1585,20 @@ ilm_re_flat <- function(obj, par, cb) {
   f0 <- tryCatch(obj$fn(par), error = function(e) NA_real_)
   for (nm in cb$maybe) {
     id <- cb$blocks[[nm]]
-    ## an AR block is its log SD and its correlation; only the SD is pushed
-    if (identical(nm, "ar")) id <- id[names(par)[id] == "lchol_ar"]
+    ## a term of several dimensions is pushed along its smallest Cholesky
+    ## diagonal (ilm_cov_push()); an AR block is its log SD and its
+    ## correlation, and only the SD is pushed
+    multi <- !is.null(cb$mpush[[nm]])
+    if (multi) id <- cb$mpush[[nm]]
+    else if (identical(nm, "ar")) id <- id[names(par)[id] == "lchol_ar"]
     p2 <- par; p2[id] <- p2[id] - 3
     f1 <- tryCatch(obj$fn(p2), error = function(e) NA_real_)
     cb$push[[nm]] <- f1 - f0
     if (isTRUE(f1 - f0 <= ilm_re_flat_tol)) {
       cb$flagged <- c(cb$flagged, nm)
-      cb$force <- c(cb$force, nm)
+      ## held whatever its curvature only for a single SD: a term of several
+      ## dimensions has only its flat directions held (ilm_hess_recover())
+      if (!multi) cb$force <- c(cb$force, nm)
     }
   }
   ## A gaussian residual SD and an AR SD can both look flat when the noise
@@ -2270,8 +2352,8 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
          call. = FALSE)
   fam <- if (is.list(family)) family else ilm_family(family)
   ## Integrating the fixed effects out under a flat prior is available for any
-  ## family, and glmmTMB does exactly this -- `if (REML) randomArg <-
-  ## c(randomArg, "beta")`. What differs is how much it delivers. For a linear
+  ## family: the fixed effects are simply added to the parameters the Laplace
+  ## approximation integrates over. What differs is how much it delivers. For a linear
   ## model the integral is exact and the result is textbook REML, unbiased with
   ## the n - p divisor. For anything else the Laplace approximation to that
   ## integral is itself an approximation, so what comes out is an

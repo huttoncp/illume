@@ -317,7 +317,30 @@ section 5.4.
 
 ## License
 
-MIT. See `LICENSE`.
+GPL-2: the GNU General Public License, version 2. It is version 2 only for
+now because the causal-graph functions may include code adapted from
+[dagitty](https://CRAN.R-project.org/package=dagitty), which is GPL-2 only.
+
+## Acknowledgements
+
+Parts of illume adapt code from, or follow, other packages, and their
+authors hold copyright in those parts:
+[car](https://CRAN.R-project.org/package=car) (John Fox, Sanford Weisberg,
+Brad Price) and R's `stats::mauchly.test()` (the R Core Team), for the
+sphericity statistics;
+[afex](https://CRAN.R-project.org/package=afex) (Henrik Singmann, Ben
+Bolker, Jake Westfall, Frederik Aust, Mattan S. Ben-Shachar), for
+generalized eta squared;
+[pbkrtest](https://CRAN.R-project.org/package=pbkrtest) (Ulrich Halekoh,
+Søren Højsgaard), for Kenward-Roger;
+[MASS](https://CRAN.R-project.org/package=MASS) (Brian Ripley, Bill
+Venables), for the generalised inverse;
+[missMDA](https://CRAN.R-project.org/package=missMDA) (Francois Husson,
+Julie Josse), for the low-rank imputation; and
+[dagitty](https://CRAN.R-project.org/package=dagitty) (Johannes Textor,
+Benito van der Zander, Ankur Ankan), for the causal-graph functions.
+Each is listed in `DESCRIPTION` as a copyright holder, and credited beside
+the code and in its help.
 
 ## Contributing
 

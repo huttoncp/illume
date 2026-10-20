@@ -68,3 +68,11 @@ By participating you agree to abide by the [code of conduct](CODE_OF_CONDUCT.md)
 ## Questions
 
 Open an issue. There is no mailing list.
+
+## Licence of contributions
+
+illume is distributed under GPL-2 for now (see the README). Contributions
+are accepted under GPL (>= 2), so that the package can move to GPL (>= 2)
+later. Please sign off each commit (`git commit -s`), which certifies the
+Developer Certificate of Origin (https://developercertificate.org/) for that
+contribution. No contributor licence agreement is needed.

@@ -120,6 +120,14 @@ variable. Covariates are measured by definition, so they are added to
 \code{observed} automatically; name any measured factors there too.
 }
 
+\section{Copyright}{
+
+The sphericity statistics adapt code from the car package (Fox,
+Weisberg and Price; GPL (>= 2)) and from R's \code{stats::mauchly.test()};
+generalized eta squared follows the afex package (Singmann, Bolker,
+Westfall, Aust and Ben-Shachar; GPL (>= 2)).
+}
+
 \examples{
 set.seed(1)
 n <- 24

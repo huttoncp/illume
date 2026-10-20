@@ -223,6 +223,10 @@ ilm_aov_ss <- function(Y, X, idx, P) {
        E = E, P = P, q = q, df_e_b = df_e_b)
 }
 
+## Copyright notice: ilm_aov_sphericity() adapts code from car's
+## summary.Anova.mlm() (car, GPL (>= 2); copyright John Fox, Sanford
+## Weisberg and Brad Price) and from R's stats::mauchly.test() (GPL (>= 2);
+## copyright the R Core Team). The help of ilm_aov_ez() cites both.
 #' Greenhouse-Geisser, Huynh-Feldt and Mauchly
 #'
 #' Arithmetic follows `car:::summary.Anova.mlm` exactly, so the numbers are
