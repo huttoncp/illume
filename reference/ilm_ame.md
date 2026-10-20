@@ -1,0 +1,118 @@
+# Average marginal effect on the response scale
+
+What a coefficient means where the response lives. For a gaussian model
+that is the coefficient itself; for anything with a link it is not, and
+the difference matters: an odds ratio of 2 can be a 3-point change in
+probability or a 20-point one depending on where the data sit.
+
+## Usage
+
+``` r
+ilm_ame(
+  object,
+  terms = NULL,
+  eps = 1e-04,
+  groups = c("typical", "population"),
+  marginal = NULL,
+  per = NULL
+)
+```
+
+## Arguments
+
+- object:
+
+  An
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md).
+
+- terms:
+
+  Which predictors. Default is every fixed-effect term.
+
+- eps:
+
+  Relative step for the numerical derivatives.
+
+- groups:
+
+  `"typical"` (the default) for the effect in a typical group, with the
+  random effects at zero; `"population"` for the effect averaged over
+  them. See "Which effect, in a mixed model".
+
+- marginal:
+
+  Deprecated. `TRUE` is `groups = "population"`, and `FALSE` is
+  `groups = "typical"`.
+
+- per:
+
+  For a model with an offset, `offset(log(exposure))`: the exposure the
+  effects on the mean are per. `per` rescales the offset – the exposure
+  – to the value given, for every row. By default the effects are per
+  unit of exposure (the offset at zero); a positive number puts every
+  row at that exposure instead – `per = 1e5` for a rate per 100,000.
+  Such a result prints which. Ignored without an offset.
+
+## Value
+
+A data frame with `term`, `level`, `estimate`, `se`, `lower`, `upper`,
+and `kind` (`"slope"` or `"contrast"`). For an outcome with categories –
+multinomial or ordinal – there is also a `category` column and one row
+per category: the effect on the probability of each. Those rows sum to
+zero for every term, because the probabilities sum to one.
+
+## Details
+
+For a numeric predictor this is the average of the derivative of the
+fitted mean with respect to it, taken over the rows actually observed.
+For a factor it is the average change in fitted mean from moving every
+row to that level from the reference, which is a contrast rather than a
+derivative.
+
+Standard errors come from the delta method: the effect is differentiated
+numerically with respect to the parameters and combined with their
+covariance. The parameter vector includes the covariance parameters,
+which the effect depends on when it is averaged over the random effects.
+
+## Which effect, in a mixed model
+
+By default, `groups = "typical"`, the predictions hold the random
+effects at zero, so the effect is the one for a **typical group** – the
+effect
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md)
+reports, and the one the coefficients describe. With
+`groups = "population"` the predictions are averaged over every random
+term, as `predict(groups = "population")` does, and the effect is the
+one on the **population as a whole**. Through a nonlinear link the two
+differ: a logit's population-averaged effect is the flatter one. They
+answer different questions. The `marginaleffects` bridge averages over
+the random effects unless its option `ilm_model.groups` is set to
+`"typical"`, so by default it matches `groups = "population"`.
+
+"Marginal" is the usual name for this kind of effect, a derivative or a
+contrast averaged over the rows, whichever groups it is taken for. The
+old argument `marginal` chose the groups: `marginal = FALSE` is
+`groups = "typical"`, and `marginal = TRUE` is `groups = "population"`.
+It still works, with a warning, and will be removed after the next
+release.
+
+## See also
+
+[`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md),
+and the `marginaleffects` package, which does this and a great deal more
+once
+[`ilm_register_marginaleffects()`](https://huttoncp.github.io/illume/reference/ilm_register_marginaleffects.md)
+is called.
+
+## Examples
+
+``` r
+set.seed(1); n <- 400
+d <- data.frame(x = rnorm(n), g = factor(sample(c("a", "b"), n, TRUE)))
+d$y <- rbinom(n, 1, plogis(0.4 * d$x + 0.6 * (d$g == "b")))
+fit <- ilm_model(y ~ x + g, data = d, family = "binomial", verbose = FALSE)
+ilm_ame(fit)
+#>   term level     kind   estimate         se      lower     upper
+#> 1    x  <NA>    slope 0.09084394 0.02377348 0.04424877 0.1374391
+#> 2    g     b contrast 0.18714683 0.04793616 0.09319367 0.2811000
+```

@@ -1,0 +1,92 @@
+# A continuous-time autoregressive structure over irregular time
+
+The correlation between two observations of the same unit is `rho`
+raised to the power of the gap between them, so observations close in
+time are similar and the spacing need not be regular. This is the
+structure `nlme`'s `corCAR1()` fits, and the AR(1) special case when
+every gap is one.
+
+## Usage
+
+``` r
+ilm_car1(time, group, verbose = TRUE)
+```
+
+## Arguments
+
+- time:
+
+  Time, one value per observation. Any numeric scale or `Date`; `rho` is
+  the correlation one unit apart, so the units matter. Or a one-sided
+  formula `~ time | group` naming two columns of the model's data.
+
+- group:
+
+  Unit identifier, one value per observation. Omitted when `time` is a
+  formula.
+
+- verbose:
+
+  Warn about nearly coincident times. The latent budget is judged when
+  the model is fitted, where the family is known – see the
+  `obs_per_ar_latent` check – and `FALSE` here quiets that warning too.
+
+## Value
+
+A `"ilm_car1"` specification, to pass as `ilm_model(ar = )`.
+
+## Details
+
+**Not a spatial CAR.** "CAR" here is continuous-time autoregression,
+over time within a unit. In disease mapping "CAR" means the conditional
+autoregressive model over neighbouring areas (Besag's ICAR, and BYM with
+an unstructured part beside it), which this is not. For correlation
+between neighbouring areas, use a Markov random field smooth over the
+area factor, `s(region, bs = "mrf", xt = list(nb = nb))` with `nb` the
+neighbour list, and add `(1 | region)` for the BYM form's unstructured
+part.
+
+Written as a Markov chain the transition from one observation to the
+next is `phi_k = rho ^ d_k` with innovation variance `1 - phi_k^2`,
+which is exact for the Ornstein-Uhlenbeck process rather than an
+approximation to it. Irregular spacing therefore costs nothing in
+accuracy.
+
+What it does cost is latent values. One exists per distinct (group,
+time) pair, so genuinely continuous times with no repeats give one
+latent per observation – the regime where the Laplace approximation
+stops converging. The constructor reports the budget and warns when it
+is thin; rounding `time` to a coarser grid, so that observations share a
+latent, is the usual fix and is what makes the difference between a
+model that fits and one that does not.
+
+`ilm_car1(~ time | group)` names two columns of the model's data instead
+of passing them; see
+[`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
+for why that is the safer form.
+
+## See also
+
+[`ilm_ar1()`](https://huttoncp.github.io/illume/reference/ilm_ar1.md)
+for evenly spaced time,
+[`ilm_rw1()`](https://huttoncp.github.io/illume/reference/ilm_rw1.md)
+for a level that drifts rather than reverting,
+[`ilm_check_ar()`](https://huttoncp.github.io/illume/reference/ilm_check_ar.md)
+and
+[`ilm_plot_acf()`](https://huttoncp.github.io/illume/reference/ilm_plot_acf.md)
+to test whether the structure is needed,
+[`ilm_cells()`](https://huttoncp.github.io/illume/reference/ilm_cells.md)
+for the fitted cells.
+
+## Examples
+
+``` r
+set.seed(1)
+d <- data.frame(id = rep(1:20, each = 6),
+                day = as.vector(replicate(20, sort(sample(1:60, 6)))))
+ilm_car1(d$day, d$id)
+#> CAR(1), continuous time 
+#>   20 groups, 120 latent values, 120 observations (1.00 per latent)
+#>   gaps: min 1, median 7, max 24
+#>   whether that is thin depends on the family; the fit checks it
+```

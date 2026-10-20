@@ -1,0 +1,549 @@
+# Effect size and power
+
+Three questions that bracket an analysis. Before it: how large does the
+study need to be. After it: how large is the effect, on a scale someone
+can act on. And then: what would happen if we changed something.
+
+``` r
+
+library(illume)
+```
+
+## Before: how large a study
+
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+treats a fitted model as the truth, simulates studies at the sizes you
+are considering, refits each one, and counts how often the term is
+detected. Nothing in it needs a closed-form variance, so it covers mixed
+models, zero-inflated counts and ordinal outcomes as readily as a linear
+regression.
+
+``` r
+
+pilot <- ilm_model(y ~ dose, data = pilot_data, family = "binomial")
+pw <- ilm_power(pilot, n = c(200, 400, 800), effect = c(0.3, 0.5), sims = 500)
+pw
+plot(pw)
+```
+
+Two things it reports that most software does not, and both change what
+the number means.
+
+### The power estimate is itself an estimate
+
+A power of 0.80 from 200 replicates is a proportion, so it carries a
+standard error of `sqrt(0.8 * 0.2 / 200)`, about 2.8%. The power is 0.74
+to 0.86, and a sample size read off that curve is a range rather than a
+number.
+
+``` r
+
+ilm_power_n(pw, target = 0.8)
+#>   effect     n  n_lower  n_upper
+#>      0.3   240      207      272
+```
+
+Quoting “you need 240 participants” from that is false precision.
+Quoting “somewhere between 210 and 270, and more replicates will narrow
+it” is the answer the simulation supports. Raising `sims` narrows the
+interval and nothing else does – collecting more pilot data changes the
+estimate, not its Monte Carlo error.
+
+The interval is Wilson rather than Wald, because power estimates live
+near 1, where a Wald interval reaches above it.
+
+### Some fits will not converge
+
+A replicate that fails to fit has not detected anything. `power` counts
+it as a non-detection; `power_converged` divides only by the replicates
+that worked, which is **power conditional on convergence** – a different
+and more flattering quantity, and the one most software reports.
+
+``` r
+
+#>   n effect power mc_lower mc_upper power_converged converged
+#>  40  2.072 0.850    0.756    0.912           0.872     0.975
+```
+
+When `converged` is below one the two differ, and the gap is the size of
+the problem rather than something to smooth over. A design where a fifth
+of studies fail to fit is a design worth reconsidering, and averaging
+over only the successes hides exactly that.
+
+### The test it counts is the one you will report
+
+Each simulated study is analysed the way the real one will be. A model
+with nothing to integrate out reports exact t and F tests, so that is
+what is counted; anything else reports a Wald z, and a term with several
+coefficients – a factor with three levels, or any term of a multinomial
+model, which has one coefficient per category – is tested jointly, as
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
+tests it.
+
+``` r
+
+ilm_power(pilot, term = "dose")       # one coefficient: its z or t test
+ilm_power(pilot3, term = "arm")       # three arms: the joint test of both
+ilm_power(pilot3, term = "armB")      # or one comparison, named as a coefficient
+```
+
+It matters most where studies are small. Counting a z test where the
+analysis will use a t put the power of a 20-person two-arm trial at
+0.43, against an exact 0.395.
+
+For a joint test `effect` is a **multiple** of the assumed coefficients
+rather than a value for one of them: `effect = c(0.5, 1)` asks what
+happens if every part of the effect is half what was assumed.
+
+A study is also refitted as the same model – the contrasts, the zero
+part, the dispersion model, the censoring and a flexible survival
+baseline all come along, and serial correlation is simulated and
+refitted as itself. Each of those was once dropped, and a model with
+sum-to-zero contrasts came back with differently named coefficients and
+a power of exactly zero.
+
+### Mixed designs
+
+For a model with a grouping factor, `n` is the number of rows but the
+number of **clusters** moves with it, because that is what a mixed
+design’s power actually depends on. Resampling rows would hold the
+number of groups fixed while n grew, which is the wrong thing to hold
+fixed. A cluster drawn twice becomes two clusters, or the design has
+fewer independent groups than it appears to – and so do the classes
+inside a school drawn twice, while items that every participant saw keep
+their labels, because new participants do not bring new items.
+
+A random **slope** is drawn as a random slope, not as an intercept
+shift. A `(1 + time | id)` design whose participants were all given the
+same slope would have them moving in near-parallel, which understates
+how far they differ and so overstates power for anything interacting
+with `time`.
+
+### When there is no pilot study
+
+[`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+treats a fitted model as the truth, and a study being planned has
+nothing to fit.
+[`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md)
+builds the model from assumptions instead: a design grid, the parameters
+you are prepared to defend, and an ordinary `ilm_model` object that
+everything else in the package will accept.
+
+Assumptions go in as cell means on the response scale, which is the form
+most people actually hold one in.
+
+``` r
+
+d <- list(arm = c("control", "treatment"), time = c("pre", "post"))
+cells <- c(control.pre = 20, control.post = 21,
+           treatment.pre = 20, treatment.post = 25)
+
+s <- ilm_scaffold(change ~ arm * time + (1 | id), design = d,
+                  within = "time", n_unit = 60,
+                  cells = cells, sd = 6, icc = 0.5)
+#> <ilm_scaffold>  parameters ASSUMED, not estimated
+#>   formula    : change ~ arm * time + (1 | id)
+#>   family     : gaussian
+#>   size       : 60 ids x 2 = 120 rows
+#>   between    : arm
+#>   within     : time
+#>
+#>   assumed coefficients
+#>           (Intercept)          armtreatment              timepost
+#>                    20                     0                     1
+#> armtreatment:timepost
+#>                     4
+#>
+#>   residual sd : 6
+#>   id sd       : 6
+#>   total sd    : 8.485   <- the outcome's own spread; `sd` above is the residual
+```
+
+`n_unit` counts participants, not rows, so the number you give is the
+number that goes in a protocol. `arm` varies between participants and
+`time` within, and the grid is built accordingly – allocating a
+between-participants variable to rows would put the same person in both
+arms.
+
+The point of returning a model rather than a number is that the
+assumptions can be interrogated before anything is built on them. The
+cell means went in; here they are coming back out through an entirely
+different route.
+
+``` r
+
+ilm_emmeans(s, c("arm", "time"))
+#>        arm time estimate    se lower upper
+#>    control  pre       20 1.595 16.87 23.13
+#>  treatment  pre       20 1.595 16.87 23.13
+#>    control post       21 1.595 17.87 24.13
+#>  treatment post       25 1.595 21.87 28.13
+```
+
+Cell means the formula cannot produce are refused rather than
+approximated. A least-squares solve always returns *something*, and the
+something it returns for crossed means under an additive formula is a
+scaffold for a different study:
+
+``` r
+
+ilm_scaffold(change ~ arm + time, design = d, within = "time",
+             n_unit = 60, cells = cells, sd = 6, icc = 0.5)
+#> Error: this formula cannot produce the cell means given: cell
+#> 'control.pre' is off by 1 on the link scale. Cell means that differ by
+#> more than the terms in the formula allow need the interaction between
+#> them -- arm * time rather than arm + time.
+```
+
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+is the scaffold plus the power curve in one call.
+
+``` r
+
+pw <- ilm_power_design(change ~ arm * time + (1 | id), design = d,
+                       within = "time", n_unit = c(60, 120, 240, 400),
+                       cells = cells, sd = 6, icc = 0.5,
+                       term = "arm:time", sims = 300)
+#> Simulated power for armtreatment:timepost (gaussian family, alpha = 0.05)
+#>   counting the Wald z test, as the analysis reports it
+#>   300 replicates per cell; the scaffold's own grid had 800 rows
+#>   each replicate is a fresh draw of the planned design: balanced
+#>   allocation, new participants
+#>  n_unit   n effect power mc_lower mc_upper power_converged converged
+#>      60 120      4 0.490    0.434    0.546           0.490         1
+#>     120 240      4 0.747    0.695    0.793           0.747         1
+#>     240 480      4 0.957    0.927    0.975           0.957         1
+#>     400 800      4 0.983    0.962    0.993           0.983         1
+
+ilm_power_n(pw, target = 0.8)
+#>  effect   n n_lower n_upper n_unit n_unit_lower n_unit_upper
+#>       4 301   249.8   348.7  150.5        124.9        174.4
+```
+
+Read `n_unit`, not `n`: about 150 participants measured twice –
+somewhere between 125 and 175, given the Monte Carlo error – not 300
+people. `ilm_interpret(pw)` writes the same thing out in sentences.
+
+The standard errors printed on a scaffold come from **one realisation**
+of the design at its own size. They are not a property of the
+assumptions, and power read off them would be one coin flip. That is
+what
+[`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+is for.
+
+None of this makes an assumption true. It makes the assumption explicit,
+and separates “we need 150 participants” from the four numbers that
+claim implies.
+
+### `sd` is the residual standard deviation
+
+Worth stating plainly, because every other package that takes a design
+specification means something different by the word. `sd` is the
+**residual** scale, and the random effects sit on top of it, so with
+`icc` the outcome’s own spread is `sd / sqrt(1 - icc)`. The example
+above — `sd = 6, icc = 0.5` — is data whose standard deviation is 8.49,
+not 6.
+
+`Superpower` and `faux` both take the **total** standard deviation, and
+so does a paper you might read one off. Converting is:
+
+      sd_illume = sd_total * sqrt(1 - icc)
+
+The scaffold prints both so the two cannot be quietly confused:
+
+``` r
+
+#>   residual sd : 4.243
+#>   id sd       : 4.243
+#>   total sd    : 6   <- the outcome's own spread; `sd` above is the residual
+```
+
+With a random slope the total varies by row — the spread depends on
+where you are in the design — and it says that instead of printing a
+number true at one point only.
+
+### Every simulated study is a fresh draw of the plan
+
+A scaffold has no data to resample, so each replicate draws the planned
+design again at its own size: participants allocated to cells the way a
+protocol randomises a factorial – every combination of the
+between-participant factors equally often, and any remainder spread so
+each factor’s own levels stay balanced – and a covariate given as a
+function drawn afresh. Resampling the scaffold’s own grid instead, as
+this once did, left cells of a small factorial empty: 18 participants in
+a 3 x 3 design fitted 28.5% of the time, where the planned study, with
+two in every cell, always can.
+
+### A categorical outcome
+
+For a multinomial or ordinal outcome the assumption is the probability
+of each category in each cell, which is how it would be written in a
+protocol.
+
+``` r
+
+cells <- rbind(control   = c(none = 0.50, some = 0.30, full = 0.20),
+               treatment = c(none = 0.35, some = 0.35, full = 0.30))
+pw <- ilm_power_design(y ~ arm, design = list(arm = c("control", "treatment")),
+                       n_unit = c(100, 200, 400), family = "multinomial",
+                       cells = cells, term = "arm", sims = 1000)
+#>  n_unit   n effect power mc_lower mc_upper power_converged converged
+#>     100 100      1 0.239    0.214    0.266           0.239         1
+#>     200 200      1 0.468    0.437    0.499           0.468         1
+#>     400 400      1 0.818    0.793    0.841           0.818         1
+```
+
+`arm` is tested across all its categories at once, and `effect` is a
+multiple of the assumed coefficients. Checked against the noncentral
+chi-square the asymptotic theory gives, the curve is 0.818 against 0.813
+at 400; at 100 and 200 it sits 3 to 4 points below theory (0.239 against
+0.272, 0.468 against 0.502), because the Wald test the analysis reports
+is itself a little conservative there – it rejected a true null 4.2% of
+the time at 100 and 4.5% at 200. A Pearson test of the 2 x 3 table would
+have more power at those sizes, and that is not the test a mixed-model
+analysis reports.
+
+An ordinal outcome can be stated the same way, or as slopes and
+`thresholds`. Probabilities no proportional-odds model can produce are
+refused, with the model that can produce them named:
+
+``` r
+
+bad <- rbind(control = c(lo = 0.38, mid = 0.35, hi = 0.27),
+             treatment = c(lo = 0.20, mid = 0.60, hi = 0.20))
+ilm_scaffold(y ~ arm, design = list(arm = c("control", "treatment")),
+             n_unit = 150, family = "ordinal", cells = bad)
+#> Error: these cell probabilities are not ones proportional odds can produce:
+#> between cells, the cumulative log-odds shift by different amounts at
+#> different cut points (off by 0.322). An ordinal model would plan a
+#> different study from the one described. family = "multinomial" reproduces
+#> these probabilities exactly.
+```
+
+A random intercept in a multinomial model is a random shift in every
+category’s log-odds, and `re_sd` is its standard deviation. For a binary
+or ordinal outcome an `icc` works as it does for a gaussian one, on the
+latent scale, whose residual variance is that of the standard logistic,
+`pi^2 / 3`.
+
+### When the design itself fails a check
+
+Some checks the analysis makes are made *before* fitting, on the design,
+so every study drawn from it fails them alike. Counting that against
+each replicate would put the power at zero whatever the effect, so the
+result reports it instead – with the remedy the check itself names:
+
+``` r
+
+#>   The DESIGN fails a check the analysis makes before fitting, and
+#>   every analysis of such a study will report it as FAILED:
+#>     latent_budget: 2.00 observations per latent value (240 observations,
+#>       120 latent values: id 120)  (100% of the simulated studies)
+#>       try: ... term 'id' contributes 120 (us, width 2). rr(1) would cut it to 60
+```
+
+That one is a three-category multinomial with four visits per
+participant: a random intercept per category and participant leaves two
+observations for every value it has to estimate. The same design with
+eight visits does not fail it.
+
+With 60 participants the Wald test of the treatment effect in that
+design rejected a true null 5.8% of the time with four visits and 7.8%
+with eight, so the power reported is a little flattered, by the same
+amount. That is the test the analysis will report;
+[`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
+is the calibrated alternative for the analysis itself.
+
+### What it was checked against
+
+Simulated power is only as good as the simulation, so this was compared
+with three outside implementations on designs each could express.
+
+**`power.t.test`**, two-sample, effect 2.5 on sd 4, 2,000 replicates:
+
+      participants     100      200      300
+      illume         0.878    0.995    1.000
+      closed form    0.872    0.993    1.000
+
+And where it matters most, at 20 participants with an effect of 0.8
+standard deviations: 0.387 (0.374 to 0.399 over 6,000 replicates)
+against the exact 0.395. Counting a z test there, as this once did, gave
+0.43.
+
+**`Superpower::ANOVA_exact()`** and **`simr::makeLmer()`** on the 2
+(arm, between) × 2 (time, within) design above, cell means 20/21/20/25
+with `sd = 6` and an ICC of 0.5. `simr` is the closest existing thing to
+a scaffold — it builds a model from `fixef`, `VarCorr` and `sigma` with
+nothing fitted — so it is the fairest comparison available. `simr` 1,000
+replicates, illume 2,000:
+
+      n per arm   Superpower   simr (z)   simr (Satterthwaite)   illume (ML)   illume (REML)
+         20          0.306       0.329           0.302              0.358         0.342
+         40          0.549       0.552           0.545              0.583         0.572
+
+**`faux`**, which generates the data a completely different way, on a
+random slope design. Per-subject moments from 8,000 simulated
+participants:
+
+                    intercept sd   slope sd   correlation
+      target            2.000        1.200       -0.400
+      faux              2.157        1.270       -0.432
+      illume            2.156        1.273       -0.446
+
+Checked directly as well: the random effects drawn for 8,000 simulated
+groups have standard deviations 2.016 and 1.209 and a correlation of
+−0.413, against 2, 1.2 and −0.4 assumed.
+
+Two things worth taking from that. The agreement with `faux` to three
+decimals is the strongest evidence that random slopes are simulated
+correctly — they were not, until recently, and an independent generator
+is what settled it.
+
+And illume sits above Superpower’s exact calculation, for two reasons
+that can be taken apart. It counts the test its analysis reports, and a
+mixed model’s default analysis is maximum likelihood with a z reference.
+Maximum likelihood’s variance components run small, which flatters the
+power by about 1.5 points here; `reml = TRUE` plans for a REML analysis
+instead, and brings illume within Monte Carlo error of `simr`, which
+uses REML too. What remains is z against an exact F: a Satterthwaite
+reference takes `simr` down to Superpower’s value. Expect gaps of that
+size when comparing against G\*Power or Superpower, and choose `reml` to
+match the analysis you will actually run.
+
+## After: how large the effect
+
+[`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md)
+reports each coefficient on the scale its family puts it on.
+
+``` r
+
+fit <- ilm_model(relapse ~ dose + age, data = d, family = "binomial")
+ilm_effects(fit)
+```
+
+| family | scale |
+|----|----|
+| binomial, beta | odds ratio |
+| poisson, negative binomial | incidence rate ratio |
+| ordinal | proportional odds ratio |
+| weibull, lognormal, loglogistic | time ratio (an acceleration factor, **not** a hazard ratio) |
+| Royston-Parmar | hazard ratio |
+| gaussian | the coefficient, plus partial variance explained |
+
+Three details that are easy to get wrong.
+
+**The interval is built on the link scale and transformed.**
+[`exp()`](https://rdrr.io/r/base/Log.html) of the endpoints is exact and
+asymmetric, which is the shape a ratio’s uncertainty really has. A
+standard error computed on the ratio scale and doubled either way is
+symmetric and can reach below zero.
+
+**A ratio from a mixed model is conditional.** `exp(beta)` there is the
+odds ratio for a *given cluster* – two patients in the same hospital,
+one exposed – not for the population, and the gap widens as the random
+effects grow. The print says so and names
+`ilm_ame(groups = "population")` for the population-averaged quantity:
+
+``` r
+
+ilm_effects(fit)                             # conditional odds ratio
+ilm_ame(fit, "dose", groups = "population")  # effect on the probability
+                                             # scale, averaged over groups
+```
+
+**Standardising a binary predictor is meaningless.** Dividing by the
+standard deviation of a 0/1 variable answers what happens per standard
+deviation of treatment, which is not a question anyone asks. Those are
+left alone, and the reason is printed rather than the number quietly
+omitted. `standardise = "gelman"` divides numeric predictors by *two*
+standard deviations, which is what makes them comparable with a binary
+one.
+
+``` r
+
+ilm_effects(fit, standardise = "gelman")
+```
+
+A robust covariance can be substituted, so the same table can be built
+on clustered or design-based standard errors:
+
+``` r
+
+ilm_effects(fit, vcov = ilm_vcov_cluster(fit, ~ clinic))
+```
+
+## Then: what would happen if
+
+[`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md)
+sets predictors to values someone is considering and reports what the
+model implies.
+
+``` r
+
+ilm_scenario(fit, dose = c(0, 10, 20), contrast = "first")
+```
+
+The default averages over **the observed units**: set the intervention
+for everyone, keep each unit’s own covariates, predict, average. That is
+standardisation, and when the adjustment set is valid it is the causal
+estimand.
+
+This is not the same as building one row with the predictors set and
+predicting from it. That row is a *representative unit* – what happens
+to someone who looks like this – and under any non-linear link it is a
+different number, because the average of a prediction is not the
+prediction at the average. On a logistic fit at the same dose: 0.657
+averaged over the units, 0.683 at the average covariate.
+`over = "reference"` gives the second, and the print says which was
+used.
+
+``` r
+
+ilm_scenario(fit, dose = 10)                        # the population
+ilm_scenario(fit, dose = 10, over = "reference")    # a unit like this
+```
+
+### It checks whether the scenario is inside the data
+
+A model returns a number for a dose nobody received, and the interval
+around it looks like any other, because the interval carries uncertainty
+about the coefficients rather than about whether the functional form
+survives out there. Each scenario is checked twice.
+
+**By value**, against each predictor’s observed range – with a 2%
+tolerance, so asking for `dose = 0` when the smallest observed is 0.013
+is not flagged. Flagging that every time is how a warning gets ignored.
+
+**By combination**, which no range check catches. Every value can sit
+inside its own range while the point sits in a corner nobody occupies.
+On personnel data where years of service is roughly age minus 22, a
+25-year-old with 35 years of service has both values well inside their
+ranges, and sits 2.39 standardised units from the nearest real person
+against 0.25 for a typical one.
+
+``` r
+
+ilm_scenario(fit, age = c(45, 25), service = c(23, 35))
+#>  age service estimate lower upper extrapolating
+#>   45      23    3.095 3.003 3.180         FALSE
+#>   25      35    2.820 1.292 4.192          TRUE
+```
+
+A flagged scenario is reported rather than refused. Sometimes
+extrapolating is the point – but the reader should know they are doing
+it, and nothing in the number tells them.
+
+## See also
+
+[`vignette("workflow")`](https://huttoncp.github.io/illume/articles/workflow.md)
+for where these sit in an analysis,
+[`?ilm_power`](https://huttoncp.github.io/illume/reference/ilm_power.md),
+[`?ilm_scaffold`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md)
+and
+[`?ilm_power_design`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
+for planning without a pilot,
+[`?ilm_effects`](https://huttoncp.github.io/illume/reference/ilm_effects.md),
+[`?ilm_scenario`](https://huttoncp.github.io/illume/reference/ilm_scenario.md),
+and [`?ilm_ame`](https://huttoncp.github.io/illume/reference/ilm_ame.md)
+for the marginal effect of a one-unit change rather than a named
+scenario.
