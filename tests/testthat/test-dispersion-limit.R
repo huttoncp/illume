@@ -74,19 +74,58 @@ dl_beta <- function(seed, phi) {
   d
 }
 
-## The flat case is skipped on macOS. Along a beta's flat ridge, at phi of 1e8
-## and more, the objective carries rounding noise -- the beta log-density's
-## lgamma terms cancel -- of the order of the flatness test's 1e-3 tolerance,
-## so whether a fit is held depends on where the optimiser stopped on the
-## ridge. Here the fit stops at logdisp 17.3 (phi 3e7), the push of 3 moves
-## the objective by 4e-5, and it is held; on CI's macOS (arm64) job it was
-## not. Until the hold rule is made robust to that noise, a failure says
-## where the fit stopped.
+## The beta log-density used to be written as a sum of lgamma terms of size
+## phi log phi, whose rounding at a phi of 1e8 and more was of the order of
+## the flatness test's 1e-3 tolerance, so whether a fit on the flat ridge was
+## held depended on where the optimiser stopped -- it was not, on CI's macOS
+## (arm64) job. ilm_ldbeta() now rearranges it so those terms cancel in the
+## algebra; checked against stats::dbeta here.
+test_that("the beta log-density agrees with stats::dbeta at every precision", {
+  for (lphi in -1:12) for (mu in c(0.02, 0.3, 0.5, 0.9)) {
+    phi <- 10^lphi; s <- sqrt(mu * (1 - mu) / (phi + 1))
+    y <- pmin(pmax(mu + c(-2, -0.5, 0.5, 2) * s, 1e-9), 1 - 1e-9)
+    err <- max(abs(illume:::ilm_ldbeta(y, mu, phi) -
+                     stats::dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE)))
+    expect_lt(err, 1e-8, label = sprintf("|log f - dbeta| at phi 1e%d, mu %g", lphi, mu))
+  }
+})
+
+## With it, the ridge is flat: the fit forced to stop at log phi from 16 to
+## 24 -- logdisp pinned by equal bounds in every nlminb call the fit makes, the
+## real optimiser wrapped, not replaced -- is held at each, the push of 3
+## moving the objective by under 5e-5. Before, it moved by 4e-3 at 20 and
+## 0.28 at 24, and none from 20 up was held.
+disp_pinned <- function(target) function(start, objective, gradient = NULL,
+                                         hessian = NULL, ..., lower = -Inf,
+                                         upper = Inf) {
+  j <- which(names(start) == "logdisp")
+  lo <- rep_len(lower, length(start)); up <- rep_len(upper, length(start))
+  lo[j] <- up[j] <- target; start[j] <- target
+  stats::nlminb(start, objective, gradient, hessian, ..., lower = lo, upper = up)
+}
+
+test_that("a beta's phi stopped anywhere on its flat ridge is held", {
+  d <- dl_beta(71272, 200)
+  for (t in c(16, 18, 20, 22, 24)) {
+    f <- with_mocked_bindings(suppressMessages(dl_fit(d, "beta")),
+                              nlminb = disp_pinned(t))
+    at <- sprintf("logdisp pinned at %g", t)
+    expect_true("dispersion" %in% f$hessian_held, info = at)
+    expect_identical(f$checks$status[f$checks$check == "dispersion_limit"],
+                     "BOUNDARY", info = at)
+    expect_true(f$ok, info = at)
+  }
+})
+
+## The unforced flat case is still skipped on macOS: beyond a phi of about
+## 1e11 a smaller noise remains (a fit forced to stop at log phi 26 had no
+## usable standard errors), and where the optimiser stops on another platform
+## cannot be checked here. A failure says where the fit stopped.
 test_that("a beta's phi is held at its limit", {
   skip_if(Sys.info()[["sysname"]] == "Darwin",
-          paste("the dispersion hold is platform-sensitive at phi of 1e8 and more,",
-                "where lgamma cancellation in the beta log-density is of the order",
-                "of its 1e-3 flatness tolerance"))
+          paste("the dispersion hold is still platform-sensitive beyond a phi of",
+                "about 1e11, where a residual noise of the order of its 1e-3",
+                "flatness tolerance remains"))
   ## flat beyond phi = 6e7: held
   f <- suppressMessages(dl_fit(dl_beta(71272, 200), "beta"))
   id <- names(f$opt$par) == "logdisp"
@@ -100,11 +139,23 @@ test_that("a beta's phi is held at its limit", {
                "other terms carry all the variation", info = at)
 })
 
+## A precision past the line at a CURVED optimum: a beta regression with no
+## random terms to take up the noise, its true phi 1e7, so phi is identified
+## and the objective rises by about 2,400 when log phi is pushed 3 further.
+## Past the line, not flat, so not held. (This replaces a case of the study's
+## that looked curved only through the old density's rounding: under the
+## exact one it is flat at the limit, and held.) Seed 1 and phi 1e7 are the
+## setting, of seeds 1-3 at phi 1e7 and 1e9, where the fit converges cleanly
+## (nlminb code 0); the rest are past the line and not held too, but stop
+## with code 1 at that precision.
 test_that("a beta's phi at a curved optimum is not held", {
-  ## phi near 1e12, but at a curved optimum, the latent interpolating nearly
-  ## noiseless data: past the line, not flat, so not held
-  f2 <- suppressMessages(dl_fit(dl_beta(63362, 1e4), "beta"))
-  expect_lt(exp(-f2$opt$par[names(f2$opt$par) == "logdisp"] / 2), 1e-2)
+  set.seed(1); n <- 300
+  d <- data.frame(x = rnorm(n))
+  mu <- plogis(0.2 + 0.4 * d$x)
+  d$y <- rbeta(n, mu * 1e7, (1 - mu) * 1e7)
+  f2 <- suppressMessages(ilm_model(y ~ x, data = d, family = "beta", verbose = FALSE))
+  lp <- f2$opt$par[names(f2$opt$par) == "logdisp"]
+  expect_lt(exp(-lp / 2), 1e-2)
   expect_false("dispersion" %in% f2$hessian_held)
 })
 
