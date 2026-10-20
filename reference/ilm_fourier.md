@@ -86,5 +86,5 @@ f <- ilm_model(y ~ ilm_fourier(t, 12) + (1 | id), data = d,
 #> ilm_model(): the random-effect covariance of `id` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.
 coef(f)
 #>            (Intercept) ilm_fourier(t, 12)sin1 ilm_fourier(t, 12)cos1 
-#>             0.02037760             1.92025691             0.01996842 
+#>             0.02037751             1.92025693             0.01996844 
 ```
