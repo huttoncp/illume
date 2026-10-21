@@ -6,6 +6,25 @@
   (`GPL-2`). It is version 2 only for now because the causal-graph
   functions may include code adapted from dagitty, which is GPL-2 only.
 
+- **A beta model’s precision is held at its limit wherever on the flat
+  ridge the optimiser stops.** The beta log-density added terms of size
+  phi log phi to reach a result of size log phi. At a phi of 1e8 and
+  more, their rounding was of the order of the dispersion hold’s
+  flatness tolerance, so whether a fit at its limit was held depended on
+  the platform. It is now computed so that those terms cancel exactly,
+  by Stirling’s series for the log of the gamma function (Cramér 1946,
+  section 12.5). It agrees with
+  [`stats::dbeta()`](https://rdrr.io/r/stats/Beta.html) to 1e-9 up to
+  phi = 1e12, and is unchanged below phi = 1e4. On the dispersion-limit
+  study’s 500 beta fits, 30 more fits at their limit are held (missed
+  holds 58 to 28) and none that is not; 29 more pass their checks; and
+  57 fewer stop with a non-convergence code. The fits past the line that
+  looked like curved optima were the old rounding: with the exact
+  density all are at their limit. A precision at its limit, already
+  reported as held at its estimate, can come out at a different value.
+  At a moderate phi the change can alter `nlminb`’s stopping code
+  without moving the estimates; the optimizer check stays OK.
+
 - **A random-effect term of several dimensions is held at its boundary
   wherever on the flat ridge the optimiser stops.** A covariance of two
   or more dimensions – an intercept and a slope, or several categories –
