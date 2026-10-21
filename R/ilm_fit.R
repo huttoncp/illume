@@ -1420,9 +1420,17 @@ ilm_cov_blocks <- function(re, Sig, Sigd, ty, rk, dk, toff, ar, pe, pn,
 ##     rising as log k is pushed further, had 1 / sqrt(k) below 1.9e-3 in
 ##     99% and every genuine fit was above 0.05, so the line sits at 1e-2,
 ##     in the middle of that gap on the log scale;
-##   - a beta's phi can also reach 1e8 to 1e15 at a CURVED optimum, where a
-##     correlation over time interpolates nearly noiseless data: 8 such fits
-##     were past the line, and the flatness test is what keeps them out.
+##   - the study also found 8 beta fits past the line that seemed to sit at a
+##     CURVED optimum, phi of 1e8 to 1e15. That was the beta density's
+##     rounding: at such a precision its lgamma terms cancelled to noise
+##     (see ilm_ldbeta()). Rebuilt from the study's seeds, 10 fits under the
+##     old density were past the line and rose by more than 1e-3 when log
+##     phi was pushed 3 further (the original 8 were not reproduced
+##     exactly). All 10 are at the limit with the exact density (as good
+##     with log phi at 24, within 1e-3), and all are held. A curved
+##     optimum past the line does exist -- a beta regression with no random
+##     terms and a true phi of 1e7, say -- and the flatness test is what
+##     keeps it out.
 ilm_disp_limit <- 1e-2
 
 ## A GAUSSIAN RESIDUAL SD AT ZERO is the same edge at the other end: with one
@@ -1460,8 +1468,11 @@ ilm_ar_sd_limit <- 0.1
 ## -- k or phi twenty times larger -- changes the objective, with the random
 ## effects re-optimised, by at most ilm_disp_flat_tol, a deviance of 0.002.
 ## At the limit it changed by 1.1e-5 at most for the negative binomial and
-## 9e-4 for the beta; at the curved beta optima, by 1e-3 to 1e4. The first
-## version allowed 5e-3, which held 3 beta fits at 1.2e-3 to 3.3e-3; the
+## 9e-4 for the beta, then computed with the rounding ilm_ldbeta() removes;
+## with the exact density, a fit forced to stop at log phi from 16 to 25
+## moves it by under 3e-4, and a genuinely curved beta optimum by about
+## 2,400. The first version allowed 5e-3, which held 3 beta fits at 1.2e-3
+## to 3.3e-3 (under the old density); the
 ## random-effect study (re_sd_limit.R) showed that looser tolerance holding
 ## terms the model could not drop, so both rules use 1e-3.
 ilm_disp_flat_tol <- 1e-3

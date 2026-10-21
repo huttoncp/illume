@@ -266,12 +266,12 @@ ilm_family <- function(family = c("gaussian", "binomial", "poisson",
       nll = function(eta, y, w, disp, logsig = NULL, ...) {
         mu <- 1 / (1 + exp(-eta[, 1]))
         phi <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
-        -sum(w * dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE))
+        -sum(w * ilm_ldbeta(y, mu, phi))
       },
       logden = function(eta, y, disp, logsig = NULL) {
         mu <- 1 / (1 + exp(-eta[, 1]))
         phi <- if (is.null(logsig)) exp(disp[1]) else exp(logsig)
-        dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE)
+        ilm_ldbeta(y, mu, phi)
       },
       p0 = function(mu, disp) rep(0, length(mu)),
       pcdf = function(q, mu, disp)
@@ -383,6 +383,44 @@ ilm_ordinal_family <- function(name) {
       z <- as.numeric(eta[, 1]) + qfn(stats::runif(n))
       as.integer(rowSums(outer(z, as.numeric(zeta), `>`))) + 1L
     })
+}
+
+## THE BETA LOG-DENSITY AT A LARGE PRECISION. Written as lgamma(phi) -
+## lgamma(a) - lgamma(b) + (a - 1) log y + (b - 1) log(1 - y), with a = mu phi
+## and b = (1 - mu) phi, it adds terms of size phi log phi to reach a result
+## of size log phi, and at a phi of 1e8 and more their rounding is of the
+## order of the dispersion hold's 1e-3 flatness tolerance (ilm_disp_flat()):
+## out by 3.5e-5 per observation at phi = 1e10 and 3.8e-3 at 1e12, against
+## stats::dbeta, which avoids the cancellation its own way. Rearranged so the
+## large terms cancel in the algebra -- an exact identity --
+##   log f = a log(y / mu) + b log((1 - y) / (1 - mu)) - log(y (1 - y))
+##           + (1/2) log(phi mu (1 - mu) / (2 pi)) + C(phi) - C(a) - C(b),
+## where C(z) = lgamma(z) - (z - 1/2) log z + z - (1/2) log(2 pi), whose
+## series for large z is 1/(12 z) - 1/(360 z^3) + O(z^-5) (Stirling's
+## formula: Cramér 1946, Mathematical Methods of Statistics, section 12.5,
+## p. 130, eq. 12.5.3). log(y / mu) is taken as log1p((y - mu) / mu), which
+## is exact where y is near mu, as it is at a large phi. The usual and the
+## rearranged density, and C's direct and series forms, are blended smoothly
+## where both are accurate -- phi near 1e4, z near 1e3 -- because an AD tape
+## cannot branch on a parameter. Against stats::dbeta, for y within two
+## standard deviations of mu: within 1e-11 up to phi = 1e9 and 1e-9 up to
+## 1e12, and the same as the usual form below phi = 1e4.
+#' @keywords internal
+#' @noRd
+ilm_ldbeta <- function(y, mu, phi) {
+  a <- mu * phi; b <- (1 - mu) * phi
+  usual <- lgamma(phi) - lgamma(a) - lgamma(b) + (a - 1) * log(y) +
+    (b - 1) * log1p(-y)
+  ## C(z): directly for small z, by the series for large, the series written
+  ## so that its weight and its terms never meet as 0 * Inf
+  cz <- function(z)
+    (lgamma(z) - (z - 0.5) * log(z) + z - 0.5 * log(2 * pi)) / (1 + (z / 1e3)^8) +
+      1 / (12 * (z + 1e24 / z^7)) - 1 / (360 * (z^3 + 1e24 / z^5))
+  rearr <- a * log1p((y - mu) / mu) + b * log1p((mu - y) / (1 - mu)) -
+    log(y) - log1p(-y) + 0.5 * log(phi * mu * (1 - mu) / (2 * pi)) +
+    cz(phi) - cz(a) - cz(b)
+  wt <- 1 / (1 + (1e4 / phi)^8)
+  (1 - wt) * usual + wt * rearr
 }
 
 #' Category probabilities implied by a cumulative link fit
