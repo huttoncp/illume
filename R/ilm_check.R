@@ -30,7 +30,7 @@
 #' @seealso [illumex::ilm_frame_issues()] for collinearity in the raw data.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(score ~ income + grp + (1 | id), data = d,
 #'                family = "gaussian", verbose = FALSE)
 #' ilm_check_collinearity(f)
@@ -111,7 +111,7 @@ ilm_check_collinearity <- function(object, warn = sqrt(5), fail = sqrt(10)) {
 #'   failures this can only hint at.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(visits ~ income + (1 | id), data = d, family = "poisson",
 #'                verbose = FALSE)
 #' ilm_check_predictive(f, B = 30)
@@ -196,7 +196,7 @@ ilm_check_predictive <- function(object, B = 50L, seed = 1L, plot = TRUE) {
 #'   remedy out as the change to make.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(claims ~ income + (1 | id), data = d, family = "poisson",
 #'                verbose = FALSE)
 #' ilm_check_dispersion(f, B = 200)
@@ -279,7 +279,7 @@ ilm_check_dispersion <- function(object, B = 200L, seed = 1L) {
 #'   part out as the change to make.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(downtime ~ income + (1 | id), data = d, family = "poisson",
 #'                verbose = FALSE)
 #' ilm_check_zeros(f, B = 200)
@@ -349,7 +349,7 @@ ilm_check_zeros <- function(object, B = 200L, seed = 1L) {
 #' Multilevel/Hierarchical Models. Cambridge University Press, ch. 5.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(flag ~ income + (1 | id), data = d, family = "binomial",
 #'                verbose = FALSE)
 #' ilm_binned_residuals(f)
@@ -464,7 +464,7 @@ ilm_var_stats <- function(fit, by_vec, seed) {
 #'   than unevenly dispersed.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim(n_id = 25)
+#' d <- ilm_example_data(n_id = 25)
 #' f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 #'                verbose = FALSE)
 #' ilm_check_variance(f, B = 20, plot = FALSE)

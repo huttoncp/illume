@@ -421,6 +421,11 @@ iml_scores <- ilm_scores
 #' @export
 iml_se_fixef <- ilm_se_fixef
 
+#' @rdname ilm_sim
+#' @usage NULL
+#' @export
+iml_sim <- ilm_sim
+
 #' @rdname ilm_simulate
 #' @usage NULL
 #' @export

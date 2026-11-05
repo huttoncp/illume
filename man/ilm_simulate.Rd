@@ -53,5 +53,6 @@ hand -- so there is nothing in the computation graph for TMB to redraw.
 }
 
 \seealso{
-\code{\link[=ilm_consistency]{ilm_consistency()}}, \code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}}, \code{\link[=ilm_appraise]{ilm_appraise()}}.
+\code{\link[=ilm_sim]{ilm_sim()}} for whole datasets, the rows with these responses in
+place; \code{\link[=ilm_consistency]{ilm_consistency()}}, \code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}}, \code{\link[=ilm_appraise]{ilm_appraise()}}.
 }

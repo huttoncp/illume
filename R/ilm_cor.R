@@ -179,7 +179,7 @@ ilm_cor_build <- function(spec, data) {
 #'   drifts, [ilm_check_ar()] to test whether the structure is needed,
 #'   [ilm_cells()] for the fitted cells.
 #' @examples
-#' d <- ilm_sim(n_id = 20, n_period = 8)
+#' d <- ilm_example_data(n_id = 20, n_period = 8)
 #' a <- ilm_ar1(as.integer(factor(d$date)), d$id)
 #' a
 #' @export

@@ -43,7 +43,7 @@ beforehand can. The fitted model remembers the names, so \code{\link[=ilm_cells]
 predictions for new rows know where to find the time and the group.
 }
 \examples{
-d <- ilm_sim(n_id = 20, n_period = 8)
+d <- ilm_example_data(n_id = 20, n_period = 8)
 a <- ilm_ar1(as.integer(factor(d$date)), d$id)
 a
 }

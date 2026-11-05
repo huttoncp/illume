@@ -1,5 +1,18 @@
 # illume 0.0.8.9003
 
+* **`ilm_sim()` returns whole simulated datasets** from a fitted model or a
+  scaffold: the rows the model was fitted to, or the scaffold's design, with
+  a simulated response in the response's own column and of its type, ready
+  to analyse. It is a shortcut for `ilm_simulate()`, whose matrix of
+  responses had to be bound back to the rows by hand, and draws the same
+  responses with the same seed. `n` and `effect` draw a study of another
+  size, or with one coefficient or term changed, as `ilm_power()` draws one
+  and through the same code. A censored response comes with the column that
+  `censor` needs to fit it again.
+* **illumex's example data are now `ilm_example_data()`**, with the same
+  arguments and the same data, and `ilm_sim()` is illume's own. illume's
+  examples, tests, README and introduction use the new name, and illume now
+  needs illumex 0.0.8.9006 or later.
 * illume is now licensed under the GNU General Public License, version 2
   (`GPL-2`). It is version 2 only for now because the causal-graph
   functions may include code adapted from dagitty, which is GPL-2 only.

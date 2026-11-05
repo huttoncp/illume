@@ -80,7 +80,7 @@ follow \code{MASS::ginv()} (Venables and Ripley; GPL-2 | GPL-3).
 
 \examples{
 set.seed(1)
-d <- ilm_sim(n_id = 25)
+d <- ilm_example_data(n_id = 25)
 f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 L <- c(0, 1)                      # the slope on income
