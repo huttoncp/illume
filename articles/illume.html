@@ -237,6 +237,15 @@ and pool</td>
 <code><a href="../reference/ilm_interpret.html">ilm_interpret()</a></code>
 </td>
 </tr>
+<tr class="odd">
+<td>
+<strong>Prediction and forecasting</strong> (limn)</td>
+<td>
+<code>ilm_predict()</code>, <code>ilm_forecast()</code>,
+<code>ilm_cv()</code> and <code>ilm_compare()</code>, after
+<code><a href="https://rdrr.io/r/base/library.html" class="external-link">library(limn)</a></code>
+</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -370,11 +379,25 @@ subgroups</td>
 <td>factorial and repeated-measures ANOVA, in the language those designs
 are taught in</td>
 </tr>
+<tr class="even">
+<td>
+<code>predictions</code> (limn)</td>
+<td>which unit a prediction is for, and how uncertain it is</td>
+</tr>
+<tr class="odd">
+<td>
+<code>forecasting</code> (limn)</td>
+<td>forecasts past a series’ last observed time</td>
+</tr>
 </tbody>
 </table>
 <p>The three marked (illumex) belong to <code>illumex</code>, the
 exploration package <code>illume</code> attaches:
-<code><a href="https://huttoncp.github.io/illumex/articles/exploring-data.html">vignette("exploring-data", package = "illumex")</a></code>.</p>
+<code><a href="https://huttoncp.github.io/illumex/articles/exploring-data.html">vignette("exploring-data", package = "illumex")</a></code>. The two
+marked (limn) belong to <a href="https://huttoncp.github.io/limn/" class="external-link"><code>limn</code></a>, the
+prediction and forecasting package, which is loaded separately and
+attaches <code>illume</code>:
+<code>vignette("predictions", package = "limn")</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="how-this-package-was-built">How this package was built<a class="anchor" aria-label="anchor" href="#how-this-package-was-built"></a>

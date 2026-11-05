@@ -14,7 +14,13 @@ before a model – is the companion package
 so [`library(illume)`](https://github.com/huttoncp/illume) gives you
 both.
 
-Note: illumex is being republished and installs will work again shortly.
+Prediction and forecasting from a fitted model – predictive
+distributions, forecasts, proper scoring rules, calibration and
+cross-validation – are the companion package
+[`limn`](https://huttoncp.github.io/limn/). It builds on `illume` rather
+than the other way round:
+[`library(limn)`](https://rdrr.io/r/base/library.html) attaches
+`illume`, which attaches `illumex`.
 
 > Not on CRAN yet. This is pre-release software under active
 > development.
@@ -64,6 +70,9 @@ remotes::install_github("huttoncp/illume")
 
 This installs `illumex` from GitHub along with it. R \>= 4.1. The only
 compiled dependency is RTMB/TMB, which is on CRAN.
+
+`limn` is installed separately: see [its
+site](https://huttoncp.github.io/limn/#installation).
 
 ## A worked example, end to end
 
@@ -124,6 +133,7 @@ the whole package.
 | **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html) (illumex) to describe it; [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md) and [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) to fill it in and pool |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
 | **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md) from a fit, [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md) and [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md) from assumptions alone – for every family, multinomial included, each simulated study analysed with the test the analysis will report; [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
+| **Prediction and forecasting** (limn) | `ilm_predict()`, `ilm_forecast()`, `ilm_cv()` and `ilm_compare()`, after [`library(limn)`](https://rdrr.io/r/base/library.html) |
 
 ## The multinomial claim, stated carefully
 
@@ -235,6 +245,9 @@ vignette("workflow", package = "illume")
 Exploring data, profiling and anomaly detection are `illumex`’s
 vignettes:
 [`vignette("exploring-data", package = "illumex")`](https://huttoncp.github.io/illumex/articles/exploring-data.html).
+Predictions and forecasting are `limn`’s:
+`vignette("predictions", package = "limn")` and
+`vignette("forecasting", package = "limn")`.
 
 ## How this package was built
 

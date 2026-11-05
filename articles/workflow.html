@@ -337,6 +337,12 @@ average covariate, and under any non-linear link it is a different
 answer. It also checks whether each scenario sits inside the data – by
 value, and by combination, since every value can be ordinary while the
 combination is one nobody occupies.</p>
+<p>If the question is prediction rather than inference – how well the
+model predicts new rows, what a series will do next, or which of two
+models forecasts better – that is <a href="https://huttoncp.github.io/limn/" class="external-link"><code>limn</code></a>’s, a
+separate package that builds on the fit: <code><a href="https://rdrr.io/r/base/library.html" class="external-link">library(limn)</a></code>,
+then <code>ilm_predict()</code>, <code>ilm_forecast()</code>,
+<code>ilm_cv()</code> or <code>ilm_compare()</code>.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -415,6 +421,16 @@ apart</td>
 <code><a href="../reference/ilm_moderation.html">ilm_moderation()</a></code>,
 <code><a href="../reference/ilm_plot_moderation.html">ilm_plot_moderation()</a></code>
 </td>
+</tr>
+<tr class="even">
+<td>
+<em>Predictions</em> (limn)</td>
+<td>which unit a prediction is for, and how uncertain it is</td>
+</tr>
+<tr class="odd">
+<td>
+<em>Forecasting series</em> (limn)</td>
+<td>forecasts past a series’ last observed time</td>
 </tr>
 </tbody>
 </table>

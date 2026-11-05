@@ -100,6 +100,7 @@ the whole package.
 | **Missing data** | [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html) (illumex) to describe it; [`ilm_impute()`](https://huttoncp.github.io/illume/reference/ilm_impute.md) and [`ilm_mi_pool()`](https://huttoncp.github.io/illume/reference/ilm_mi_pool.md) to fill it in and pool |
 | **Causal** | [`ilm_dag()`](https://huttoncp.github.io/illume/reference/ilm_dag.md), [`ilm_adjust_sets()`](https://huttoncp.github.io/illume/reference/ilm_adjust_sets.md), [`ilm_dag_test()`](https://huttoncp.github.io/illume/reference/ilm_dag_test.md), [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md), [`ilm_mediate()`](https://huttoncp.github.io/illume/reference/ilm_mediate.md) |
 | **Design and decision** | [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md), [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md), [`ilm_interpret()`](https://huttoncp.github.io/illume/reference/ilm_interpret.md) |
+| **Prediction and forecasting** (limn) | `ilm_predict()`, `ilm_forecast()`, `ilm_cv()` and `ilm_compare()`, after [`library(limn)`](https://rdrr.io/r/base/library.html) |
 
 ## The multinomial claim, stated carefully
 
@@ -194,10 +195,16 @@ each.
 | `effect-size-and-power` | effect sizes, power with or without a pilot, scenario projection |
 | `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
+| `predictions` (limn) | which unit a prediction is for, and how uncertain it is |
+| `forecasting` (limn) | forecasts past a series’ last observed time |
 
 The three marked (illumex) belong to `illumex`, the exploration package
 `illume` attaches:
 [`vignette("exploring-data", package = "illumex")`](https://huttoncp.github.io/illumex/articles/exploring-data.html).
+The two marked (limn) belong to
+[`limn`](https://huttoncp.github.io/limn/), the prediction and
+forecasting package, which is loaded separately and attaches `illume`:
+`vignette("predictions", package = "limn")`.
 
 ## How this package was built
 

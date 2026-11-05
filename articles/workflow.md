@@ -356,6 +356,13 @@ also checks whether each scenario sits inside the data – by value, and
 by combination, since every value can be ordinary while the combination
 is one nobody occupies.
 
+If the question is prediction rather than inference – how well the model
+predicts new rows, what a series will do next, or which of two models
+forecasts better – that is [`limn`](https://huttoncp.github.io/limn/)’s,
+a separate package that builds on the fit:
+[`library(limn)`](https://rdrr.io/r/base/library.html), then
+`ilm_predict()`, `ilm_forecast()`, `ilm_cv()` or `ilm_compare()`.
+
 ------------------------------------------------------------------------
 
 ## 11. Reporting
@@ -385,3 +392,5 @@ ilm_interpret(fit)
 | *Causal models* | DAGs, difference-in-differences, discontinuities |
 | *Effect size and power* | [`ilm_effects()`](https://huttoncp.github.io/illume/reference/ilm_effects.md), [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md), [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md), [`ilm_scaffold()`](https://huttoncp.github.io/illume/reference/ilm_scaffold.md), [`ilm_scenario()`](https://huttoncp.github.io/illume/reference/ilm_scenario.md) |
 | *Moderation* | [`ilm_moderation()`](https://huttoncp.github.io/illume/reference/ilm_moderation.md), [`ilm_plot_moderation()`](https://huttoncp.github.io/illume/reference/ilm_plot_moderation.md) |
+| *Predictions* (limn) | which unit a prediction is for, and how uncertain it is |
+| *Forecasting series* (limn) | forecasts past a series’ last observed time |

@@ -78,7 +78,7 @@
 <p><strong>A Unified Engine for Frequentist Inference.</strong></p>
 <p><code>illume</code> is an analysis workflow for R aimed at <strong>inference</strong> rather than prediction. It covers the path from a sample-size calculation, through exploration and missing data, to a model, its diagnostics, and a scenario a stakeholder can act on – with one object and one vocabulary the whole way.</p>
 <p>The exploratory half – describing, cleaning, plotting and profiling data before a model – is the companion package <a href="https://github.com/huttoncp/illumex" class="external-link"><code>illumex</code></a>. <code>illume</code> attaches it, so <code><a href="https://github.com/huttoncp/illume" class="external-link">library(illume)</a></code> gives you both.</p>
-<p>Note: illumex is being republished and installs will work again shortly.</p>
+<p>Prediction and forecasting from a fitted model – predictive distributions, forecasts, proper scoring rules, calibration and cross-validation – are the companion package <a href="https://huttoncp.github.io/limn/" class="external-link"><code>limn</code></a>. It builds on <code>illume</code> rather than the other way round: <code><a href="https://rdrr.io/r/base/library.html" class="external-link">library(limn)</a></code> attaches <code>illume</code>, which attaches <code>illumex</code>.</p>
 <blockquote>
 <p>Not on CRAN yet. This is pre-release software under active development.</p>
 </blockquote>
@@ -95,6 +95,7 @@
 <code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"huttoncp/illume"</span><span class="op">)</span></span></code></pre></div>
 <p>This installs <code>illumex</code> from GitHub along with it. R &gt;= 4.1. The only compiled dependency is RTMB/TMB, which is on CRAN.</p>
+<p><code>limn</code> is installed separately: see <a href="https://huttoncp.github.io/limn/#installation" class="external-link">its site</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="a-worked-example-end-to-end">A worked example, end to end<a class="anchor" aria-label="anchor" href="#a-worked-example-end-to-end"></a>
@@ -196,6 +197,13 @@
 <td><strong>Design and decision</strong></td>
 <td>
 <code><a href="reference/ilm_power.html">ilm_power()</a></code> from a fit, <code><a href="reference/ilm_power_design.html">ilm_power_design()</a></code> and <code><a href="reference/ilm_scaffold.html">ilm_scaffold()</a></code> from assumptions alone – for every family, multinomial included, each simulated study analysed with the test the analysis will report; <code><a href="reference/ilm_scenario.html">ilm_scenario()</a></code>, <code><a href="reference/ilm_interpret.html">ilm_interpret()</a></code>
+</td>
+</tr>
+<tr>
+<td>
+<strong>Prediction and forecasting</strong> (limn)</td>
+<td>
+<code>ilm_predict()</code>, <code>ilm_forecast()</code>, <code>ilm_cv()</code> and <code>ilm_compare()</code>, after <code><a href="https://rdrr.io/r/base/library.html" class="external-link">library(limn)</a></code>
 </td>
 </tr>
 </tbody>
@@ -345,7 +353,7 @@
 </table>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"workflow"</span>, package <span class="op">=</span> <span class="st">"illume"</span><span class="op">)</span></span></code></pre></div>
-<p>Exploring data, profiling and anomaly detection are <code>illumex</code>’s vignettes: <code><a href="https://huttoncp.github.io/illumex/articles/exploring-data.html">vignette("exploring-data", package = "illumex")</a></code>.</p>
+<p>Exploring data, profiling and anomaly detection are <code>illumex</code>’s vignettes: <code><a href="https://huttoncp.github.io/illumex/articles/exploring-data.html">vignette("exploring-data", package = "illumex")</a></code>. Predictions and forecasting are <code>limn</code>’s: <code>vignette("predictions", package = "limn")</code> and <code>vignette("forecasting", package = "limn")</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="how-this-package-was-built">How this package was built<a class="anchor" aria-label="anchor" href="#how-this-package-was-built"></a>
