@@ -91,6 +91,7 @@ and everything downstream is unchanged. That is the shape of the whole package.
 | **Missing data** | `ilm_check_missing()` (illumex) to describe it; `ilm_impute()` and `ilm_mi_pool()` to fill it in and pool |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
 | **Design and decision** | `ilm_power()`, `ilm_scaffold()`, `ilm_power_design()`, `ilm_scenario()`, `ilm_interpret()` |
+| **Prediction and forecasting** (limn) | `ilm_predict()`, `ilm_forecast()`, `ilm_cv()` and `ilm_compare()`, after `library(limn)` |
 
 ## The multinomial claim, stated carefully
 
@@ -171,9 +172,14 @@ pointer for each.
 | `effect-size-and-power` | effect sizes, power with or without a pilot, scenario projection |
 | `moderation` | whether an effect holds for everyone, without p-hacking the subgroups |
 | `anova` | factorial and repeated-measures ANOVA, in the language those designs are taught in |
+| `predictions` (limn) | which unit a prediction is for, and how uncertain it is |
+| `forecasting` (limn) | forecasts past a series' last observed time |
 
 The three marked (illumex) belong to `illumex`, the exploration package
-`illume` attaches: `vignette("exploring-data", package = "illumex")`.
+`illume` attaches: `vignette("exploring-data", package = "illumex")`. The two
+marked (limn) belong to [`limn`](https://huttoncp.github.io/limn/), the
+prediction and forecasting package, which is loaded separately and attaches
+`illume`: `vignette("predictions", package = "limn")`.
 
 ## How this package was built
 
