@@ -180,7 +180,7 @@ head(fit$checks[, c("check", "status", "detail")], 8)
 #> 4                                                       20.0 observations per level
 #> 5 10.00 observations per latent value (800 observations, 80 latent values: subj 80)
 #> 6                                          nlminb code 0 (relative convergence (4))
-#> 7                                                         max |gradient| = 1.62e-04
+#> 7                                                         max |gradient| = 1.63e-04
 #> 8              positive definite: TRUE; non-finite or non-positive variances: FALSE
 ```
 
@@ -628,22 +628,9 @@ f5 <- ilm_model(y ~ x1 + (1 | subj), data = d5, family = "multinomial",
 #> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
 #> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
 #> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
-#> Warning in nlminb(st, fn, gr, control = ctl): NA/NaN function evaluation
 #> Warning in nlminb(st, obj$fn, obj$gr, lower = lo, control = ctl): NA/NaN
+#> function evaluation
+#> Warning in nlminb(o$par, obj$fn, obj$gr, lower = lo, control = ctl): NA/NaN
 #> function evaluation
 #> ilm_model(): the random-effect covariance of `subj` sits at the edge of its range -- a variance of zero or a correlation of +/-1 -- where the data cannot resolve it. The fixed effects and their standard errors are still usable; summary() says what else is. If the term belongs in the model, boundary = "avoid" keeps it inside its range with a small penalty: it is then assumed nonzero rather than estimated at zero, so do not test whether it is; its variance comes out larger, and for a binary or categorical outcome the fixed effects a little further from zero -- markedly so when a category is rare.
 rem <- ilm_remedies(f5)
