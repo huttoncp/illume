@@ -11,7 +11,11 @@ The exploratory half -- describing, cleaning, plotting and profiling data before
 a model -- is the companion package [`illumex`](https://github.com/huttoncp/illumex).
 `illume` attaches it, so `library(illume)` gives you both.
 
-Note: illumex is being republished and installs will work again shortly.
+Prediction and forecasting from a fitted model -- predictive distributions,
+forecasts, proper scoring rules, calibration and cross-validation -- are the
+companion package [`limn`](https://huttoncp.github.io/limn/). It builds on
+`illume` rather than the other way round: `library(limn)` attaches `illume`,
+which attaches `illumex`.
 
 > Not on CRAN yet. This is pre-release software under active development.
 
@@ -46,6 +50,9 @@ remotes::install_github("huttoncp/illume")
 
 This installs `illumex` from GitHub along with it. R >= 4.1. The only compiled
 dependency is RTMB/TMB, which is on CRAN.
+
+`limn` is installed separately: see
+[its site](https://huttoncp.github.io/limn/#installation).
 
 ## A worked example, end to end
 
@@ -100,6 +107,7 @@ and everything downstream is unchanged. That is the shape of the whole package.
 | **Missing data** | `ilm_check_missing()` (illumex) to describe it; `ilm_impute()` and `ilm_mi_pool()` to fill it in and pool |
 | **Causal** | `ilm_dag()`, `ilm_adjust_sets()`, `ilm_dag_test()`, `ilm_dag_model()`, `ilm_mediate()` |
 | **Design and decision** | `ilm_power()` from a fit, `ilm_power_design()` and `ilm_scaffold()` from assumptions alone -- for every family, multinomial included, each simulated study analysed with the test the analysis will report; `ilm_scenario()`, `ilm_interpret()` |
+| **Prediction and forecasting** (limn) | `ilm_predict()`, `ilm_forecast()`, `ilm_cv()` and `ilm_compare()`, after `library(limn)` |
 
 ## The multinomial claim, stated carefully
 
@@ -196,7 +204,9 @@ vignette("workflow", package = "illume")
 ```
 
 Exploring data, profiling and anomaly detection are `illumex`'s vignettes:
-`vignette("exploring-data", package = "illumex")`.
+`vignette("exploring-data", package = "illumex")`. Predictions and forecasting
+are `limn`'s: `vignette("predictions", package = "limn")` and
+`vignette("forecasting", package = "limn")`.
 
 ## How this package was built
 
