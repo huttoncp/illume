@@ -46,7 +46,7 @@ for the specific failures this can only hint at.
 
 ``` r
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(visits ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
 ilm_check_predictive(f, B = 30)

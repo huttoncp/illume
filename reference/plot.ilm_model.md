@@ -35,7 +35,7 @@ Invisibly, the data behind the plot.
 
 ``` r
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 plot(f)

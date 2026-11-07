@@ -80,7 +80,7 @@ site](https://huttoncp.github.io/limn/#installation).
 
 library(illume)
 
-d <- ilm_sim()                       # a grouped dataset with a known structure
+d <- ilm_example_data()              # a grouped dataset with a known structure
 d$income <- d$income / 1000          # income in thousands
 
 ## what is in it

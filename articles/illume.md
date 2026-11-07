@@ -48,7 +48,7 @@ library(illume)
 
 ``` r
 
-d <- ilm_sim()                       # a grouped dataset with a known structure
+d <- ilm_example_data()              # a grouped dataset with a known structure
 
 ## what is in it
 ilm_describe_all(d)

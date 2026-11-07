@@ -45,7 +45,7 @@ to make.
 
 ``` r
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(claims ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
 ilm_check_dispersion(f, B = 200)

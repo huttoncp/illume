@@ -61,6 +61,8 @@ there is nothing in the computation graph for TMB to redraw.
 
 ## See also
 
+[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
+for whole datasets, the rows with these responses in place;
 [`ilm_consistency()`](https://huttoncp.github.io/illume/reference/ilm_consistency.md),
 [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md),
 [`ilm_appraise()`](https://huttoncp.github.io/illume/reference/ilm_appraise.md).

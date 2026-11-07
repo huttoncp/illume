@@ -140,7 +140,7 @@ for the other within-group assumption.
 
 ``` r
 set.seed(1)
-d <- ilm_sim(n_id = 20, n_period = 8)
+d <- ilm_example_data(n_id = 20, n_period = 8)
 f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 ilm_plot_acf(f, time = as.integer(factor(d$date)), group = d$id,

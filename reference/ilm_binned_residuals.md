@@ -39,7 +39,7 @@ Multilevel/Hierarchical Models. Cambridge University Press, ch. 5.
 
 ``` r
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(flag ~ income + (1 | id), data = d, family = "binomial",
                verbose = FALSE)
 ilm_binned_residuals(f)

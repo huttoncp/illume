@@ -144,7 +144,9 @@ for the curve,
 [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
 for a study with no data yet,
 [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
-for the generator.
+for the generator,
+[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
+for one of these simulated studies as data.
 
 ## Examples
 

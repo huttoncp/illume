@@ -51,7 +51,7 @@ make.
 
 ``` r
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(downtime ~ income + (1 | id), data = d, family = "poisson",
                verbose = FALSE)
 ilm_check_zeros(f, B = 200)

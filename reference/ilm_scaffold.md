@@ -5,8 +5,8 @@ you assume, and returns a fitted-shaped `"ilm_model"`. Use it to plan a
 study: pass it to
 [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
 for a power curve, to
-[`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md)
-for data a pipeline can be rehearsed on, or to
+[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
+for datasets a pipeline can be rehearsed on, or to
 [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md)
 and
 [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
@@ -224,6 +224,7 @@ ed. Sage. (Section 17.3, the latent-variable ICC.)
 [`ilm_power_design()`](https://huttoncp.github.io/illume/reference/ilm_power_design.md)
 for the common case in one call;
 [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md),
+[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md),
 [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md),
 [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
 [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md).

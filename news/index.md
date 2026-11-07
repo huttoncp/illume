@@ -2,6 +2,26 @@
 
 ## illume 0.0.8.9003
 
+- **[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
+  returns whole simulated datasets** from a fitted model or a scaffold:
+  the rows the model was fitted to, or the scaffold’s design, with a
+  simulated response in the response’s own column and of its type, ready
+  to analyse. It is a shortcut for
+  [`ilm_simulate()`](https://huttoncp.github.io/illume/reference/ilm_simulate.md),
+  whose matrix of responses had to be bound back to the rows by hand,
+  and draws the same responses with the same seed. `n` and `effect` draw
+  a study of another size, or with one coefficient or term changed, as
+  [`ilm_power()`](https://huttoncp.github.io/illume/reference/ilm_power.md)
+  draws one and through the same code. A censored response comes with
+  the column that `censor` needs to fit it again.
+
+- **illumex’s example data are now
+  [`ilm_example_data()`](https://huttoncp.github.io/illumex/reference/ilm_example_data.html)**,
+  with the same arguments and the same data, and
+  [`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
+  is illume’s own. illume’s examples, tests, README and introduction use
+  the new name, and illume now needs illumex 0.0.8.9006 or later.
+
 - illume is now licensed under the GNU General Public License, version 2
   (`GPL-2`). It is version 2 only for now because the causal-graph
   functions may include code adapted from dagitty, which is GPL-2 only.
@@ -565,7 +585,7 @@
   the difference between the last level and the first, which the
   sentence never reported. The verdict there is the joint test of every
   level, as before. The README’s worked example uses columns
-  [`ilm_sim()`](https://huttoncp.github.io/illumex/reference/ilm_sim.html)
+  [`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
   makes, and income on a scale the model fits well. Found by another
   agent.
 
@@ -1374,7 +1394,7 @@ it, which remain the only things that have ever found a defect here.
   [`ilm_check_missing()`](https://huttoncp.github.io/illumex/reference/ilm_check_missing.html)
   and the `*_na()` functions, the plots of data (as against those of a
   model),
-  [`ilm_sim()`](https://huttoncp.github.io/illumex/reference/ilm_sim.html),
+  [`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md),
   and the `progress` argument’s help page. So did the vignettes on
   exploring data, profiling and anomaly detection. Imputing and pooling
   stay here, because pooling needs a model.
