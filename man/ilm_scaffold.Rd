@@ -97,7 +97,7 @@ An \code{"ilm_model"} that also carries class \code{"ilm_scaffold"}.
 \description{
 Builds a design grid from a study specification, attaches the parameters you
 assume, and returns a fitted-shaped \code{"ilm_model"}. Use it to plan a study:
-pass it to \code{\link[=ilm_power]{ilm_power()}} for a power curve, to \code{\link[=ilm_simulate]{ilm_simulate()}} for data a
+pass it to \code{\link[=ilm_power]{ilm_power()}} for a power curve, to \code{\link[=ilm_sim]{ilm_sim()}} for datasets a
 pipeline can be rehearsed on, or to \code{\link[=ilm_emmeans]{ilm_emmeans()}} and \code{\link[=ilm_trends]{ilm_trends()}} to
 see what your assumptions actually imply before you rely on them.
 }
@@ -204,5 +204,6 @@ Analysis}, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)
 }
 \seealso{
 \code{\link[=ilm_power_design]{ilm_power_design()}} for the common case in one call;
-\code{\link[=ilm_power]{ilm_power()}}, \code{\link[=ilm_simulate]{ilm_simulate()}}, \code{\link[=ilm_emmeans]{ilm_emmeans()}}, \code{\link[=ilm_trends]{ilm_trends()}}.
+\code{\link[=ilm_power]{ilm_power()}}, \code{\link[=ilm_sim]{ilm_sim()}}, \code{\link[=ilm_simulate]{ilm_simulate()}}, \code{\link[=ilm_emmeans]{ilm_emmeans()}},
+\code{\link[=ilm_trends]{ilm_trends()}}.
 }

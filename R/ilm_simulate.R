@@ -118,7 +118,8 @@ ilm_re_list_of <- function(fit) {
 #'   event, a time drawn from the censoring distribution estimated from the
 #'   data. A value at or beyond its censoring time is a censored one. A
 #'   response with a floor or ceiling is held at that limit.
-#' @seealso [ilm_consistency()], [ilm_pb_lrt()], [ilm_appraise()].
+#' @seealso [ilm_sim()] for whole datasets, the rows with these responses in
+#'   place; [ilm_consistency()], [ilm_pb_lrt()], [ilm_appraise()].
 #' @export
 ilm_simulate <- function(fit, nsim = 1L, seed = NULL) {
   ilm_rng_restore(seed)                  # the user's random stream, put back on exit

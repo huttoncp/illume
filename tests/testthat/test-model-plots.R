@@ -18,7 +18,7 @@ BLANK <- 2000     # an empty device lands near 500 bytes; a real plot far above
 
 test_that("model plots draw and validate their arguments", {
   set.seed(1)
-  d <- ilm_sim(n_id = 30)
+  d <- ilm_example_data(n_id = 30)
   f <- ilm_model(score ~ income + grp + (1 | id), data = d,
                  family = "gaussian", verbose = FALSE)
   expect_gt(png_bytes(ilm_plot_model(f, "coef")), BLANK)
@@ -32,7 +32,7 @@ test_that("model plots draw and validate their arguments", {
 
 test_that("the coefficient plot returns the interval table", {
   set.seed(1)
-  d <- ilm_sim(n_id = 30)
+  d <- ilm_example_data(n_id = 30)
   f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                  verbose = FALSE)
   ## drawn inside a device: a plot call with none open writes Rplots.pdf into

@@ -76,8 +76,8 @@ grp <- list(
        function(x) grepl("^ilm_plot", x)),
 
   list("Simulation",
-       "Draws from a fitted model, and the same model refitted to them or to other data. Example data with a known structure, ilm_sim(), is illumex's.",
-       function(x) grepl("^ilm_(simulate|fitted|survival|refit)$", x)),
+       "Draws from a fitted model or a scaffold, as responses or as whole datasets, and the same model refitted to them or to other data. Example data with a known structure, ilm_example_data(), is illumex's.",
+       function(x) grepl("^ilm_(sim|simulate|fitted|survival|refit)$", x)),
 
   list("Working with other packages",
        "Registration shims and the methods that let the wider ecosystem dispatch on an illume fit.",

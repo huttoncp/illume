@@ -177,7 +177,7 @@ ilm_mtext_wrap <- function(x, line = 3.6, cex = 0.62, col = "grey30",
 #'   [ilm_check_variance()] for the other within-group assumption.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim(n_id = 20, n_period = 8)
+#' d <- ilm_example_data(n_id = 20, n_period = 8)
 #' f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 #'                verbose = FALSE)
 #' ilm_plot_acf(f, time = as.integer(factor(d$date)), group = d$id,

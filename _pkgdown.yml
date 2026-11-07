@@ -167,10 +167,11 @@ reference:
   - ilm_plot_variogram
 - title: "Simulation"
   desc: >
-    Draws from a fitted model, and the same model refitted to them or to other data. Example data with a known structure, ilm_sim(), is illumex's.
+    Draws from a fitted model or a scaffold, as responses or as whole datasets, and the same model refitted to them or to other data. Example data with a known structure, ilm_example_data(), is illumex's.
   contents:
   - ilm_fitted
   - ilm_refit
+  - ilm_sim
   - ilm_simulate
   - ilm_survival
 - title: "Working with other packages"

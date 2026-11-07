@@ -21,7 +21,7 @@ A shorthand for \code{\link[=ilm_plot_model]{ilm_plot_model()}}, which is the fu
 }
 \examples{
 set.seed(1)
-d <- ilm_sim()
+d <- ilm_example_data()
 f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 plot(f)

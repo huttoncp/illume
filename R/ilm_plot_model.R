@@ -34,7 +34,7 @@ ILM_MODEL_PLOTS <- c("coef", "effect", "random", "residual", "acf")
 #' @seealso [ilm_appraise()] for the full residual panel.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(score ~ income + grp + (1 | id), data = d,
 #'                family = "gaussian", verbose = FALSE)
 #' ilm_plot_model(f, "coef")
@@ -69,7 +69,7 @@ ilm_plot_model <- function(model, what = "coef", term = NULL, conf = 0.95,
 #' @return Invisibly, the data behind the plot.
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim()
+#' d <- ilm_example_data()
 #' f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 #'                verbose = FALSE)
 #' plot(f)

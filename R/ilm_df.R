@@ -238,7 +238,7 @@ ilm_kr_max_n <- 4000L
 #' @seealso [ilm_anova()], [ilm_emmeans()], [ilm_pb_lrt()].
 #' @examples
 #' set.seed(1)
-#' d <- ilm_sim(n_id = 25)
+#' d <- ilm_example_data(n_id = 25)
 #' f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
 #'                verbose = FALSE)
 #' L <- c(0, 1)                      # the slope on income

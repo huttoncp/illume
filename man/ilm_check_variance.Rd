@@ -59,7 +59,7 @@ than against an assumed distribution.
 }
 \examples{
 set.seed(1)
-d <- ilm_sim(n_id = 25)
+d <- ilm_example_data(n_id = 25)
 f <- ilm_model(score ~ income + (1 | id), data = d, family = "gaussian",
                verbose = FALSE)
 ilm_check_variance(f, B = 20, plot = FALSE)

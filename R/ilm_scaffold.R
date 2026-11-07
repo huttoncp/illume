@@ -23,7 +23,7 @@
 #'
 #' Builds a design grid from a study specification, attaches the parameters you
 #' assume, and returns a fitted-shaped `"ilm_model"`. Use it to plan a study:
-#' pass it to [ilm_power()] for a power curve, to [ilm_simulate()] for data a
+#' pass it to [ilm_power()] for a power curve, to [ilm_sim()] for datasets a
 #' pipeline can be rehearsed on, or to [ilm_emmeans()] and [ilm_trends()] to
 #' see what your assumptions actually imply before you rely on them.
 #'
@@ -141,7 +141,8 @@
 #' @references Snijders, T. A. B. and Bosker, R. J. (2012). *Multilevel
 #'   Analysis*, 2nd ed. Sage. (Section 17.3, the latent-variable ICC.)
 #' @seealso [ilm_power_design()] for the common case in one call;
-#'   [ilm_power()], [ilm_simulate()], [ilm_emmeans()], [ilm_trends()].
+#'   [ilm_power()], [ilm_sim()], [ilm_simulate()], [ilm_emmeans()],
+#'   [ilm_trends()].
 #' @examples
 #' \donttest{
 #' ## a parallel-arm trial, stated as cell means

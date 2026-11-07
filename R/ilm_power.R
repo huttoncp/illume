@@ -473,6 +473,75 @@ ilm_power_p <- function(fit, nm) {
     stats::pchisq(W, q, lower.tail = FALSE)
 }
 
+## How a new study is drawn from `object`, set up once: `draw(n, B)` draws one
+## study of about `n` rows at coefficients `B` and returns its response, the
+## model's design on its rows (`stub`, ready to refit), and where the rows came
+## from -- the scaffold's fresh grid `d`, or a fitted model's resampled `rows`
+## and the drawn copy of a cluster each belongs to. Shared by ilm_power(),
+## which refits the stub, and ilm_sim(), which lays the same draw out as data,
+## so a dataset drawn at a planned size is a study ilm_power() counts.
+#' @keywords internal
+#' @noRd
+ilm_power_study <- function(object) {
+  st <- ilm_refit_stub(object)
+  if (inherits(object, "ilm_scaffold") && !is.null(object$scaffold)) {
+    s <- object$scaffold
+    rpu <- max(1L, as.integer(s$rows_per_unit))
+    draw <- function(nn, B) {
+      d <- ilm_scaffold_grid(s$design, max(4L, as.integer(round(nn / rpu))),
+                             s$within, s$group)
+      y <- ilm_power_response(object, ilm_power_eta_grid(object, d, B))
+      list(y = y, stub = ilm_power_stub_grid(object, st, d), d = d)
+    }
+    return(list(draw = draw, grouped = !is.null(s$group), unit = NULL,
+                expanded = FALSE))
+  }
+  fam <- if (is.null(object$family)) "multinomial" else object$family$name
+  unit <- ilm_power_unit(object)
+  ucodes <- if (is.null(unit)) NULL else unit$codes
+  nested <- vapply(st$re, function(e) !identical(e$kind, "basis") &&
+                     ilm_nested_in(e$group, ucodes), TRUE)
+  ar_nested <- !is.null(st$ar) && ilm_nested_in(ilm_ar_group(st$ar), ucodes)
+  ## Frequency weights say a row stands for that many observations, and a
+  ## new study draws each of them separately; simulating one outcome and
+  ## weighting it would claim they all came out the same. Binomial weights
+  ## on a proportion are numbers of trials instead, and travel with the row.
+  w <- st$weights
+  trials <- !is.null(w) && identical(fam, "binomial") &&
+    any(!(st$y %in% c(0, 1)))
+  base <- seq_len(nrow(object$X))
+  expanded <- !is.null(w) && !trials
+  if (expanded) {
+    base <- rep(base, pmax(round(w), 0L))
+    st$weights <- NULL
+  }
+  dispv <- if (!is.null(object$Zd) || isTRUE(object$disp_mu))
+    log(ilm_disp_vec(object)) else NULL
+  draw <- function(nn, B) {
+    r <- ilm_power_rows(nn, ucodes, base)
+    sr <- ilm_power_stub(st, r$rows, r$copy, nested, ar_nested)
+    y <- ilm_power_response(object, ilm_power_eta_stub(object, sr, B),
+                            logsig = if (is.null(dispv)) NULL else dispv[r$rows],
+                            Zzi = sr$Zzi, w = sr$weights)
+    if (!is.null(sr$censor)) y <- ilm_censor_apply(sr$censor, y)
+    list(y = y, stub = sr, rows = r$rows, copy = r$copy)
+  }
+  list(draw = draw, grouped = !is.null(unit), unit = ucodes,
+       expanded = expanded)
+}
+
+## The coefficients a simulated study is drawn at: the fitted ones, with the
+## tested coefficient set to `effect` on the link scale, or a term's
+## coefficients multiplied by it. Laid out as the model's coefficient matrix.
+#' @keywords internal
+#' @noRd
+ilm_power_beta <- function(object, tgt, effect) {
+  b <- stats::coef(object)
+  bb <- b
+  bb[tgt$idx] <- if (length(tgt$idx) > 1L) b[tgt$idx] * effect else effect
+  matrix(bb, ncol(object$X), if (is.null(object$C)) 1L else object$C)
+}
+
 #' Power for a term, by simulating from a fitted model
 #'
 #' Treats a fitted model as the truth, generates datasets of the requested
@@ -550,7 +619,8 @@ ilm_power_p <- function(fit, nm) {
 #'   with `power`, its Monte Carlo interval, `power_converged` and `converged`.
 #' @seealso [ilm_power_n()] to read off the size for a target power,
 #'   [plot.ilm_power()] for the curve, [ilm_power_design()] for a study with no
-#'   data yet, [ilm_simulate()] for the generator.
+#'   data yet, [ilm_simulate()] for the generator, [ilm_sim()] for one of
+#'   these simulated studies as data.
 #' @references Arnold, B. F., Hogan, D. R., Colford, J. M. and Hubbard, A. E.
 #'   (2011). Simulation methods to estimate design power. *BMC Medical Research
 #'   Methodology* 11, 94.
@@ -587,51 +657,13 @@ ilm_power <- function(object, n = NULL, term = NULL, effect = NULL,
   if (is.null(effect)) effect <- if (joint) 1 else unname(b[tgt$idx])
   grid <- expand.grid(n = n, effect = effect, KEEP.OUT.ATTRS = FALSE)
   fam <- if (is.null(object$family)) "multinomial" else object$family$name
-  p <- ncol(object$X); C <- if (is.null(object$C)) 1L else object$C
 
-  if (scaffold) {
-    s <- object$scaffold
-    rpu <- max(1L, as.integer(s$rows_per_unit))
-    st <- ilm_refit_stub(object)
-    one <- function(nn, B) {
-      d <- ilm_scaffold_grid(s$design, max(4L, as.integer(round(nn / rpu))),
-                             s$within, s$group)
-      y <- ilm_power_response(object, ilm_power_eta_grid(object, d, B))
-      ilm_refit_like(ilm_power_stub_grid(object, st, d), y = y, restarts = 1L)
-    }
-    grouped <- !is.null(s$group)
-  } else {
-    st <- ilm_refit_stub(object)
-    unit <- ilm_power_unit(object)
-    ucodes <- if (is.null(unit)) NULL else unit$codes
-    nested <- vapply(st$re, function(e) !identical(e$kind, "basis") &&
-                       ilm_nested_in(e$group, ucodes), TRUE)
-    ar_nested <- !is.null(st$ar) && ilm_nested_in(ilm_ar_group(st$ar), ucodes)
-    ## Frequency weights say a row stands for that many observations, and a
-    ## new study draws each of them separately; simulating one outcome and
-    ## weighting it would claim they all came out the same. Binomial weights
-    ## on a proportion are numbers of trials instead, and travel with the row.
-    w <- st$weights
-    trials <- !is.null(w) && identical(fam, "binomial") &&
-      any(!(st$y %in% c(0, 1)))
-    base <- seq_len(n0)
-    if (!is.null(w) && !trials) {
-      base <- rep(base, pmax(round(w), 0L))
-      st$weights <- NULL
-    }
-    dispv <- if (!is.null(object$Zd) || isTRUE(object$disp_mu))
-      log(ilm_disp_vec(object)) else NULL
-    one <- function(nn, B) {
-      r <- ilm_power_rows(nn, ucodes, base)
-      sr <- ilm_power_stub(st, r$rows, r$copy, nested, ar_nested)
-      y <- ilm_power_response(object, ilm_power_eta_stub(object, sr, B),
-                              logsig = if (is.null(dispv)) NULL else dispv[r$rows],
-                              Zzi = sr$Zzi, w = sr$weights)
-      if (!is.null(sr$censor)) y <- ilm_censor_apply(sr$censor, y)
-      ilm_refit_like(sr, y = y, restarts = 1L)
-    }
-    grouped <- !is.null(unit)
+  study <- ilm_power_study(object)
+  one <- function(nn, B) {
+    s <- study$draw(nn, B)
+    ilm_refit_like(s$stub, y = s$y, restarts = 1L)
   }
+  grouped <- study$grouped
 
   set.seed(seed)
   pb <- ilm_progress(nrow(grid) * sims, progress, "simulating studies")
@@ -640,9 +672,7 @@ ilm_power <- function(object, n = NULL, term = NULL, effect = NULL,
   dfail <- list()                       # design verdicts: check -> detail, n
   nfit <- 0L
   for (g in seq_len(nrow(grid))) {
-    bb <- b
-    bb[tgt$idx] <- if (joint) b[tgt$idx] * grid$effect[g] else grid$effect[g]
-    B <- matrix(bb, p, C)
+    B <- ilm_power_beta(object, tgt, grid$effect[g])
     rej <- ok <- logical(sims)
     for (s_i in seq_len(sims)) {
       fit <- try(suppressWarnings(suppressMessages(one(grid$n[g], B))),

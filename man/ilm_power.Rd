@@ -124,5 +124,6 @@ Methodology} 11, 94.
 \seealso{
 \code{\link[=ilm_power_n]{ilm_power_n()}} to read off the size for a target power,
 \code{\link[=plot.ilm_power]{plot.ilm_power()}} for the curve, \code{\link[=ilm_power_design]{ilm_power_design()}} for a study with no
-data yet, \code{\link[=ilm_simulate]{ilm_simulate()}} for the generator.
+data yet, \code{\link[=ilm_simulate]{ilm_simulate()}} for the generator, \code{\link[=ilm_sim]{ilm_sim()}} for one of
+these simulated studies as data.
 }
