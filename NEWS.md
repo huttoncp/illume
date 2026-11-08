@@ -16,6 +16,18 @@
 * illume is now licensed under the GNU General Public License, version 2
   (`GPL-2`). It is version 2 only for now because the causal-graph
   functions may include code adapted from dagitty, which is GPL-2 only.
+* **Licence history.** Versions of illume before commit aa37085 (17
+  October 2026) were labelled with the MIT licence. That label was wrong
+  for part of the code: those versions included code adapted, or possibly
+  adapted, from packages licensed under the GPL, which are now credited in
+  DESCRIPTION. Code adapted from GPL-licensed packages can't be offered
+  under the MIT licence, and those versions also didn't credit the authors
+  of those packages. The adapted code was never available under MIT and
+  remains under its original licences. From commit aa37085 until 19
+  October 2026, illume was labelled GPL (>= 2). Because its causal-graph
+  functions may include code adapted from dagitty, which is licensed under
+  GPL-2 only, that label may also have been wrong for those functions.
+  Since 19 October 2026 (commit a1a7337), illume is licensed under GPL-2.
 * **A beta model's precision is held at its limit wherever on the flat
   ridge the optimiser stops.** The beta log-density added terms of size
   phi log phi to reach a result of size log phi. At a phi of 1e8 and more,
