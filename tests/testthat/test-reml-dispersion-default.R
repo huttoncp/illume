@@ -16,7 +16,8 @@ test_that("a dispersion model with no random terms is fitted by REML by default,
                  "fitted by REML")
   expect_true(isTRUE(f$reml))
   expect_true(isTRUE(f$reml_by_default))
-  expect_true(isTRUE(f$call$reml))
+  ## not written into the call: a refit decides again for its own model
+  expect_null(f$call$reml)
   ## the same fit as asking for it
   fr <- ilm_model(y ~ g, data = d, family = "gaussian", dispformula = ~ g,
                   reml = TRUE, verbose = FALSE)
@@ -47,6 +48,20 @@ test_that("reml = FALSE is respected, and other models keep maximum likelihood",
   d$cnt <- rpois(nrow(d), 3)
   f4 <- q(ilm_model(cnt ~ g, data = d, family = "poisson", verbose = FALSE))
   expect_false(isTRUE(f4$reml))
+})
+
+test_that("update() decides again for the model it describes", {
+  d <- disp_data()
+  d$id <- factor(rep(1:10, length.out = nrow(d)))
+  f <- q(ilm_model(y ~ g, data = d, family = "gaussian", dispformula = ~ g,
+                   verbose = FALSE))
+  expect_true(isTRUE(q(stats::update(f, y ~ g + x))$reml))
+  expect_false(isTRUE(q(stats::update(f, dispformula = NULL))$reml))
+  expect_false(isTRUE(q(stats::update(f, y ~ g + (1 | id)))$reml))
+  ## an explicit choice is kept
+  f0 <- q(ilm_model(y ~ g, data = d, family = "gaussian", dispformula = ~ g,
+                    reml = FALSE, verbose = FALSE))
+  expect_false(isTRUE(q(stats::update(f0, y ~ g + x))$reml))
 })
 
 test_that("reml must be TRUE, FALSE or NULL", {

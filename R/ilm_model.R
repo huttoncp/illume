@@ -993,14 +993,13 @@ ilm_model_formula <- function(formula, data, family = "auto",
              error = function(e) NULL)
   ## REML or maximum likelihood, when the call did not say: REML for a
   ## gaussian dispersion model with nothing integrated out, maximum likelihood
-  ## for everything else (ilm_reml_default())
+  ## for everything else (ilm_reml_default()). Not written into the call, so
+  ## that a refit through it -- update() included -- decides again for the
+  ## model it then describes: dropping the dispersion formula, or adding a
+  ## random term, returns it to maximum likelihood.
   reml_by_default <- is.null(reml) &&
     ilm_reml_default(fam, re_list, ar, Zd, disp_mu, Zzi, censor, rp)
   if (is.null(reml)) reml <- reml_by_default
-  ## written into the call, as an inferred family is, so that what refits
-  ## through the call -- moderation searches, power by simulation -- fit the
-  ## same way without saying so again
-  if (reml_by_default) cl$reml <- TRUE
   fit <- ilm_fit(X, yi, J, re_list, re_struct = re_struct, ar = ar, censor = censor,
                  Zd = Zd, disp_mu = disp_mu, rp = rp,
                  Zzi = Zzi, zi_type = zi_type,
