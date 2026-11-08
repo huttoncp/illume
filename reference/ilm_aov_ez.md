@@ -204,10 +204,10 @@ a
 #> <ilm_contrast> 3 comparison(s), adjust = max_t 
 #>   t tests on satterthwaite df
 #> 
-#>  contrast estimate     se df  lower upper  p_adj
-#>     2 - 1   0.8775 0.2762 44 0.2068 1.548 0.0072
-#>     3 - 1   2.1202 0.2762 44 1.4495 2.791 0.0000
-#>     3 - 2   1.2427 0.2762 44 0.5720 1.913 0.0001
+#>  contrast estimate     se df  lower upper   p_adj
+#>     2 - 1   0.8775 0.2762 44 0.2069 1.548 0.00735
+#>     3 - 1   2.1202 0.2762 44 1.4495 2.791 0.00000
+#>     3 - 2   1.2427 0.2762 44 0.5720 1.913 0.00010
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 
@@ -251,9 +251,9 @@ a
 #>   t tests on satterthwaite df
 #> 
 #>  contrast estimate     se df lower upper p_adj
-#>     2 - 1    2.134 0.3906 44 1.186 3.083     0
-#>     3 - 1    4.325 0.3906 44 3.377 5.274     0
-#>     3 - 2    2.191 0.3906 44 1.243 3.140     0
+#>     2 - 1    2.134 0.3906 44 1.189 3.079     0
+#>     3 - 1    4.325 0.3906 44 3.381 5.270     0
+#>     3 - 2    2.191 0.3906 44 1.247 3.136     0
 #> 
 #>   Intervals hold jointly at 95% across all 3 comparisons.
 #> 
