@@ -74,8 +74,9 @@ ilm_fmt_corr <- function(S, labs, digits = 3) {
 #' @param digits Integer. Significant digits in the coefficient table.
 #' @param max_corr_dim Integer. Largest `C` for which correlation matrices are
 #'   printed in full.
-#' @param df The degrees of freedom of a gaussian mixed model's coefficient
-#'   tests: `"auto"` (Satterthwaite's, per coefficient, as `lmerTest` reports),
+#' @param df The degrees of freedom of the coefficient tests of a gaussian
+#'   mixed model, or of a gaussian model with a dispersion formula and no
+#'   random terms: `"auto"` (Satterthwaite's, per coefficient, as `lmerTest` reports),
 #'   `"kenward-roger"`, `"asymptotic"` (the normal) or a number. See
 #'   [ilm_coef_table()]. Other fits are unaffected.
 #' @param ... Unused.

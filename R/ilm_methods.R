@@ -284,7 +284,8 @@ nobs.ilm_model <- function(object, ...) nrow(object$X)
 #' `ilm_anova(test = "LRT")` or, for small samples, [ilm_pb_lrt()].
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param df The degrees of freedom for a gaussian mixed model: `"auto"`
+#' @param df The degrees of freedom for a gaussian mixed model, or a gaussian
+#'   model with a dispersion formula and no random terms: `"auto"`
 #'   (Satterthwaite), `"satterthwaite"`, `"kenward-roger"`, `"asymptotic"`
 #'   (the normal), or a number. Ignored for other fits.
 #' @return A data frame with columns `Estimate`, `Std. Error`, and either `z

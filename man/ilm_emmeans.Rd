@@ -38,7 +38,8 @@ offset at zero, a rate such as cases per person-year); a positive number
 reports them per that much exposure instead -- \code{per = 1e5} for a rate per
 100,000. The print says which. Ignored without an offset.}
 
-\item{df}{For a gaussian mixed model, the degrees of freedom of each mean's
+\item{df}{For a gaussian mixed model, or a gaussian model with a
+dispersion formula and no random terms, the degrees of freedom of each mean's
 interval: \code{"auto"} (Satterthwaite's, as emmeans gives on an \code{lmerTest}
 fit), \code{"satterthwaite"}, \code{"kenward-roger"} (their df and adjusted
 standard errors; REML fits), \code{"asymptotic"} (the normal) or a number. A

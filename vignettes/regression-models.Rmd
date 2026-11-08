@@ -211,10 +211,10 @@ ilm_model(y ~ x1 + grp + (1 | id), data = d, family = "gaussian",
           reml = TRUE)
 ```
 
-The default is maximum likelihood, and the reason is the order you work in. A
-restricted likelihood is the likelihood of contrasts orthogonal to the design
-matrix, so changing the fixed effects changes which data it is the likelihood
-of. Two REML fits with different fixed effects are not comparable, and their
+For most models the default is maximum likelihood, and the reason is the
+order you work in. A restricted likelihood is the likelihood of contrasts
+orthogonal to the design matrix, so changing the fixed effects changes which
+data it is the likelihood of. Two REML fits with different fixed effects are not comparable, and their
 difference is not a likelihood ratio.
 
 So: **settle the mean structure under the default, then refit with
@@ -233,6 +233,17 @@ REML's exact properties, and `fit$reml_exact` says which of the two a fit has.
 `ilm_dag_model()` (for a gaussian response) and `ilm_aov_ez()` default to REML,
 because in both the fixed effects were fixed before any data were seen: by the
 graph in one case and by the design in the other.
+
+So does a gaussian model whose spread is modelled by `dispformula`, not in the
+fitted mean, and that has no random terms: `ilm_model(y ~ group, dispformula =
+~ group)`, for example, is fitted by REML unless `reml = FALSE` is passed, and
+says so. There the dispersion coefficients are the only variance parameters,
+and in a simulation over 14 designs REML's F tests held their level better
+than maximum likelihood's, and its group standard deviations were less biased,
+in every design. Its F tests use Satterthwaite's df by default, and for a
+spread per group they are Welch-type tests; `ilm_anova()`'s help says how they
+differ from Welch's (1951). Pass `reml = FALSE` to compare its fixed effects
+by likelihood ratio.
 
 ## Predictions
 

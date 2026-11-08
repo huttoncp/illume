@@ -24,8 +24,9 @@ test_that("a separate variance per group matches glmmTMB and gls", {
   skip_if_not_installed("glmmTMB")
   skip_if_not_installed("nlme")
   d <- disp_group()
+  ## maximum likelihood, as glmmTMB and gls(method = "ML") fit it
   f <- ilm_model(y ~ x, data = d, family = "gaussian", dispformula = ~ g,
-                 verbose = FALSE)
+                 reml = FALSE, verbose = FALSE)
   g1 <- glmmTMB::glmmTMB(y ~ x, data = d, family = stats::gaussian(),
                          dispformula = ~ g)
   n1 <- nlme::gls(y ~ x, data = d, weights = nlme::varIdent(form = ~ 1 | g),
@@ -48,7 +49,7 @@ test_that("a dispersion that changes with a covariate matches glmmTMB", {
   d <- data.frame(x = stats::rnorm(n), z = stats::rnorm(n))
   d$y <- 1 + 0.8 * d$x + stats::rnorm(n, 0, exp(-0.2 + 0.5 * d$z))
   f <- ilm_model(y ~ x, data = d, family = "gaussian", dispformula = ~ z,
-                 verbose = FALSE)
+                 reml = FALSE, verbose = FALSE)   # glmmTMB's maximum likelihood
   g <- glmmTMB::glmmTMB(y ~ x, data = d, family = stats::gaussian(),
                         dispformula = ~ z)
   expect_equal(as.numeric(logLik(f)), as.numeric(logLik(g)), tolerance = 1e-5)
@@ -161,18 +162,24 @@ test_that("the per-row dispersion reaches the residuals and the simulators", {
   expect_equal(unname(sort(sds)), c(0.5, 1.5, 3.0), tolerance = 0.25)
 })
 
-test_that("a dispersion model rules out exact t and F inference", {
+test_that("a dispersion model rules out exact t and F inference, and gets Satterthwaite's df", {
   # exact inference rests on a constant variance. With the variance itself
   # estimated as a function of covariates that independence goes, and the t
-  # distribution becomes an approximation; gls() reports t here by convention.
+  # distribution becomes an approximation, with df that account for the
+  # estimated spreads (Satterthwaite's) rather than the residual df.
   d <- disp_group(n = 600)
-  f <- ilm_model(y ~ x, data = d, family = "gaussian", dispformula = ~ g,
-                 verbose = FALSE)
+  f <- suppressMessages(ilm_model(y ~ x, data = d, family = "gaussian",
+                                  dispformula = ~ g, verbose = FALSE))
   g0 <- ilm_model(y ~ x, data = d, family = "gaussian", verbose = FALSE)
   expect_false(isTRUE(f$exact_df))
   expect_true(isTRUE(g0$exact_df))
-  expect_true("z value" %in% names(ilm_coef_table(f)))
+  ct <- ilm_coef_table(f)
+  expect_true(all(c("df", "t value") %in% names(ct)))
+  expect_identical(attr(ct, "df_method"), "satterthwaite")
+  expect_true(all(ct$df < nrow(d) - 2))
   expect_true("t value" %in% names(ilm_coef_table(g0)))
+  ## asked for by name, the normal is still there
+  expect_true("z value" %in% names(ilm_coef_table(f, df = "asymptotic")))
 })
 
 test_that("summary says the spread is not constant", {

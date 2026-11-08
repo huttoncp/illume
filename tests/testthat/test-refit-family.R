@@ -127,7 +127,7 @@ test_that("a likelihood-ratio test holds its size for every structure", {
       disp = {
         d$y <- eta + stats::rnorm(n, 0, ifelse(d$s == "hi", 2, 0.5))
         ilm_model(y ~ x1 + grp, data = d, family = "gaussian",
-                  dispformula = ~ s, verbose = FALSE)
+                  dispformula = ~ s, reml = FALSE, verbose = FALSE)  # an LRT needs ML
       },
       rp = {
         e <- -log(stats::runif(n)); lp <- eta - 0.3
@@ -142,7 +142,8 @@ test_that("a likelihood-ratio test holds its size for every structure", {
   for (kind in c("tobit", "aft", "disp", "rp")) {
     f <- mk(kind)
     a <- suppressWarnings(ilm_anova(f, test = "LRT"))
-    w <- suppressWarnings(ilm_anova(f))
+    ## the Wald chi-square by name: a dispersion model's default is now F
+    w <- suppressWarnings(ilm_anova(f, statistic = "Chisq"))
     # x1 has no effect, so the two tests should broadly agree and neither
     # should be extreme. A reduced fit that dropped the structure gave a
     # statistic in the hundreds.

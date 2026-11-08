@@ -19,7 +19,7 @@ ilm_denom_df(
 
 \item{method}{One of \code{"auto"}, \code{"satterthwaite"}, \code{"kenward-roger"},
 \code{"residual"}, \code{"asymptotic"}. \code{"auto"} gives the exact residual df when
-nothing was integrated out, Satterthwaite for a gaussian mixed model, and
+nothing was integrated out, Satterthwaite for any other gaussian fit, and
 \code{Inf} otherwise.}
 
 \item{h}{Step size for the numerical derivatives.}
