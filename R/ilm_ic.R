@@ -32,6 +32,22 @@ ilm_ic_warn <- function(object) {
             "an unreliable optimum. See object$checks.", call. = FALSE)
 }
 
+## A REML fit's AIC or BIC is a number like any other, and nothing in it says
+## that it compares only with fits of the same fixed effects: a restricted
+## likelihood is the likelihood of contrasts orthogonal to the fixed design,
+## so a different design makes it the likelihood of different data. It cannot
+## be refused, since one criterion does not know what it will be compared
+## with, so it is said, as a message, once per call.
+#' @keywords internal
+#' @noRd
+ilm_ic_reml_note <- function(object, what) {
+  if (!isTRUE(object$reml)) return(invisible(NULL))
+  message(what, " from a REML fit: comparable only with models that have the ",
+          "same fixed effects, because a restricted likelihood depends on the ",
+          "fixed effects it was fitted with. To compare fixed effects, refit ",
+          "each model with `reml = FALSE`.")
+}
+
 #' Information criteria
 #'
 #' AIC and BIC computed from the Laplace-approximate marginal log-likelihood,
@@ -60,6 +76,17 @@ ilm_ic_warn <- function(object) {
 #' since that parameter is not freely estimated, making both criteria
 #' conservative.
 #'
+#' @section From a REML fit:
+#' A restricted likelihood is the likelihood of contrasts orthogonal to the
+#' fixed-effect design, so changing the fixed effects changes which data it is
+#' the likelihood of. AIC and BIC from REML fits therefore compare only models
+#' with the same fixed effects -- different random or dispersion structures,
+#' say. To compare fixed effects, refit each model with `reml = FALSE`. Both
+#' functions say so in a message when given a REML fit; they cannot refuse,
+#' since a single criterion does not know what it will be compared with. A
+#' gaussian model with a dispersion formula and no random terms is fitted by
+#' REML by default (see [ilm_model()]).
+#'
 #' @param object A fitted `"ilm_model"` object.
 #' @param k Numeric. Penalty per parameter; 2 gives AIC.
 #' @param n `"obs"` or `"groups"`; `BIC()` only.
@@ -75,6 +102,7 @@ ilm_ic_warn <- function(object) {
 #' @export
 AIC.ilm_model <- function(object, ..., k = 2) {
   ilm_ic_warn(object)
+  ilm_ic_reml_note(object, if (k == 2) "AIC" else "An information criterion")
   ll <- logLik(object)
   -2 * as.numeric(ll) + k * attr(ll, "df")
 }
@@ -122,6 +150,7 @@ AIC.ilm_model <- function(object, ..., k = 2) {
 #' @export
 BIC.ilm_model <- function(object, ..., n = c("obs", "groups")) {
   ilm_ic_warn(object); n <- match.arg(n)
+  ilm_ic_reml_note(object, "BIC")
   ll <- logLik(object)
   nn <- if (n == "obs") attr(ll, "nobs") else {
     gl <- object$nlk[vapply(object$re, function(e) e$kind != "basis", TRUE)]
@@ -400,7 +429,9 @@ ilm_null_ll <- function(object, restarts = 1L) {
 #'
 #' @param model A fitted `"ilm_model"` object.
 #' @param metrics Unused; present for compatibility with the generic.
-#' @param verbose Logical. Message when the fit failed its checks.
+#' @param verbose Logical. Message when the fit failed its checks, and when
+#'   it was fitted by REML, whose AIC, AICc and BIC compare only with models
+#'   that have the same fixed effects (the `"ic_note"` attribute says so too).
 #' @param ... Unused.
 #' @return A one-row data frame of class `"performance_model"`.
 #' @references
@@ -420,11 +451,13 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
                  error = function(e) c(log_score = NA_real_, brier = NA_real_,
                                        accuracy = NA_real_))
   ll0 <- ilm_null_ll(model)
+  ## the REML note is said once below, not once per criterion
+  ic <- suppressMessages(c(AIC(model), BIC(model), BIC(model, n = "groups")))
   out <- data.frame(
-    AIC = AIC(model),
+    AIC = ic[1],
     AICc = -2 * as.numeric(ll) + 2 * df * n / max(1, n - df - 1),
-    BIC = BIC(model),
-    BIC_groups = BIC(model, n = "groups"),
+    BIC = ic[2],
+    BIC_groups = ic[3],
     logLik = as.numeric(ll),
     df = df,
     R2_McFadden = if (is.na(ll0)) NA_real_ else 1 - as.numeric(ll) / ll0,
@@ -433,6 +466,9 @@ model_performance.ilm_model <- function(model, metrics = "all", ..., verbose = T
     Accuracy = unname(sc["accuracy"]))
   if (verbose && !ilm_fixed_usable(model))
     message("Fit did not pass all checks; these indices describe an unreliable optimum.")
+  if (verbose) ilm_ic_reml_note(model, "AIC, AICc and BIC")
+  attr(out, "ic_note") <- if (isTRUE(model$reml))
+    "AIC, AICc and BIC are from a REML fit, so they compare only with models that have the same fixed effects. Refit with reml = FALSE to compare fixed effects."
   attr(out, "r2_note") <- paste0(
     "R2_McFadden is relative to an intercept-only model with the same grouping random effects. Nakagawa R2 and ICC are omitted: a nominal multinomial has no distribution-specific residual variance to define them.",
     if (isTRUE(model$reml)) " It is NA for this REML fit: restricted likelihoods of models with different fixed effects are not comparable. Refit with reml = FALSE for it." else "")

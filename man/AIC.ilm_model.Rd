@@ -78,6 +78,19 @@ since that parameter is not freely estimated, making both criteria
 conservative.
 }
 
+\section{From a REML fit}{
+
+A restricted likelihood is the likelihood of contrasts orthogonal to the
+fixed-effect design, so changing the fixed effects changes which data it is
+the likelihood of. AIC and BIC from REML fits therefore compare only models
+with the same fixed effects -- different random or dispersion structures,
+say. To compare fixed effects, refit each model with \code{reml = FALSE}. Both
+functions say so in a message when given a REML fit; they cannot refuse,
+since a single criterion does not know what it will be compared with. A
+gaussian model with a dispersion formula and no random terms is fitted by
+REML by default (see \code{\link[=ilm_model]{ilm_model()}}).
+}
+
 \references{
 Vaida, F., & Blanchard, S. (2005). Conditional Akaike information for
 mixed-effects models. \emph{Biometrika}, 92(2), 351--370.

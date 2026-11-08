@@ -161,7 +161,7 @@ print.summary.ilm_model <- function(x, digits = 4, max_corr_dim = 6L, ...) {
   ll <- logLik(o); dev <- -2 * as.numeric(ll)
   nn <- if (!is.null(o$weights)) sum(o$weights) else nrow(o$X)
   cat(sprintf("\n     AIC      BIC   logLik deviance df.resid\n%8.1f %8.1f %8.1f %8.1f %8d\n",
-              suppressWarnings(AIC(o)), suppressWarnings(BIC(o)),
+              suppressMessages(suppressWarnings(AIC(o))), suppressMessages(suppressWarnings(BIC(o))),
               as.numeric(ll), dev, as.integer(nn - attr(ll, "df"))))
   ## the rows the fit used, when missing values took some: a model fitted to
   ## 61% of the data should say so beside its fit statistics
@@ -460,7 +460,7 @@ print.ilm_model <- function(x, ...) {
                 x$J, nrow(x$X), ncol(x$X), length(x$zeta),
                 if (length(x$zeta) == 1L) "" else "s", flag))
     cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective,
-                suppressWarnings(AIC(x))))
+                suppressMessages(suppressWarnings(AIC(x)))))
     ilm_rows_print(x)
     return(invisible(x))
   }
@@ -480,7 +480,7 @@ print.ilm_model <- function(x, ...) {
                 sprintf(" + %d %s", length(x$zi_gamma),
                         if (identical(x$zi_type, "hurdle")) "hurdle" else "zero-inflation"),
               flag))
-  cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressWarnings(AIC(x))))
+  cat(sprintf("  logLik %.2f | AIC %.1f\n", -x$opt$objective, suppressMessages(suppressWarnings(AIC(x)))))
   ilm_rows_print(x)
   invisible(x)
 }

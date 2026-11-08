@@ -1,5 +1,13 @@
 # illume 0.0.8.9003
 
+* **`AIC()`, `BIC()` and `model_performance()` now say when a fit is REML.**
+  A restricted likelihood depends on the fixed effects it was fitted with,
+  so a REML fit's criteria compare only with models that have the same
+  fixed effects. They still return their values -- a single criterion
+  cannot know what it will be compared with -- but now with a message
+  saying so and how to refit, and `model_performance()` carries it as an
+  `"ic_note"` attribute. `summary()` and `print()` do not repeat it.
+
 * **A gaussian model with a dispersion formula and no random terms is now
   fitted by REML by default, and its tests are F tests.** `ilm_model()`'s
   `reml` now defaults to `NULL`, which chooses REML for a gaussian,
