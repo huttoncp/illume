@@ -10,7 +10,8 @@ ilm_coef_table(object, df = "auto")
 \arguments{
 \item{object}{A fitted \code{"ilm_model"} object.}
 
-\item{df}{The degrees of freedom for a gaussian mixed model: \code{"auto"}
+\item{df}{The degrees of freedom for a gaussian mixed model, or a gaussian
+model with a dispersion formula and no random terms: \code{"auto"}
 (Satterthwaite), \code{"satterthwaite"}, \code{"kenward-roger"}, \code{"asymptotic"}
 (the normal), or a number. Ignored for other fits.}
 }

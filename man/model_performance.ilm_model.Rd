@@ -13,7 +13,9 @@
 
 \item{...}{Unused.}
 
-\item{verbose}{Logical. Message when the fit failed its checks.}
+\item{verbose}{Logical. Message when the fit failed its checks, and when
+it was fitted by REML, whose AIC, AICc and BIC compare only with models
+that have the same fixed effects (the \code{"ic_note"} attribute says so too).}
 }
 \value{
 A one-row data frame of class \code{"performance_model"}.

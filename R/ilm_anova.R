@@ -290,6 +290,34 @@ ilm_recode_sum <- function(object, which) {
 #' III does depend on the coding and is only well defined with orthogonal
 #' contrasts such as [stats::contr.sum()].
 #'
+#' @section Unequal spreads, and Welch's test:
+#' A gaussian model with a spread per group, `dispformula = ~ group`, and no
+#' random terms gets F tests on Satterthwaite's denominator df by default,
+#' combined over a term's columns by Fai and Cornelius (1996). Fitted by REML,
+#' which is that model's default, the F test of the group term has Welch's
+#' (1951) numerator exactly. With two groups it is Welch's t test: the same
+#' statistic, df and p-value as `t.test(var.equal = FALSE)`. With three or
+#' more, Welch divides the statistic by \eqn{1 + 2(k - 2)\Lambda/(k^2 - 1)}{1 +
+#' 2(k - 2)L/(k^2 - 1)} and uses \eqn{(k^2 - 1)/(3\Lambda)}{(k^2 - 1)/(3L)}
+#' denominator df, where \eqn{\Lambda = \sum_i (1 - w_i/W)^2/(n_i - 1)}{L =
+#' sum (1 - w_i/W)^2/(n_i - 1)}, \eqn{w_i = n_i/s_i^2} and \eqn{W = \sum_i
+#' w_i}{W = sum w_i}; the df here come instead from Satterthwaite's
+#' approximation, which applies to any design, not only one factor. So with
+#' three or more groups the F here is somewhat larger than Welch's and its df
+#' differ, and [stats::oneway.test()] gives Welch's own.
+#'
+#' In a simulation over 14 designs, under equal means at a nominal 5%, this F
+#' rejected a median 5.8% of the time (4% to 10%), against Welch's 5.1% in
+#' the one-way designs. With normal errors, Welch held 5% better with four or
+#' six groups of six to eight observations (6.1% against 6.7%, and 5.2%
+#' against 6.6%); a
+#' one-degree-of-freedom term beside other terms, and a spread modelled on a
+#' covariate in 20 observations, came out near 7% to 8%. Fitted by maximum
+#' likelihood the F is larger again, because the group variances are divided
+#' by \eqn{n_i} rather than \eqn{n_i - 1}, and too liberal: a median 8.2%,
+#' up to 14.5%. `statistic = "Chisq"` gives the large-sample chi-square,
+#' which rejected a median 11.5% on a maximum-likelihood fit, up to 26%.
+#'
 #' @section Wald versus likelihood ratio:
 #' Wald tests are fast and need no refitting for Type III. Likelihood-ratio tests
 #' refit a reduced model for each term, which is slower but avoids the
@@ -308,11 +336,17 @@ ilm_recode_sum <- function(object, which) {
 #'   refit with [stats::contr.sum()] for those factors and say so. `FALSE`
 #'   tests the model exactly as coded and warns instead. The fit passed in is
 #'   never modified either way.
-#' @param test `"Wald"` or `"LRT"`.
+#' @param test `"Wald"` or `"LRT"`. A likelihood-ratio test compares
+#'   maximum-likelihood fits, so a REML fit is refitted by maximum likelihood
+#'   for it, with a message; the fit passed in is unchanged. For a gaussian
+#'   mixed or dispersion model the Wald F test needs no refit (see the
+#'   section on unequal spreads).
 #' @param ncores Integer. Worker processes for the refits.
 #' @param restarts Integer. Optimiser restarts in refits.
-#' @param df For a gaussian mixed model's Wald tests, the denominator degrees
-#'   of freedom of each F: `"auto"` (Satterthwaite's, as `lmerTest` reports),
+#' @param df For the Wald tests of a gaussian mixed model, or of a gaussian
+#'   model with a dispersion formula and no random terms, the denominator
+#'   degrees of freedom of each F: `"auto"` (Satterthwaite's, as `lmerTest`
+#'   reports),
 #'   `"satterthwaite"`, `"kenward-roger"` (their df and scaled F, on their
 #'   adjusted covariance; REML fits) or `"asymptotic"`. Other fits are
 #'   unaffected. For a term of several columns, Satterthwaite's df combines
@@ -320,8 +354,9 @@ ilm_recode_sum <- function(object, which) {
 #'   when each has more than 2 df; otherwise the term's `DenDF` and p-value
 #'   are `NA` and the table's heading says why. Kenward-Roger's df, or testing
 #'   fewer contrasts at once, may give one.
-#' @param statistic `"F"` (the default) or `"Chisq"`. For a gaussian mixed
-#'   model's Wald tests, `"F"` gives an F test on the denominator df above and
+#' @param statistic `"F"` (the default) or `"Chisq"`. For the Wald tests of
+#'   a gaussian mixed model, or of a gaussian dispersion model with no random
+#'   terms, `"F"` gives an F test on the denominator df above and
 #'   `"Chisq"` the large-sample chi-square the table gave before; with few
 #'   groups the chi-square is too liberal. Every other fit keeps its own
 #'   reference: exact F with nothing integrated out, chi-square otherwise.
@@ -330,23 +365,38 @@ ilm_recode_sum <- function(object, which) {
 #'   and `Pr(>F)` when the model admits exact inference -- a gaussian model with
 #'   no random or smooth terms, where the residual variance is estimated rather
 #'   than assumed known (see [ilm_model()]); and `NumDF`, `DenDF`, `F value` and
-#'   `Pr(>F)` for a gaussian mixed model's Wald tests with `statistic = "F"`. A model with no terms to test, such
+#'   `Pr(>F)` for the Wald tests of a gaussian mixed model, or of a gaussian
+#'   dispersion model with no random terms, with `statistic = "F"`. A model
+#'   with no terms to test, such
 #'   as an intercept-only model, returns a table with zero rows rather than an
 #'   error: "there is nothing to test" is an answer, not a failure.
 #' @references
 #' Fox, J., & Weisberg, S. (2019). *An R Companion to Applied Regression*,
 #' 3rd ed. Sage. (Chapter 5 explains Type II and Type III tests.)
 #'
+#' Fai, A. H.-T., & Cornelius, P. L. (1996). Approximate F-tests of multiple
+#' degree of freedom hypotheses in generalized least squares analyses of
+#' unbalanced split-plot experiments. *Journal of Statistical Computation and
+#' Simulation*, 54(4), 363--378.
+#'
 #' Hauck, W. W., & Donner, A. (1977). Wald's test as applied to hypotheses in
 #' logit analysis. *Journal of the American Statistical Association*, 72(360),
 #' 851--853.
+#'
+#' Satterthwaite, F. E. (1946). An approximate distribution of estimates of
+#' variance components. *Biometrics Bulletin*, 2(6), 110--114.
+#'
+#' Welch, B. L. (1951). On the comparison of several mean values: An
+#' alternative approach. *Biometrika*, 38(3/4), 330--336.
 #' @seealso [ilm_pb_lrt()], [ilm_coef_table()].
 #' @export
 ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
                         ncores = 1L, restarts = 2L, recode = TRUE,
                         df = "auto", statistic = c("F", "Chisq")) {
   test <- match.arg(test); statistic <- match.arg(statistic)
-  if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
+  ## a likelihood ratio compares maximum-likelihood fits: a REML fit is
+  ## refitted by maximum likelihood for the test, and the user told
+  if (test == "LRT") object <- ilm_as_ml(object, "ilm_anova(test = \"LRT\")")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
   type3 <- type %in% c("3", "III")

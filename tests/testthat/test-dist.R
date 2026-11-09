@@ -95,8 +95,9 @@ test_that("a zero part and a dispersion model are the fit's too", {
                     zi_type = "hurdle", verbose = FALSE),
     hbeta = ilm_model(yb ~ x, data = d, family = "beta", ziformula = ~ z,
                       zi_type = "hurdle", verbose = FALSE),
+    ## maximum likelihood, whose objective is the density's own
     disp = ilm_model(yd ~ x, data = d, family = "gaussian", dispformula = ~ g,
-                     verbose = FALSE),
+                     reml = FALSE, verbose = FALSE),
     dispmu = ilm_model(yh ~ x, data = d, family = "nbinom", dispformula = ~ mu,
                        verbose = FALSE))
   for (nm in names(fits))

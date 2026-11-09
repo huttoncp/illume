@@ -12,8 +12,9 @@
 \arguments{
 \item{object, x}{A fitted \code{"ilm_model"} object.}
 
-\item{df}{The degrees of freedom of a gaussian mixed model's coefficient
-tests: \code{"auto"} (Satterthwaite's, per coefficient, as \code{lmerTest} reports),
+\item{df}{The degrees of freedom of the coefficient tests of a gaussian
+mixed model, or of a gaussian model with a dispersion formula and no
+random terms: \code{"auto"} (Satterthwaite's, per coefficient, as \code{lmerTest} reports),
 \code{"kenward-roger"}, \code{"asymptotic"} (the normal) or a number. See
 \code{\link[=ilm_coef_table]{ilm_coef_table()}}. Other fits are unaffected.}
 

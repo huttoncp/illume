@@ -82,7 +82,8 @@
 #'   `"auto"`, `"satterthwaite"`, `"kenward-roger"`, `"residual"`,
 #'   `"asymptotic"`, or a single number. See [ilm_denom_df()]. `"auto"` gives
 #'   an exact t where nothing was integrated out, Satterthwaite for a gaussian
-#'   mixed model, and a z test otherwise. A method named for a fit it does
+#'   mixed model or a gaussian model with a dispersion formula and no random
+#'   terms, and a z test otherwise. A method named for a fit it does
 #'   not apply to stops with the reason. A slope whose Satterthwaite df
 #'   cannot be formed is tested as z, with a warning, and the printed header
 #'   names it and why.
@@ -250,7 +251,8 @@ ilm_trends_multinom <- function(object, av, specs, V, b, level, weights, var,
 #'
 #' Each row is its own one-degree contrast, so each gets its own df. Under
 #' `"auto"` this is the exact residual df where nothing was integrated out,
-#' Satterthwaite for a gaussian mixed model, and infinite otherwise -- which
+#' Satterthwaite for a gaussian mixed model or a gaussian model with a
+#' dispersion formula and no random terms, and infinite otherwise -- which
 #' recovers the z test the package used before finite df existed.
 #'
 #' A row whose Satterthwaite df cannot be formed is tested against the normal,

@@ -73,13 +73,25 @@ test_that("REML on a fixed-effects gaussian model IS the n - p divisor", {
                tolerance = 1e-7)
 })
 
-test_that("a likelihood-ratio test on a REML fit is refused, not fudged", {
+test_that("a likelihood-ratio test on a REML fit refits by ML, and says so", {
   d <- reml_data(20, 4)
   f <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
                  reml = TRUE, verbose = FALSE)
-  expect_error(ilm_anova(f, test = "LRT"), "REML")
-  expect_error(ilm_anova(f, test = "LRT"), "reml = FALSE")
-  expect_error(ilm_pb_lrt(f, "grp", B = 2L), "REML")
+  fm <- ilm_model(y ~ grp + x + (1 | id), data = d, family = "gaussian",
+                  reml = FALSE, verbose = FALSE)
+  expect_message(a <- ilm_anova(f, test = "LRT"), "refitted by maximum likelihood")
+  expect_message(ilm_anova(f, test = "LRT"), "Wald F test")
+  ## the same test as on the maximum-likelihood fit
+  expect_equal(as.data.frame(a), as.data.frame(ilm_anova(fm, test = "LRT")),
+               tolerance = 1e-5)
+  ## the fit passed in is unchanged
+  expect_true(isTRUE(f$reml))
+  m <- character()
+  withCallingHandlers(ilm_pb_lrt(f, "grp", B = 2L, verbose = FALSE),
+                      message = function(e) { m <<- c(m, conditionMessage(e))
+                                              invokeRestart("muffleMessage") })
+  expect_true(any(grepl("ilm_pb_lrt\\(\\): refitted by maximum likelihood", m)))
+  expect_false(any(grepl("Wald F test", m)))
   ## a Wald test compares nothing across structures and stays available
   expect_s3_class(ilm_anova(f), "data.frame")
 })
