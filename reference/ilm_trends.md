@@ -63,7 +63,8 @@ ilm_trends(
   `"asymptotic"`, or a single number. See
   [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md).
   `"auto"` gives an exact t where nothing was integrated out,
-  Satterthwaite for a gaussian mixed model, and a z test otherwise. A
+  Satterthwaite for a gaussian mixed model or a gaussian model with a
+  dispersion formula and no random terms, and a z test otherwise. A
   method named for a fit it does not apply to stops with the reason. A
   slope whose Satterthwaite df cannot be formed is tested as z, with a
   warning, and the printed header names it and why.

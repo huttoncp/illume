@@ -2,6 +2,60 @@
 
 ## illume 0.0.8.9003
 
+- **A likelihood-ratio test of a REML fit now refits it by maximum
+  likelihood, and says so, instead of refusing.**
+  `ilm_anova(test = "LRT")` and
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
+  compare maximum-likelihood fits, since a restricted likelihood depends
+  on the fixed effects it was fitted with. Given a REML fit, they refit
+  the model by maximum likelihood for the test, with a message at run
+  time; the fit passed in and its REML estimates are unchanged. For a
+  gaussian mixed or dispersion model,
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)’s
+  message also names the Wald F test, its default, which needs no refit
+  and, for a dispersion model, held its level better in simulation.
+
+- **[`AIC()`](https://rdrr.io/r/stats/AIC.html),
+  [`BIC()`](https://rdrr.io/r/stats/AIC.html) and `model_performance()`
+  now say when a fit is REML.** A restricted likelihood depends on the
+  fixed effects it was fitted with, so a REML fit’s criteria compare
+  only with models that have the same fixed effects. They still return
+  their values – a single criterion cannot know what it will be compared
+  with – but now with a message saying so and how to refit, and
+  `model_performance()` carries it as an `"ic_note"` attribute.
+  [`summary()`](https://rdrr.io/r/base/summary.html) and
+  [`print()`](https://rdrr.io/r/base/print.html) do not repeat it.
+
+- **A gaussian model with a dispersion formula and no random terms is
+  now fitted by REML by default, and its tests are F tests.**
+  [`ilm_model()`](https://huttoncp.github.io/illume/reference/ilm_model.md)’s
+  `reml` now defaults to `NULL`, which chooses REML for a gaussian,
+  identity-link model whose spread is modelled by `dispformula` (not
+  `~ mu`) and that has no random terms, smooths, `ar`, zero part or
+  censoring, and says so. Every other model is fitted by maximum
+  likelihood, as before. For the same model, `df = "auto"` in
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md),
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md),
+  [`ilm_emmeans()`](https://huttoncp.github.io/illume/reference/ilm_emmeans.md),
+  [`ilm_contrast()`](https://huttoncp.github.io/illume/reference/ilm_contrast.md)
+  and
+  [`ilm_trends()`](https://huttoncp.github.io/illume/reference/ilm_trends.md)
+  now gives Satterthwaite’s df, with F and t tests, where it gave a
+  chi-square or z test. With `dispformula = ~ group`, two groups give
+  Welch’s t test exactly; with three or more, the F test’s numerator is
+  Welch’s (1951) and its df come from Satterthwaite’s approximation, and
+  [`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)’s
+  help says how that differs from Welch’s test. In a simulation over 14
+  designs, under equal means at a nominal 5%, the previous default –
+  maximum likelihood with a chi-square – rejected a median 11.5% of the
+  time, up to 26%; the new one, a median 5.8%, from 4% to 10%. The group
+  standard deviations are also less biased. Pass `reml = FALSE` to
+  compare fixed effects by AIC or BIC, or for
+  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md),
+  which refuses a REML fit: a restricted likelihood belongs to the fixed
+  effects it was fitted with.
+
 - **[`ilm_sim()`](https://huttoncp.github.io/illume/reference/ilm_sim.md)
   returns whole simulated datasets** from a fitted model or a scaffold:
   the rows the model was fitted to, or the scaffold’s design, with a

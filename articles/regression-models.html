@@ -342,19 +342,20 @@ it carries through into standard errors and degrees of freedom.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ilm_model.html">ilm_model</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">grp</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">|</span> <span class="va">id</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">d</span>, family <span class="op">=</span> <span class="st">"gaussian"</span>,</span>
 <span>          reml <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>The default is maximum likelihood, and the reason is the order you
-work in. A restricted likelihood is the likelihood of contrasts
-orthogonal to the design matrix, so changing the fixed effects changes
-which data it is the likelihood of. Two REML fits with different fixed
-effects are not comparable, and their difference is not a likelihood
-ratio.</p>
+<p>For most models the default is maximum likelihood, and the reason is
+the order you work in. A restricted likelihood is the likelihood of
+contrasts orthogonal to the design matrix, so changing the fixed effects
+changes which data it is the likelihood of. Two REML fits with different
+fixed effects are not comparable, and their difference is not a
+likelihood ratio.</p>
 <p>So: <strong>settle the mean structure under the default, then refit
 with <code>reml = TRUE</code> for the estimates you report.</strong>
 Once set, <code>ilm_anova(test = "LRT")</code> and
-<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code> refuse rather than quietly comparing things
-that are not comparable, and so does <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> – a
-sandwich needs per-observation scores, and integrating the coefficients
-out leaves none.</p>
+<code><a href="../reference/ilm_pb_lrt.html">ilm_pb_lrt()</a></code> refit the model by maximum likelihood for the
+test and say so, rather than quietly comparing things that are not
+comparable, and <code><a href="../reference/ilm_robust.html">ilm_robust()</a></code> refuses – a sandwich needs
+per-observation scores, and integrating the coefficients out leaves
+none.</p>
 <p>For a gaussian response this is REML exactly: the Laplace
 approximation to the restricted likelihood is exact for a linear model,
 and the variance components agree with <code>lme4</code> to 1e-05.
@@ -367,6 +368,18 @@ a fit has.</p>
 <code><a href="../reference/ilm_aov_ez.html">ilm_aov_ez()</a></code> default to REML, because in both the fixed
 effects were fixed before any data were seen: by the graph in one case
 and by the design in the other.</p>
+<p>So does a gaussian model whose spread is modelled by
+<code>dispformula</code>, not in the fitted mean, and that has no random
+terms: <code>ilm_model(y ~ group, dispformula = ~ group)</code>, for
+example, is fitted by REML unless <code>reml = FALSE</code> is passed,
+and says so. There the dispersion coefficients are the only variance
+parameters, and in a simulation over 14 designs REML’s F tests held
+their level better than maximum likelihood’s, and its group standard
+deviations were less biased, in every design. Its F tests use
+Satterthwaite’s df by default, and for a spread per group they are
+Welch-type tests; <code><a href="../reference/ilm_anova.html">ilm_anova()</a></code>’s help says how they differ
+from Welch’s (1951). A likelihood-ratio test of its fixed effects refits
+it by maximum likelihood, and says so.</p>
 </div>
 <div class="section level2">
 <h2 id="predictions">Predictions<a class="anchor" aria-label="anchor" href="#predictions"></a>

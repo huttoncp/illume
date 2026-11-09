@@ -81,7 +81,9 @@ R-squared, and the scoring rules from <code><a href="ilm_scores.html">ilm_scores
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
-<dd><p>Logical. Message when the fit failed its checks.</p></dd>
+<dd><p>Logical. Message when the fit failed its checks, and when
+it was fitted by REML, whose AIC, AICc and BIC compare only with models
+that have the same fixed effects (the <code>"ic_note"</code> attribute says so too).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -85,7 +85,11 @@ which does – see <code>recode</code>.</p></dd>
 
 
 <dt id="arg-test">test<a class="anchor" aria-label="anchor" href="#arg-test"></a></dt>
-<dd><p><code>"Wald"</code> or <code>"LRT"</code>.</p></dd>
+<dd><p><code>"Wald"</code> or <code>"LRT"</code>. A likelihood-ratio test compares
+maximum-likelihood fits, so a REML fit is refitted by maximum likelihood
+for it, with a message; the fit passed in is unchanged. For a gaussian
+mixed or dispersion model the Wald F test needs no refit (see the
+section on unequal spreads).</p></dd>
 
 
 <dt id="arg-ncores">ncores<a class="anchor" aria-label="anchor" href="#arg-ncores"></a></dt>
@@ -105,8 +109,10 @@ never modified either way.</p></dd>
 
 
 <dt id="arg-df">df<a class="anchor" aria-label="anchor" href="#arg-df"></a></dt>
-<dd><p>For a gaussian mixed model's Wald tests, the denominator degrees
-of freedom of each F: <code>"auto"</code> (Satterthwaite's, as <code>lmerTest</code> reports),
+<dd><p>For the Wald tests of a gaussian mixed model, or of a gaussian
+model with a dispersion formula and no random terms, the denominator
+degrees of freedom of each F: <code>"auto"</code> (Satterthwaite's, as <code>lmerTest</code>
+reports),
 <code>"satterthwaite"</code>, <code>"kenward-roger"</code> (their df and scaled F, on their
 adjusted covariance; REML fits) or <code>"asymptotic"</code>. Other fits are
 unaffected. For a term of several columns, Satterthwaite's df combines
@@ -117,8 +123,9 @@ fewer contrasts at once, may give one.</p></dd>
 
 
 <dt id="arg-statistic">statistic<a class="anchor" aria-label="anchor" href="#arg-statistic"></a></dt>
-<dd><p><code>"F"</code> (the default) or <code>"Chisq"</code>. For a gaussian mixed
-model's Wald tests, <code>"F"</code> gives an F test on the denominator df above and
+<dd><p><code>"F"</code> (the default) or <code>"Chisq"</code>. For the Wald tests of
+a gaussian mixed model, or of a gaussian dispersion model with no random
+terms, <code>"F"</code> gives an F test on the denominator df above and
 <code>"Chisq"</code> the large-sample chi-square the table gave before; with few
 groups the chi-square is too liberal. Every other fit keeps its own
 reference: exact F with nothing integrated out, chi-square otherwise.</p></dd>
@@ -131,7 +138,9 @@ columns are <code>Df</code>, <code>Chisq</code> and <code>Pr(&gt;Chisq)</code> i
 and <code>Pr(&gt;F)</code> when the model admits exact inference – a gaussian model with
 no random or smooth terms, where the residual variance is estimated rather
 than assumed known (see <code><a href="ilm_model.html">ilm_model()</a></code>); and <code>NumDF</code>, <code>DenDF</code>, <code>F value</code> and
-<code>Pr(&gt;F)</code> for a gaussian mixed model's Wald tests with <code>statistic = "F"</code>. A model with no terms to test, such
+<code>Pr(&gt;F)</code> for the Wald tests of a gaussian mixed model, or of a gaussian
+dispersion model with no random terms, with <code>statistic = "F"</code>. A model
+with no terms to test, such
 as an intercept-only model, returns a table with zero rows rather than an
 error: "there is nothing to test" is an answer, not a failure.</p>
     </div>
@@ -159,6 +168,34 @@ III does depend on the coding and is only well defined with orthogonal
 contrasts such as <code><a href="https://rdrr.io/r/stats/contrast.html" class="external-link">stats::contr.sum()</a></code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="unequal-spreads-and-welch-s-test">Unequal spreads, and Welch's test<a class="anchor" aria-label="anchor" href="#unequal-spreads-and-welch-s-test"></a></h2>
+
+
+<p>A gaussian model with a spread per group, <code>dispformula = ~ group</code>, and no
+random terms gets F tests on Satterthwaite's denominator df by default,
+combined over a term's columns by Fai and Cornelius (1996). Fitted by REML,
+which is that model's default, the F test of the group term has Welch's
+(1951) numerator exactly. With two groups it is Welch's t test: the same
+statistic, df and p-value as <code>t.test(var.equal = FALSE)</code>. With three or
+more, Welch divides the statistic by \(1 + 2(k - 2)\Lambda/(k^2 - 1)\) and uses \((k^2 - 1)/(3\Lambda)\)
+denominator df, where \(\Lambda = \sum_i (1 - w_i/W)^2/(n_i - 1)\), \(w_i = n_i/s_i^2\) and \(W = \sum_i
+w_i\); the df here come instead from Satterthwaite's
+approximation, which applies to any design, not only one factor. So with
+three or more groups the F here is somewhat larger than Welch's and its df
+differ, and <code><a href="https://rdrr.io/r/stats/oneway.test.html" class="external-link">stats::oneway.test()</a></code> gives Welch's own.</p>
+<p>In a simulation over 14 designs, under equal means at a nominal 5%, this F
+rejected a median 5.8% of the time (4% to 10%), against Welch's 5.1% in
+the one-way designs. With normal errors, Welch held 5% better with four or
+six groups of six to eight observations (6.1% against 6.7%, and 5.2%
+against 6.6%); a
+one-degree-of-freedom term beside other terms, and a spread modelled on a
+covariate in 20 observations, came out near 7% to 8%. Fitted by maximum
+likelihood the F is larger again, because the group variances are divided
+by \(n_i\) rather than \(n_i - 1\), and too liberal: a median 8.2%,
+up to 14.5%. <code>statistic = "Chisq"</code> gives the large-sample chi-square,
+which rejected a median 11.5% on a maximum-likelihood fit, up to 26%.</p>
+    </div>
+    <div class="section level2">
     <h2 id="wald-versus-likelihood-ratio">Wald versus likelihood ratio<a class="anchor" aria-label="anchor" href="#wald-versus-likelihood-ratio"></a></h2>
 
 
@@ -173,9 +210,17 @@ large-sample approximations.</p>
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Fox, J., &amp; Weisberg, S. (2019). <em>An R Companion to Applied Regression</em>,
 3rd ed. Sage. (Chapter 5 explains Type II and Type III tests.)</p>
+<p>Fai, A. H.-T., &amp; Cornelius, P. L. (1996). Approximate F-tests of multiple
+degree of freedom hypotheses in generalized least squares analyses of
+unbalanced split-plot experiments. <em>Journal of Statistical Computation and
+Simulation</em>, 54(4), 363–378.</p>
 <p>Hauck, W. W., &amp; Donner, A. (1977). Wald's test as applied to hypotheses in
 logit analysis. <em>Journal of the American Statistical Association</em>, 72(360),
 851–853.</p>
+<p>Satterthwaite, F. E. (1946). An approximate distribution of estimates of
+variance components. <em>Biometrics Bulletin</em>, 2(6), 110–114.</p>
+<p>Welch, B. L. (1951). On the comparison of several mean values: An
+alternative approach. <em>Biometrika</em>, 38(3/4), 330–336.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

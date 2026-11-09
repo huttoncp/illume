@@ -112,7 +112,8 @@ reports them per that much exposure instead – <code>per = 1e5</code> for a rat
 
 
 <dt id="arg-df">df<a class="anchor" aria-label="anchor" href="#arg-df"></a></dt>
-<dd><p>For a gaussian mixed model, the degrees of freedom of each mean's
+<dd><p>For a gaussian mixed model, or a gaussian model with a
+dispersion formula and no random terms, the degrees of freedom of each mean's
 interval: <code>"auto"</code> (Satterthwaite's, as emmeans gives on an <code>lmerTest</code>
 fit), <code>"satterthwaite"</code>, <code>"kenward-roger"</code> (their df and adjusted
 standard errors; REML fits), <code>"asymptotic"</code> (the normal) or a number. A

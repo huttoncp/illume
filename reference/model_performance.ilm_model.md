@@ -30,7 +30,9 @@ model_performance(model, metrics = "all", ..., verbose = TRUE)
 
 - verbose:
 
-  Logical. Message when the fit failed its checks.
+  Logical. Message when the fit failed its checks, and when it was
+  fitted by REML, whose AIC, AICc and BIC compare only with models that
+  have the same fixed effects (the `"ic_note"` attribute says so too).
 
 ## Value
 

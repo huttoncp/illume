@@ -59,7 +59,8 @@ ilm_emmeans(
 
 - df:
 
-  For a gaussian mixed model, the degrees of freedom of each mean's
+  For a gaussian mixed model, or a gaussian model with a dispersion
+  formula and no random terms, the degrees of freedom of each mean's
   interval: `"auto"` (Satterthwaite's, as emmeans gives on an `lmerTest`
   fit), `"satterthwaite"`, `"kenward-roger"` (their df and adjusted
   standard errors; REML fits), `"asymptotic"` (the normal) or a number.

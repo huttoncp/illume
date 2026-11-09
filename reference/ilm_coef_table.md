@@ -17,7 +17,8 @@ ilm_coef_table(object, df = "auto")
 
 - df:
 
-  The degrees of freedom for a gaussian mixed model: `"auto"`
+  The degrees of freedom for a gaussian mixed model, or a gaussian model
+  with a dispersion formula and no random terms: `"auto"`
   (Satterthwaite), `"satterthwaite"`, `"kenward-roger"`, `"asymptotic"`
   (the normal), or a number. Ignored for other fits.
 

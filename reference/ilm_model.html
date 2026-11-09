@@ -99,7 +99,7 @@ by <code>ilm_model()</code>; documented separately only because <code>ilm_model(
 <span>  ziformula <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  zi_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"inflated"</span>, <span class="st">"hurdle"</span><span class="op">)</span>,</span>
 <span>  design <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  reml <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  reml <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hold"</span>, <span class="st">"avoid"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -268,24 +268,35 @@ replicate count are different things and the design already carries one.</p></dd
 
 
 <dt id="arg-reml">reml<a class="anchor" aria-label="anchor" href="#arg-reml"></a></dt>
-<dd><p>Logical. Estimate the variance components by RESTRICTED maximum
-likelihood instead of maximum likelihood. Defaults to <code>FALSE</code>, and the
-reason is the order you work in: maximum likelihood is what lets you
+<dd><p>Logical, or <code>NULL</code> (the default) to choose. Estimate the
+variance components by RESTRICTED maximum likelihood instead of maximum
+likelihood. <code>NULL</code> chooses REML for a gaussian model with an identity
+link whose spread is modelled by <code>dispformula</code> (not <code>~ mu</code>) and that has
+nothing else – no random terms or smooths, no <code>ar</code>, no zero part, no
+censoring – and says so. There its tests hold their level better and its
+spreads are less biased: over 14 designs with normal, heavy-tailed and
+skewed errors, F tests on its fit rejected 4% to 10% of true nulls at a
+nominal 5%, against 5% to 15% on a maximum-likelihood fit, and its group
+standard deviations were nearer the truth in every design. For every
+other model <code>NULL</code> means <code>FALSE</code>, and the reason is the order you work in:
+maximum likelihood is what lets you
 compare fixed-effect structures, because a restricted likelihood belongs
 to contrasts orthogonal to the design matrix and changing that matrix
-changes which data it is the likelihood of. Settle the fixed effects under
-the default, then refit with <code>reml = TRUE</code> for the estimates you report –
+changes which data it is the likelihood of. Settle the fixed effects by
+maximum likelihood, then refit with <code>reml = TRUE</code> for the estimates you
+report –
 maximum likelihood biases the variance components downward, and with few
 clusters that carries through to standard errors and to the degrees of
 freedom from <code><a href="ilm_denom_df.html">ilm_denom_df()</a></code>. With few groups the difference is
 measurable: in a study of 8 groups of 6, nominal 90% prediction intervals
 for new groups, built from the fitted variance components, covered 0.903
 with REML against 0.891 with maximum likelihood for a gaussian response,
-and 0.892 against 0.872 for a Poisson one. Once set, any likelihood-ratio
-test refuses
-rather than quietly comparing things that are not comparable, and so does
-<code><a href="ilm_robust.html">ilm_robust()</a></code>, whose sandwich needs per-observation scores that a
-restricted likelihood does not have. Available for every family, but exact
+and 0.892 against 0.872 for a Poisson one. Once set, a likelihood-ratio
+test of fixed effects (<code><a href="ilm_anova.html">ilm_anova()</a></code> with <code>test = "LRT"</code>, <code><a href="ilm_pb_lrt.html">ilm_pb_lrt()</a></code>)
+refits the model by maximum likelihood for the test and says so, AIC and
+BIC say they compare only models with the same fixed effects, and
+<code><a href="ilm_robust.html">ilm_robust()</a></code> refuses, because its sandwich needs per-observation scores
+that a restricted likelihood does not have. Available for every family, but exact
 only for a gaussian response: for any other family it is an approximately
 restricted likelihood, which reduces the downward bias without REML's
 exact properties, and <code>fit$reml_exact</code> says which a fit has (see the

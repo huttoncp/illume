@@ -309,20 +309,21 @@ ilm_model(y ~ x1 + grp + (1 | id), data = d, family = "gaussian",
           reml = TRUE)
 ```
 
-The default is maximum likelihood, and the reason is the order you work
-in. A restricted likelihood is the likelihood of contrasts orthogonal to
-the design matrix, so changing the fixed effects changes which data it
-is the likelihood of. Two REML fits with different fixed effects are not
-comparable, and their difference is not a likelihood ratio.
+For most models the default is maximum likelihood, and the reason is the
+order you work in. A restricted likelihood is the likelihood of
+contrasts orthogonal to the design matrix, so changing the fixed effects
+changes which data it is the likelihood of. Two REML fits with different
+fixed effects are not comparable, and their difference is not a
+likelihood ratio.
 
 So: **settle the mean structure under the default, then refit with
 `reml = TRUE` for the estimates you report.** Once set,
 `ilm_anova(test = "LRT")` and
 [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md)
-refuse rather than quietly comparing things that are not comparable, and
-so does
+refit the model by maximum likelihood for the test and say so, rather
+than quietly comparing things that are not comparable, and
 [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
-– a sandwich needs per-observation scores, and integrating the
+refuses – a sandwich needs per-observation scores, and integrating the
 coefficients out leaves none.
 
 For a gaussian response this is REML exactly: the Laplace approximation
@@ -338,6 +339,19 @@ which of the two a fit has.
 [`ilm_aov_ez()`](https://huttoncp.github.io/illume/reference/ilm_aov_ez.md)
 default to REML, because in both the fixed effects were fixed before any
 data were seen: by the graph in one case and by the design in the other.
+
+So does a gaussian model whose spread is modelled by `dispformula`, not
+in the fitted mean, and that has no random terms:
+`ilm_model(y ~ group, dispformula = ~ group)`, for example, is fitted by
+REML unless `reml = FALSE` is passed, and says so. There the dispersion
+coefficients are the only variance parameters, and in a simulation over
+14 designs REML’s F tests held their level better than maximum
+likelihood’s, and its group standard deviations were less biased, in
+every design. Its F tests use Satterthwaite’s df by default, and for a
+spread per group they are Welch-type tests;
+[`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)’s
+help says how they differ from Welch’s (1951). A likelihood-ratio test
+of its fixed effects refits it by maximum likelihood, and says so.
 
 ## Predictions
 

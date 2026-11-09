@@ -37,7 +37,7 @@ ilm_model_formula(
   ziformula = NULL,
   zi_type = c("inflated", "hurdle"),
   design = NULL,
-  reml = FALSE,
+  reml = NULL,
   boundary = c("hold", "avoid")
 )
 ```
@@ -235,30 +235,43 @@ ilm_model_formula(
 
 - reml:
 
-  Logical. Estimate the variance components by RESTRICTED maximum
-  likelihood instead of maximum likelihood. Defaults to `FALSE`, and the
-  reason is the order you work in: maximum likelihood is what lets you
-  compare fixed-effect structures, because a restricted likelihood
-  belongs to contrasts orthogonal to the design matrix and changing that
-  matrix changes which data it is the likelihood of. Settle the fixed
-  effects under the default, then refit with `reml = TRUE` for the
-  estimates you report – maximum likelihood biases the variance
-  components downward, and with few clusters that carries through to
-  standard errors and to the degrees of freedom from
+  Logical, or `NULL` (the default) to choose. Estimate the variance
+  components by RESTRICTED maximum likelihood instead of maximum
+  likelihood. `NULL` chooses REML for a gaussian model with an identity
+  link whose spread is modelled by `dispformula` (not `~ mu`) and that
+  has nothing else – no random terms or smooths, no `ar`, no zero part,
+  no censoring – and says so. There its tests hold their level better
+  and its spreads are less biased: over 14 designs with normal,
+  heavy-tailed and skewed errors, F tests on its fit rejected 4% to 10%
+  of true nulls at a nominal 5%, against 5% to 15% on a
+  maximum-likelihood fit, and its group standard deviations were nearer
+  the truth in every design. For every other model `NULL` means `FALSE`,
+  and the reason is the order you work in: maximum likelihood is what
+  lets you compare fixed-effect structures, because a restricted
+  likelihood belongs to contrasts orthogonal to the design matrix and
+  changing that matrix changes which data it is the likelihood of.
+  Settle the fixed effects by maximum likelihood, then refit with
+  `reml = TRUE` for the estimates you report – maximum likelihood biases
+  the variance components downward, and with few clusters that carries
+  through to standard errors and to the degrees of freedom from
   [`ilm_denom_df()`](https://huttoncp.github.io/illume/reference/ilm_denom_df.md).
   With few groups the difference is measurable: in a study of 8 groups
   of 6, nominal 90% prediction intervals for new groups, built from the
   fitted variance components, covered 0.903 with REML against 0.891 with
   maximum likelihood for a gaussian response, and 0.892 against 0.872
-  for a Poisson one. Once set, any likelihood-ratio test refuses rather
-  than quietly comparing things that are not comparable, and so does
-  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md),
-  whose sandwich needs per-observation scores that a restricted
-  likelihood does not have. Available for every family, but exact only
-  for a gaussian response: for any other family it is an approximately
-  restricted likelihood, which reduces the downward bias without REML's
-  exact properties, and `fit$reml_exact` says which a fit has (see the
-  *Regression models* vignette).
+  for a Poisson one. Once set, a likelihood-ratio test of fixed effects
+  ([`ilm_anova()`](https://huttoncp.github.io/illume/reference/ilm_anova.md)
+  with `test = "LRT"`,
+  [`ilm_pb_lrt()`](https://huttoncp.github.io/illume/reference/ilm_pb_lrt.md))
+  refits the model by maximum likelihood for the test and says so, AIC
+  and BIC say they compare only models with the same fixed effects, and
+  [`ilm_robust()`](https://huttoncp.github.io/illume/reference/ilm_robust.md)
+  refuses, because its sandwich needs per-observation scores that a
+  restricted likelihood does not have. Available for every family, but
+  exact only for a gaussian response: for any other family it is an
+  approximately restricted likelihood, which reduces the downward bias
+  without REML's exact properties, and `fit$reml_exact` says which a fit
+  has (see the *Regression models* vignette).
   [`ilm_dag_model()`](https://huttoncp.github.io/illume/reference/ilm_dag_model.md)
   defaults to `TRUE` for a gaussian response, because there the graph
   fixed the adjustment set before any data were seen.

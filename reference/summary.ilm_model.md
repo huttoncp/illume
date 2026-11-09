@@ -28,9 +28,11 @@ print(x, digits = 4, max_corr_dim = 6L, ...)
 
 - df:
 
-  The degrees of freedom of a gaussian mixed model's coefficient tests:
-  `"auto"` (Satterthwaite's, per coefficient, as `lmerTest` reports),
-  `"kenward-roger"`, `"asymptotic"` (the normal) or a number. See
+  The degrees of freedom of the coefficient tests of a gaussian mixed
+  model, or of a gaussian model with a dispersion formula and no random
+  terms: `"auto"` (Satterthwaite's, per coefficient, as `lmerTest`
+  reports), `"kenward-roger"`, `"asymptotic"` (the normal) or a number.
+  See
   [`ilm_coef_table()`](https://huttoncp.github.io/illume/reference/ilm_coef_table.md).
   Other fits are unaffected.
 

@@ -30,7 +30,7 @@ ilm_denom_df(
 
   One of `"auto"`, `"satterthwaite"`, `"kenward-roger"`, `"residual"`,
   `"asymptotic"`. `"auto"` gives the exact residual df when nothing was
-  integrated out, Satterthwaite for a gaussian mixed model, and `Inf`
+  integrated out, Satterthwaite for any other gaussian fit, and `Inf`
   otherwise.
 
 - h:
