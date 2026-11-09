@@ -336,7 +336,11 @@ ilm_recode_sum <- function(object, which) {
 #'   refit with [stats::contr.sum()] for those factors and say so. `FALSE`
 #'   tests the model exactly as coded and warns instead. The fit passed in is
 #'   never modified either way.
-#' @param test `"Wald"` or `"LRT"`.
+#' @param test `"Wald"` or `"LRT"`. A likelihood-ratio test compares
+#'   maximum-likelihood fits, so a REML fit is refitted by maximum likelihood
+#'   for it, with a message; the fit passed in is unchanged. For a gaussian
+#'   mixed or dispersion model the Wald F test needs no refit (see the
+#'   section on unequal spreads).
 #' @param ncores Integer. Worker processes for the refits.
 #' @param restarts Integer. Optimiser restarts in refits.
 #' @param df For the Wald tests of a gaussian mixed model, or of a gaussian
@@ -390,7 +394,9 @@ ilm_anova <- function(object, type = 2, test = c("Wald", "LRT"),
                         ncores = 1L, restarts = 2L, recode = TRUE,
                         df = "auto", statistic = c("F", "Chisq")) {
   test <- match.arg(test); statistic <- match.arg(statistic)
-  if (test == "LRT") ilm_stop_reml_lrt(object, "a likelihood-ratio ilm_anova()")
+  ## a likelihood ratio compares maximum-likelihood fits: a REML fit is
+  ## refitted by maximum likelihood for the test, and the user told
+  if (test == "LRT") object <- ilm_as_ml(object, "ilm_anova(test = \"LRT\")")
   type <- toupper(as.character(type)[1])
   if (!type %in% c("3", "III", "2", "II")) stop("type must be 2 / \"II\" or 3 / \"III\"")
   type3 <- type %in% c("3", "III")

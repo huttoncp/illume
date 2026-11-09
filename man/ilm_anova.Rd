@@ -24,7 +24,11 @@ each term against everything not containing it, which does not depend on
 how the factors are coded. Type III tests each term against every other,
 which does -- see \code{recode}.}
 
-\item{test}{\code{"Wald"} or \code{"LRT"}.}
+\item{test}{\code{"Wald"} or \code{"LRT"}. A likelihood-ratio test compares
+maximum-likelihood fits, so a REML fit is refitted by maximum likelihood
+for it, with a message; the fit passed in is unchanged. For a gaussian
+mixed or dispersion model the Wald F test needs no refit (see the
+section on unequal spreads).}
 
 \item{ncores}{Integer. Worker processes for the refits.}
 

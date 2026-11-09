@@ -259,11 +259,12 @@ ilm_nobars <- function(f) reformulas::nobars(f)
 #'   measurable: in a study of 8 groups of 6, nominal 90% prediction intervals
 #'   for new groups, built from the fitted variance components, covered 0.903
 #'   with REML against 0.891 with maximum likelihood for a gaussian response,
-#'   and 0.892 against 0.872 for a Poisson one. Once set, any likelihood-ratio
-#'   test refuses
-#'   rather than quietly comparing things that are not comparable, and so does
-#'   [ilm_robust()], whose sandwich needs per-observation scores that a
-#'   restricted likelihood does not have. Available for every family, but exact
+#'   and 0.892 against 0.872 for a Poisson one. Once set, a likelihood-ratio
+#'   test of fixed effects ([ilm_anova()] with `test = "LRT"`, [ilm_pb_lrt()])
+#'   refits the model by maximum likelihood for the test and says so, AIC and
+#'   BIC say they compare only models with the same fixed effects, and
+#'   [ilm_robust()] refuses, because its sandwich needs per-observation scores
+#'   that a restricted likelihood does not have. Available for every family, but exact
 #'   only for a gaussian response: for any other family it is an approximately
 #'   restricted likelihood, which reduces the downward bias without REML's
 #'   exact properties, and `fit$reml_exact` says which a fit has (see the
@@ -1044,8 +1045,9 @@ ilm_model_formula <- function(formula, data, family = "auto",
     message("ilm_model(): fitted by REML, the default for a gaussian model with ",
             "a dispersion formula and no random terms: its tests hold their ",
             "level better and its spreads are less biased than under maximum ",
-            "likelihood. To compare fixed effects by likelihood ratio, AIC or ",
-            "BIC, or for ilm_robust(), refit with `reml = FALSE`.")
+            "likelihood. A likelihood-ratio test refits by maximum likelihood ",
+            "itself; to compare fixed effects by AIC or BIC, or for ",
+            "ilm_robust(), refit with `reml = FALSE`.")
 
   ## ---- everything the ecosystem layer reconstructs a reference grid from ---
   fit$design    <- design

@@ -43,32 +43,44 @@
 ## approximating it.
 ## ---------------------------------------------------------------------------
 
-#' Stop a likelihood comparison that REML makes meaningless
+#' Refit a REML fit by maximum likelihood for a likelihood comparison
 #'
 #' A restricted likelihood is the likelihood of contrasts orthogonal to `X`.
 #' Change `X` and it is a likelihood of different data, so two REML fits with
 #' different fixed effects have nothing comparable about them -- their
 #' difference is not a likelihood ratio and its reference is not chi-square.
-#' The same applies to AIC and to any bootstrap built on the ratio.
-#'
-#' This is not a numerical nicety. The comparison runs perfectly happily and
-#' returns a number, which is why it has to be refused rather than warned
-#' about.
+#' A likelihood-ratio test of fixed effects therefore compares maximum-
+#' likelihood fits. Asked for one on a REML fit, the test refits the model by
+#' maximum likelihood itself and says so at run time; the fit passed in, and
+#' its REML estimates, are not changed. Where the model has a Wald F test on
+#' finite df -- a gaussian mixed model, or a gaussian dispersion model with no
+#' random terms -- the message also names it: it needs no refit, and for a
+#' dispersion model it held its level better than the likelihood-ratio test
+#' in simulation.
 #'
 #' @param object A fitted `"ilm_model"` object.
-#' @param what What the caller was trying to do, named in the message.
-#' @return `TRUE`, invisibly, or an error.
+#' @param what What the caller was doing, named in the message.
+#' @param point_to_f Logical. Name the Wald F test where the model has one.
+#' @return `object` itself when it was fitted by maximum likelihood, otherwise
+#'   the same model refitted by maximum likelihood.
 #' @keywords internal
 #' @noRd
-ilm_stop_reml_lrt <- function(object, what = "a likelihood-ratio test") {
-  if (!isTRUE(object$reml)) return(invisible(TRUE))
-  stop(what, " compares likelihoods across different fixed-effect structures, ",
-       "and this model was fitted by REML. A restricted likelihood belongs to ",
-       "contrasts orthogonal to the design matrix, so changing the fixed ",
-       "effects changes which data it is the likelihood of and the two are ",
-       "not comparable. Refit with `reml = FALSE` to compare fixed effects, ",
-       "then switch back once the structure is settled -- or use a Wald test, ",
-       "which is valid under REML.", call. = FALSE)
+ilm_as_ml <- function(object, what, point_to_f = TRUE) {
+  if (!isTRUE(object$reml)) return(object)
+  o <- object; o$reml <- FALSE
+  r <- ilm_refit_y(o, object$y)
+  if (!is.null(r$call)) r$call$reml <- FALSE
+  r$reml_by_default <- FALSE
+  f_note <- if (isTRUE(point_to_f) && ilm_finite_df(object, "auto"))
+    paste0(" The Wald F test, ilm_anova()'s default, needs no refit and is ",
+           "valid on the REML fit; for a gaussian model with a dispersion ",
+           "formula it held its level better than this test in simulation.")
+  else ""
+  message(what, ": refitted by maximum likelihood for the test, because the ",
+          "model was fitted by REML and a restricted likelihood depends on the ",
+          "fixed effects it was fitted with. The fit you passed in, and its REML ",
+          "estimates, are unchanged.", f_note)
+  r
 }
 
 #' Which parameters are fixed effects, and which are variance components

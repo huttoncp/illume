@@ -176,11 +176,12 @@ freedom from \code{\link[=ilm_denom_df]{ilm_denom_df()}}. With few groups the di
 measurable: in a study of 8 groups of 6, nominal 90\% prediction intervals
 for new groups, built from the fitted variance components, covered 0.903
 with REML against 0.891 with maximum likelihood for a gaussian response,
-and 0.892 against 0.872 for a Poisson one. Once set, any likelihood-ratio
-test refuses
-rather than quietly comparing things that are not comparable, and so does
-\code{\link[=ilm_robust]{ilm_robust()}}, whose sandwich needs per-observation scores that a
-restricted likelihood does not have. Available for every family, but exact
+and 0.892 against 0.872 for a Poisson one. Once set, a likelihood-ratio
+test of fixed effects (\code{\link[=ilm_anova]{ilm_anova()}} with \code{test = "LRT"}, \code{\link[=ilm_pb_lrt]{ilm_pb_lrt()}})
+refits the model by maximum likelihood for the test and says so, AIC and
+BIC say they compare only models with the same fixed effects, and
+\code{\link[=ilm_robust]{ilm_robust()}} refuses, because its sandwich needs per-observation scores
+that a restricted likelihood does not have. Available for every family, but exact
 only for a gaussian response: for any other family it is an approximately
 restricted likelihood, which reduces the downward bias without REML's
 exact properties, and \code{fit$reml_exact} says which a fit has (see the

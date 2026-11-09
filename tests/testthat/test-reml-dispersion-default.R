@@ -127,12 +127,14 @@ test_that("with three groups the F test has Welch's numerator", {
                tolerance = 1e-8)
 })
 
-test_that("a likelihood-ratio test on the default fit says to refit by maximum likelihood", {
+test_that("a likelihood-ratio test on the default fit refits by maximum likelihood", {
   d <- disp_data()
   f <- q(ilm_model(y ~ g, data = d, family = "gaussian", dispformula = ~ g,
                    verbose = FALSE))
-  expect_error(ilm_anova(f, test = "LRT"), "reml = FALSE")
+  expect_message(a <- ilm_anova(f, test = "LRT"),
+                 "refitted by maximum likelihood.*Wald F test")
   f0 <- q(ilm_model(y ~ g, data = d, family = "gaussian", dispformula = ~ g,
                     reml = FALSE, verbose = FALSE))
-  expect_s3_class(q(ilm_anova(f0, test = "LRT")), "anova")
+  expect_no_message(a0 <- ilm_anova(f0, test = "LRT"))
+  expect_equal(as.data.frame(a), as.data.frame(a0), tolerance = 1e-5)
 })

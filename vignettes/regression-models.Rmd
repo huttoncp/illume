@@ -219,9 +219,10 @@ difference is not a likelihood ratio.
 
 So: **settle the mean structure under the default, then refit with
 `reml = TRUE` for the estimates you report.** Once set, `ilm_anova(test =
-"LRT")` and `ilm_pb_lrt()` refuse rather than quietly comparing things that
-are not comparable, and so does `ilm_robust()` -- a sandwich needs
-per-observation scores, and integrating the coefficients out leaves none.
+"LRT")` and `ilm_pb_lrt()` refit the model by maximum likelihood for the test
+and say so, rather than quietly comparing things that are not comparable, and
+`ilm_robust()` refuses -- a sandwich needs per-observation scores, and
+integrating the coefficients out leaves none.
 
 For a gaussian response this is REML exactly: the Laplace approximation to
 the restricted likelihood is exact for a linear model, and the variance
@@ -242,8 +243,8 @@ and in a simulation over 14 designs REML's F tests held their level better
 than maximum likelihood's, and its group standard deviations were less biased,
 in every design. Its F tests use Satterthwaite's df by default, and for a
 spread per group they are Welch-type tests; `ilm_anova()`'s help says how they
-differ from Welch's (1951). Pass `reml = FALSE` to compare its fixed effects
-by likelihood ratio.
+differ from Welch's (1951). A likelihood-ratio test of its fixed effects
+refits it by maximum likelihood, and says so.
 
 ## Predictions
 
