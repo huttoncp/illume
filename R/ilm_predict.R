@@ -33,8 +33,24 @@ ilm_smooth_design <- function(sob, newdata) {
   newdata <- ilm_add_standins(newdata, sob$name_map)
   X0 <- mgcv::PredictMat(sob$sm, newdata)
   D  <- sob$re$trans.D
-  M  <- X0 %*% sob$re$trans.U %*% diag(D, length(D))
   nrk <- vapply(sob$rand, ncol, 1L); nr <- sum(nrk); off <- c(0L, cumsum(nrk))
+  M <- if (!is.null(sob$re$trans.U)) {
+    X0 %*% sob$re$trans.U %*% diag(D, length(D))
+  } else {
+    ## A factor-smooth interaction (bs = "fs"): smooth2random() returns no
+    ## trans.U for it, only trans.D and `rind`, and its random blocks are the
+    ## basis scaled by trans.D with the columns reordered. Found by
+    ## measurement, not from mgcv's code: cbind(rand) equals
+    ## (PredictMat(sm, data) %*% diag(trans.D))[, order(rind)] to 2.2e-14 in
+    ## eight set-ups (mgcv 1.9.1, 10 Nov 2026); test-smooth-fs-predict.R
+    ## checks it. In every set-up measured the smooth had no unpenalised
+    ## columns. One that has them, or no `rind`, has not been measured, and is
+    ## stopped rather than guessed at.
+    if (is.null(sob$re$rind) || isTRUE(NCOL(sob$Xf) > 0L))
+      stop("predict(): the smooth ", sob$sm$label, " has a reparameterisation ",
+           "illume does not know how to evaluate at new values.", call. = FALSE)
+    (X0 %*% diag(D, length(D)))[, order(sob$re$rind), drop = FALSE]
+  }
   list(Xr = lapply(seq_along(nrk), function(k) M[, (off[k] + 1L):off[k + 1L], drop = FALSE]),
        Xf = if (ncol(sob$Xf)) M[, nr + seq_len(ncol(sob$Xf)), drop = FALSE] else NULL)
 }
