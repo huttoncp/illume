@@ -143,6 +143,15 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95,
     times <- seq(min(y[y > 0]), max(y), length.out = 100L)
   }
   times <- sort(unique(times[times > 0]))
+  ## A factor-smooth interaction's subjects are a population, as predict()
+  ## treats them, but the curves here for a subject's own fit or for the
+  ## average over subjects do not carry such a term yet. A typical subject's
+  ## curve, with the term at zero, does.
+  if (any(ilm_fs_terms(object)) && !identical(groups, "typical"))
+    stop("ilm_survival() does not yet give groups = \"", groups, "\" for a ",
+         "model with a factor-smooth interaction (bs = \"fs\"); use groups = ",
+         "\"typical\" for a subject at the average, with that term at zero.",
+         call. = FALSE)
   gk <- which(vapply(object$re, function(e) !identical(e$kind, "basis"), TRUE))
   ## with nothing of a group's own, every choice is the typical group's curve
   if (!length(gk) && is.null(object$ar)) groups <- "typical"

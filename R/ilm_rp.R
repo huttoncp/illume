@@ -326,7 +326,8 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   }
   times <- sort(unique(times[times > 0]))
   ## the covariate part, without the baseline, for each requested pattern
-  Xn <- ilm_newX(object, newdata)$X
+  ## a typical subject's curve: a factor-smooth's subject is not used
+  Xn <- ilm_newX(object, newdata, fs_fill = TRUE)$X
   keep <- setdiff(seq_len(ncol(object$X)), rp$cols)
   if (ncol(Xn) != length(keep))
     stop("the new data give ", ncol(Xn), " covariate columns where the fit ",
