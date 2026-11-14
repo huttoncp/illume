@@ -526,6 +526,21 @@ ilm_smooth <- function(spec, data) {
          "Until each level has its own smooth here, fit this model with ",
          "mgcv::gam().", call. = FALSE)
   }
+  ## A factor-smooth interaction with a numeric `by`: the random blocks
+  ## smooth2random() returns for it do not carry the `by` values -- measured,
+  ## they are the basis without them (10 Nov 2026, mgcv 1.9.1) -- so the fit
+  ## was the model with no `by` at all, under a name that said it had one.
+  ## Refused until it is handled.
+  if (inherits(spec, "fs.smooth.spec") && !identical(spec$by, "NA")) {
+    by <- spec$by
+    if (!is.null(map) && by %in% names(map)) by <- map[[by]]
+    stop(sub("\\)$", "", spec$label), ", bs = \"fs\", by = ", by, "): ",
+         "illume does not handle a `by` variable on a factor-smooth ",
+         "interaction (bs = \"fs\"). It is refused rather than fitted wrongly: ",
+         "before this check, `", by, "` was dropped without a word and the ",
+         "model fitted was the one without it. Fit this model with ",
+         "mgcv::gam(), or drop `by`.", call. = FALSE)
+  }
   sm <- sml[[1L]]
   re <- mgcv::smooth2random(sm, "", type = 2)
   list(Xf = re$Xf, rand = re$rand, sm = sm, re = re, name_map = map)
