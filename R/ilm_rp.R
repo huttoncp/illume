@@ -326,12 +326,17 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   }
   times <- sort(unique(times[times > 0]))
   ## the covariate part, without the baseline, for each requested pattern
-  Xn <- ilm_newX(object, newdata)$X
+  nd <- ilm_newX(object, newdata)
+  Xn <- nd$X
   keep <- setdiff(seq_len(ncol(object$X)), rp$cols)
   if (ncol(Xn) != length(keep))
     stop("the new data give ", ncol(Xn), " covariate columns where the fit ",
          "has ", length(keep), call. = FALSE)
-  off <- as.vector(Xn %*% object$beta[keep, 1L])
+  ## with every smooth's penalised part: from the fixed design alone, a smooth
+  ## kept only its unpenalised columns, and a curve whose smooth's penalised
+  ## part was 5.8 on the linear predictor came out 0.976 where it was 0.0003
+  off <- as.vector(Xn %*% object$beta[keep, 1L]) +
+    ilm_smooth_part(object, nd, typical = TRUE)[, 1L]
   V <- object$sdr$cov.fixed
   gam <- object$beta[rp$cols, 1L]
   Bs <- ilm_rcs(log(times), rp$knots)
