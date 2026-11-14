@@ -190,3 +190,98 @@ test_that("ilm_survival() gives a typical subject's curve, and refuses the other
   expect_equal(s1$surv, exp(-exp((log(c(1, 2)) - as.numeric(f$beta[1])) / sc)),
                tolerance = 1e-8)
 })
+
+## ---- what "typical" and "population" rest on, and the in-sample functions --
+
+test_that("a row's sum of squares in each fs block is the same whichever fitted subject it is given", {
+  ## groups = "typical" and "population" build the design with the first
+  ## fitted subject put in, and "population" uses each row's sum of squares in
+  ## each block; that is right only if the sums do not depend on the subject
+  cases <- list(
+    list(seed = 21, n_id = 30, form = y ~ s(x, id, bs = "fs", k = 5)),
+    list(seed = 22, n_id = 6,  form = y ~ s(x, id, bs = "fs", k = 3, m = 1)),
+    list(seed = 23, n_id = 12, form = y ~ s(x, k = 5) + s(x, id, bs = "fs", k = 8)),
+    list(seed = 24, n_id = 10, form = y ~ s(x, id, bs = "fs", k = 6, xt = list(bs = "cr"))))
+  xs <- c(0, 0.13, 0.5, 0.77, 1)
+  for (z in cases) {
+    d <- fsg_data(z$seed, n_id = z$n_id)
+    f <- fsg_fit(z$form, d, "gaussian")
+    sob <- f$smooths[["s(x,id)"]]
+    ss <- lapply(levels(d$id), function(l) {
+      D <- illume:::ilm_smooth_design(sob, data.frame(x = xs, id = factor(l, levels = levels(d$id))))
+      sapply(D$Xr, function(M) rowSums(M^2))
+    })
+    expect_true(all(ss[[1]] > 0))
+    for (j in seq_along(ss)[-1]) expect_equal(ss[[j]], ss[[1]], tolerance = 1e-12)
+    ## and the filled-in design gives the same sums as any subject's own
+    D <- illume:::ilm_smooth_design(sob, illume:::ilm_fs_fill(sob, data.frame(x = xs)))
+    expect_equal(sapply(D$Xr, function(M) rowSums(M^2)), ss[[length(ss)]], tolerance = 1e-12)
+  }
+})
+
+fsg_multi <- function(seed) {
+  d <- fsg_data(seed, n_id = 20, n_per = 15)
+  set.seed(seed)
+  d$y3 <- cut(d$y + stats::rnorm(nrow(d), 0, 0.5), c(-Inf, -0.5, 0.5, Inf),
+              labels = c("lo", "mid", "hi"))
+  d
+}
+
+test_that("ilm_fitted(groups = 'typical') follows predict(): the fs term at zero", {
+  d <- fsg_data(25, pois = TRUE)
+  f <- fsg_fit(y ~ s(x, k = 5) + s(x, id, bs = "fs", k = 5), d, "poisson")
+  expect_equal(as.numeric(ilm_fitted(f, groups = "typical")),
+               fsg_p(f, groups = "typical"), tolerance = 1e-10)
+  ## "fitted" keeps each row's own subject, as predict() does
+  expect_equal(as.numeric(ilm_fitted(f, groups = "fitted")), fsg_p(f), tolerance = 1e-8)
+  dm <- fsg_multi(26)
+  fm <- fsg_fit(y3 ~ s(x, id, bs = "fs", k = 4), dm, "multinomial")
+  expect_equal(unname(ilm_fitted(fm, groups = "typical")),
+               unname(suppressWarnings(predict(fm, groups = "typical"))), tolerance = 1e-10)
+})
+
+test_that("ilm_rqr(groups = 'typical') takes each row's distribution with the fs term at zero", {
+  d <- fsg_data(27, pois = TRUE)
+  f <- fsg_fit(y ~ s(x, id, bs = "fs", k = 5), d, "poisson")
+  mu <- fsg_p(f, groups = "typical")
+  set.seed(1)
+  lo <- stats::ppois(d$y - 1, mu); hi <- stats::ppois(d$y, mu)
+  u <- lo + stats::runif(nrow(d)) * (hi - lo)
+  r <- ilm_rqr(f, groups = "typical", seed = 1L)
+  expect_equal(as.numeric(r), pmin(pmax(u, 1e-10), 1 - 1e-10), tolerance = 1e-10)
+  expect_false(isTRUE(all.equal(as.numeric(r), as.numeric(ilm_rqr(f, groups = "fitted", seed = 1L)))))
+})
+
+test_that("ilm_scores(groups = 'typical') scores predict()'s typical probabilities", {
+  score <- function(P, y) c(log_score = mean(-log(P[cbind(seq_along(y), y)])),
+                            accuracy = mean(max.col(P, ties.method = "first") == y))
+  dm <- fsg_multi(28)
+  fm <- fsg_fit(y3 ~ s(x, id, bs = "fs", k = 4), dm, "multinomial")
+  P <- suppressWarnings(predict(fm, groups = "typical"))
+  expect_equal(ilm_scores(fm, groups = "typical")[c("log_score", "accuracy")],
+               score(P, as.integer(dm$y3)), tolerance = 1e-10)
+  ## an ordinal fit, whose probabilities come from its latent predictor
+  dm$yo <- factor(dm$y3, ordered = TRUE)
+  ## (an ordinal fit needs a predictor besides the smooth)
+  fo <- fsg_fit(yo ~ x + s(x, id, bs = "fs", k = 4), dm, "ordinal")
+  Po <- suppressWarnings(predict(fo, groups = "typical"))
+  expect_equal(ilm_scores(fo, groups = "typical")[c("log_score", "accuracy")],
+               score(Po, as.integer(dm$yo)), tolerance = 1e-10)
+})
+
+test_that("with no fs term the three are unchanged, and ilm_eta_hat() keeps fs by default", {
+  ## the flag reaches only a factor-smooth's blocks: on fits without one the
+  ## typical linear predictor is the same with it as without it
+  d <- fsg_data(29, pois = TRUE)
+  set.seed(29); d$h <- factor(sample(letters[1:6], nrow(d), TRUE))
+  for (form in list(y ~ s(x, k = 5) + (1 | h), y ~ x + (1 | id))) {
+    f <- fsg_fit(form, d, "poisson")
+    expect_identical(illume:::ilm_eta_hat(f, FALSE, fs = FALSE), illume:::ilm_eta_hat(f, FALSE))
+    expect_equal(as.numeric(ilm_fitted(f, groups = "typical")),
+                 fsg_p(f, groups = "typical"), tolerance = 1e-10)
+  }
+  ## ilm_robust() and ilm_rp_offset() call ilm_eta_hat(conditional = FALSE)
+  ## without the flag, and on an fs fit that still includes the term
+  f <- fsg_fit(y ~ s(x, id, bs = "fs", k = 5), d, "poisson")
+  expect_equal(illume:::ilm_eta_hat(f, FALSE), illume:::ilm_eta_hat(f, TRUE))
+})

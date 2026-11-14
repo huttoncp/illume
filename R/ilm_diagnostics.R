@@ -77,7 +77,7 @@ ilm_rqr <- function(object, groups = c("fitted", "typical"), seed = 1L,
   ## whole point of the ordering -- so it takes the discrete construction
   ## rather than the log-score one the multinomial needs.
   if (isTRUE(object$ordinal)) {
-    P <- ilm_ord_probs(ilm_eta_hat(object, conditional)[, 1], object$zeta,
+    P <- ilm_ord_probs(ilm_eta_hat(object, conditional, fs = conditional)[, 1], object$zeta,
                        object$family$pfun)
     cm <- cbind(0, t(apply(P, 1L, cumsum)))
     yi <- as.integer(object$y)
@@ -103,7 +103,7 @@ ilm_rqr <- function(object, groups = c("fitted", "typical"), seed = 1L,
       ## the COUNT part's mean: ilm_fitted() has already folded the zeros into
       ## the response scale, so this comes from the linear predictor instead
       muc <- as.numeric(object$family$linkinv(
-        ilm_eta_hat(object, conditional)[, 1]))
+        ilm_eta_hat(object, conditional, fs = conditional)[, 1]))
       pz <- ilm_zi_p(object)
       if (isTRUE(object$family$continuous)) {
         ## A continuous response with a zero part has exactly ONE jump, the
@@ -121,7 +121,7 @@ ilm_rqr <- function(object, groups = c("fitted", "typical"), seed = 1L,
       }
     }
     else if (!is.null(object$family$cdf))
-      object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional)[, 1]),
+      object$family$cdf(y, as.numeric(ilm_eta_hat(object, conditional, fs = conditional)[, 1]),
                         if (length(disp)) unname(disp) else 1)
     else switch(fam,
       gaussian = stats::pnorm(y, mu, if (length(disp)) unname(disp) else 1),
