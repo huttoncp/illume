@@ -118,3 +118,45 @@ test_that("a flexible-parametric typical curve leaves a factor-smooth's subjects
     as.vector(illume:::ilm_rcs(log(c(1, 3)), f$rp$knots) %*% f$beta[f$rp$cols, 1L]) + ei)))
   expect_equal(s_a$surv, S, tolerance = 1e-10)
 })
+
+test_that("a Weibull 'fitted' curve agrees with predict(), through exported functions only", {
+  ## predict(groups = "fitted", type = "link") carries the smooth and the
+  ## row's group; the Weibull survivor function at that linear predictor is
+  ## the curve, with nothing from the package's internals
+  d <- ss_data(36); f <- ss_fit(d, "weibull")
+  nd <- data.frame(x = c(0.2, 0.55, 0.85), h = factor(c("b", "c", "f"), levels = levels(d$h)))
+  tg <- c(1, 2.5)
+  s <- suppressWarnings(ilm_survival(f, newdata = nd, times = tg, groups = "fitted", nsim = 20L))
+  eta <- as.numeric(suppressWarnings(predict(f, newdata = nd, type = "link", groups = "fitted")))
+  sc <- unname(f$dispersion[[1]])
+  expect_equal(s$surv, as.vector(sapply(eta, function(e) exp(-exp((log(tg) - e) / sc)))),
+               tolerance = 1e-8)
+})
+
+test_that("the 'fitted' interval is the percentiles over joint draws of the coefficients, the smooth's included", {
+  ## ilm_survival() draws with ilm_draws(blocks = c("beta", "bvec")); the same
+  ## draws, put through the by-hand curve, give the same interval exactly. A
+  ## smooth's penalised coefficients held at their estimates instead give a
+  ## different, wider one at the ends (measured 14 Nov)
+  d <- ss_data(37); f <- ss_fit(d, "weibull")
+  nd <- data.frame(x = c(0.25, 0.75), h = factor("a", levels = levels(d$h)))
+  tg <- 3
+  s <- suppressWarnings(ilm_survival(f, newdata = nd, times = tg, groups = "fitted",
+                                     nsim = 60L, seed = 4L))
+  dr <- ilm_draws(f, nsim = 60L, seed = 4L, blocks = c("beta", "bvec"), natural = FALSE)
+  w <- rownames(dr$draws)
+  ndx <- illume:::ilm_newX(f, nd)
+  kh <- which(names(f$re) == "h")
+  ks <- which(vapply(f$re, function(r) identical(r$kind, "basis"), TRUE))
+  sc <- unname(f$dispersion[[1]])
+  S <- sapply(seq_len(ncol(dr$draws)), function(j) {
+    b <- dr$draws[w == "beta", j]; bv <- dr$draws[w == "bvec", j]
+    e <- as.vector(ndx$X %*% b)
+    for (k in ks) e <- e + as.vector(illume:::ilm_basis_new(f, ndx, k) %*% illume:::ilm_Bhat_term(f, k, bv))
+    e <- e + as.vector(illume:::ilm_Bhat_term(f, kh, bv))[match(as.character(nd$h), f$re[[kh]]$levels)]
+    exp(-exp((log(tg) - e) / sc))
+  })
+  expect_equal(s$lower, apply(S, 1, stats::quantile, 0.025, names = FALSE), tolerance = 1e-10)
+  expect_equal(s$upper, apply(S, 1, stats::quantile, 0.975, names = FALSE), tolerance = 1e-10)
+  expect_true(all(s$lower <= s$surv & s$surv <= s$upper))
+})

@@ -1,5 +1,28 @@
 # illume 0.0.8.9003
 
+* **`ilm_survival()` now carries a smooth's curve into every survival curve
+  it draws.** Three of its curves were built from the fixed effects alone,
+  so a smooth kept only its straight-line part and the rest of its curve
+  was left out:
+  - with `groups = "fitted"` or `"population"`, for a model with a smooth
+    beside a random effect or a correlation over time (`ar`), in any
+    survival family;
+  - with `groups = "typical"`, for a flexible-parametric model
+    (`family = "rp"`) with a smooth.
+
+  The error was as large as the smooth's curve. For a Weibull model
+  `time ~ s(x) + (1 | h)`, the survival at t = 3 for one group came out as
+  8.8e-21 where the model gave 0.917; a flexible-parametric fit of the same
+  model was off by up to 0.976 under `"typical"`. A Weibull or other
+  accelerated failure time model's `"typical"` curve was right, and every
+  curve for a model without a smooth is unchanged. Under `"fitted"` and
+  `"population"`, the intervals now also carry the uncertainty in the
+  smooth's curve, drawn jointly with the fixed effects.
+
+  Also, `"fitted"` and `"population"` stopped with "non-numeric matrix
+  extent" or "incorrect number of dimensions" when given a single time in
+  `times`; they now take one.
+
 * **A likelihood-ratio test of a REML fit now refits it by maximum
   likelihood, and says so, instead of refusing.** `ilm_anova(test = "LRT")`
   and `ilm_pb_lrt()` compare maximum-likelihood fits, since a restricted
