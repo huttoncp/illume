@@ -339,7 +339,6 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   ## part was 5.8 on the linear predictor came out 0.976 where it was 0.0003
   off <- as.vector(Xn %*% object$beta[keep, 1L]) +
     ilm_smooth_part(object, nd, typical = TRUE)[, 1L]
-  V <- object$sdr$cov.fixed
   gam <- object$beta[rp$cols, 1L]
   Bs <- ilm_rcs(log(times), rp$knots)
   crit <- stats::qnorm(1 - (1 - conf) / 2)
@@ -347,21 +346,31 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   ## The variance of eta at a given time comes from the whole coefficient
   ## vector, spline included, so the interval widens where the baseline is
   ## least well determined as well as where the covariates are.
-  ## cov.fixed is indexed by TMB's own parameter names, which are the names of
-  ## the parameter list -- "beta", "theta" -- not the display names the package
-  ## shows the user. Using the latter matched nothing and gave a zero-width
-  ## interval.
-  pn <- names(object$sdr$par.fixed)
-  bidx <- if (!is.null(V) && all(is.finite(V)) && !is.null(pn))
-    which(pn == "beta") else integer(0)
+  ## The fixed effects' covariance, read as vcov() reads it: by position, the
+  ## first ncol(X) rows. It was looked up by name twice, and each time the
+  ## lookup matched nothing and the interval came back with no width, without
+  ## a word: once by the display names, which cov.fixed is not indexed by, and
+  ## then by names(sdr$par.fixed), which under REML holds the variance
+  ## parameters only -- every REML fit's interval was 0 wide. A lookup that
+  ## does not find the block now stops, and a covariance that is unusable
+  ## gives no interval, with a warning, rather than one of no width.
+  Vb <- suppressWarnings(vcov(object))
+  if (is.null(Vb) || !identical(dim(as.matrix(Vb)), c(ncol(object$X), ncol(object$X))))
+    stop("internal: the fixed effects' covariance has ",
+         if (is.null(Vb)) "no entries" else paste(dim(as.matrix(Vb)), collapse = " x "),
+         " where the design has ", ncol(object$X), " columns.", call. = FALSE)
+  Vb <- as.matrix(Vb)
+  usable <- all(is.finite(Vb))
+  if (!usable)
+    warning("the fixed effects' covariance is unusable (see the hessian line of ",
+            "fit$checks), so the survival curve has no interval.", call. = FALSE)
   out <- lapply(seq_along(off), function(i) {
     e <- as.vector(Bs %*% gam) + off[i]
     S <- Sfun(e)
-    se <- rep(0, length(times))
-    if (length(bidx) == ncol(object$X)) {
+    se <- rep(NA_real_, length(times))
+    if (usable) {
       Z <- cbind(Bs, matrix(rep(Xn[i, ], each = length(times)),
                             nrow = length(times)))
-      Vb <- V[bidx, bidx, drop = FALSE]
       se <- sqrt(pmax(rowSums((Z %*% Vb) * Z), 0))
     }
     data.frame(row = i, time = times, surv = S,

@@ -17,7 +17,18 @@
   accelerated failure time model's `"typical"` curve was right, and every
   curve for a model without a smooth is unchanged. Under `"fitted"` and
   `"population"`, the intervals now also carry the uncertainty in the
-  smooth's curve, drawn jointly with the fixed effects.
+  smooth's curve, drawn jointly with the fixed effects. For a
+  flexible-parametric model with a smooth, the `"typical"` interval now
+  sits around the corrected curve, so it moves with it; how it is built is
+  unchanged.
+
+* **A flexible-parametric model fitted by REML now has a `"typical"`
+  interval in `ilm_survival()`.** It had no width at any time, for every
+  such fit: the fixed effects' variance was looked up where a REML fit does
+  not keep it. It is now read as `vcov()` reads it, so a REML fit gets the
+  interval an ML fit gets, the delta method from the fixed effects'
+  covariance. Where that covariance is unusable, the curve has no interval
+  and a warning says so, rather than an interval of no width.
 
   Also, `"fitted"` and `"population"` stopped with "non-numeric matrix
   extent" or "incorrect number of dimensions" when given a single time in

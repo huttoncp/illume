@@ -160,3 +160,35 @@ test_that("the 'fitted' interval is the percentiles over joint draws of the coef
   expect_equal(s$upper, apply(S, 1, stats::quantile, 0.975, names = FALSE), tolerance = 1e-10)
   expect_true(all(s$lower <= s$surv & s$surv <= s$upper))
 })
+
+test_that("a flexible-parametric typical interval by REML is the delta method from vcov(), not of no width", {
+  ## It was 0 at every time by REML: the fixed effects' variance was looked up
+  ## by name in a vector that, under REML, does not hold them
+  d <- ss_data(38)
+  nd <- data.frame(x = c(0.2, 0.8), h = factor("a", levels = levels(d$h)))
+  tg <- c(1, 3)
+  for (reml in c(TRUE, FALSE)) {
+    f <- ss_fit(d, "rp", time ~ x + (1 | h))
+    if (!reml) f <- suppressMessages(suppressWarnings(
+      ilm_model(time ~ x + (1 | h), data = d, family = "rp", reml = FALSE,
+                censor = ilm_surv(d$time, d$event), verbose = FALSE)))
+    s <- suppressWarnings(ilm_survival(f, newdata = nd, times = tg, groups = "typical"))
+    expect_true(all(s$upper - s$lower > 0), label = paste("reml =", reml))
+    ## by hand: S(B(t) gamma + x beta) with the delta method on the linear
+    ## predictor, from the fixed effects' block of vcov()
+    V <- as.matrix(vcov(f))
+    keep <- setdiff(seq_len(ncol(f$X)), f$rp$cols)
+    Xn <- illume:::ilm_newX(f, nd)$X
+    Bs <- illume:::ilm_rcs(log(tg), f$rp$knots)
+    crit <- stats::qnorm(0.975)
+    lo <- hi <- NULL
+    for (i in seq_len(nrow(nd))) {
+      e <- as.vector(Bs %*% f$beta[f$rp$cols, 1L]) + sum(Xn[i, ] * f$beta[keep, 1L])
+      Z <- cbind(Bs, matrix(rep(Xn[i, ], each = length(tg)), nrow = length(tg)))
+      se <- sqrt(rowSums((Z %*% V) * Z))
+      lo <- c(lo, f$family$surv(e + crit * se)); hi <- c(hi, f$family$surv(e - crit * se))
+    }
+    expect_equal(s$lower, lo, tolerance = 1e-8, label = paste("lower, reml =", reml))
+    expect_equal(s$upper, hi, tolerance = 1e-8, label = paste("upper, reml =", reml))
+  }
+})
