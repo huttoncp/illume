@@ -326,7 +326,9 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   }
   times <- sort(unique(times[times > 0]))
   ## the covariate part, without the baseline, for each requested pattern
-  nd <- ilm_newX(object, newdata)
+  ## a typical subject's curve: a factor-smooth's subject is not used, and
+  ## its blocks are left out of the smooth part below
+  nd <- ilm_newX(object, newdata, fs_fill = TRUE)
   Xn <- nd$X
   keep <- setdiff(seq_len(ncol(object$X)), rp$cols)
   if (ncol(Xn) != length(keep))

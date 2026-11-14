@@ -1,0 +1,13 @@
+illume 0.0.8.9003 | mgcv 1.9.1 | R version 4.4.3 (2025-02-28 ucrt) 
+date 2026-11-11 04:06:55 -0500 
+
+case                                      order(rind) mapping     rind (first guess)
+fit: 30 levels, k=5, m=2                             8.68e-15                  0.426
+fit: 30 levels, k=3, m=2                             4.27e-15                  0.538
+fit: 30 levels, k=8, m=1, with s(x)                  1.87e-15                  0.414
+fit: 5 levels, k=4                                   1.55e-15                  0.455
+fit: 60 levels, k=5                                  8.65e-15                  0.421
+fit: unbalanced, k=6, cr basis                       4.44e-16                  0.412
+direct: 30 levels, k=5, m=3                          2.19e-14                  0.379
+direct: numeric by z, k=5                               0.179                  0.528
+direct: 2-d smooth, tp, k=10                         1.12e-15                  0.329

@@ -11,7 +11,11 @@
 ## a random effect but is not a population to average over -- it IS the mean
 ## structure, so basis terms are always evaluated.  Grouping factors and AR terms
 ## are the populations: zeroed (groups = "typical") or integrated out
-## (groups = "population").
+## (groups = "population").  The exception is a factor-smooth interaction,
+## s(x, id, bs = "fs"): its blocks are basis terms, but each subject's curve is
+## a deviation drawn from a population of subjects, so it is treated as a
+## grouping term -- each row's own subject's curve under "fitted", zero under
+## "typical", and integrated out under "population".
 
 #' Evaluate a smooth's design at new covariate values
 #'
@@ -33,8 +37,24 @@ ilm_smooth_design <- function(sob, newdata) {
   newdata <- ilm_add_standins(newdata, sob$name_map)
   X0 <- mgcv::PredictMat(sob$sm, newdata)
   D  <- sob$re$trans.D
-  M  <- X0 %*% sob$re$trans.U %*% diag(D, length(D))
   nrk <- vapply(sob$rand, ncol, 1L); nr <- sum(nrk); off <- c(0L, cumsum(nrk))
+  M <- if (!is.null(sob$re$trans.U)) {
+    X0 %*% sob$re$trans.U %*% diag(D, length(D))
+  } else {
+    ## A factor-smooth interaction (bs = "fs"): smooth2random() returns no
+    ## trans.U for it, only trans.D and `rind`, and its random blocks are the
+    ## basis scaled by trans.D with the columns reordered. Found by
+    ## measurement, not from mgcv's code: cbind(rand) equals
+    ## (PredictMat(sm, data) %*% diag(trans.D))[, order(rind)] to 2.2e-14 in
+    ## eight set-ups (mgcv 1.9.1, 10 Nov 2026); test-smooth-fs-predict.R
+    ## checks it. In every set-up measured the smooth had no unpenalised
+    ## columns. One that has them, or no `rind`, has not been measured, and is
+    ## stopped rather than guessed at.
+    if (is.null(sob$re$rind) || isTRUE(NCOL(sob$Xf) > 0L))
+      stop("predict(): the smooth ", sob$sm$label, " has a reparameterisation ",
+           "illume does not know how to evaluate at new values.", call. = FALSE)
+    (X0 %*% diag(D, length(D)))[, order(sob$re$rind), drop = FALSE]
+  }
   list(Xr = lapply(seq_along(nrk), function(k) M[, (off[k] + 1L):off[k + 1L], drop = FALSE]),
        Xf = if (ncol(sob$Xf)) M[, nr + seq_len(ncol(sob$Xf)), drop = FALSE] else NULL)
 }
@@ -73,7 +93,7 @@ ilm_Bhat_term <- function(object, k, bvec = NULL) {
 #' @return A list with `X` and the per-smooth designs.
 #' @keywords internal
 #' @noRd
-ilm_newX <- function(object, newdata, offset_at = NULL) {
+ilm_newX <- function(object, newdata, offset_at = NULL, fs_fill = FALSE) {
   ## `offset_at`, one value for every row, stands in for the offset the rows
   ## would give -- a mean per unit of exposure has no exposure column to read
   ## -- and a column the offset needs is filled in only so the frame builds
@@ -87,7 +107,11 @@ ilm_newX <- function(object, newdata, offset_at = NULL) {
     stats::model.matrix(mt, mf, contrasts.arg = object$contrasts), object)
   sd_list <- list()
   for (lab in names(object$smooths)) {
-    sd_list[[lab]] <- ilm_smooth_design(object$smooths[[lab]], newdata)
+    sob <- object$smooths[[lab]]
+    ## a factor-smooth's subject is not needed when its term is to be zeroed or
+    ## integrated out, but its design cannot be built without one
+    ndl <- if (fs_fill && ilm_is_fs(sob)) ilm_fs_fill(sob, newdata) else newdata
+    sd_list[[lab]] <- ilm_smooth_design(sob, ndl)
     if (!is.null(sd_list[[lab]]$Xf)) X <- cbind(X, sd_list[[lab]]$Xf)
   }
   ## A flexible parametric baseline puts spline columns at the front of the
@@ -117,16 +141,19 @@ ilm_newX <- function(object, newdata, offset_at = NULL) {
 #' @param nd Output of [ilm_newX()].
 #' @param beta Optional replacement fixed effects.
 #' @param bvec Optional replacement random effects.
+#' @param fs `FALSE` leaves a factor-smooth interaction's terms at zero, as
+#'   the grouping terms are: its subjects are a population.
 #' @return A matrix with `N` rows and `C` columns.
 #' @keywords internal
 #' @noRd
-ilm_eta <- function(object, nd, beta = NULL, bvec = NULL) {
+ilm_eta <- function(object, nd, beta = NULL, bvec = NULL, fs = TRUE) {
   if (is.null(beta)) beta <- object$beta
   eta <- nd$X %*% beta
   if (!is.null(nd$offset)) eta <- eta + nd$offset
+  skip <- if (fs) logical(length(object$re)) else ilm_fs_terms(object)
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
-    if (e$kind != "basis") next                        # populations: left at zero
+    if (e$kind != "basis" || skip[k]) next             # populations: left at zero
     ctb <- ilm_basis_new(object, nd, k) %*% ilm_Bhat_term(object, k, bvec)
     if (identical(object$re_struct[[k]]$type, "rr")) ctb <- ctb %*% t(object$Lambda[[k]])
     eta <- eta + ctb
@@ -149,6 +176,102 @@ ilm_basis_new <- function(object, nd, k) {
   if (length(sdl$Xr) == 1L) return(sdl$Xr[[1]])
   i <- suppressWarnings(as.integer(sub(".*\\.", "", nm)))
   sdl$Xr[[if (is.na(i)) 1L else i]]
+}
+
+## ---- a factor-smooth interaction's subjects --------------------------------
+##
+## s(x, id, bs = "fs") gives each subject its own curve, and the subjects are a
+## population, as a grouping factor's levels are. Its blocks are stored as
+## basis terms, one per penalty, each with its own variance, so these say
+## which basis terms they are and find each row's subject.
+
+## Is a stored smooth a factor-smooth interaction?
+#' @keywords internal
+#' @noRd
+ilm_is_fs <- function(sob) inherits(sob$sm, "fs.interaction")
+
+## For each random term, is it a block of a factor-smooth interaction?
+#' @keywords internal
+#' @noRd
+ilm_fs_terms <- function(object) {
+  if (!length(object$smooths)) return(logical(length(object$re)))
+  vapply(seq_along(object$re), function(k) {
+    if (!identical(object$re[[k]]$kind, "basis")) return(FALSE)
+    nm <- names(object$re)[k]
+    sob <- object$smooths[[sub("\\.[0-9]+$", "", nm)]]
+    if (is.null(sob)) sob <- object$smooths[[nm]]
+    !is.null(sob) && ilm_is_fs(sob)
+  }, TRUE)
+}
+
+## The column of the data that names a factor-smooth's subject: the smooth's
+## own factor, or the original column it stands in for.
+#' @keywords internal
+#' @noRd
+ilm_fs_col <- function(sob) {
+  v <- sob$sm$fterm
+  map <- sob$name_map
+  if (length(map) && v %in% names(map)) map[[v]] else v
+}
+
+## The rows with the first fitted subject put in, for a design whose subject
+## part is not used: zeroed under "typical", or integrated out under
+## "population", where only each row's sum of squares in each block counts.
+## That sum is the same whichever subject is put in, because every subject
+## has the same basis and the same penalty (measured equal to the last digit
+## for three subjects).
+#' @keywords internal
+#' @noRd
+ilm_fs_fill <- function(sob, newdata) {
+  newdata[[ilm_fs_col(sob)]] <- factor(rep(sob$sm$flev[1L], nrow(newdata)),
+                                       levels = sob$sm$flev)
+  newdata
+}
+
+## groups = "fitted" gives each row its own subject's curve, so every row needs
+## a subject the fit has seen. A missing column used to fail inside
+## mgcv::PredictMat() with a message about a 'names' attribute, and a subject
+## the fit had not seen, given as a factor level, got a curve of zero without
+## a word.
+#' @keywords internal
+#' @noRd
+ilm_fs_place <- function(object, newdata) {
+  alt <- "use groups = \"typical\" or groups = \"population\" for them"
+  for (lab in names(object$smooths)) {
+    sob <- object$smooths[[lab]]
+    if (!ilm_is_fs(sob)) next
+    v <- ilm_fs_col(sob)
+    if (!v %in% names(newdata))
+      stop("`newdata` does not have ", sQuote(v), ", the subject factor of ",
+           "the factor-smooth interaction ", lab, ", and a fitted prediction ",
+           "is for a particular subject; ", alt, ".", call. = FALSE)
+    lv <- as.character(newdata[[v]])
+    nw <- unique(lv[is.na(match(lv, sob$sm$flev))])
+    if (length(nw)) {
+      stop(length(nw), " subject", if (length(nw) > 1L) "s" else "", " of `",
+           v, "` in `newdata` (", paste(utils::head(nw, 3L), collapse = ", "),
+           if (length(nw) > 3L) ", ..." else "", ") ",
+           if (length(nw) > 1L) "were" else "was", " not in the fit, so ",
+           if (length(nw) > 1L) "they have" else "it has", " no estimated ",
+           "curve in ", lab, ". A new subject's curve is unknown: ", alt, ".",
+           call. = FALSE)
+    }
+  }
+  invisible(NULL)
+}
+
+## The latent terms for a factor-smooth's blocks, in the form
+## ilm_latent_var() takes: a block's coefficients are independent with the
+## block's variance, so at a row its contribution is normal with variance
+## (the row's sum of squares in the block) x (the block's variance).
+#' @keywords internal
+#' @noRd
+ilm_fs_latent_terms <- function(object, nd, fsk) {
+  lapply(fsk, function(k) {
+    X <- ilm_basis_new(object, nd, k)
+    list(Zb = matrix(sqrt(rowSums(X^2)), ncol = 1L), A = matrix(1, 1L, 1L),
+         B = ilm_msqrt(object$Sigma[[k]]))
+  })
 }
 
 ## ---- drawing a random effect the way the model actually stores one ---------
@@ -718,6 +841,17 @@ predict.ilm_model <- function(object, newdata = NULL,
                            c(`TRUE` = "population", `FALSE` = "typical"))
   marginal <- identical(groups, "population")
   fitted <- identical(groups, "fitted")
+  ## a factor-smooth interaction's subjects: each row's own under "fitted",
+  ## and otherwise a population, zeroed or integrated out
+  fsk <- which(ilm_fs_terms(object))
+  fs_own <- fitted
+  ## A multinomial fit is averaged over by draws of every term's C-column
+  ## effect, which a factor-smooth's blocks are not set up for
+  if (length(fsk) && marginal && object$C > 1L)
+    stop("groups = \"population\" is not available for a multinomial fit ",
+         "with a factor-smooth interaction (bs = \"fs\"); use groups = ",
+         "\"typical\" for a subject at the average, or groups = \"fitted\" ",
+         "for the fitted subjects.", call. = FALSE)
   ## A flexible parametric model's linear predictor depends on TIME through the
   ## spline, so there is no fitted value for a covariate pattern alone. Asking
   ## for one is a question about the survival curve.
@@ -737,10 +871,13 @@ predict.ilm_model <- function(object, newdata = NULL,
   ## each row's own offset unless an exposure is given: then every row is at
   ## it, "unit" being the offset at zero
   oa <- if (is.null(per)) NULL else ilm_offset_at(object, per)
+  ## each row's own subject, checked before the design is built from it
+  if (length(fsk) && fs_own && !is.null(newdata)) ilm_fs_place(object, newdata)
   nd <- if (is.null(newdata))
           list(X = object$X, smooths = NULL,
                offset = if (is.null(oa)) object$offset else rep(oa, nrow(object$X)))
-        else ilm_newX(object, newdata, offset_at = oa)
+        else ilm_newX(object, newdata, offset_at = oa,
+                      fs_fill = length(fsk) > 0L && !fs_own)
   if (is.null(newdata) && length(object$smooths))
     nd$smooths <- lapply(object$smooths, ilm_smooth_design, newdata = object$model)
   ## each row's own group and cell, placed before anything is computed, so a
@@ -768,13 +905,14 @@ predict.ilm_model <- function(object, newdata = NULL,
   if (marginal && !isTRUE(object$ordinal) && object$C == 1L &&
       !is.null(object$family) && identical(object$family$link, "identity"))
     marginal <- FALSE
-  integ <- marginal && (length(gk) > 0L || has_ar)
+  integ <- marginal && (length(gk) > 0L || has_ar || length(fsk) > 0L)
   draws <- NULL; vrow <- NULL
   if (integ) {
     pdat <- if (is.null(newdata)) object$model else newdata
     if (has_ar && identical(object$ar$type, "rw1"))
       ar_el <- ilm_rw_elapsed(object, newdata)
-    tms <- ilm_latent_terms(object, gk, pdat)
+    tms <- c(ilm_latent_terms(object, gk, pdat),
+             ilm_fs_latent_terms(object, nd, fsk))
     if (object$C > 1L) {
       ## C linear predictors: draws, with common random numbers, in the same
       ## stream as before for the grouping terms, and the AR term after them
@@ -823,7 +961,7 @@ predict.ilm_model <- function(object, newdata = NULL,
     S
   }
   point <- function(beta, bvec = NULL, bar = NULL) {
-    eta <- ilm_eta(object, nd, beta, bvec)
+    eta <- ilm_eta(object, nd, beta, bvec, fs = fs_own)
     if (fitted) eta <- eta + ilm_fitted_shift(object, pl, nrow(eta), bvec, bar)
     if (type == "link") return(if (multinom) eta %*% t(Tc) else eta[, 1, drop = FALSE])
     if (ordinal) {

@@ -184,7 +184,10 @@ ilm_fitted <- function(object, groups = c("fitted", "typical"),
                            "ilm_fitted()", conditional, "conditional",
                            c(`TRUE` = "fitted", `FALSE` = "typical"))
   Tc <- contr.sum(object$J)
-  eta <- ilm_eta_hat(object, identical(groups, "fitted"))
+  ## a factor-smooth's subjects are a population: "typical" leaves the term
+  ## out, as predict() does
+  fit_g <- identical(groups, "fitted")
+  eta <- ilm_eta_hat(object, fit_g, fs = fit_g)
   if (object$C > 1L) {
     P <- exp(eta %*% t(Tc)); P <- P / rowSums(P)
     colnames(P) <- object$ylevels
@@ -229,7 +232,12 @@ ilm_Bar_hat <- function(object) {
 
 #' @keywords internal
 #' @noRd
-ilm_eta_hat <- function(object, conditional = TRUE) {
+## `fs = FALSE` leaves a factor-smooth interaction's blocks out as well, as
+## predict(groups = "typical") does: its subjects are a population. Only
+## ilm_fitted(), ilm_rqr() and ilm_scores() pass it, with `conditional`;
+## cluster-robust standard errors and a flexible-parametric model's offset
+## call this without it and keep the term.
+ilm_eta_hat <- function(object, conditional = TRUE, fs = TRUE) {
   eta <- object$X %*% object$beta
   if (!is.null(object$offset)) eta <- eta + object$offset
   ## The AR/CAR latent is a random effect like any other and belongs in the
@@ -242,9 +250,11 @@ ilm_eta_hat <- function(object, conditional = TRUE) {
     Ba <- ilm_Bar_hat(object)
     if (!is.null(Ba)) eta <- eta + Ba[object$ar$idx, , drop = FALSE]
   }
+  skip <- if (fs) logical(length(object$re)) else ilm_fs_terms(object)
   for (k in seq_along(object$re)) {
     e <- object$re[[k]]
     if (!conditional && e$kind != "basis") next
+    if (skip[k]) next
     B <- ilm_Bhat_term(object, k)
     isrr <- identical(object$re_struct[[k]]$type, "rr")
     if (e$kind == "basis") {
@@ -344,8 +354,8 @@ ilm_scores.ilm_model <- function(object, groups = c("fitted", "typical"),
   ## An ordinal fit's fitted values are its latent predictor; the category
   ## probabilities are where the thresholds cut it
   P <- if (ord)
-    ilm_ord_probs(ilm_eta_hat(object, conditional)[, 1L], object$zeta,
-                  object$family$pfun)
+    ilm_ord_probs(ilm_eta_hat(object, conditional, fs = conditional)[, 1L],
+                  object$zeta, object$family$pfun)
   else ilm_fitted(object, groups)
   ## a binary fit returns the probability of the second level only
   if (bin) { P <- cbind(1 - P[, 1], P[, 1]); y <- y + 1 }

@@ -215,8 +215,10 @@ ilm_scenario <- function(object, ..., over = c("sample", "reference"),
   ## with a random slope that gave the intercept-only average, and a
   ## smooth lost its penalised part entirely -- a gaussian sin() curve came
   ## out as -1.31 at its peak of +1.
+  ## A factor-smooth interaction's subjects are a population too, so its
+  ## curves are averaged over as every other random term is.
   mixed <- any(vapply(object$re, function(e) e$kind != "basis", TRUE)) ||
-    !is.null(object$ar)
+    !is.null(object$ar) || any(ilm_fs_terms(object))
   ## with an offset, every unit at the same exposure: per unit unless given
   ex <- if (is.null(object$offset)) NULL else if (is.null(per)) "unit" else per
   nsc <- nrow(grid)

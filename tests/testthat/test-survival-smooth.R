@@ -95,3 +95,26 @@ test_that("without a smooth the curves are what they were", {
     expect_equal(s$surv, ss_by_hand(f, nd, c(1, 3), gr), tolerance = 1e-8, label = gr)
   }
 })
+
+test_that("a flexible-parametric typical curve leaves a factor-smooth's subjects out", {
+  ## its subjects are a population, so a typical curve has the term at zero,
+  ## as predict(groups = "typical") has it, while an ordinary smooth stays in
+  d <- ss_data(35)
+  f <- ss_fit(d, "rp", time ~ s(x, k = 5) + s(x, h, bs = "fs", k = 4))
+  at <- function(lv) data.frame(x = c(0.25, 0.5, 0.75), h = factor(lv, levels = levels(d$h)))
+  s_a <- suppressWarnings(ilm_survival(f, newdata = at("a"), times = c(1, 3), groups = "typical"))
+  s_e <- suppressWarnings(ilm_survival(f, newdata = at("e"), times = c(1, 3), groups = "typical"))
+  expect_equal(s_a$surv, s_e$surv)
+  ## by hand: the fixed effects and s(x)'s penalised part, no fs blocks
+  nd <- at("a")
+  ndx <- illume:::ilm_newX(f, nd, fs_fill = TRUE)
+  keep <- setdiff(seq_len(ncol(f$X)), f$rp$cols)
+  e <- as.vector(ndx$X %*% f$beta[keep, 1L])
+  fs <- illume:::ilm_fs_terms(f)
+  expect_true(any(fs))
+  for (k in which(vapply(f$re, function(r) identical(r$kind, "basis"), TRUE) & !fs))
+    e <- e + as.vector(illume:::ilm_basis_new(f, ndx, k) %*% illume:::ilm_Bhat_term(f, k))
+  S <- unlist(lapply(e, function(ei) f$family$surv(
+    as.vector(illume:::ilm_rcs(log(c(1, 3)), f$rp$knots) %*% f$beta[f$rp$cols, 1L]) + ei)))
+  expect_equal(s_a$surv, S, tolerance = 1e-10)
+})
