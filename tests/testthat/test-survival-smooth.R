@@ -242,8 +242,10 @@ test_that("an unusable covariance, or draws that fail, give no interval and a wa
   expect_true(all(is.finite(s0$surv)))
   f1 <- ss_fit(d, "rp")
   f1$jointPrecision <- f1$jointPrecision * 0
-  expect_warning(s1 <- ilm_survival(f1, newdata = nd, times = c(1, 3), groups = "typical",
-                                    nsim = 20L), "no intervals")
+  ## the Matrix package also warns, as the Cholesky factor fails
+  expect_warning(expect_warning(
+    s1 <- ilm_survival(f1, newdata = nd, times = c(1, 3), groups = "typical", nsim = 20L),
+    "no intervals"), "not positive definite")
   expect_true(all(is.na(s1$lower) & is.na(s1$upper)))
   expect_true(all(is.finite(s1$surv)))
 })
