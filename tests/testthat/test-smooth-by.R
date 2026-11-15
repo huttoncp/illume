@@ -18,6 +18,11 @@ test_that("a numeric by variable beside its own smooth is refused, saying why", 
                          verbose = FALSE),
                "Drop `z` from the formula; s(x, by = z) carries its effect",
                fixed = TRUE)
+  ## the book is cited as the standard reference, without a page number
+  msg <- tryCatch(ilm_model(y ~ z + s(x, by = z), data = d, family = "gaussian",
+                            verbose = FALSE), error = conditionMessage)
+  expect_match(msg, "See Wood (2017), Generalized Additive Models, 2nd ed.", fixed = TRUE)
+  expect_false(grepl("p. 326", msg, fixed = TRUE))
   ## without it the model is identified, and every standard error is finite
   f <- ilm_model(y ~ s(x, by = z), data = d, family = "gaussian",
                  verbose = FALSE)
