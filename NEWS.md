@@ -1,5 +1,14 @@
 # illume 0.0.8.9003
 
+* **REML on a model with nothing random and no dispersion parameter is now
+  refused with a reason.** A Poisson or flexible-parametric model with no
+  random effect, fitted with `reml = TRUE`, stopped with the optimiser's
+  own words, "'d' must be a nonempty numeric vector": once REML integrates
+  the fixed effects out, such a model has no parameter left to estimate.
+  The message now says so and points to `reml = FALSE`, which gives the
+  same coefficients. A model that keeps a scale or variance parameter
+  (gaussian, Weibull) still fits by REML, as does one with a random effect.
+
 * **A likelihood-ratio test of a REML fit now refits it by maximum
   likelihood, and says so, instead of refusing.** `ilm_anova(test = "LRT")`
   and `ilm_pb_lrt()` compare maximum-likelihood fits, since a restricted
