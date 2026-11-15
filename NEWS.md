@@ -29,6 +29,10 @@
   interval is the delta method from the fixed effects' covariance, as
   before.
 
+  Also, `"fitted"` and `"population"` stopped with "non-numeric matrix
+  extent" or "incorrect number of dimensions" when given a single time in
+  `times`; they now take one.
+
 * **A flexible-parametric model fitted by REML now has a `"typical"`
   interval in `ilm_survival()`.** It had no width at any time, for every
   such fit: the fixed effects' variance was looked up where a REML fit does
@@ -36,10 +40,6 @@
   interval an ML fit gets, the delta method from the fixed effects'
   covariance. Where that covariance is unusable, the curve has no interval
   and a warning says so, rather than an interval of no width.
-
-  Also, `"fitted"` and `"population"` stopped with "non-numeric matrix
-  extent" or "incorrect number of dimensions" when given a single time in
-  `times`; they now take one.
 
 * **A likelihood-ratio test of a REML fit now refits it by maximum
   likelihood, and says so, instead of refusing.** `ilm_anova(test = "LRT")`

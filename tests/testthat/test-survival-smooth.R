@@ -226,3 +226,24 @@ test_that("a flexible-parametric typical interval with a smooth carries the smoo
     expect_true(all(s$lower <= s$surv & s$surv <= s$upper), label = lab)
   }
 })
+
+test_that("an unusable covariance, or draws that fail, give no interval and a warning, never one of no width", {
+  ## forced on a copy of a fit: a missing entry in the fixed effects'
+  ## covariance, and a joint precision of zeros, which has no Cholesky factor
+  d <- ss_data(40)
+  nd <- data.frame(x = c(0.3, 0.7), h = factor("a", levels = levels(d$h)))
+  f0 <- suppressMessages(suppressWarnings(
+    ilm_model(time ~ x + (1 | h), data = d, family = "rp", reml = FALSE,
+              censor = ilm_surv(d$time, d$event), verbose = FALSE)))
+  f0$sdr$cov.fixed[1, 1] <- NA_real_
+  expect_warning(s0 <- ilm_survival(f0, newdata = nd, times = c(1, 3), groups = "typical"),
+                 "covariance is unusable")
+  expect_true(all(is.na(s0$lower) & is.na(s0$upper)))
+  expect_true(all(is.finite(s0$surv)))
+  f1 <- ss_fit(d, "rp")
+  f1$jointPrecision <- f1$jointPrecision * 0
+  expect_warning(s1 <- ilm_survival(f1, newdata = nd, times = c(1, 3), groups = "typical",
+                                    nsim = 20L), "no intervals")
+  expect_true(all(is.na(s1$lower) & is.na(s1$upper)))
+  expect_true(all(is.finite(s1$surv)))
+})

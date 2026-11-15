@@ -1,0 +1,79 @@
+build: survival-smooth at f705b2f | illume 0.0.8.9003 | mgcv 1.9.1 | R 4.4.3 | date 2026-11-15 03:59:50 -0500 
+
+== weibull | reml = TRUE | time ~ s(x, k = 8) + (1 | h), S(3), h at zero ==
+x = 0.25  point 0.9349    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.8399   , 0.9744   ] width 0.135 
+          ilm_survival(), nsim = 4000:  [0.8399   , 0.9744   ] width 0.135 
+          ref, joint (4000 draws):      [0.8451   , 0.9737   ] width 0.129 
+          ref, beta only (4000 draws):  [0.6572   , 0.9895   ] width 0.332 
+x = 0.50  point 0.4871    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.1919   , 0.7309   ] width 0.539 
+          ilm_survival(), nsim = 4000:  [0.1919   , 0.7309   ] width 0.539 
+          ref, joint (4000 draws):      [0.1979   , 0.7285   ] width 0.531 
+          ref, beta only (4000 draws):  [0.2206   , 0.7121   ] width 0.492 
+x = 0.75  point 0.0002587 inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [5.217e-09, 0.02795  ] width 0.028 
+          ilm_survival(), nsim = 4000:  [5.217e-09, 0.02795  ] width 0.028 
+          ref, joint (4000 draws):      [2.142e-08, 0.02526  ] width 0.0253 
+          ref, beta only (4000 draws):  [1.177e-20, 0.2253   ] width 0.225 
+
+== weibull | reml = FALSE | time ~ s(x, k = 8) + (1 | h), S(3), h at zero ==
+x = 0.25  point 0.9376    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.8523   , 0.9744   ] width 0.122 
+          ilm_survival(), nsim = 4000:  [0.8523   , 0.9744   ] width 0.122 
+          ref, joint (4000 draws):      [0.8567   , 0.9739   ] width 0.117 
+          ref, beta only (4000 draws):  [0.6798   , 0.9895   ] width 0.31 
+x = 0.50  point 0.4985    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.2172   , 0.7281   ] width 0.511 
+          ilm_survival(), nsim = 4000:  [0.2172   , 0.7281   ] width 0.511 
+          ref, joint (4000 draws):      [0.2224   , 0.7251   ] width 0.503 
+          ref, beta only (4000 draws):  [0.2463   , 0.7093   ] width 0.463 
+x = 0.75  point 0.0003242 inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [2.112e-08, 0.02593  ] width 0.0259 
+          ilm_survival(), nsim = 4000:  [2.112e-08, 0.02593  ] width 0.0259 
+          ref, joint (4000 draws):      [7.126e-08, 0.02374  ] width 0.0237 
+          ref, beta only (4000 draws):  [1.742e-19, 0.2253   ] width 0.225 
+
+== rp | reml = TRUE | time ~ s(x, k = 8) + (1 | h), S(3), h at zero ==
+x = 0.25  point 0.9545    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.874    , 0.9841   ] width 0.11 
+          ilm_survival(), nsim = 4000:  [0.874    , 0.9837   ] width 0.11 
+          ref, joint (4000 draws):      [0.8771   , 0.9835   ] width 0.106 
+          ref, beta only (4000 draws):  [0.7235   , 0.9932   ] width 0.27 
+          delta, joint covariance:      [0.8766   , 0.9837   ] width 0.107 
+x = 0.50  point 0.5123    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.2059   , 0.7191   ] width 0.513 
+          ilm_survival(), nsim = 4000:  [0.2055   , 0.7431   ] width 0.538 
+          ref, joint (4000 draws):      [0.213    , 0.7496   ] width 0.537 
+          ref, beta only (4000 draws):  [0.2295   , 0.7383   ] width 0.509 
+          delta, joint covariance:      [0.2176   , 0.7458   ] width 0.528 
+x = 0.75  point 0.0002807 inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [7.258e-09, 0.02213  ] width 0.0221 
+          ilm_survival(), nsim = 4000:  [5.057e-09, 0.02451  ] width 0.0245 
+          ref, joint (4000 draws):      [5.923e-09, 0.03036  ] width 0.0304 
+          ref, beta only (4000 draws):  [5.712e-22, 0.2599   ] width 0.26 
+          delta, joint covariance:      [8.693e-09, 0.02723  ] width 0.0272 
+
+== rp | reml = FALSE | time ~ s(x, k = 8) + (1 | h), S(3), h at zero ==
+x = 0.25  point 0.9557    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.8781   , 0.9842   ] width 0.106 
+          ilm_survival(), nsim = 4000:  [0.8826   , 0.9836   ] width 0.101 
+          ref, joint (4000 draws):      [0.8869   , 0.983    ] width 0.0961 
+          ref, beta only (4000 draws):  [0.7373   , 0.9932   ] width 0.256 
+          delta, joint covariance:      [0.8844   , 0.9834   ] width 0.0991 
+x = 0.50  point 0.5229    inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [0.2272   , 0.7209   ] width 0.494 
+          ilm_survival(), nsim = 4000:  [0.2323   , 0.738    ] width 0.506 
+          ref, joint (4000 draws):      [0.2447   , 0.7412   ] width 0.496 
+          ref, beta only (4000 draws):  [0.2608   , 0.7326   ] width 0.472 
+          delta, joint covariance:      [0.2454   , 0.7414   ] width 0.496 
+x = 0.75  point 0.0003829 inside (4000): TRUE
+          ilm_survival(), nsim = 200:   [8.145e-08, 0.02582  ] width 0.0258 
+          ilm_survival(), nsim = 4000:  [2.475e-08, 0.02332  ] width 0.0233 
+          ref, joint (4000 draws):      [3.144e-08, 0.0292   ] width 0.0292 
+          ref, beta only (4000 draws):  [5.567e-21, 0.2642   ] width 0.264 
+          delta, joint covariance:      [4.313e-08, 0.02599  ] width 0.026 
+
+== control: rp, time ~ x + (1 | h), S(3) widths at the three rows ==
+  reml = TRUE: 0.32 0.401 0.326
+  reml = FALSE: 0.297 0.375 0.31
