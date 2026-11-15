@@ -276,6 +276,6 @@ The multinomial model is a baseline-category logit with random effects;
 Agresti (2013), *Categorical Data Analysis*, chapter 8, is the standard
 reference. The fitting method is described in Kristensen et al. (2016),
 *Journal of Statistical Software* 70(5). The mixed-model representation
-of smooths follows Wood (2017), *Generalized Additive Models*, section
-5.4. The parametric bootstrap follows Halekoh and Højsgaard (2014),
-*Journal of Statistical Software* 59(9).
+of smooths follows Wood (2017), *Generalized Additive Models*. The
+parametric bootstrap follows Halekoh and Højsgaard (2014), *Journal of
+Statistical Software* 59(9).

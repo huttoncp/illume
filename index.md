@@ -375,7 +375,7 @@ of Statistical Software* 59(9).
 Agresti (2013). *Categorical Data Analysis*, 3rd ed., chapter 8.
 
 Wood (2017). *Generalized Additive Models: An Introduction with R*, 2nd
-ed., section 5.4.
+ed.
 
 ## License
 

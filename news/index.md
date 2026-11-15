@@ -1041,8 +1041,8 @@
   and nothing said why. A smooth with a numeric `by` is not centred, so
   its unpenalised part already spans `z` (and `z * x`) whatever the
   basis. The two are one column. The fit now stops before it starts,
-  saying so and that dropping `z` is the fix (Wood 2017, p. 326). Found
-  by another agent.
+  saying so and that dropping `z` is the fix (Wood 2017). Found by
+  another agent.
 
 - Fixed: a smooth with a numeric `by` took the name of the same smooth
   without it, so `s(x) + s(x, by = z)` called both `"s(x)"`.

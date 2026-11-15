@@ -64,10 +64,10 @@ unit of time, and `range` its reciprocal decay; a random walk has
 coefficients, on the basis's own scale: a different basis for the same
 curve gives a different number. How wiggly the curve is, its matrix
 carries as `"edf"`: its effective degrees of freedom, as `mgcv` defines
-them (Wood 2017, section 6.1.2), with their maximum, the null space plus
-the basis, as `"edf_max"`. An edf near its maximum means the basis may
-be too small for the curve. For a multinomial outcome it is the total
-over the categories.
+them (Wood 2017), with their maximum, the null space plus the basis, as
+`"edf_max"`. An edf near its maximum means the basis may be too small
+for the curve. For a multinomial outcome it is the total over the
+categories.
 
 **Dispersion.** On the natural scale and named for what it is. For a
 gaussian model it is `sigma`, the residual standard DEVIATION, not the
