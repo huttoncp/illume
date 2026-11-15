@@ -19,8 +19,15 @@
   `"population"`, the intervals now also carry the uncertainty in the
   smooth's curve, drawn jointly with the fixed effects. For a
   flexible-parametric model with a smooth, the `"typical"` interval now
-  sits around the corrected curve, so it moves with it; how it is built is
-  unchanged.
+  sits around the corrected curve, and it carries the smooth's uncertainty
+  jointly with the fixed effects', as `predict()`'s intervals do: it is the
+  percentiles over joint draws of the two (`nsim` and `seed` set them),
+  with every grouping term at zero. It was built from the fixed effects'
+  covariance alone, with the smooth held at its estimate, which made it
+  far too wide where the smooth bends: in the measured case 0.26 wide at
+  the end of `x`, where the joint interval is 0.029. Without a smooth, the
+  interval is the delta method from the fixed effects' covariance, as
+  before.
 
 * **A flexible-parametric model fitted by REML now has a `"typical"`
   interval in `ilm_survival()`.** It had no width at any time, for every

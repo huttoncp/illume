@@ -156,7 +156,8 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95,
   ## with nothing of a group's own, every choice is the typical group's curve
   if (!length(gk) && is.null(object$ar)) groups <- "typical"
   if (identical(groups, "typical")) {
-    if (!is.null(object$rp)) return(ilm_rp_survival(object, newdata, times, conf))
+    if (!is.null(object$rp))
+      return(ilm_rp_survival(object, newdata, times, conf, nsim = nsim, seed = seed))
     return(ilm_aft_survival(object, newdata, times, conf))
   }
   ilm_survival_groups(object, newdata, times, conf, groups, gk, nsim, seed)

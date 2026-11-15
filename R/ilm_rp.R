@@ -318,7 +318,7 @@ ilm_rp_lrt <- function(object, verbose = TRUE) {
 ## is no single eta to evaluate: the basis is rebuilt at every time asked for.
 #' @keywords internal
 #' @noRd
-ilm_rp_survival <- function(object, newdata, times, conf) {
+ilm_rp_survival <- function(object, newdata, times, conf, nsim = 200L, seed = 1L) {
   rp <- object$rp
   if (is.null(times)) {
     y <- as.numeric(object$y)
@@ -343,6 +343,18 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   Bs <- ilm_rcs(log(times), rp$knots)
   crit <- stats::qnorm(1 - (1 - conf) / 2)
   Sfun <- object$family$surv
+  ## With a smooth in the curve, the interval carries its uncertainty jointly
+  ## with the fixed effects', as predict() does: the two are drawn together,
+  ## and grouping terms are at zero. From the fixed effects' covariance alone
+  ## the smooth's penalised coefficients are held at their estimates, which
+  ## predict() warns makes a smooth's interval far too wide -- measured here,
+  ## 0.26 wide at the end of x where the joint interval is 0.029. A
+  ## factor-smooth's blocks are at zero in a typical curve, so they don't
+  ## count as a smooth in it.
+  basis <- vapply(object$re, function(e) identical(e$kind, "basis"), TRUE)
+  if (any(basis & !ilm_fs_terms(object)))
+    return(ilm_rp_survival_joint(object, nd, Xn, keep, Bs, Sfun, times, off,
+                                 conf, nsim, seed))
   ## The variance of eta at a given time comes from the whole coefficient
   ## vector, spline included, so the interval widens where the baseline is
   ## least well determined as well as where the covariates are.
@@ -377,4 +389,43 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
                lower = Sfun(e + crit * se), upper = Sfun(e - crit * se))
   })
   do.call(rbind, out)
+}
+
+## A flexible-parametric typical curve with a smooth: the point at the
+## estimates, and the interval as percentiles over joint draws of the fixed
+## effects and the smooth's penalised coefficients (ilm_draws(), which forms
+## the joint distribution as predict() and ilm_survival()'s other curves use
+## it), with every grouping term at zero.
+#' @keywords internal
+#' @noRd
+ilm_rp_survival_joint <- function(object, nd, Xn, keep, Bs, Sfun, times, off,
+                                  conf, nsim, seed) {
+  rp <- object$rp
+  base <- as.vector(Bs %*% object$beta[rp$cols, 1L])
+  est <- vapply(off, function(o) Sfun(base + o), numeric(length(times)))
+  est <- matrix(est, nrow = length(times))
+  lo <- hi <- matrix(NA_real_, length(times), length(off))
+  blk <- intersect(c("beta", "bvec"), names(object$obj$env$par))
+  dr <- tryCatch(ilm_draws(object, nsim = nsim, seed = seed, blocks = blk,
+                           natural = FALSE), error = function(e) e)
+  if (inherits(dr, "error")) {
+    warning("no intervals: ", conditionMessage(dr), call. = FALSE)
+  } else {
+    w <- rownames(dr$draws)
+    acc <- array(NA_real_, c(length(times), length(off), nsim))
+    for (s in seq_len(nsim)) {
+      b <- dr$draws[w == "beta", s]
+      bv <- if (any(w == "bvec")) dr$draws[w == "bvec", s]
+      o <- as.vector(Xn %*% b[keep]) +
+        ilm_smooth_part(object, nd, bv, typical = TRUE)[, 1L]
+      bs <- as.vector(Bs %*% b[rp$cols])
+      acc[, , s] <- vapply(o, function(oi) Sfun(bs + oi), numeric(length(times)))
+    }
+    a <- (1 - conf) / 2
+    lo <- apply(acc, 1:2, stats::quantile, probs = a, names = FALSE, na.rm = TRUE)
+    hi <- apply(acc, 1:2, stats::quantile, probs = 1 - a, names = FALSE, na.rm = TRUE)
+    lo <- matrix(lo, nrow = length(times)); hi <- matrix(hi, nrow = length(times))
+  }
+  do.call(rbind, lapply(seq_along(off), function(i)
+    data.frame(row = i, time = times, surv = est[, i], lower = lo[, i], upper = hi[, i])))
 }
