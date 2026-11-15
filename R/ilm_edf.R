@@ -7,7 +7,7 @@
 ## freedom say that, and no reparameterisation moves them.
 ## ---------------------------------------------------------------------------
 
-## mgcv's definition (Wood 2017, section 6.1.2): the trace of the smooth's
+## mgcv's definition (Wood 2017): the trace of the smooth's
 ## block of F = (X'WX + S)^-1 X'WX, taken over every coefficient of the fit at
 ## the estimated variance parameters. X is the whole design, fixed and random
 ## columns; S the penalty, which here is the random effects' prior precision

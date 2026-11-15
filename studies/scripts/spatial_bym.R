@@ -6,7 +6,7 @@
 ## The disease-surveillance case study fits a BYM-form areal term: an
 ##   intrinsic CAR field and an unstructured region effect, written in illume
 ##   as s(region, bs = "mrf", xt = list(nb = nb)) + (1 | region), the first
-##   an mgcv Markov random field smooth (Wood 2017, 5.8.1), the second the
+##   an mgcv Markov random field smooth (Wood 2017), the second the
 ##   package's own random intercept. Nothing in illume's evidence covers it.
 ##   This study asks, for data generated from that model:
 ##   Q1 do the fixed effects' 95% intervals cover (the covariate's slope);

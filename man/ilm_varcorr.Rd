@@ -53,7 +53,7 @@ of time, and \code{range} its reciprocal decay; a random walk has
 coefficients, on the basis's own scale: a different basis for the same
 curve gives a different number. How wiggly the curve is, its matrix
 carries as \code{"edf"}: its effective degrees of freedom, as \code{mgcv} defines
-them (Wood 2017, section 6.1.2), with their maximum, the null space plus
+them (Wood 2017), with their maximum, the null space plus
 the basis, as \code{"edf_max"}. An edf near its maximum means the basis may be
 too small for the curve. For a multinomial outcome it is the total over
 the categories.

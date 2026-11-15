@@ -553,7 +553,7 @@ ilm_model_formula <- function(formula, data, family = "auto",
          "are the same column, and the model as written has no unique fit ",
          "(every standard error would come out NaN). Drop `", bv, "` from ",
          "the formula; ", lab, " carries its effect. See Wood (2017), ",
-         "Generalized Additive Models, 2nd ed., p. 326.", call. = FALSE)
+         "Generalized Additive Models, 2nd ed.", call. = FALSE)
   }
 
   ## all.vars() on the grouping side, not deparse(). A NESTED bar is expanded
