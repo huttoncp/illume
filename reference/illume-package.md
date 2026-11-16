@@ -135,3 +135,59 @@ Useful links:
 ## Author
 
 **Maintainer**: Craig Hutton <craig.hutton@gmail.com>
+
+Other contributors:
+
+- R Core Team (ilm_aov_sphericity() adapts code from
+  stats::mauchly.test()) \[copyright holder\]
+
+- John Fox (code adapted from car in ilm_aov_sphericity()) \[copyright
+  holder\]
+
+- Sanford Weisberg (code adapted from car in ilm_aov_sphericity())
+  \[copyright holder\]
+
+- Brad Price (code adapted from car in ilm_aov_sphericity()) \[copyright
+  holder\]
+
+- Henrik Singmann (ilm_aov_ez()'s generalized eta squared follows afex)
+  \[copyright holder\]
+
+- Ben Bolker (ilm_aov_ez()'s generalized eta squared follows afex)
+  \[copyright holder\]
+
+- Jake Westfall (ilm_aov_ez()'s generalized eta squared follows afex)
+  \[copyright holder\]
+
+- Frederik Aust (ilm_aov_ez()'s generalized eta squared follows afex)
+  \[copyright holder\]
+
+- Mattan S. Ben-Shachar (ilm_aov_ez()'s generalized eta squared follows
+  afex) \[copyright holder\]
+
+- Ulrich Halekoh (the Kenward-Roger functions may include code adapted
+  from pbkrtest) \[copyright holder\]
+
+- Søren Højsgaard (the Kenward-Roger functions may include code adapted
+  from pbkrtest) \[copyright holder\]
+
+- Brian Ripley (ilm_kr_ginv() may follow MASS::ginv()) \[copyright
+  holder\]
+
+- Bill Venables (ilm_kr_ginv() may follow MASS::ginv()) \[copyright
+  holder\]
+
+- Francois Husson (ilm_impute()'s low-rank route may include code
+  adapted from missMDA) \[copyright holder\]
+
+- Julie Josse (ilm_impute()'s low-rank route may include code adapted
+  from missMDA) \[copyright holder\]
+
+- Johannes Textor (the causal-graph functions may include code adapted
+  from dagitty) \[copyright holder\]
+
+- Benito van der Zander (the causal-graph functions may include code
+  adapted from dagitty) \[copyright holder\]
+
+- Ankur Ankan (the causal-graph functions may include code adapted from
+  dagitty) \[copyright holder\]
