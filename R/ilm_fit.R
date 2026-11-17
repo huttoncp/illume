@@ -3037,7 +3037,7 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   ## be a nonempty numeric vector", which says nothing of why. Refused, with
   ## the reason, until such a model can be fitted by REML; not fitted by ML in
   ## its place, since a REML fit's criterion and an ML fit's are not the same
-  ## kind of number. (The message's wording is a draft.)
+  ## kind of number.
   if (reml && !length(obj$par))
     stop("there is nothing for REML to estimate in this model: it has no ",
          "random effect and no dispersion parameter, so once REML integrates ",
