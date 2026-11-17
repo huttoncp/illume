@@ -3030,6 +3030,20 @@ ilm_fit <- function(X, y, J = NULL, re_list = list(), re_struct = NULL, ar = NUL
   rnd_fit <- if (reml) c(rnd, "beta") else rnd
   obj <- MakeADFun(f, pars, random = if (length(rnd_fit)) rnd_fit else NULL,
                    map = map, silent = TRUE)
+  ## With nothing random and no dispersion parameter, REML leaves the outer
+  ## optimiser nothing to estimate: the fixed effects have been integrated
+  ## out, and there was nothing else. nlminb() then stopped with "'d' must
+  ## be a nonempty numeric vector", which says nothing of why. Refused, with
+  ## the reason, until such a model can be fitted by REML; not fitted by ML in
+  ## its place, since a REML fit's criterion and an ML fit's are not the same
+  ## kind of number.
+  if (reml && !length(obj$par))
+    stop("there is nothing for REML to estimate in this model: it has no ",
+         "random effect and no dispersion parameter, so once REML integrates ",
+         "the fixed effects out no parameter is left. Fit it with reml = FALSE, ",
+         "which gives the same coefficients; its criterion is a likelihood, ",
+         "not a restricted one, so compare it only with fits by maximum ",
+         "likelihood.", call. = FALSE)
   ## guard: if a fill order in nm_* ever drifts from ilm_mkL/ilm_mkD/ilm_mkLam/ilm_mkLd, the
   ## names would silently mislabel every parameter.  Fail loudly instead.
   n_expected <- if (reml) length(pnames) - p * C else length(pnames)
