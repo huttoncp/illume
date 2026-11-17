@@ -113,5 +113,27 @@ Useful links:
 \author{
 \strong{Maintainer}: Craig Hutton \email{craig.hutton@gmail.com}
 
+Other contributors:
+\itemize{
+  \item R Core Team (ilm_aov_sphericity() adapts code from stats::mauchly.test()) [copyright holder]
+  \item John Fox (code adapted from car in ilm_aov_sphericity()) [copyright holder]
+  \item Sanford Weisberg (code adapted from car in ilm_aov_sphericity()) [copyright holder]
+  \item Brad Price (code adapted from car in ilm_aov_sphericity()) [copyright holder]
+  \item Henrik Singmann (ilm_aov_ez()'s generalized eta squared follows afex) [copyright holder]
+  \item Ben Bolker (ilm_aov_ez()'s generalized eta squared follows afex) [copyright holder]
+  \item Jake Westfall (ilm_aov_ez()'s generalized eta squared follows afex) [copyright holder]
+  \item Frederik Aust (ilm_aov_ez()'s generalized eta squared follows afex) [copyright holder]
+  \item Mattan S. Ben-Shachar (ilm_aov_ez()'s generalized eta squared follows afex) [copyright holder]
+  \item Ulrich Halekoh (the Kenward-Roger functions may include code adapted from pbkrtest) [copyright holder]
+  \item Søren Højsgaard (the Kenward-Roger functions may include code adapted from pbkrtest) [copyright holder]
+  \item Brian Ripley (ilm_kr_ginv() may follow MASS::ginv()) [copyright holder]
+  \item Bill Venables (ilm_kr_ginv() may follow MASS::ginv()) [copyright holder]
+  \item Francois Husson (ilm_impute()'s low-rank route may include code adapted from missMDA) [copyright holder]
+  \item Julie Josse (ilm_impute()'s low-rank route may include code adapted from missMDA) [copyright holder]
+  \item Johannes Textor (the causal-graph functions may include code adapted from dagitty) [copyright holder]
+  \item Benito van der Zander (the causal-graph functions may include code adapted from dagitty) [copyright holder]
+  \item Ankur Ankan (the causal-graph functions may include code adapted from dagitty) [copyright holder]
+}
+
 }
 \keyword{internal}
