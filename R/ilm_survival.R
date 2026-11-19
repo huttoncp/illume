@@ -82,7 +82,12 @@ ilm_km_at <- function(km, grid) {
 #'
 #' Intervals for a typical group are computed on the complementary log-log
 #' scale for the accelerated failure time families, which is linear in `eta`,
-#' and on the linear predictor for a flexible model. For `"fitted"` and
+#' and on the linear predictor for a flexible model with no smooth, or whose
+#' only smooths are factor-smooth interactions (`bs = "fs"`), which a typical
+#' group sets to zero. For a flexible model with any other smooth they are
+#' percentile intervals from `nsim` joint draws of the coefficients and the
+#' smooths' penalised coefficients, with every random effect at zero.
+#' For `"fitted"` and
 #' `"population"` they are percentile intervals from `nsim` joint draws of the
 #' coefficients -- and, for `"fitted"`, of the groups' own effects, as
 #' [predict.ilm_model()] draws them. Uncertainty in an accelerated failure time
@@ -99,7 +104,9 @@ ilm_km_at <- function(km, grid) {
 #' @param groups `"fitted"` (the default), `"typical"` or `"population"`; see
 #'   "Which groups". Only a model with random effects or a correlation over
 #'   time has a choice to make.
-#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`.
+#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`, and of a
+#'   typical group's curve from a flexible model with a smooth other than a
+#'   factor-smooth interaction.
 #' @param seed Random seed for those draws.
 #' @return A data frame with `row`, `time`, `surv`, `lower` and `upper`.
 #' @seealso [ilm_plot_survival()], which draws it against the Kaplan-Meier

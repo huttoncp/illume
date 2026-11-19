@@ -31,7 +31,9 @@ observed follow-up.}
 "Which groups". Only a model with random effects or a correlation over
 time has a choice to make.}
 
-\item{nsim}{Draws behind the intervals of \code{"fitted"} and \code{"population"}.}
+\item{nsim}{Draws behind the intervals of \code{"fitted"} and \code{"population"}, and of a
+typical group's curve from a flexible model with a smooth other than a
+factor-smooth interaction.}
 
 \item{seed}{Random seed for those draws.}
 }
@@ -68,7 +70,12 @@ linear predictor.
 
 Intervals for a typical group are computed on the complementary log-log
 scale for the accelerated failure time families, which is linear in \code{eta},
-and on the linear predictor for a flexible model. For \code{"fitted"} and
+and on the linear predictor for a flexible model with no smooth, or whose
+only smooths are factor-smooth interactions (\code{bs = "fs"}), which a typical
+group sets to zero. For a flexible model with any other smooth they are
+percentile intervals from \code{nsim} joint draws of the coefficients and the
+smooths' penalised coefficients, with every random effect at zero.
+For \code{"fitted"} and
 \code{"population"} they are percentile intervals from \code{nsim} joint draws of the
 coefficients -- and, for \code{"fitted"}, of the groups' own effects, as
 \code{\link[=predict.ilm_model]{predict.ilm_model()}} draws them. Uncertainty in an accelerated failure time
