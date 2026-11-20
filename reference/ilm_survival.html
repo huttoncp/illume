@@ -98,7 +98,9 @@ time has a choice to make.</p></dd>
 
 
 <dt id="arg-nsim">nsim<a class="anchor" aria-label="anchor" href="#arg-nsim"></a></dt>
-<dd><p>Draws behind the intervals of <code>"fitted"</code> and <code>"population"</code>.</p></dd>
+<dd><p>Draws behind the intervals of <code>"fitted"</code> and <code>"population"</code>, and of a
+typical group's curve from a flexible model with a smooth other than a
+factor-smooth interaction.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -134,7 +136,12 @@ group's curve, not the curve at zero, since survival is not linear in the
 linear predictor.</p></li>
 </ul><p>Intervals for a typical group are computed on the complementary log-log
 scale for the accelerated failure time families, which is linear in <code>eta</code>,
-and on the linear predictor for a flexible model. For <code>"fitted"</code> and
+and on the linear predictor for a flexible model with no smooth, or whose
+only smooths are factor-smooth interactions (<code>bs = "fs"</code>), which a typical
+group sets to zero. For a flexible model with any other smooth they are
+percentile intervals from <code>nsim</code> joint draws of the coefficients and the
+smooths' penalised coefficients, with every random effect at zero.
+For <code>"fitted"</code> and
 <code>"population"</code> they are percentile intervals from <code>nsim</code> joint draws of the
 coefficients – and, for <code>"fitted"</code>, of the groups' own effects, as
 <code><a href="predict.ilm_model.html">predict.ilm_model()</a></code> draws them. Uncertainty in an accelerated failure time

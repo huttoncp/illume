@@ -46,7 +46,9 @@ ilm_survival(
 
 - nsim:
 
-  Draws behind the intervals of `"fitted"` and `"population"`.
+  Draws behind the intervals of `"fitted"` and `"population"`, and of a
+  typical group's curve from a flexible model with a smooth other than a
+  factor-smooth interaction.
 
 - seed:
 
@@ -87,10 +89,14 @@ says which, as it does for
 
 Intervals for a typical group are computed on the complementary log-log
 scale for the accelerated failure time families, which is linear in
-`eta`, and on the linear predictor for a flexible model. For `"fitted"`
-and `"population"` they are percentile intervals from `nsim` joint draws
-of the coefficients – and, for `"fitted"`, of the groups' own effects,
-as
+`eta`, and on the linear predictor for a flexible model with no smooth,
+or whose only smooths are factor-smooth interactions (`bs = "fs"`),
+which a typical group sets to zero. For a flexible model with any other
+smooth they are percentile intervals from `nsim` joint draws of the
+coefficients and the smooths' penalised coefficients, with every random
+effect at zero. For `"fitted"` and `"population"` they are percentile
+intervals from `nsim` joint draws of the coefficients – and, for
+`"fitted"`, of the groups' own effects, as
 [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
 draws them. Uncertainty in an accelerated failure time family's scale
 parameter is not included, so its intervals are slightly narrow, most in
