@@ -1,5 +1,46 @@
 # illume 0.0.8.9003
 
+* **`ilm_survival()` now carries a smooth's curve into every survival curve
+  it draws.** Three of its curves were built from the fixed effects alone,
+  so a smooth kept only its straight-line part and the rest of its curve
+  was left out:
+  - with `groups = "fitted"` or `"population"`, for a model with a smooth
+    beside a random effect or a correlation over time (`ar`), in any
+    survival family;
+  - with `groups = "typical"`, for a flexible-parametric model
+    (`family = "rp"`) with a smooth.
+
+  The error was as large as the smooth's curve. For a Weibull model
+  `time ~ s(x) + (1 | h)`, the survival at t = 3 for one group came out as
+  8.8e-21 where the model gave 0.917; a flexible-parametric fit of the same
+  model was off by up to 0.976 under `"typical"`. A Weibull or other
+  accelerated failure time model's `"typical"` curve was right, and every
+  curve for a model without a smooth is unchanged. Under `"fitted"` and
+  `"population"`, the intervals now also carry the uncertainty in the
+  smooth's curve, drawn jointly with the fixed effects. For a
+  flexible-parametric model with a smooth, the `"typical"` interval now
+  sits around the corrected curve, and it carries the smooth's uncertainty
+  jointly with the fixed effects', as `predict()`'s intervals do: it is the
+  percentiles over joint draws of the two (`nsim` and `seed` set them),
+  with every grouping term at zero. It was built from the fixed effects'
+  covariance alone, with the smooth held at its estimate, which made it
+  far too wide where the smooth bends: in the measured case 0.26 wide at
+  the end of `x`, where the joint interval is 0.029. Without a smooth, the
+  interval is the delta method from the fixed effects' covariance, as
+  before.
+
+  Also, `"fitted"` and `"population"` stopped with "non-numeric matrix
+  extent" or "incorrect number of dimensions" when given a single time in
+  `times`; they now take one.
+
+* **A flexible-parametric model fitted by REML now has a `"typical"`
+  interval in `ilm_survival()`.** It had no width at any time, for every
+  such fit: the fixed effects' variance was looked up where a REML fit does
+  not keep it. It is now read as `vcov()` reads it, so a REML fit gets the
+  interval an ML fit gets, the delta method from the fixed effects'
+  covariance. Where that covariance is unusable, the curve has no interval
+  and a warning says so, rather than an interval of no width.
+
 * **REML on a model with nothing random and no dispersion parameter is now
   refused with a reason.** A Poisson or flexible-parametric model with no
   random effect, fitted with `reml = TRUE`, stopped with the optimiser's

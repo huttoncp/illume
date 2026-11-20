@@ -82,7 +82,12 @@ ilm_km_at <- function(km, grid) {
 #'
 #' Intervals for a typical group are computed on the complementary log-log
 #' scale for the accelerated failure time families, which is linear in `eta`,
-#' and on the linear predictor for a flexible model. For `"fitted"` and
+#' and on the linear predictor for a flexible model with no smooth, or whose
+#' only smooths are factor-smooth interactions (`bs = "fs"`), which a typical
+#' group sets to zero. For a flexible model with any other smooth they are
+#' percentile intervals from `nsim` joint draws of the coefficients and the
+#' smooths' penalised coefficients, with every random effect at zero.
+#' For `"fitted"` and
 #' `"population"` they are percentile intervals from `nsim` joint draws of the
 #' coefficients -- and, for `"fitted"`, of the groups' own effects, as
 #' [predict.ilm_model()] draws them. Uncertainty in an accelerated failure time
@@ -99,7 +104,9 @@ ilm_km_at <- function(km, grid) {
 #' @param groups `"fitted"` (the default), `"typical"` or `"population"`; see
 #'   "Which groups". Only a model with random effects or a correlation over
 #'   time has a choice to make.
-#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`.
+#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`, and of a
+#'   typical group's curve from a flexible model with a smooth other than a
+#'   factor-smooth interaction.
 #' @param seed Random seed for those draws.
 #' @return A data frame with `row`, `time`, `surv`, `lower` and `upper`.
 #' @seealso [ilm_plot_survival()], which draws it against the Kaplan-Meier
@@ -156,7 +163,8 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95,
   ## with nothing of a group's own, every choice is the typical group's curve
   if (!length(gk) && is.null(object$ar)) groups <- "typical"
   if (identical(groups, "typical")) {
-    if (!is.null(object$rp)) return(ilm_rp_survival(object, newdata, times, conf))
+    if (!is.null(object$rp))
+      return(ilm_rp_survival(object, newdata, times, conf, nsim = nsim, seed = seed))
     return(ilm_aft_survival(object, newdata, times, conf))
   }
   ilm_survival_groups(object, newdata, times, conf, groups, gk, nsim, seed)
@@ -219,16 +227,24 @@ ilm_survival_groups <- function(object, newdata, times, conf, groups, gk, nsim, 
   Bs <- if (!is.null(rp)) ilm_rcs(log(times), rp$knots)
   sc <- if (is.null(rp)) unname(object$dispersion[[1]])
   nm <- object$family$name
-  ## S(t | e) at every time, one column per linear predictor
+  ## S(t | e) at every time, one column per linear predictor. Kept a matrix:
+  ## with a single time vapply() returns a vector, and the intervals below
+  ## stopped on it with "non-numeric matrix extent".
   surv_at <- function(beta, e) {
-    if (is.null(rp))
+    S <- if (is.null(rp))
       vapply(e, function(ei) ilm_aft_surv(nm, (log(times) - ei) / sc),
              numeric(length(times)))
     else {
       base <- as.vector(Bs %*% beta[rp$cols])
       vapply(e, function(ei) object$family$surv(base + ei), numeric(length(times)))
     }
+    matrix(S, nrow = length(times))
   }
+  ## A smooth's penalised part is in the linear predictor too: from the fixed
+  ## design alone a smooth kept only its unpenalised columns, and the curves
+  ## for a row's own group and for the population left the rest out -- a
+  ## Weibull survival of 0.917 came out as 8.8e-21.
+  has_smooth <- any(vapply(object$re, function(e) identical(e$kind, "basis"), TRUE))
   pl <- if (identical(groups, "fitted")) ilm_fitted_place(object, newdata)
   sdrow <- NULL
   if (identical(groups, "population")) {
@@ -240,17 +256,21 @@ ilm_survival_groups <- function(object, newdata, times, conf, groups, gk, nsim, 
   ## the curves, one column per row, for one set of parameters
   curves <- function(beta, bvec = NULL, bar = NULL) {
     e <- as.vector(Xn %*% beta[keep]) + off
+    if (has_smooth) e <- e + ilm_smooth_part(object, nd, bvec)[, 1L]
     if (!is.null(pl)) e <- e + ilm_fitted_shift(object, pl, n, bvec, bar)[, 1L]
     if (is.null(sdrow)) return(surv_at(beta, e))
     ## the average of the curve over each row's latent normal, time by time
-    vapply(seq_len(n), function(i)
+    matrix(vapply(seq_len(n), function(i)
       vapply(seq_along(times), function(k)
         ilm_normal_expect(function(x) surv_at(beta, x)[k, ], e[i], sdrow[i]), 0),
-      numeric(length(times)))
+      numeric(length(times))), nrow = length(times))
   }
   est <- curves(as.vector(object$beta[, 1L]))
-  ## joint draws: the coefficients, and for "fitted" the groups' own effects
-  blk <- intersect(c("beta", if (!is.null(pl)) c("bvec", "B_ar")),
+  ## joint draws: the coefficients, a smooth's penalised coefficients with
+  ## them (they trade off against its unpenalised part, so are drawn
+  ## jointly), and for "fitted" the groups' own effects
+  blk <- intersect(c("beta", if (!is.null(pl) || has_smooth) "bvec",
+                     if (!is.null(pl)) "B_ar"),
                    names(object$obj$env$par))
   dr <- tryCatch(ilm_draws(object, nsim = nsim, seed = seed, blocks = blk, natural = FALSE),
                  error = function(e) e)
@@ -270,6 +290,26 @@ ilm_survival_groups <- function(object, newdata, times, conf, groups, gk, nsim, 
   }
   do.call(rbind, lapply(seq_len(n), function(i)
     data.frame(row = i, time = times, surv = est[, i], lower = lo[, i], upper = hi[, i])))
+}
+
+## Every smooth's penalised part at the rows `nd` was built for (output of
+## ilm_newX()), from the estimated coefficients or a draw of them (`bvec`):
+## the part of the linear predictor the fixed design does not carry. For a
+## typical curve (`typical = TRUE`) a factor-smooth interaction's blocks are
+## left out, because its subjects are a population, as predict(groups =
+## "typical") leaves them.
+#' @keywords internal
+#' @noRd
+ilm_smooth_part <- function(object, nd, bvec = NULL, typical = FALSE) {
+  S <- matrix(0, nrow(nd$X), object$C)
+  skip <- if (typical) ilm_fs_terms(object) else logical(length(object$re))
+  for (k in seq_along(object$re)) {
+    if (!identical(object$re[[k]]$kind, "basis") || skip[k]) next
+    ctb <- ilm_basis_new(object, nd, k) %*% ilm_Bhat_term(object, k, bvec)
+    if (identical(object$re_struct[[k]]$type, "rr")) ctb <- ctb %*% t(object$Lambda[[k]])
+    S <- S + ctb
+  }
+  S
 }
 
 ## The covariate pattern an effect plot would use: median for a number, the

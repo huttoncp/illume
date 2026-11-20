@@ -1,0 +1,39 @@
+build: after the fix: survival-smooth at 24c3b3a (main cc0ff4a merged in) | illume 0.0.8.9003 | mgcv 1.9.1 | R 4.4.3 | date 2026-11-14 01:50:12 -0500 
+
+== 1. Weibull, time ~ s(x, k = 8) + (1 | h) ==
+smooth's penalised part at x = 0.25, 0.5, 0.75 (link scale): 2.8568 0.18981 -2.5096 
+groups      ilm_survival() S(3)                by hand S(3)                       max abs diff
+typical     0.934933 0.48708 0.000258727       0.934933 0.48708 0.000258727       9.22e-19
+fitted      0.916904 0.395539 2.36967e-05      0.916904 0.395539 2.36967e-05      0
+population  0.900388 0.467639 0.0350117        0.900388 0.467639 0.0350117        4.72e-09
+by hand without the penalised part, "fitted": 8.77756e-21 0.24475 0.958009 
+by hand without the penalised part, "population": 0.00155276 0.360566 0.947392 
+
+== 2. control: Weibull, time ~ x + (1 | h) ==
+groups      ilm_survival() S(3)                by hand S(3)                       max abs diff
+typical     0.699586 0.451655 0.170617         0.699586 0.451655 0.170617         0
+fitted      0.683562 0.428961 0.152129         0.683562 0.428961 0.152129         0
+population  0.656364 0.441924 0.226237         0.656364 0.441924 0.226237         8.99e-12
+
+== 3. flexible parametric, time ~ s(x, k = 8) + (1 | h) ==
+smooth's penalised part at x = 0.25, 0.5, 0.75 (link scale): -6.775 -0.39222 5.8291 
+groups      ilm_survival() S(3)                by hand S(3)                       max abs diff
+typical     0.954521 0.512296 0.000280681      0.954521 0.512296 0.000280681      0
+fitted      0.93907 0.405208 1.59567e-05       0.93907 0.405208 1.59567e-05       0
+population  0.926178 0.485749 0.0387346        0.926178 0.485749 0.0387346        4.21e-12
+by hand without the penalised part, "typical": 1.99214e-18 0.371549 0.976236 
+by hand without the penalised part, "fitted": 1.23994e-24 0.26258 0.968039 
+
+== one time against two (fit 1, then fit 3) ==
+  Weibull      groups = "typical"    times = 3         0.934933 0.48708 0.000258727
+  Weibull      groups = "typical"    times = c(2, 3)   0.934933 0.48708 0.000258727
+  Weibull      groups = "fitted"     times = 3         0.916904 0.395539 2.36967e-05
+  Weibull      groups = "fitted"     times = c(2, 3)   0.916904 0.395539 2.36967e-05
+  Weibull      groups = "population" times = 3         0.900388 0.467639 0.0350117
+  Weibull      groups = "population" times = c(2, 3)   0.900388 0.467639 0.0350117
+  rp           groups = "typical"    times = 3         0.954521 0.512296 0.000280681
+  rp           groups = "typical"    times = c(2, 3)   0.954521 0.512296 0.000280681
+  rp           groups = "fitted"     times = 3         0.93907 0.405208 1.59567e-05
+  rp           groups = "fitted"     times = c(2, 3)   0.93907 0.405208 1.59567e-05
+  rp           groups = "population" times = 3         0.926178 0.485749 0.0387346
+  rp           groups = "population" times = c(2, 3)   0.926178 0.485749 0.0387346

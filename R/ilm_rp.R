@@ -318,7 +318,7 @@ ilm_rp_lrt <- function(object, verbose = TRUE) {
 ## is no single eta to evaluate: the basis is rebuilt at every time asked for.
 #' @keywords internal
 #' @noRd
-ilm_rp_survival <- function(object, newdata, times, conf) {
+ilm_rp_survival <- function(object, newdata, times, conf, nsim = 200L, seed = 1L) {
   rp <- object$rp
   if (is.null(times)) {
     y <- as.numeric(object$y)
@@ -326,40 +326,106 @@ ilm_rp_survival <- function(object, newdata, times, conf) {
   }
   times <- sort(unique(times[times > 0]))
   ## the covariate part, without the baseline, for each requested pattern
-  ## a typical subject's curve: a factor-smooth's subject is not used
-  Xn <- ilm_newX(object, newdata, fs_fill = TRUE)$X
+  ## a typical subject's curve: a factor-smooth's subject is not used, and
+  ## its blocks are left out of the smooth part below
+  nd <- ilm_newX(object, newdata, fs_fill = TRUE)
+  Xn <- nd$X
   keep <- setdiff(seq_len(ncol(object$X)), rp$cols)
   if (ncol(Xn) != length(keep))
     stop("the new data give ", ncol(Xn), " covariate columns where the fit ",
          "has ", length(keep), call. = FALSE)
-  off <- as.vector(Xn %*% object$beta[keep, 1L])
-  V <- object$sdr$cov.fixed
+  ## with every smooth's penalised part: from the fixed design alone, a smooth
+  ## kept only its unpenalised columns, and a curve whose smooth's penalised
+  ## part was 5.8 on the linear predictor came out 0.976 where it was 0.0003
+  off <- as.vector(Xn %*% object$beta[keep, 1L]) +
+    ilm_smooth_part(object, nd, typical = TRUE)[, 1L]
   gam <- object$beta[rp$cols, 1L]
   Bs <- ilm_rcs(log(times), rp$knots)
   crit <- stats::qnorm(1 - (1 - conf) / 2)
   Sfun <- object$family$surv
+  ## With a smooth in the curve, the interval carries its uncertainty jointly
+  ## with the fixed effects', as predict() does: the two are drawn together,
+  ## and grouping terms are at zero. From the fixed effects' covariance alone
+  ## the smooth's penalised coefficients are held at their estimates, which
+  ## predict() warns makes a smooth's interval far too wide -- measured here,
+  ## 0.26 wide at the end of x where the joint interval is 0.029. A
+  ## factor-smooth's blocks are at zero in a typical curve, so they don't
+  ## count as a smooth in it.
+  basis <- vapply(object$re, function(e) identical(e$kind, "basis"), TRUE)
+  if (any(basis & !ilm_fs_terms(object)))
+    return(ilm_rp_survival_joint(object, nd, Xn, keep, Bs, Sfun, times, off,
+                                 conf, nsim, seed))
   ## The variance of eta at a given time comes from the whole coefficient
   ## vector, spline included, so the interval widens where the baseline is
   ## least well determined as well as where the covariates are.
-  ## cov.fixed is indexed by TMB's own parameter names, which are the names of
-  ## the parameter list -- "beta", "theta" -- not the display names the package
-  ## shows the user. Using the latter matched nothing and gave a zero-width
-  ## interval.
-  pn <- names(object$sdr$par.fixed)
-  bidx <- if (!is.null(V) && all(is.finite(V)) && !is.null(pn))
-    which(pn == "beta") else integer(0)
+  ## The fixed effects' covariance, read as vcov() reads it: by position, the
+  ## first ncol(X) rows. It was looked up by name twice, and each time the
+  ## lookup matched nothing and the interval came back with no width, without
+  ## a word: once by the display names, which cov.fixed is not indexed by, and
+  ## then by names(sdr$par.fixed), which under REML holds the variance
+  ## parameters only -- every REML fit's interval was 0 wide. A lookup that
+  ## does not find the block now stops, and a covariance that is unusable
+  ## gives no interval, with a warning, rather than one of no width.
+  Vb <- suppressWarnings(vcov(object))
+  if (is.null(Vb) || !identical(dim(as.matrix(Vb)), c(ncol(object$X), ncol(object$X))))
+    stop("internal: the fixed effects' covariance has ",
+         if (is.null(Vb)) "no entries" else paste(dim(as.matrix(Vb)), collapse = " x "),
+         " where the design has ", ncol(object$X), " columns.", call. = FALSE)
+  Vb <- as.matrix(Vb)
+  usable <- all(is.finite(Vb))
+  if (!usable)
+    warning("the fixed effects' covariance is unusable (see the hessian line of ",
+            "fit$checks), so the survival curve has no interval.", call. = FALSE)
   out <- lapply(seq_along(off), function(i) {
     e <- as.vector(Bs %*% gam) + off[i]
     S <- Sfun(e)
-    se <- rep(0, length(times))
-    if (length(bidx) == ncol(object$X)) {
+    se <- rep(NA_real_, length(times))
+    if (usable) {
       Z <- cbind(Bs, matrix(rep(Xn[i, ], each = length(times)),
                             nrow = length(times)))
-      Vb <- V[bidx, bidx, drop = FALSE]
       se <- sqrt(pmax(rowSums((Z %*% Vb) * Z), 0))
     }
     data.frame(row = i, time = times, surv = S,
                lower = Sfun(e + crit * se), upper = Sfun(e - crit * se))
   })
   do.call(rbind, out)
+}
+
+## A flexible-parametric typical curve with a smooth: the point at the
+## estimates, and the interval as percentiles over joint draws of the fixed
+## effects and the smooth's penalised coefficients (ilm_draws(), which forms
+## the joint distribution as predict() and ilm_survival()'s other curves use
+## it), with every grouping term at zero.
+#' @keywords internal
+#' @noRd
+ilm_rp_survival_joint <- function(object, nd, Xn, keep, Bs, Sfun, times, off,
+                                  conf, nsim, seed) {
+  rp <- object$rp
+  base <- as.vector(Bs %*% object$beta[rp$cols, 1L])
+  est <- vapply(off, function(o) Sfun(base + o), numeric(length(times)))
+  est <- matrix(est, nrow = length(times))
+  lo <- hi <- matrix(NA_real_, length(times), length(off))
+  blk <- intersect(c("beta", "bvec"), names(object$obj$env$par))
+  dr <- tryCatch(ilm_draws(object, nsim = nsim, seed = seed, blocks = blk,
+                           natural = FALSE), error = function(e) e)
+  if (inherits(dr, "error")) {
+    warning("no intervals: ", conditionMessage(dr), call. = FALSE)
+  } else {
+    w <- rownames(dr$draws)
+    acc <- array(NA_real_, c(length(times), length(off), nsim))
+    for (s in seq_len(nsim)) {
+      b <- dr$draws[w == "beta", s]
+      bv <- if (any(w == "bvec")) dr$draws[w == "bvec", s]
+      o <- as.vector(Xn %*% b[keep]) +
+        ilm_smooth_part(object, nd, bv, typical = TRUE)[, 1L]
+      bs <- as.vector(Bs %*% b[rp$cols])
+      acc[, , s] <- vapply(o, function(oi) Sfun(bs + oi), numeric(length(times)))
+    }
+    a <- (1 - conf) / 2
+    lo <- apply(acc, 1:2, stats::quantile, probs = a, names = FALSE, na.rm = TRUE)
+    hi <- apply(acc, 1:2, stats::quantile, probs = 1 - a, names = FALSE, na.rm = TRUE)
+    lo <- matrix(lo, nrow = length(times)); hi <- matrix(hi, nrow = length(times))
+  }
+  do.call(rbind, lapply(seq_along(off), function(i)
+    data.frame(row = i, time = times, surv = est[, i], lower = lo[, i], upper = hi[, i])))
 }
