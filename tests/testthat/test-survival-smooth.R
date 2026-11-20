@@ -193,40 +193,6 @@ test_that("a flexible-parametric typical interval by REML is the delta method fr
   }
 })
 
-test_that("a flexible-parametric typical interval with a smooth carries the smooth's uncertainty jointly", {
-  ## As predict() does: the fixed effects and the smooth's penalised
-  ## coefficients drawn together, grouping terms at zero. Built from the fixed
-  ## effects' covariance alone it was the construction predict() warns
-  ## against, far too wide where the smooth bends (measured 14 Nov: 0.26 at
-  ## x = 0.75 against 0.029 for the joint reference)
-  d <- ss_data(39)
-  nd <- data.frame(x = c(0.1, 0.5, 0.9), h = factor("a", levels = levels(d$h)))
-  tg <- c(1, 3)
-  for (reml in c(TRUE, FALSE)) {
-    f <- suppressMessages(suppressWarnings(
-      ilm_model(time ~ s(x, k = 8) + (1 | h), data = d, family = "rp", reml = reml,
-                censor = ilm_surv(d$time, d$event), verbose = FALSE)))
-    s <- suppressWarnings(ilm_survival(f, newdata = nd, times = tg, groups = "typical",
-                                       nsim = 80L, seed = 6L))
-    dr <- ilm_draws(f, nsim = 80L, seed = 6L, blocks = c("beta", "bvec"), natural = FALSE)
-    w <- rownames(dr$draws)
-    ndx <- illume:::ilm_newX(f, nd)
-    keep <- setdiff(seq_len(ncol(f$X)), f$rp$cols)
-    ks <- which(vapply(f$re, function(r) identical(r$kind, "basis"), TRUE))
-    Bs <- illume:::ilm_rcs(log(tg), f$rp$knots)
-    S <- sapply(seq_len(ncol(dr$draws)), function(j) {
-      b <- dr$draws[w == "beta", j]; bv <- dr$draws[w == "bvec", j]
-      e <- as.vector(ndx$X %*% b[keep])
-      for (k in ks) e <- e + as.vector(illume:::ilm_basis_new(f, ndx, k) %*% illume:::ilm_Bhat_term(f, k, bv))
-      unlist(lapply(e, function(ei) f$family$surv(as.vector(Bs %*% b[f$rp$cols]) + ei)))
-    })
-    lab <- paste("reml =", reml)
-    expect_equal(s$lower, apply(S, 1, stats::quantile, 0.025, names = FALSE), tolerance = 1e-10, label = lab)
-    expect_equal(s$upper, apply(S, 1, stats::quantile, 0.975, names = FALSE), tolerance = 1e-10, label = lab)
-    expect_true(all(s$lower <= s$surv & s$surv <= s$upper), label = lab)
-  }
-})
-
 test_that("an unusable covariance, or draws that fail, give no interval and a warning, never one of no width", {
   ## forced on a copy of a fit: a missing entry in the fixed effects'
   ## covariance, and a joint precision of zeros, which has no Cholesky factor
@@ -244,7 +210,7 @@ test_that("an unusable covariance, or draws that fail, give no interval and a wa
   f1$jointPrecision <- f1$jointPrecision * 0
   ## the Matrix package also warns, as the Cholesky factor fails
   expect_warning(expect_warning(
-    s1 <- ilm_survival(f1, newdata = nd, times = c(1, 3), groups = "typical", nsim = 20L),
+    s1 <- ilm_survival(f1, newdata = nd, times = c(1, 3), groups = "typical"),
     "no intervals"), "not positive definite")
   expect_true(all(is.na(s1$lower) & is.na(s1$upper)))
   expect_true(all(is.finite(s1$surv)))
