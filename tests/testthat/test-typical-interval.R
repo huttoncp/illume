@@ -337,8 +337,23 @@ test_that("an unusable covariance gives no interval and a warning in every famil
     f2 <- ti_fit(d, fam, time ~ z)
     f2$sdr$cov.fixed <- -f2$sdr$cov.fixed
     expect_warning(s2 <- ilm_survival(f2, newdata = nd, times = tg, groups = "typical"),
-                   "negative variance")
+                   "negative or not finite")
     expect_true(all(is.na(s2$lower) & is.na(s2$upper)), label = fam)
     expect_true(all(is.finite(s2$surv)), label = fam)
+    ## a Hessian that is not positive definite, whose covariance TMB hands back
+    ## finite all the same: vcov() warns, and the curve has no interval and one
+    ## warning of its own, whatever the covariance would give
+    f3 <- ti_fit(d, fam, time ~ z + (1 | h))
+    expect_true(all(is.finite(f3$sdr$cov.fixed)))
+    f3$sdr$pdHess <- FALSE
+    f3$hessian_held <- NULL
+    w3 <- NULL
+    s3 <- withCallingHandlers(ilm_survival(f3, newdata = nd, times = tg, groups = "typical"),
+                              warning = function(w) { w3 <<- c(w3, conditionMessage(w))
+                                                      invokeRestart("muffleWarning") })
+    expect_length(w3, 1L)
+    expect_match(w3, "covariance is unusable")
+    expect_true(all(is.na(s3$lower) & is.na(s3$upper)), label = fam)
+    expect_true(all(is.finite(s3$surv)), label = fam)
   }
 })

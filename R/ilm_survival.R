@@ -350,13 +350,21 @@ ilm_typical_cov <- function(object, nd) {
     ## parameters only -- every REML fit's interval was 0 wide. A lookup that
     ## does not find the block now stops, and a covariance that is unusable
     ## gives no interval, with a warning, rather than one of no width.
-    Vb <- suppressWarnings(vcov(object))
+    ## vcov() warns when the Hessian is not positive definite, and TMB can hand
+    ## back a covariance that is finite there, with a negative variance in it
+    ## (a saddle's inverse Hessian is). A warning from vcov() is taken as the
+    ## sign, and the warning below is the one the user sees.
+    unusable <- FALSE
+    Vb <- withCallingHandlers(vcov(object), warning = function(w) {
+      unusable <<- TRUE
+      invokeRestart("muffleWarning")
+    })
     if (is.null(Vb) || !identical(dim(as.matrix(Vb)), c(p, p)))
       stop("internal: the fixed effects' covariance has ",
            if (is.null(Vb)) "no entries" else paste(dim(as.matrix(Vb)), collapse = " x "),
            " where the design has ", p, " columns.", call. = FALSE)
     Vb <- as.matrix(Vb)
-    if (!all(is.finite(Vb))) {
+    if (unusable || !all(is.finite(Vb))) {
       warning("the fixed effects' covariance is unusable (see the hessian line of ",
               "fit$checks), so the survival curve has no interval.", call. = FALSE)
       return(NULL)
@@ -407,14 +415,16 @@ ilm_typical_se <- function(A, V) {
 }
 
 ## The warning for a curve whose interval could not be formed from a usable
-## variance, said once for the whole curve.
+## variance, said once for the whole curve: the variance at a point came out
+## negative beyond rounding, or not finite.
 #' @keywords internal
 #' @noRd
 ilm_typical_se_warn <- function(se)
   if (anyNA(se))
     warning("the covariance of the fixed effects and the smooths' coefficients gives ",
-            "a negative variance at ", sum(is.na(se)), " of ", length(se),
-            " points of the curve, so those have no interval.", call. = FALSE)
+            "a variance that is negative or not finite at ", sum(is.na(se)), " of ",
+            length(se), " points of the curve, so those have no interval.",
+            call. = FALSE)
 
 ## The covariate pattern an effect plot would use: median for a number, the
 ## commonest level for a factor.

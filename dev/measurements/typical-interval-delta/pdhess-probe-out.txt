@@ -1,0 +1,6 @@
+RTMB 1.9 | TMB 1.9.21 | R 4.4.3 | date 2026-11-20 18:43:29 -0500 
+pdHess: FALSE 
+cov.fixed (finite entries: TRUE):
+     [,1] [,2]
+[1,]  0.5  0.0
+[2,]  0.0 -0.5
