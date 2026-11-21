@@ -31,9 +31,8 @@ observed follow-up.}
 "Which groups". Only a model with random effects or a correlation over
 time has a choice to make.}
 
-\item{nsim}{Draws behind the intervals of \code{"fitted"} and \code{"population"}, and of a
-typical group's curve from a flexible model with a smooth other than a
-factor-smooth interaction.}
+\item{nsim}{Draws behind the intervals of \code{"fitted"} and \code{"population"}. A
+typical group's interval uses none.}
 
 \item{seed}{Random seed for those draws.}
 }
@@ -68,19 +67,20 @@ group's curve, not the curve at zero, since survival is not linear in the
 linear predictor.
 }
 
-Intervals for a typical group are computed on the complementary log-log
-scale for the accelerated failure time families, which is linear in \code{eta},
-and on the linear predictor for a flexible model with no smooth, or whose
-only smooths are factor-smooth interactions (\code{bs = "fs"}), which a typical
-group sets to zero. For a flexible model with any other smooth they are
-percentile intervals from \code{nsim} joint draws of the coefficients and the
-smooths' penalised coefficients, with every random effect at zero.
-For \code{"fitted"} and
-\code{"population"} they are percentile intervals from \code{nsim} joint draws of the
-coefficients -- and, for \code{"fitted"}, of the groups' own effects, as
-\code{\link[=predict.ilm_model]{predict.ilm_model()}} draws them. Uncertainty in an accelerated failure time
-family's scale parameter is not included, so its intervals are slightly
-narrow, most in the tail beyond the last observed event.
+Intervals for a typical group use no draws. The curve is worked out at
+\code{eta - c * se} and \code{eta + c * se}, where \code{se} is the standard error of the
+linear predictor \code{eta} and \code{c} the normal quantile for \code{conf}; this is the
+delta method on \code{eta}, and it gives the same interval on every run. The
+standard error comes from the covariance of the fixed effects or, when the
+model has a smooth other than a factor-smooth interaction (\code{bs = "fs"}),
+from the joint covariance of the fixed effects and those smooths' penalised
+coefficients. Every random effect is at zero, and so is a factor-smooth
+interaction. For \code{"fitted"} and \code{"population"} the intervals are percentile
+intervals from \code{nsim} joint draws of the coefficients -- and, for
+\code{"fitted"}, of the groups' own effects, as \code{\link[=predict.ilm_model]{predict.ilm_model()}} draws them.
+Uncertainty in an accelerated failure time family's scale parameter is not
+included in any of these intervals, so they are slightly narrow, most in
+the tail beyond the last observed event.
 }
 
 \examples{

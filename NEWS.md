@@ -1,5 +1,34 @@
 # illume 0.0.8.9003
 
+* `ilm_survival()`'s interval for a typical group is now the delta method on
+  the linear predictor in every family, and uses no draws. The curve is
+  worked out at the two ends of the linear predictor's interval. The
+  standard error comes from the fit's covariance: the fixed effects', or,
+  with a smooth other than a factor-smooth interaction, the joint
+  covariance of the fixed effects and those smooths' penalised
+  coefficients, with every random effect at zero. The interval is the same
+  on every run, and `nsim` and `seed` no longer affect it.
+  * Every accelerated failure time fit's typical interval moves. Its
+    standard error was the SD of 200 draws inside `predict()`, at a seed
+    fixed there. For the Weibull the interval moves by about the draws'
+    noise. For the lognormal and log-logistic it moves by more, because the
+    old interval used the Weibull's slope on the complementary log-log
+    scale, which is right only for the Weibull. A lognormal interval is now
+    narrower where survival is low and wider where it is high. A
+    log-logistic interval is narrower, least so where survival is near 1.
+    In one simulated example the limits moved by up to 0.01 for the
+    Weibull, 0.06 for the lognormal and 0.15 for the log-logistic.
+  * A flexible-parametric fit with a smooth other than a factor-smooth
+    interaction moves by about the draws' noise: up to 0.03 in that
+    example. Where survival is near 0 or 1, this can be a large share of
+    the interval.
+  * A flexible-parametric fit with no such smooth is unchanged.
+  * Where the covariance is unusable, there is no interval, with a
+    warning, in every family. The accelerated failure time families used
+    to give an interval of no width.
+  * Where survival was below 1e-12, the lower limit could sit above the
+    estimate. The limits now always enclose it.
+
 * **`ilm_survival()` now carries a smooth's curve into every survival curve
   it draws.** Three of its curves were built from the fixed effects alone,
   so a smooth kept only its straight-line part and the rest of its curve

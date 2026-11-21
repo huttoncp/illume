@@ -80,19 +80,20 @@ ilm_km_at <- function(km, grid) {
 #'   group's curve, not the curve at zero, since survival is not linear in the
 #'   linear predictor.
 #'
-#' Intervals for a typical group are computed on the complementary log-log
-#' scale for the accelerated failure time families, which is linear in `eta`,
-#' and on the linear predictor for a flexible model with no smooth, or whose
-#' only smooths are factor-smooth interactions (`bs = "fs"`), which a typical
-#' group sets to zero. For a flexible model with any other smooth they are
-#' percentile intervals from `nsim` joint draws of the coefficients and the
-#' smooths' penalised coefficients, with every random effect at zero.
-#' For `"fitted"` and
-#' `"population"` they are percentile intervals from `nsim` joint draws of the
-#' coefficients -- and, for `"fitted"`, of the groups' own effects, as
-#' [predict.ilm_model()] draws them. Uncertainty in an accelerated failure time
-#' family's scale parameter is not included, so its intervals are slightly
-#' narrow, most in the tail beyond the last observed event.
+#' Intervals for a typical group use no draws. The curve is worked out at
+#' `eta - c * se` and `eta + c * se`, where `se` is the standard error of the
+#' linear predictor `eta` and `c` the normal quantile for `conf`; this is the
+#' delta method on `eta`, and it gives the same interval on every run. The
+#' standard error comes from the covariance of the fixed effects or, when the
+#' model has a smooth other than a factor-smooth interaction (`bs = "fs"`),
+#' from the joint covariance of the fixed effects and those smooths' penalised
+#' coefficients. Every random effect is at zero, and so is a factor-smooth
+#' interaction. For `"fitted"` and `"population"` the intervals are percentile
+#' intervals from `nsim` joint draws of the coefficients -- and, for
+#' `"fitted"`, of the groups' own effects, as [predict.ilm_model()] draws them.
+#' Uncertainty in an accelerated failure time family's scale parameter is not
+#' included in any of these intervals, so they are slightly narrow, most in
+#' the tail beyond the last observed event.
 #'
 #' @param object A fitted `"ilm_model"` with a time-to-event family.
 #' @param newdata Covariate patterns, one row each. With none, the curve is
@@ -104,9 +105,8 @@ ilm_km_at <- function(km, grid) {
 #' @param groups `"fitted"` (the default), `"typical"` or `"population"`; see
 #'   "Which groups". Only a model with random effects or a correlation over
 #'   time has a choice to make.
-#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`, and of a
-#'   typical group's curve from a flexible model with a smooth other than a
-#'   factor-smooth interaction.
+#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`. A
+#'   typical group's interval uses none.
 #' @param seed Random seed for those draws.
 #' @return A data frame with `row`, `time`, `surv`, `lower` and `upper`.
 #' @seealso [ilm_plot_survival()], which draws it against the Kaplan-Meier
