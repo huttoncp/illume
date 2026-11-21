@@ -1,0 +1,16 @@
+build: main e61f44a | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-20 18:57:18 -0500 
+
+family       fit     reml      max |limit - by hand| (lower, upper) max |change| with nsim 10/seed 1 -> nsim 2000/seed 7
+weibull      plain   FALSE     0.00621, 0.00609                   0
+weibull      re      FALSE     0.00717, 0.00698                   0
+weibull      smooth  TRUE      0.0105, 0.0103                     0
+lognormal    plain   FALSE     0.0183, 0.0177                     0
+lognormal    re      FALSE     0.0214, 0.0200                     0
+lognormal    smooth  TRUE      0.0642, 0.0318                     0
+loglogistic  plain   FALSE     0.0577, 0.0648                     0
+loglogistic  re      FALSE     0.0666, 0.0812                     0
+loglogistic  smooth  TRUE      0.123, 0.154                       0
+rp           plain   FALSE     0.00e+00, 5.55e-17                 0
+rp           re      FALSE     5.55e-17, 0.00e+00                 0
+rp           smooth  TRUE      0.177, 0.151                       0.178
+

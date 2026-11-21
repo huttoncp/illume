@@ -1,0 +1,13 @@
+fit                identical  max |difference| in either limit
+weibull plain      FALSE      0.00621
+weibull re         FALSE      0.00717
+weibull smooth     FALSE      0.0105
+lognormal plain    FALSE      0.0183
+lognormal re       FALSE      0.0214
+lognormal smooth   FALSE      0.0642
+loglogistic plain  FALSE      0.0648
+loglogistic re     FALSE      0.0812
+loglogistic smooth FALSE      0.154
+rp plain           TRUE       0
+rp re              TRUE       0
+rp smooth          FALSE      0.0278

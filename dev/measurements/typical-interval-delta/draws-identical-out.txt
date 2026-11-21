@@ -1,0 +1,20 @@
+build: main e61f44a | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-20 18:57:24 -0500 
+build: typical-interval-delta d0d8461 | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-20 18:57:34 -0500 
+case                                           identical
+weibull, smooth + (1 | h), REML | given = none TRUE
+weibull, smooth + (1 | h), REML | given = theta TRUE
+weibull, smooth + (1 | h), REML | given = parameters TRUE
+weibull, (1 | h), ML, joint | given = none     TRUE
+weibull, (1 | h), ML, joint | given = theta    TRUE
+weibull, (1 | h), ML, joint | given = parameters TRUE
+rp, smooth + (1 | h), ML | given = none        TRUE
+rp, smooth + (1 | h), ML | given = theta       TRUE
+rp, smooth + (1 | h), ML | given = parameters  TRUE
+weibull, smooth + (1 | h), boundary | given = none TRUE
+weibull, smooth + (1 | h), boundary | given = theta TRUE
+weibull, smooth + (1 | h), boundary | given = parameters TRUE
+weibull, factor-smooth, REML | given = none    TRUE
+weibull, factor-smooth, REML | given = theta   TRUE
+weibull, factor-smooth, REML | given = parameters TRUE
+weibull, smooth + (1 | h), REML | blocks       TRUE
+all identical: TRUE 

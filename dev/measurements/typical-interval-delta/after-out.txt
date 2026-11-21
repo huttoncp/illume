@@ -1,0 +1,16 @@
+build: typical-interval-delta d0d8461 | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-20 18:57:29 -0500 
+
+family       fit     reml      max |limit - by hand| (lower, upper) max |change| with nsim 10/seed 1 -> nsim 2000/seed 7
+weibull      plain   FALSE     1.11e-16, 5.55e-17                 0
+weibull      re      FALSE     0, 0                               0
+weibull      smooth  TRUE      0.00e+00, 8.33e-17                 0
+lognormal    plain   FALSE     0.00e+00, 5.55e-17                 0
+lognormal    re      FALSE     0.00e+00, 5.55e-17                 0
+lognormal    smooth  TRUE      4.44e-16, 4.44e-16                 0
+loglogistic  plain   FALSE     0, 0                               0
+loglogistic  re      FALSE     1.11e-16, 2.78e-17                 0
+loglogistic  smooth  TRUE      4.44e-16, 1.11e-16                 0
+rp           plain   FALSE     0.00e+00, 5.55e-17                 0
+rp           re      FALSE     5.55e-17, 0.00e+00                 0
+rp           smooth  TRUE      8.55e-15, 8.16e-15                 0
+
