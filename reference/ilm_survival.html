@@ -98,9 +98,8 @@ time has a choice to make.</p></dd>
 
 
 <dt id="arg-nsim">nsim<a class="anchor" aria-label="anchor" href="#arg-nsim"></a></dt>
-<dd><p>Draws behind the intervals of <code>"fitted"</code> and <code>"population"</code>, and of a
-typical group's curve from a flexible model with a smooth other than a
-factor-smooth interaction.</p></dd>
+<dd><p>Draws behind the intervals of <code>"fitted"</code> and <code>"population"</code>. A
+typical group's interval uses none.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -134,19 +133,20 @@ distribution of random effects, by quadrature at each time: the curve for
 the population of groups as a whole. It is flatter than the typical
 group's curve, not the curve at zero, since survival is not linear in the
 linear predictor.</p></li>
-</ul><p>Intervals for a typical group are computed on the complementary log-log
-scale for the accelerated failure time families, which is linear in <code>eta</code>,
-and on the linear predictor for a flexible model with no smooth, or whose
-only smooths are factor-smooth interactions (<code>bs = "fs"</code>), which a typical
-group sets to zero. For a flexible model with any other smooth they are
-percentile intervals from <code>nsim</code> joint draws of the coefficients and the
-smooths' penalised coefficients, with every random effect at zero.
-For <code>"fitted"</code> and
-<code>"population"</code> they are percentile intervals from <code>nsim</code> joint draws of the
-coefficients – and, for <code>"fitted"</code>, of the groups' own effects, as
-<code><a href="predict.ilm_model.html">predict.ilm_model()</a></code> draws them. Uncertainty in an accelerated failure time
-family's scale parameter is not included, so its intervals are slightly
-narrow, most in the tail beyond the last observed event.</p>
+</ul><p>Intervals for a typical group use no draws. The curve is worked out at
+<code>eta - c * se</code> and <code>eta + c * se</code>, where <code>se</code> is the standard error of the
+linear predictor <code>eta</code> and <code>c</code> the normal quantile for <code>conf</code>; this is the
+delta method on <code>eta</code>, and it gives the same interval on every run. The
+standard error comes from the covariance of the fixed effects or, when the
+model has a smooth other than a factor-smooth interaction (<code>bs = "fs"</code>),
+from the joint covariance of the fixed effects and those smooths' penalised
+coefficients. Every random effect is at zero, and so is a factor-smooth
+interaction. For <code>"fitted"</code> and <code>"population"</code> the intervals are percentile
+intervals from <code>nsim</code> joint draws of the coefficients – and, for
+<code>"fitted"</code>, of the groups' own effects, as <code><a href="predict.ilm_model.html">predict.ilm_model()</a></code> draws them.
+Uncertainty in an accelerated failure time family's scale parameter is not
+included in any of these intervals, so they are slightly narrow, most in
+the tail beyond the last observed event.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -165,12 +165,12 @@ estimate, <code><a href="ilm_surv.html">ilm_surv()</a></code>.</p></div>
 <span class="r-in"><span>               censor <span class="op">=</span> <span class="fu"><a href="ilm_surv.html">ilm_surv</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">time</span>, <span class="va">d</span><span class="op">$</span><span class="va">event</span><span class="op">)</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">ilm_survival</span><span class="op">(</span><span class="va">f</span>, newdata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   row       time      surv     lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1 0.02367112 0.9969355 0.9959874 0.9976598</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   1 0.23229399 0.9385701 0.9203042 0.9527572</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   1 0.44091686 0.8621862 0.8234503 0.8929776</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   1 0.64953972 0.7804836 0.7227639 0.8276276</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   1 0.85816259 0.6986832 0.6251829 0.7605540</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   1 1.06678545 0.6197232 0.5342923 0.6940207</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   1 0.02367112 0.9969355 0.9960635 0.9976145</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   1 0.23229399 0.9385701 0.9217585 0.9518640</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   1 0.44091686 0.8621862 0.8264971 0.8910207</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   1 0.64953972 0.7804836 0.7272392 0.8245985</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   1 0.85816259 0.6986832 0.6307910 0.7565302</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   1 1.06678545 0.6197232 0.5406977 0.6891251</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

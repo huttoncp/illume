@@ -46,9 +46,8 @@ ilm_survival(
 
 - nsim:
 
-  Draws behind the intervals of `"fitted"` and `"population"`, and of a
-  typical group's curve from a flexible model with a smooth other than a
-  factor-smooth interaction.
+  Draws behind the intervals of `"fitted"` and `"population"`. A typical
+  group's interval uses none.
 
 - seed:
 
@@ -87,20 +86,21 @@ says which, as it does for
   typical group's curve, not the curve at zero, since survival is not
   linear in the linear predictor.
 
-Intervals for a typical group are computed on the complementary log-log
-scale for the accelerated failure time families, which is linear in
-`eta`, and on the linear predictor for a flexible model with no smooth,
-or whose only smooths are factor-smooth interactions (`bs = "fs"`),
-which a typical group sets to zero. For a flexible model with any other
-smooth they are percentile intervals from `nsim` joint draws of the
-coefficients and the smooths' penalised coefficients, with every random
-effect at zero. For `"fitted"` and `"population"` they are percentile
-intervals from `nsim` joint draws of the coefficients – and, for
-`"fitted"`, of the groups' own effects, as
+Intervals for a typical group use no draws. The curve is worked out at
+`eta - c * se` and `eta + c * se`, where `se` is the standard error of
+the linear predictor `eta` and `c` the normal quantile for `conf`; this
+is the delta method on `eta`, and it gives the same interval on every
+run. The standard error comes from the covariance of the fixed effects
+or, when the model has a smooth other than a factor-smooth interaction
+(`bs = "fs"`), from the joint covariance of the fixed effects and those
+smooths' penalised coefficients. Every random effect is at zero, and so
+is a factor-smooth interaction. For `"fitted"` and `"population"` the
+intervals are percentile intervals from `nsim` joint draws of the
+coefficients – and, for `"fitted"`, of the groups' own effects, as
 [`predict.ilm_model()`](https://huttoncp.github.io/illume/reference/predict.ilm_model.md)
 draws them. Uncertainty in an accelerated failure time family's scale
-parameter is not included, so its intervals are slightly narrow, most in
-the tail beyond the last observed event.
+parameter is not included in any of these intervals, so they are
+slightly narrow, most in the tail beyond the last observed event.
 
 ## See also
 
@@ -120,10 +120,10 @@ f <- ilm_model(time ~ x, data = d, family = "weibull",
                censor = ilm_surv(d$time, d$event), verbose = FALSE)
 head(ilm_survival(f, newdata = data.frame(x = c(-1, 1))))
 #>   row       time      surv     lower     upper
-#> 1   1 0.02367112 0.9969355 0.9959874 0.9976598
-#> 2   1 0.23229399 0.9385701 0.9203042 0.9527572
-#> 3   1 0.44091686 0.8621862 0.8234503 0.8929776
-#> 4   1 0.64953972 0.7804836 0.7227639 0.8276276
-#> 5   1 0.85816259 0.6986832 0.6251829 0.7605540
-#> 6   1 1.06678545 0.6197232 0.5342923 0.6940207
+#> 1   1 0.02367112 0.9969355 0.9960635 0.9976145
+#> 2   1 0.23229399 0.9385701 0.9217585 0.9518640
+#> 3   1 0.44091686 0.8621862 0.8264971 0.8910207
+#> 4   1 0.64953972 0.7804836 0.7272392 0.8245985
+#> 5   1 0.85816259 0.6986832 0.6307910 0.7565302
+#> 6   1 1.06678545 0.6197232 0.5406977 0.6891251
 ```
