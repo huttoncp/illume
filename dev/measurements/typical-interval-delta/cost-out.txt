@@ -1,0 +1,37 @@
+## cost.R run on a model with 10000 groups (fits saved by 'cost.R fit 10000 <folder>' on 20 Nov 2026: Weibull 311.9 s, flexible 268.8 s, joint precision 9539 and 9541 rows). Laptop, other programs may be running; the load at the start of each run is below.
+#### cpu load % at start: 100 | free MB: 4136
+build: main e61f44a | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-21 00:00:08 -0500 
+
+weibull, joint precision 9539 x 9539
+  peak working set after reading the fit: 264.94 MB
+  run 1: 0.95 s elapsed; mean interval width over the 300 points: 0.00580
+  run 2: 0.49 s elapsed; mean interval width over the 300 points: 0.00580
+  run 3: 0.48 s elapsed; mean interval width over the 300 points: 0.00580
+  peak working set after the curves: 450.64 MB
+#### cpu load % at start: 51 | free MB: 3982
+build: main e61f44a | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-21 00:00:16 -0500 
+
+rp, joint precision 9541 x 9541
+  peak working set after reading the fit: 274.99 MB
+  run 1: 1.04 s elapsed; mean interval width over the 300 points: 0.00610
+  run 2: 0.56 s elapsed; mean interval width over the 300 points: 0.00610
+  run 3: 0.69 s elapsed; mean interval width over the 300 points: 0.00610
+  peak working set after the curves: 485.38 MB
+#### cpu load % at start: 40 | free MB: 3963
+build: typical-interval-delta d0d8461 | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-21 00:00:25 -0500 
+
+weibull, joint precision 9539 x 9539
+  peak working set after reading the fit: 266.33 MB
+  run 1: 0.13 s elapsed; mean interval width over the 300 points: 0.00611
+  run 2: 0.02 s elapsed; mean interval width over the 300 points: 0.00611
+  run 3: 0.02 s elapsed; mean interval width over the 300 points: 0.00611
+  peak working set after the curves: 288.86 MB
+#### cpu load % at start: 41 | free MB: 4344
+build: typical-interval-delta d0d8461 | illume 0.0.8.9003 | R 4.4.3 | date 2026-11-21 00:00:31 -0500 
+
+rp, joint precision 9541 x 9541
+  peak working set after reading the fit: 276.47 MB
+  run 1: 0.12 s elapsed; mean interval width over the 300 points: 0.00657
+  run 2: 0.03 s elapsed; mean interval width over the 300 points: 0.00657
+  run 3: 0.02 s elapsed; mean interval width over the 300 points: 0.00657
+  peak working set after the curves: 298.15 MB

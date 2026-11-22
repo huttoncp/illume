@@ -120,6 +120,49 @@ ilm_draws <- function(object, nsim = 1000L, seed = NULL,
   nsim <- as.integer(nsim)
   if (length(nsim) != 1L || is.na(nsim) || nsim < 1L)
     stop("`nsim` must be a positive whole number", call. = FALSE)
+  su <- ilm_draws_setup(object, given, blocks)
+  mu <- su$mu; rn <- su$rn; n <- su$n; keep <- su$keep
+  free <- su$free; ch <- su$ch; dirs <- su$dirs; A <- su$A; SA <- su$SA; ASA <- su$ASA
+  n_held <- su$n_held
+
+  if (!is.null(seed)) set.seed(seed)
+  out <- base::matrix(mu[keep], length(keep), nsim,
+                      dimnames = list(rn[keep], NULL))
+  nat <- list()
+  step <- 250L
+  for (s0 in seq(1L, nsim, by = step)) {
+    cols <- s0:min(nsim, s0 + step - 1L)
+    full <- base::matrix(mu, n, length(cols))
+    if (length(free)) {
+      Z <- base::matrix(stats::rnorm(length(free) * length(cols)),
+                        length(free))
+      X <- Matrix::solve(ch, Z, system = "Lt")
+      X <- as.matrix(Matrix::solve(ch, X, system = "Pt"))
+      if (!is.null(dirs)) X <- X - SA %*% solve(ASA, A %*% X)
+      full[free, ] <- full[free, ] + X
+    }
+    out[, cols] <- full[keep, , drop = FALSE]
+    if (natural) nat[[length(nat) + 1L]] <- ilm_natural_draws(object, full)
+  }
+
+  structure(list(draws = out, mode = mu[keep],
+                 map = ilm_draws_map(object, keep),
+                 natural = if (natural) ilm_natural_bind(nat) else NULL,
+                 held = list(n = n_held, terms = object$hessian_held),
+                 given = given),
+            class = "ilm_draws")
+}
+
+## What a draw from the fit's joint distribution needs, formed once: the
+## parameter vector and its layout, the coordinates held at their estimates
+## and the directions held within the rest, and the sparse Cholesky factor of
+## the free coordinates' precision. ilm_draws() draws from it and
+## ilm_joint_cov() reads a block of its covariance from it, so the two are
+## one distribution.
+#' @keywords internal
+#' @noRd
+ilm_draws_setup <- function(object, given, blocks = NULL) {
+  A <- SA <- ASA <- NULL
   ## A fit that stopped short of a stationary point has no covariance that
   ## is the curvature at a maximum, so draws from it are unreliable whatever
   ## is held; said once, with the remedy the checks name
@@ -200,33 +243,38 @@ ilm_draws <- function(object, nsim = 1000L, seed = NULL,
     SA <- as.matrix(Matrix::solve(ch, t(A), system = "A"))
     ASA <- A %*% SA
   }
+  list(mu = mu, rn = rn, n = n, keep = keep, hold = hold, free = free, ch = ch,
+       dirs = dirs, A = A, SA = SA, ASA = ASA, n_held = n_held)
+}
 
-  if (!is.null(seed)) set.seed(seed)
-  out <- base::matrix(mu[keep], length(keep), nsim,
-                      dimnames = list(rn[keep], NULL))
-  nat <- list()
-  step <- 250L
-  for (s0 in seq(1L, nsim, by = step)) {
-    cols <- s0:min(nsim, s0 + step - 1L)
-    full <- base::matrix(mu, n, length(cols))
-    if (length(free)) {
-      Z <- base::matrix(stats::rnorm(length(free) * length(cols)),
-                        length(free))
-      X <- Matrix::solve(ch, Z, system = "Lt")
-      X <- as.matrix(Matrix::solve(ch, X, system = "Pt"))
-      if (!is.null(dirs)) X <- X - SA %*% solve(ASA, A %*% X)
-      full[free, ] <- full[free, ] + X
+## The covariance of some coordinates of the joint distribution ilm_draws()
+## draws from, given by their positions in the fit's parameter vector
+## (ilm_full_par()'s layout). It is formed from the sparse Cholesky factor of
+## the precision, by one solve for each coordinate asked for, so the dense
+## inverse of the whole precision -- whose size grows with every random-effect
+## value in the fit -- is never formed. A coordinate that is held has no
+## variance, and a direction held within the rest is taken out of the
+## covariance as ilm_draws() takes it out of a draw: for a draw X with
+## covariance S, X - S A' (A S A')^-1 A X has covariance
+## S - S A' (A S A')^-1 A S.
+#' @keywords internal
+#' @noRd
+ilm_joint_cov <- function(object, pos) {
+  su <- ilm_draws_setup(object, "none")
+  V <- matrix(0, length(pos), length(pos), dimnames = list(su$rn[pos], su$rn[pos]))
+  kf <- match(pos, su$free)
+  ok <- which(!is.na(kf))
+  if (length(ok)) {
+    E <- Matrix::sparseMatrix(i = kf[ok], j = seq_along(ok), x = 1,
+                              dims = c(length(su$free), length(ok)))
+    Vk <- as.matrix(Matrix::solve(su$ch, E, system = "A"))[kf[ok], , drop = FALSE]
+    if (!is.null(su$dirs)) {
+      SAk <- su$SA[kf[ok], , drop = FALSE]
+      Vk <- Vk - SAk %*% solve(su$ASA, t(SAk))
     }
-    out[, cols] <- full[keep, , drop = FALSE]
-    if (natural) nat[[length(nat) + 1L]] <- ilm_natural_draws(object, full)
+    V[ok, ok] <- (Vk + t(Vk)) / 2
   }
-
-  structure(list(draws = out, mode = mu[keep],
-                 map = ilm_draws_map(object, keep),
-                 natural = if (natural) ilm_natural_bind(nat) else NULL,
-                 held = list(n = n_held, terms = object$hessian_held),
-                 given = given),
-            class = "ilm_draws")
+  V
 }
 
 ## The joint precision: stored with the fit, or formed from its compiled

@@ -80,19 +80,20 @@ ilm_km_at <- function(km, grid) {
 #'   group's curve, not the curve at zero, since survival is not linear in the
 #'   linear predictor.
 #'
-#' Intervals for a typical group are computed on the complementary log-log
-#' scale for the accelerated failure time families, which is linear in `eta`,
-#' and on the linear predictor for a flexible model with no smooth, or whose
-#' only smooths are factor-smooth interactions (`bs = "fs"`), which a typical
-#' group sets to zero. For a flexible model with any other smooth they are
-#' percentile intervals from `nsim` joint draws of the coefficients and the
-#' smooths' penalised coefficients, with every random effect at zero.
-#' For `"fitted"` and
-#' `"population"` they are percentile intervals from `nsim` joint draws of the
-#' coefficients -- and, for `"fitted"`, of the groups' own effects, as
-#' [predict.ilm_model()] draws them. Uncertainty in an accelerated failure time
-#' family's scale parameter is not included, so its intervals are slightly
-#' narrow, most in the tail beyond the last observed event.
+#' Intervals for a typical group use no draws. The curve is worked out at
+#' `eta - c * se` and `eta + c * se`, where `se` is the standard error of the
+#' linear predictor `eta` and `c` the normal quantile for `conf`; this is the
+#' delta method on `eta`, and it gives the same interval on every run. The
+#' standard error comes from the covariance of the fixed effects or, when the
+#' model has a smooth other than a factor-smooth interaction (`bs = "fs"`),
+#' from the joint covariance of the fixed effects and those smooths' penalised
+#' coefficients. Every random effect is at zero, and so is a factor-smooth
+#' interaction. For `"fitted"` and `"population"` the intervals are percentile
+#' intervals from `nsim` joint draws of the coefficients -- and, for
+#' `"fitted"`, of the groups' own effects, as [predict.ilm_model()] draws them.
+#' Uncertainty in an accelerated failure time family's scale parameter is not
+#' included in any of these intervals, so they are slightly narrow, most in
+#' the tail beyond the last observed event.
 #'
 #' @param object A fitted `"ilm_model"` with a time-to-event family.
 #' @param newdata Covariate patterns, one row each. With none, the curve is
@@ -104,9 +105,8 @@ ilm_km_at <- function(km, grid) {
 #' @param groups `"fitted"` (the default), `"typical"` or `"population"`; see
 #'   "Which groups". Only a model with random effects or a correlation over
 #'   time has a choice to make.
-#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`, and of a
-#'   typical group's curve from a flexible model with a smooth other than a
-#'   factor-smooth interaction.
+#' @param nsim Draws behind the intervals of `"fitted"` and `"population"`. A
+#'   typical group's interval uses none.
 #' @param seed Random seed for those draws.
 #' @return A data frame with `row`, `time`, `surv`, `lower` and `upper`.
 #' @seealso [ilm_plot_survival()], which draws it against the Kaplan-Meier
@@ -164,36 +164,41 @@ ilm_survival <- function(object, newdata = NULL, times = NULL, conf = 0.95,
   if (!length(gk) && is.null(object$ar)) groups <- "typical"
   if (identical(groups, "typical")) {
     if (!is.null(object$rp))
-      return(ilm_rp_survival(object, newdata, times, conf, nsim = nsim, seed = seed))
+      return(ilm_rp_survival(object, newdata, times, conf))
     return(ilm_aft_survival(object, newdata, times, conf))
   }
   ilm_survival_groups(object, newdata, times, conf, groups, gk, nsim, seed)
 }
 
 ## A typical group's curve for an accelerated failure time family, with its
-## interval on the complementary log-log scale.
+## interval the survivor function at the two ends of the linear predictor's
+## interval, eta -/+ crit * se: S falls as eta falls, so eta - crit * se gives
+## the lower limit. The standard error is the delta method's, from the fit's
+## covariance of the fixed effects and the smooths' penalised coefficients
+## (ilm_typical_cov()), so it is the same on every run. It was once the SD of
+## 200 draws behind predict(se.fit = TRUE), at a seed fixed there, and the
+## interval was the point's complementary log-log value shifted by
+## crit * se / scale -- the same thing for the Weibull, where that value is
+## linear in eta, and not for the lognormal and log-logistic, whose
+## limits it put as much as 0.15 from this one's in a measured fit.
 #' @keywords internal
 #' @noRd
 ilm_aft_survival <- function(object, newdata, times, conf) {
-  pr <- stats::predict(object, newdata = newdata, se.fit = TRUE, groups = "typical")
-  eta <- log(as.matrix(if (is.list(pr)) pr$fit else pr)[, 1])
-  se_eta <- if (is.list(pr) && !is.null(pr$se.fit)) {
-    ## predict() returns the standard error on the response scale, and the
-    ## curve needs it on the linear-predictor scale it was computed on
-    as.matrix(pr$se.fit)[, 1] / as.matrix(if (is.list(pr)) pr$fit else pr)[, 1]
-  } else rep(0, length(eta))
+  est <- stats::predict(object, newdata = newdata, groups = "typical")
+  eta <- log(as.matrix(est)[, 1])
+  nd <- ilm_newX(object, newdata, fs_fill = TRUE)
+  tc <- ilm_typical_cov(object, nd)
+  se_eta <- if (is.null(tc)) rep(NA_real_, length(eta))
+            else ilm_typical_se(cbind(nd$X, tc$Zs), tc$V)
+  if (!is.null(tc)) ilm_typical_se_warn(se_eta)
   sc <- unname(object$dispersion[[1]])
   crit <- stats::qnorm(1 - (1 - conf) / 2)
   nm <- object$family$name
   out <- lapply(seq_along(eta), function(i) {
-    S <- ilm_aft_surv(nm, (log(times) - eta[i]) / sc)
-    ## on the complementary log-log scale the curve is linear in eta, with
-    ## slope -1/scale, so the delta method is exact there
-    cll <- log(-log(pmin(pmax(S, 1e-12), 1 - 1e-12)))
-    half <- crit * se_eta[i] / sc
-    data.frame(row = i, time = times, surv = S,
-               lower = exp(-exp(cll + half)),
-               upper = exp(-exp(cll - half)))
+    data.frame(row = i, time = times,
+               surv = ilm_aft_surv(nm, (log(times) - eta[i]) / sc),
+               lower = ilm_aft_surv(nm, (log(times) - (eta[i] - crit * se_eta[i])) / sc),
+               upper = ilm_aft_surv(nm, (log(times) - (eta[i] + crit * se_eta[i])) / sc))
   })
   do.call(rbind, out)
 }
@@ -311,6 +316,115 @@ ilm_smooth_part <- function(object, nd, bvec = NULL, typical = FALSE) {
   }
   S
 }
+
+## The covariance behind a typical group's interval, and the design that goes
+## with it. A typical group's linear predictor is linear in the fixed effects
+## and in the penalised coefficients of every smooth that is not a
+## factor-smooth interaction -- the grouping terms, and a factor-smooth's
+## blocks, are at zero -- so its variance at a row is a' V a, where `a` holds
+## the row's fixed design and the smooths' design at the row, and V is the
+## covariance of those coefficients. Returns the smooths' design `Zs` (a row
+## per row of `nd`, no columns with no such smooth) and V, over the fixed
+## effects first and then the smooths' coefficients; NULL, with a warning,
+## when there is no usable covariance.
+##
+## With no such smooth the fixed effects' covariance is vcov(), which is the
+## fixed block of the joint covariance by maximum likelihood. With one, the
+## block is read from the sparse factor of the joint precision
+## (ilm_joint_cov()), the distribution ilm_draws() draws from: the smooth's
+## penalised coefficients vary jointly with the fixed effects, where from the
+## fixed effects' covariance alone they would be held at their estimates, which
+## makes a smooth's interval far too wide.
+#' @keywords internal
+#' @noRd
+ilm_typical_cov <- function(object, nd) {
+  p <- ncol(object$X)
+  used <- which(vapply(object$re, function(e) identical(e$kind, "basis"), TRUE) &
+                  !ilm_fs_terms(object))
+  if (!length(used)) {
+    ## The fixed effects' covariance, read as vcov() reads it: by position, the
+    ## first ncol(X) rows. It was looked up by name twice, and each time the
+    ## lookup matched nothing and the interval came back with no width, without
+    ## a word: once by the display names, which cov.fixed is not indexed by, and
+    ## then by names(sdr$par.fixed), which under REML holds the variance
+    ## parameters only -- every REML fit's interval was 0 wide. A lookup that
+    ## does not find the block now stops, and a covariance that is unusable
+    ## gives no interval, with a warning, rather than one of no width.
+    ## vcov() warns when the Hessian is not positive definite, and TMB can hand
+    ## back a covariance that is finite there, with a negative variance in it
+    ## (a saddle's inverse Hessian is). A warning from vcov() is taken as the
+    ## sign, and the warning below is the one the user sees.
+    unusable <- FALSE
+    Vb <- withCallingHandlers(vcov(object), warning = function(w) {
+      unusable <<- TRUE
+      invokeRestart("muffleWarning")
+    })
+    if (is.null(Vb) || !identical(dim(as.matrix(Vb)), c(p, p)))
+      stop("internal: the fixed effects' covariance has ",
+           if (is.null(Vb)) "no entries" else paste(dim(as.matrix(Vb)), collapse = " x "),
+           " where the design has ", p, " columns.", call. = FALSE)
+    Vb <- as.matrix(Vb)
+    if (unusable || !all(is.finite(Vb))) {
+      warning("the fixed effects' covariance is unusable (see the hessian line of ",
+              "fit$checks), so the survival curve has no interval.", call. = FALSE)
+      return(NULL)
+    }
+    return(list(Zs = matrix(0, nrow(nd$X), 0L), V = Vb))
+  }
+  if (object$C != 1L)
+    stop("internal: a typical survival curve has one linear predictor", call. = FALSE)
+  Zl <- lapply(used, function(k) {
+    Bk <- as.matrix(ilm_basis_new(object, nd, k))
+    if (object$wk[k] != 1L || ncol(Bk) != length(object$b_idx[[k]]))
+      stop("internal: smooth term ", names(object$re)[k], " has ", ncol(Bk),
+           " design columns for ", length(object$b_idx[[k]]), " coefficients",
+           call. = FALSE)
+    Bk
+  })
+  bidx <- unlist(object$b_idx[used])
+  rn <- names(object$obj$env$par)
+  pb <- which(rn == "beta"); pv <- which(rn == "bvec")
+  if (length(pb) != p || max(bidx) > length(pv))
+    stop("internal: the fit's parameter vector has ", length(pb), " fixed effects and ",
+         length(pv), " penalised coefficients where the design needs ", p, " and ",
+         max(bidx), call. = FALSE)
+  V <- tryCatch(ilm_joint_cov(object, c(pb, pv[bidx])), error = function(e) e)
+  if (inherits(V, "error")) {
+    warning("no intervals: ", conditionMessage(V), call. = FALSE)
+    return(NULL)
+  }
+  if (!all(is.finite(V))) {
+    warning("the covariance of the fixed effects and the smooths' coefficients is ",
+            "unusable (see the hessian line of fit$checks), so the survival curve ",
+            "has no interval.", call. = FALSE)
+    return(NULL)
+  }
+  list(Zs = do.call(cbind, Zl), V = V)
+}
+
+## The standard error of a' beta for each row a of A, from the covariance V of
+## beta. A variance below zero by more than rounding (1e-8 of the sum of the
+## terms' sizes) says V is not a covariance, and that row has no standard
+## error, NA; a smaller one is rounding and counts as zero.
+#' @keywords internal
+#' @noRd
+ilm_typical_se <- function(A, V) {
+  v <- rowSums((A %*% V) * A)
+  size <- rowSums((abs(A) %*% abs(V)) * abs(A))
+  sqrt(ifelse(!is.finite(v) | v < -1e-8 * size, NA_real_, pmax(v, 0)))
+}
+
+## The warning for a curve whose interval could not be formed from a usable
+## variance, said once for the whole curve: the variance at a point came out
+## negative beyond rounding, or not finite.
+#' @keywords internal
+#' @noRd
+ilm_typical_se_warn <- function(se)
+  if (anyNA(se))
+    warning("the covariance of the fixed effects and the smooths' coefficients gives ",
+            "a variance that is negative or not finite at ", sum(is.na(se)), " of ",
+            length(se), " points of the curve, so those have no interval.",
+            call. = FALSE)
 
 ## The covariate pattern an effect plot would use: median for a number, the
 ## commonest level for a factor.
