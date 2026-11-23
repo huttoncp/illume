@@ -1099,6 +1099,15 @@ ilm_model_formula <- function(formula, data, family = "auto",
 #' @param x,object,formula A fitted `"ilm_model"` object.
 #' @param ... Unused.
 #' @return The model terms, formula, model frame, model matrix or original call.
+#' @details
+#' **The fixed-effects formula.** `formula(fit)` is the formula as it was
+#' written, with its random-effect terms and its smooths. `terms(fit)` holds
+#' the fixed-effects part of it, so `formula(terms(fit))` is the fixed-effects
+#' formula: the random-effect terms and the smooths are left out, and the
+#' ordinary terms, any `offset()` and a removed intercept are kept, as in
+#' `y ~ g + poly(t, 2) + offset(log(e))` or `y ~ g + t - 1`. A dispersion
+#' formula is a separate formula and is not part of it. A smooth's unpenalised
+#' columns are not terms of it: they are among the coefficients, as `s(x).f1`.
 #' @rdname ilm_model-accessors
 #' @export
 terms.ilm_model        <- function(x, ...) x$terms
@@ -1127,19 +1136,90 @@ formula.ilm_model      <- function(x, ...) x$formula
 #' @export
 model.frame.ilm_model  <- function(formula, ...) formula$model
 
-## The rows a fit was made from, as new rows to predict from: the model frame
-## with the variables its transformed terms are built from added back, so
-## predict() and model.matrix() can rebuild log(x) or a Fourier basis for
-## changed values of x or t. A fit made before those were kept gets its frame.
-#' @keywords internal
-#' @noRd
+#' The rows a fit was made from
+#'
+#' The fit's model frame, with the variables its transformed terms are built
+#' from added back. The frame holds a transformed term as its own column, such
+#' as `log(x)` or `poly(t, 2)`, and not the variable underneath it. So code
+#' that places new rows on a fit, to predict at changed values of `x` or `t` or
+#' to tell which rows lie beyond the data, cannot rebuild the term from the
+#' frame alone. From these rows, `predict()` and `model.matrix()` can.
+#'
+#' @details
+#' The columns added are those of `data` that the model frame lacks and that
+#' the model names: in its formula, in a dispersion or zero-inflation formula,
+#' or, for a correlation over time given by its columns, as in
+#' `ilm_ar1(~ t | g)`, its time and group. They are matched to the frame's rows
+#' by row name, so after rows are dropped for missing values they are the fit's
+#' own rows.
+#'
+#' Nothing is added, and the frame is returned alone, when `data` was not a
+#' data frame, when its row names do not all match the frame's, or when the
+#' frame already holds every variable the model names, as when nothing in it is
+#' transformed. A fit made before these columns were kept also returns its
+#' frame alone.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @return A data frame: the model frame, with the added columns after its own.
+#'   `NULL` for a fit that has no model frame.
+#' @seealso [model.frame.ilm_model()] for the frame alone.
+#' @examples
+#' set.seed(1)
+#' d <- data.frame(t = rep(1:12, 10), g = factor(rep(1:10, each = 12)))
+#' d$y <- 0.2 * d$t + stats::rnorm(10)[d$g] + stats::rnorm(120)
+#' f <- ilm_model(y ~ poly(t, 2) + (1 | g), data = d, family = "gaussian",
+#'                verbose = FALSE)
+#' names(model.frame(f))   # the frame holds poly(t, 2), not t
+#' head(ilm_data(f))       # t is added back
+#' @export
 ilm_data <- function(object) {
+  if (!inherits(object, "ilm_model"))
+    stop("`object` must be a fitted ilm_model, not ", class(object)[1],
+         call. = FALSE)
   mf <- object$model
   if (is.null(mf)) return(NULL)
   ex <- object$data_extra
   if (is.null(ex) || !ncol(ex)) return(mf)
   for (v in names(ex)) mf[[v]] <- ex[[v]]
   mf
+}
+
+#' Was a fit made by restricted maximum likelihood?
+#'
+#' `TRUE` for a fit made by restricted maximum likelihood (REML), `FALSE` for
+#' one made by maximum likelihood.
+#'
+#' @details
+#' When `reml` is not given to [ilm_model()], it decides: REML for a gaussian
+#' model with an identity link and a dispersion formula (other than `~ mu`),
+#' and nothing else: no random term or smooth, no correlation over time, no
+#' zero part, no censoring and no flexible baseline. Every other model is
+#' fitted by maximum likelihood. This reports what the fit ended up with,
+#' whichever way it got there. It matters because a likelihood, and so an AIC
+#' or a likelihood ratio, from a REML fit compares only with fits that have the
+#' same fixed effects and were also fitted by REML, and because a REML fit's
+#' coefficients and standard errors are not those of maximum likelihood.
+#'
+#' @param object A fitted `"ilm_model"` object.
+#' @return `TRUE` or `FALSE`. A fit saved by a version of illume that didn't
+#'   record it gives `FALSE`.
+#' @seealso [ilm_model()], whose `reml` argument sets it.
+#' @examples
+#' set.seed(1)
+#' d <- data.frame(g = factor(rep(1:10, each = 6)), x = stats::rnorm(60))
+#' d$y <- 1 + 0.5 * d$x + stats::rnorm(10)[d$g] + stats::rnorm(60)
+#' f_ml <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+#'                   verbose = FALSE)
+#' f_reml <- ilm_model(y ~ x + (1 | g), data = d, family = "gaussian",
+#'                     reml = TRUE, verbose = FALSE)
+#' ilm_is_reml(f_ml)
+#' ilm_is_reml(f_reml)
+#' @export
+ilm_is_reml <- function(object) {
+  if (!inherits(object, "ilm_model"))
+    stop("`object` must be a fitted ilm_model, not ", class(object)[1],
+         call. = FALSE)
+  isTRUE(object$reml)
 }
 
 #' Standard accessors for a fitted model

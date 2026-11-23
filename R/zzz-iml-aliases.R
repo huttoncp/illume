@@ -156,6 +156,11 @@ iml_dag_model <- ilm_dag_model
 #' @export
 iml_dag_test <- ilm_dag_test
 
+#' @rdname ilm_data
+#' @usage NULL
+#' @export
+iml_data <- ilm_data
+
 #' @rdname ilm_denom_df
 #' @usage NULL
 #' @export
@@ -225,6 +230,11 @@ iml_impute <- ilm_impute
 #' @usage NULL
 #' @export
 iml_interpret <- ilm_interpret
+
+#' @rdname ilm_is_reml
+#' @usage NULL
+#' @export
+iml_is_reml <- ilm_is_reml
 
 #' @rdname ilm_iv
 #' @usage NULL
