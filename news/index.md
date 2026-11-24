@@ -2,6 +2,17 @@
 
 ## illume 0.0.8.9003
 
+- [`ilm_data()`](https://huttoncp.github.io/illume/reference/ilm_data.md)
+  is now exported, and
+  [`ilm_is_reml()`](https://huttoncp.github.io/illume/reference/ilm_is_reml.md)
+  is new. `ilm_data(fit)` returns the rows a fit was made from, with the
+  variables that transformed terms are built from added back: a time
+  inside `poly(t, 2)` comes back as `t`. `ilm_is_reml(fit)` says whether
+  a fit was made by restricted maximum likelihood. The fixed-effects
+  formula of a fit is `formula(terms(fit))`, which the help for
+  [`terms()`](https://rdrr.io/r/stats/terms.html) of a fit now
+  documents. Each newly exported function has its `iml_*` alias.
+
 - [`ilm_survival()`](https://huttoncp.github.io/illume/reference/ilm_survival.md)‘s
   interval for a typical group is now the delta method on the linear
   predictor in every family, and uses no draws. The curve is worked out

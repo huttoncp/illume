@@ -61,6 +61,10 @@ the quadrature behind a population average, and the rows it used.
   : Expectation of a function of a normal variable
 - [`ilm_rows_used()`](https://huttoncp.github.io/illume/reference/ilm_rows_used.md)
   : The rows a model used
+- [`ilm_data()`](https://huttoncp.github.io/illume/reference/ilm_data.md)
+  : The rows a fit was made from
+- [`ilm_is_reml()`](https://huttoncp.github.io/illume/reference/ilm_is_reml.md)
+  : Was a fit made by restricted maximum likelihood?
 
 ## Other designs
 

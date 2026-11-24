@@ -117,6 +117,17 @@ car::Anova(), emmeans and marginaleffects can work with a fit."><meta property="
 <p>The model terms, formula, model frame, model matrix or original call.</p>
 <p>The model terms, formula, model frame, model matrix or original call.</p>
     </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><strong>The fixed-effects formula.</strong> <code>formula(fit)</code> is the formula as it was
+written, with its random-effect terms and its smooths. <code>terms(fit)</code> holds
+the fixed-effects part of it, so <code>formula(terms(fit))</code> is the fixed-effects
+formula: the random-effect terms and the smooths are left out, and the
+ordinary terms, any <code><a href="https://rdrr.io/r/stats/offset.html" class="external-link">offset()</a></code> and a removed intercept are kept, as in
+<code>y ~ g + poly(t, 2) + offset(log(e))</code> or <code>y ~ g + t - 1</code>. A dispersion
+formula is a separate formula and is not part of it. A smooth's unpenalised
+columns are not terms of it: they are among the coefficients, as <code>s(x).f1</code>.</p>
+    </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
