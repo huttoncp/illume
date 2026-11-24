@@ -50,3 +50,13 @@ Supply the pieces that other packages expect from a model object, so that
 Supply the pieces that other packages expect from a model object, so that
 \code{car::Anova()}, \code{emmeans} and \code{marginaleffects} can work with a fit.
 }
+\details{
+\strong{The fixed-effects formula.} \code{formula(fit)} is the formula as it was
+written, with its random-effect terms and its smooths. \code{terms(fit)} holds
+the fixed-effects part of it, so \code{formula(terms(fit))} is the fixed-effects
+formula: the random-effect terms and the smooths are left out, and the
+ordinary terms, any \code{offset()} and a removed intercept are kept, as in
+\code{y ~ g + poly(t, 2) + offset(log(e))} or \code{y ~ g + t - 1}. A dispersion
+formula is a separate formula and is not part of it. A smooth's unpenalised
+columns are not terms of it: they are among the coefficients, as \verb{s(x).f1}.
+}

@@ -1,5 +1,13 @@
 # illume 0.0.8.9003
 
+* `ilm_data()` is now exported, and `ilm_is_reml()` is new. `ilm_data(fit)`
+  returns the rows a fit was made from, with the variables that transformed
+  terms are built from added back: a time inside `poly(t, 2)` comes back as
+  `t`. `ilm_is_reml(fit)` says whether a fit was made by restricted maximum
+  likelihood. The fixed-effects formula of a fit is `formula(terms(fit))`,
+  which the help for `terms()` of a fit now documents. Each newly exported
+  function has its `iml_*` alias.
+
 * `ilm_survival()`'s interval for a typical group is now the delta method on
   the linear predictor in every family, and uses no draws. The curve is
   worked out at the two ends of the linear predictor's interval. The

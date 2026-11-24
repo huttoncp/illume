@@ -65,6 +65,8 @@ reference:
   - ilm_cells
   - ilm_normal_expect
   - ilm_rows_used
+  - ilm_data
+  - ilm_is_reml
 - title: "Other designs"
   desc: >
     Identification strategies and sampling designs that are not a single regression.
